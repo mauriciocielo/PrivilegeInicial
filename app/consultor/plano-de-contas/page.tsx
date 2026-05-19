@@ -57,6 +57,7 @@ export default function PlanoContasPage() {
       parentId: form.parentId,
       ativo: form.ativo !== false,
       empresaId,
+      dreCategoria: form.dreCategoria,
     };
     store.savePlanoConta(pc);
     setPlano(store.getPlanoContas(empresaId));
@@ -148,19 +149,20 @@ export default function PlanoContasPage() {
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
                     <td>
-                      <label className="toggle" onClick={() => toggleAtivo(pc)}>
-                        <input type="checkbox" readOnly checked={pc.ativo} />
-                        <div className="toggle-track" />
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc.ativo ? 'Ativo' : 'Inativo'}</span>
-                      </label>
+                      <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
+                        {pc.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {pc.nivel < 3 && (
-                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => openNew(pc)}>+ Sub</button>
+                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
                         )}
-                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(pc)}>✏️</button>
-                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(pc.id)}>🗑️</button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
+                          {pc.ativo ? '⏸️' : '▶️'}
+                        </button>
+                        <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
                       </div>
                     </td>
                   </tr>
@@ -212,6 +214,24 @@ export default function PlanoContasPage() {
                 </select>
               </div>
             </div>
+            <div className="form-group">
+              <label className="form-label">Estrutura DRE (Classificação)</label>
+              <select className="form-control" value={form.dreCategoria || ''} onChange={e=>setForm(f=>({...f,dreCategoria:e.target.value}))}>
+                <option value="">Não classificado (Outros)</option>
+                <option value="receita_vendas">Receita total de Vendas</option>
+                <option value="impostos">Despesas com Impostos</option>
+                <option value="cmv">CMV (Custo de Mercadoria)</option>
+                <option value="despesas_fixas">Despesas Fixas</option>
+                <option value="despesas_variaveis">Despesas Variáveis</option>
+                <option value="despesas_pessoal">Despesas com Pessoal</option>
+                <option value="despesas_bancarias">Despesas Bancárias</option>
+                <option value="despesas_terceiros">Despesas com Terceiros</option>
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Selecione em qual linha do DRE Gerencial esta conta deve aparecer.
+              </div>
+            </div>
+
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave}>✓ Salvar</button>

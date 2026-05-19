@@ -10,6 +10,7 @@ export interface User {
   role: 'consultor' | 'cliente';
   empresaIds: string[];
   avatar?: string;
+  receberEmailDiario?: boolean;
   createdAt: string;
 }
 
@@ -21,6 +22,8 @@ export interface Empresa {
   responsavel: string;
   email: string;
   telefone: string;
+  receitaMensalEstimada?: number;
+  comprasMensalEstimada?: number;
   createdAt: string;
 }
 
@@ -33,18 +36,53 @@ export interface PlanoConta {
   parentId?: string;
   ativo: boolean;
   empresaId: string;
+  dreCategoria?: string;
 }
 
 export interface Portador {
   id: string;
   nome: string;
-  tipo: 'conta_corrente' | 'poupanca' | 'caixa' | 'cartao' | 'outro';
+  tipo: 'conta_corrente' | 'poupanca' | 'aplicacao' | 'caixa' | 'cartao' | 'outro';
   banco?: string;
   agencia?: string;
   conta?: string;
   saldoInicial: number;
   ativo: boolean;
   empresaId: string;
+}
+
+export interface Endividamento {
+  id: string;
+  empresaId: string;
+  banco: string;
+  conta: string;
+  contrato: string;
+  descricaoContrato?: string;
+  taxa: number;
+  taxaTipo?: 'am' | 'aa';
+  indexador: string;
+  parcela: number;
+  parcelasFaltantes: number;
+  valorQuitacao: number;
+  valorAPagar: number;
+  garantia: string;
+  pagamentoMes: number;
+}
+
+export interface IndicadorMensal {
+  id: string;
+  empresaId: string;
+  mes: string; // YYYY-MM
+  faturamento: number;
+  compras: number;
+  inadimplencia: number;
+}
+
+export interface OrcamentoMensal {
+  id: string;
+  empresaId: string;
+  mes: string; // YYYY-MM
+  categorias: Record<string, number>; // planoContaId -> valor
 }
 
 export interface Lancamento {
@@ -457,6 +495,54 @@ class DataStore {
   }
   deleteLancamento(id: string) {
     this.set('cf_lancamentos', this.getLancamentos().filter(l => l.id !== id));
+  }
+
+  // Endividamento
+  getEndividamentos(empresaId?: string): Endividamento[] {
+    this.init();
+    const all = this.get<Endividamento[]>('cf_endividamentos', []);
+    return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
+  }
+  saveEndividamento(endividamento: Endividamento) {
+    const list = this.getEndividamentos();
+    const idx = list.findIndex(l => l.id === endividamento.id);
+    if (idx >= 0) list[idx] = endividamento; else list.push(endividamento);
+    this.set('cf_endividamentos', list);
+  }
+  deleteEndividamento(id: string) {
+    this.set('cf_endividamentos', this.getEndividamentos().filter(l => l.id !== id));
+  }
+
+  // Indicadores Mensais
+  getIndicadores(empresaId?: string): IndicadorMensal[] {
+    this.init();
+    const all = this.get<IndicadorMensal[]>('cf_indicadores', []);
+    return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
+  }
+  saveIndicador(indicador: IndicadorMensal) {
+    const list = this.getIndicadores();
+    const idx = list.findIndex(l => l.id === indicador.id);
+    if (idx >= 0) list[idx] = indicador; else list.push(indicador);
+    this.set('cf_indicadores', list);
+  }
+  deleteIndicador(id: string) {
+    this.set('cf_indicadores', this.getIndicadores().filter(l => l.id !== id));
+  }
+
+  // Orçamentos
+  getOrcamentos(empresaId?: string): OrcamentoMensal[] {
+    this.init();
+    const all = this.get<OrcamentoMensal[]>('cf_orcamentos', []);
+    return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
+  }
+  saveOrcamento(orcamento: OrcamentoMensal) {
+    const list = this.getOrcamentos();
+    const idx = list.findIndex(l => l.id === orcamento.id);
+    if (idx >= 0) list[idx] = orcamento; else list.push(orcamento);
+    this.set('cf_orcamentos', list);
+  }
+  deleteOrcamento(id: string) {
+    this.set('cf_orcamentos', this.getOrcamentos().filter(l => l.id !== id));
   }
 
   // Helpers

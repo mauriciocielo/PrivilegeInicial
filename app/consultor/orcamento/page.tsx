@@ -1,0 +1,212 @@
+'use client';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { store, Empresa, OrcamentoMensal, PlanoConta, Lancamento } from '../../../lib/store';
+import { uid } from '../../../lib/store';
+import { fmt } from '../../../lib/reports';
+
+export default function OrcamentoPage() {
+  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [mesSelecionado, setMesSelecionado] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1); // Default to next month for budget
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  });
+  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
+  const [lancs3Meses, setLancs3Meses] = useState<Lancamento[]>([]);
+  const [orcamento, setOrcamento] = useState<OrcamentoMensal | null>(null);
+  
+  const [valores, setValores] = useState<Record<string, number>>({});
+  const [saving, setSaving] = useState(false);
+  const [replicarFuturo, setReplicarFuturo] = useState(false);
+
+  const load = useCallback((eId: string, mes: string) => {
+    setEmpresaId(eId);
+    setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
+    
+    const plano = store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo);
+    setPlanoContas(plano.sort((a,b) => a.codigo.localeCompare(b.codigo)));
+
+    // Find if budget exists for this month
+    const orc = store.getOrcamentos(eId).find(o => o.mes === mes);
+    if (orc) {
+      setOrcamento(orc);
+      setValores(orc.categorias);
+    } else {
+      setOrcamento(null);
+      setValores({});
+    }
+
+    // Load last 3 months logic for averages
+    const [y, m] = mes.split('-');
+    const baseDate = new Date(Number(y), Number(m)-1, 1);
+    
+    const d3 = new Date(baseDate); d3.setMonth(d3.getMonth() - 3);
+    const m3 = `${d3.getFullYear()}-${String(d3.getMonth()+1).padStart(2,'0')}`;
+    const allLancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
+    const l3 = allLancs.filter(l => l.data >= m3 && l.data < mes);
+    setLancs3Meses(l3);
+
+  }, []);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
+    load(saved, mesSelecionado);
+    const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
+    window.addEventListener('empresaChange', handler);
+    return () => window.removeEventListener('empresaChange', handler);
+  }, [load, mesSelecionado]);
+
+  const calcMedia = (pcId: string) => {
+    const sum = lancs3Meses.filter(l => l.planoContaId === pcId).reduce((a, l) => a + l.valor, 0);
+    return sum / 3;
+  };
+
+  const handleSave = () => {
+    setSaving(true);
+    setTimeout(() => {
+      let currentMonthStr = mesSelecionado;
+      let monthsToSave = replicarFuturo ? 12 : 1;
+      
+      for (let i = 0; i < monthsToSave; i++) {
+        // Find existing for this month
+        const existing = store.getOrcamentos(empresaId).find(o => o.mes === currentMonthStr);
+        const o: OrcamentoMensal = {
+          id: existing?.id || uid(),
+          empresaId,
+          mes: currentMonthStr,
+          categorias: valores,
+        };
+        store.saveOrcamento(o);
+        if (i === 0) setOrcamento(o);
+
+        // increment month
+        const [yy, mm] = currentMonthStr.split('-');
+        let nY = Number(yy); let nM = Number(mm) + 1;
+        if (nM > 12) { nM = 1; nY++; }
+        currentMonthStr = `${nY}-${String(nM).padStart(2, '0')}`;
+      }
+      
+      setSaving(false);
+      setReplicarFuturo(false);
+      alert(replicarFuturo ? 'Orçamento salvo e replicado para os próximos 11 meses!' : 'Orçamento salvo com sucesso!');
+    }, 400);
+  };
+
+  const setValor = (id: string, val: number) => {
+    setValores(v => ({ ...v, [id]: val }));
+  };
+
+  const mesesOptions: string[] = [];
+  const hoje = new Date();
+  for (let i = -1; i <= 6; i++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+    mesesOptions.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+
+  const recSum = planoContas.filter(p => p.tipo === 'receita').reduce((a, p) => a + (valores[p.id] || 0), 0);
+  const despSum = planoContas.filter(p => p.tipo === 'despesa').reduce((a, p) => a + (valores[p.id] || 0), 0);
+
+  return (
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Orçamento Mensal</div>
+          <div className="page-subtitle">{empresa?.razaoSocial} — Planejamento Financeiro baseado no Fluxo de Caixa</div>
+        </div>
+        <div className="header-actions" style={{ display: 'flex', gap: 12 }}>
+          <select 
+            className="form-control" 
+            value={mesSelecionado} 
+            onChange={e => setMesSelecionado(e.target.value)}
+            style={{ width: 160 }}
+          >
+            {mesesOptions.map(m => {
+              const [y, mo] = m.split('-');
+              const d = new Date(Number(y), Number(mo)-1, 1);
+              return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
+            })}
+          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: 'var(--bg-card)', padding: '0 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+            <input type="checkbox" id="rep" checked={replicarFuturo} onChange={e => setReplicarFuturo(e.target.checked)} />
+            <label htmlFor="rep">Replicar para os próximos 11 meses</label>
+          </div>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? '⏳ Salvando...' : '✓ Salvar Orçamento'}
+          </button>
+        </div>
+      </div>
+
+      <div className="page-body">
+        <div className="stat-grid" style={{ marginBottom: 24 }}>
+          <div className="stat-card green">
+            <div className="stat-icon green">↑</div>
+            <div className="stat-label">Receitas (Orçadas)</div>
+            <div className="stat-value">{fmt.currency(recSum)}</div>
+          </div>
+          <div className="stat-card red">
+            <div className="stat-icon red">↓</div>
+            <div className="stat-label">Despesas (Orçadas)</div>
+            <div className="stat-value">{fmt.currency(despSum)}</div>
+          </div>
+          <div className={`stat-card ${recSum - despSum >= 0 ? 'blue' : 'red'}`}>
+            <div className={`stat-icon ${recSum - despSum >= 0 ? 'blue' : 'red'}`}>≈</div>
+            <div className="stat-label">Resultado Projetado</div>
+            <div className="stat-value" style={{ color: recSum - despSum >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {fmt.currency(recSum - despSum)}
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Categorias e Contas Analíticas</div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Plano de Contas</th>
+                  <th>Tipo</th>
+                  <th style={{ textAlign: 'right' }}>Média (3 Meses)</th>
+                  <th style={{ width: 200, textAlign: 'right' }}>Valor Orçado (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {planoContas.map(pc => {
+                  const media = calcMedia(pc.id);
+                  return (
+                    <tr key={pc.id}>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
+                      <td style={{ fontWeight: 500 }}>{pc.descricao}</td>
+                      <td>
+                        <span className={`badge ${pc.tipo === 'receita' ? 'badge-blue' : 'badge-red'}`}>
+                          {pc.tipo === 'receita' ? 'Receita' : 'Despesa'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
+                        {fmt.currency(media)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          className="form-control" 
+                          style={{ textAlign: 'right', width: '100%' }}
+                          value={valores[pc.id] || ''}
+                          placeholder="0.00"
+                          onChange={e => setValor(pc.id, Number(e.target.value))}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

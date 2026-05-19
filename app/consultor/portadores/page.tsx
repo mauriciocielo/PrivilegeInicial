@@ -166,13 +166,14 @@ export default function PortadoresPage() {
                 <select className="form-control" value={form.tipo||'conta_corrente'} onChange={e=>setForm(f=>({...f,tipo:e.target.value as Portador['tipo']}))}>
                   <option value="conta_corrente">Conta Corrente</option>
                   <option value="poupanca">Poupança</option>
+                  <option value="aplicacao">Aplicação</option>
                   <option value="caixa">Caixa</option>
                   <option value="cartao">Cartão</option>
                   <option value="outro">Outro</option>
                 </select>
               </div>
             </div>
-            {(form.tipo === 'conta_corrente' || form.tipo === 'poupanca') && (
+            {(form.tipo === 'conta_corrente' || form.tipo === 'poupanca' || form.tipo === 'aplicacao') && (
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Banco</label>

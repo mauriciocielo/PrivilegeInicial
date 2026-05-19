@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { fmt, generatePDF, generateXLS, buildFluxoCaixaData } from '../../../lib/reports';
+import GeminiTips from '../../../components/GeminiTips';
 
 export default function RelatoriosPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -143,29 +144,57 @@ export default function RelatoriosPage() {
     const resultadoLiquido = recOperacionalBruta + liberacoes - emprestimos - investimentos;
 
     if (tipo === 'dre') {
-      const grupos: Record<string, { receita: number; despesa: number; contas: Record<string, { valor: number; tipo: string }> }> = {};
+      const vals = {
+        receita_vendas: 0,
+        impostos: 0,
+        cmv: 0,
+        despesas_fixas: 0,
+        despesas_variaveis: 0,
+        despesas_pessoal: 0,
+        despesas_bancarias: 0,
+        despesas_terceiros: 0,
+        outras_receitas: 0,
+        outras_despesas: 0,
+      };
+
       lancs.forEach(l => {
         const pc = plano.find(p => p.id === l.planoContaId);
         if (!pc) return;
-        const parent = plano.find(p => p.id === pc.parentId);
-        const grupo = parent?.descricao || pc.descricao;
-        if (!grupos[grupo]) grupos[grupo] = { receita: 0, despesa: 0, contas: {} };
-        if (!grupos[grupo].contas[pc.descricao]) grupos[grupo].contas[pc.descricao] = { valor: 0, tipo: l.tipo };
-        grupos[grupo].contas[pc.descricao].valor += l.valor;
-        if (l.tipo === 'receita') grupos[grupo].receita += l.valor;
-        else grupos[grupo].despesa += l.valor;
+        const cat = pc.dreCategoria;
+        if (cat && cat in vals) {
+          vals[cat as keyof typeof vals] += l.valor;
+        } else {
+          if (l.tipo === 'receita') vals.outras_receitas += l.valor;
+          else vals.outras_despesas += l.valor;
+        }
       });
-      const rows: (string | number)[][] = [];
-      Object.entries(grupos).forEach(([grupo, vals]) => {
-        rows.push([grupo, '', vals.receita > 0 ? fmt.currency(vals.receita) : '', vals.despesa > 0 ? fmt.currency(vals.despesa) : '']);
-        Object.entries(vals.contas).forEach(([conta, cv]) => {
-          rows.push([`  └ ${conta}`, cv.tipo === 'receita' ? 'Receita' : 'Despesa', cv.tipo === 'receita' ? fmt.currency(cv.valor) : '', cv.tipo === 'despesa' ? fmt.currency(cv.valor) : '']);
-        });
-      });
+
+      const recLiquida = vals.receita_vendas - vals.impostos;
+      const lucroBruto = recLiquida - vals.cmv;
+      const lucroOperacional = lucroBruto - vals.despesas_fixas - vals.despesas_variaveis - vals.despesas_pessoal - vals.despesas_bancarias - vals.despesas_terceiros;
+      const resultadoFinal = lucroOperacional + vals.outras_receitas - vals.outras_despesas;
+
+      const rows: (string | number)[][] = [
+        ['Receita Total de Vendas', fmt.currency(vals.receita_vendas)],
+        ['(-) Despesas com Impostos', `-${fmt.currency(vals.impostos)}`],
+        ['(=) Receita Líquida', fmt.currency(recLiquida)],
+        ['(-) CMV (Custo da Mercadoria Vendida)', `-${fmt.currency(vals.cmv)}`],
+        ['(=) Lucro Bruto', fmt.currency(lucroBruto)],
+        ['(-) Despesas Fixas', `-${fmt.currency(vals.despesas_fixas)}`],
+        ['(-) Despesas Variáveis', `-${fmt.currency(vals.despesas_variaveis)}`],
+        ['(-) Despesas com Pessoal', `-${fmt.currency(vals.despesas_pessoal)}`],
+        ['(-) Despesas Bancárias', `-${fmt.currency(vals.despesas_bancarias)}`],
+        ['(-) Despesas com Terceiros', `-${fmt.currency(vals.despesas_terceiros)}`],
+        ['(=) Lucro Operacional', fmt.currency(lucroOperacional)],
+        ['(+) Outras Receitas', fmt.currency(vals.outras_receitas)],
+        ['(-) Outras Despesas', `-${fmt.currency(vals.outras_despesas)}`],
+        ['(=) Resultado Líquido Final', fmt.currency(resultadoFinal)],
+      ];
+
       setPreview({ rows, totais: [
-        { label: 'Total Receitas', value: fmt.currency(receitas), color: 'green' },
-        { label: 'Total Despesas', value: fmt.currency(despesas), color: 'red' },
-        { label: 'Resultado Líquido', value: fmt.currency(resultadoLiquido), color: resultadoLiquido >= 0 ? 'green' : 'red' },
+        { label: 'Lucro Bruto', value: fmt.currency(lucroBruto), color: lucroBruto >= 0 ? 'green' : 'red' },
+        { label: 'Lucro Operacional', value: fmt.currency(lucroOperacional), color: lucroOperacional >= 0 ? 'green' : 'red' },
+        { label: 'Resultado Líquido Final', value: fmt.currency(resultadoFinal), color: resultadoFinal >= 0 ? 'green' : 'red' },
       ]});
     } else if (tipo === 'fluxo') {
       const rows: (string | number)[][] = [
@@ -198,7 +227,7 @@ export default function RelatoriosPage() {
 
   const getColumns = () => {
     if (tipo === 'fluxo') return ['Estrutura de Fluxo de Caixa Gerencial', 'Total no Período'];
-    if (tipo === 'dre') return ['Grupo / Conta', 'Tipo', 'Receitas', 'Despesas'];
+    if (tipo === 'dre') return ['Estrutura DRE Gerencial', 'Total no Período'];
     return ['Data', 'Descrição', 'Tipo', 'Plano de Contas', 'Portador', 'Status', 'Valor'];
   };
 
@@ -234,10 +263,11 @@ export default function RelatoriosPage() {
 
   const handlePrint = () => { window.print(); };
 
-  const renderGroupRow = (id: string, group: any) => {
+  const renderGroupRow = (id: string, group: any, totalReceitas: number) => {
     const isExpanded = !!expandedGroups[id];
     const displayVal = group.isDespesa ? `-${fmt.currency(group.total)}` : fmt.currency(group.total);
     const valueColor = group.total > 0 ? (group.isDespesa ? 'var(--red)' : 'var(--green)') : 'var(--text-muted)';
+    const pctV = totalReceitas > 0 && group.total > 0 ? ((group.total / totalReceitas) * 100).toFixed(1) + '%' : '0.0%';
     
     return (
       <div key={id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
@@ -261,7 +291,10 @@ export default function RelatoriosPage() {
             }}>▶</span>
             <span>{group.label}</span>
           </div>
-          <span style={{ color: valueColor, fontWeight: 700 }}>{displayVal}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, minWidth: 40, textAlign: 'right' }}>{pctV}</span>
+            <span style={{ color: valueColor, fontWeight: 700, minWidth: 100, textAlign: 'right' }}>{displayVal}</span>
+          </div>
         </div>
 
         {isExpanded && (
@@ -273,6 +306,7 @@ export default function RelatoriosPage() {
             ) : group.subaccounts.map((sub: any) => {
               const isSubExpanded = !!expandedSubs[sub.id];
               const subVal = group.isDespesa ? `-${fmt.currency(sub.total)}` : fmt.currency(sub.total);
+              const subPctV = totalReceitas > 0 && sub.total > 0 ? ((sub.total / totalReceitas) * 100).toFixed(1) + '%' : '0.0%';
               
               return (
                 <div key={sub.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.02)' }}>
@@ -280,7 +314,7 @@ export default function RelatoriosPage() {
                     onClick={() => setExpandedSubs(prev => ({ ...prev, [sub.id]: !prev[sub.id] }))}
                     style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '10px 20px 10px 38px', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                      padding: '10px 18px 10px 38px', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
                       userSelect: 'none'
                     }}
                     className="accordion-sub-row"
@@ -295,7 +329,10 @@ export default function RelatoriosPage() {
                       }}>▶</span>
                       <span style={{ color: 'var(--text-secondary)' }}>{sub.desc}</span>
                     </div>
-                    <span style={{ fontWeight: 600, color: group.isDespesa ? 'var(--red)' : 'var(--green)' }}>{subVal}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, minWidth: 40, textAlign: 'right' }}>{subPctV}</span>
+                      <span style={{ fontWeight: 600, color: group.isDespesa ? 'var(--red)' : 'var(--green)', minWidth: 100, textAlign: 'right' }}>{subVal}</span>
+                    </div>
                   </div>
 
                   {isSubExpanded && (
@@ -354,6 +391,8 @@ export default function RelatoriosPage() {
       </div>
 
       <div className="page-body">
+        <GeminiTips empresaId={empresaId} />
+
         {/* Config */}
         <div className="card card-sm" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -417,13 +456,13 @@ export default function RelatoriosPage() {
           {tipo === 'fluxo' ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {/* 1. Receitas */}
-              {renderGroupRow('receitas', drilldownData.groups.receitas)}
+              {renderGroupRow('receitas', drilldownData.groups.receitas, drilldownData.groups.receitas.total)}
               
               {/* 2. Custos de Mercadoria */}
-              {renderGroupRow('custos', drilldownData.groups.custos)}
+              {renderGroupRow('custos', drilldownData.groups.custos, drilldownData.groups.receitas.total)}
               
               {/* 3. Despesas */}
-              {renderGroupRow('despesas', drilldownData.groups.despesas)}
+              {renderGroupRow('despesas', drilldownData.groups.despesas, drilldownData.groups.receitas.total)}
               
               {/* 4. Receita Operacional Bruta */}
               <div style={{
@@ -439,13 +478,13 @@ export default function RelatoriosPage() {
               </div>
 
               {/* 5. Liberações Bancárias */}
-              {renderGroupRow('liberacoes', drilldownData.groups.liberacoes)}
+              {renderGroupRow('liberacoes', drilldownData.groups.liberacoes, drilldownData.groups.receitas.total)}
 
               {/* 6. Empréstimos */}
-              {renderGroupRow('emprestimos', drilldownData.groups.emprestimos)}
+              {renderGroupRow('emprestimos', drilldownData.groups.emprestimos, drilldownData.groups.receitas.total)}
 
               {/* 7. Investimentos */}
-              {renderGroupRow('investimentos', drilldownData.groups.investimentos)}
+              {renderGroupRow('investimentos', drilldownData.groups.investimentos, drilldownData.groups.receitas.total)}
 
               {/* 8. Resultado Mensal Líquido */}
               <div style={{
@@ -458,6 +497,27 @@ export default function RelatoriosPage() {
                 <span style={{ color: drilldownData.resultadoLiquido >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
                   {fmt.currency(drilldownData.resultadoLiquido)}
                 </span>
+              </div>
+              
+              {/* Saldos dos Portadores */}
+              <div style={{ marginTop: 20, borderTop: '2px dashed var(--border)', paddingTop: 16 }}>
+                <div style={{ padding: '0 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>
+                  Saldos Finais dos Portadores (Atuais)
+                </div>
+                {store.getPortadores(empresaId).filter(p => p.ativo).map(p => {
+                  const saldo = store.getSaldoPortador(p.id, empresaId);
+                  return (
+                    <div key={p.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '8px 18px', fontSize: 12, color: 'var(--text-secondary)'
+                    }}>
+                      <span>🏦 {p.nome}</span>
+                      <span style={{ fontWeight: 600, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {fmt.currency(saldo)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

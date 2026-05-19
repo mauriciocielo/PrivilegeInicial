@@ -86,17 +86,17 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="login-hint">
-          <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--text-secondary)' }}>Acesso rápido (demo):</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => quickLogin('consultor')}>
-              👔 Consultor
-            </button>
-            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => quickLogin('cliente')}>
-              🏢 Cliente
-            </button>
-          </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>Senha para ambos: <strong>123456</strong></div>
+        <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Um link de recuperação de senha será enviado para o seu e-mail caso ele esteja cadastrado em nossa base.');
+            }}
+            style={{ color: 'var(--primary-color)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}
+          >
+            Esqueceu sua senha? Recuperar acesso
+          </a>
         </div>
       </div>
     </div>

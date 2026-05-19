@@ -15,8 +15,12 @@ export default function LancamentosPage() {
   const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '' });
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
-  const [form, setForm] = useState<Partial<Lancamento>>({});
+  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita'|'despesa'|'transferencia', portadorDestinoId?: string }>({});
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showReclassModal, setShowReclassModal] = useState(false);
+  const [reclassContaId, setReclassContaId] = useState('');
+  const [reclassPortadorId, setReclassPortadorId] = useState('');
 
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
@@ -48,6 +52,7 @@ export default function LancamentosPage() {
   const openNew = () => {
     setEditItem(null);
     setForm({
+      tipoTransacao: 'receita',
       tipo: 'receita',
       status: 'realizado',
       origem: 'manual',
@@ -59,33 +64,56 @@ export default function LancamentosPage() {
 
   const openEdit = (l: Lancamento) => {
     setEditItem(l);
-    setForm({ ...l });
+    setForm({ ...l, tipoTransacao: l.tipo });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
-      alert('Preencha todos os campos obrigatórios.');
-      return;
+    if (form.tipoTransacao === 'transferencia') {
+      if (!form.descricao || !form.valor || !form.portadorId || !form.portadorDestinoId || !form.data) {
+        alert('Preencha todos os campos da transferência.');
+        return;
+      }
+      setSaving(true);
+      await new Promise(r => setTimeout(r, 300));
+      
+      const ts = new Date().toISOString();
+      // Despesa (Saída da Origem)
+      store.saveLancamento({
+        id: uid(), empresaId, data: form.data, descricao: `[Transf. Saída] ${form.descricao}`, valor: Number(form.valor),
+        tipo: 'despesa', planoContaId: 'transf', portadorId: form.portadorId, status: form.status as any, origem: 'manual', createdAt: ts
+      });
+      // Receita (Entrada no Destino)
+      store.saveLancamento({
+        id: uid(), empresaId, data: form.data, descricao: `[Transf. Entrada] ${form.descricao}`, valor: Number(form.valor),
+        tipo: 'receita', planoContaId: 'transf', portadorId: form.portadorDestinoId, status: form.status as any, origem: 'manual', createdAt: ts
+      });
+      
+    } else {
+      if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
+        alert('Preencha todos os campos obrigatórios.');
+        return;
+      }
+      setSaving(true);
+      await new Promise(r => setTimeout(r, 300));
+      const lanc: Lancamento = {
+        id: editItem?.id || uid(),
+        empresaId,
+        data: form.data!,
+        descricao: form.descricao!,
+        valor: Number(form.valor),
+        tipo: form.tipoTransacao as 'receita' | 'despesa',
+        planoContaId: form.planoContaId!,
+        portadorId: form.portadorId!,
+        status: form.status as 'previsto' | 'realizado',
+        numeroDocumento: form.numeroDocumento,
+        observacao: form.observacao,
+        origem: 'manual',
+        createdAt: editItem?.createdAt || new Date().toISOString(),
+      };
+      store.saveLancamento(lanc);
     }
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 300));
-    const lanc: Lancamento = {
-      id: editItem?.id || uid(),
-      empresaId,
-      data: form.data!,
-      descricao: form.descricao!,
-      valor: Number(form.valor),
-      tipo: form.tipo as 'receita' | 'despesa',
-      planoContaId: form.planoContaId!,
-      portadorId: form.portadorId!,
-      status: form.status as 'previsto' | 'realizado',
-      numeroDocumento: form.numeroDocumento,
-      observacao: form.observacao,
-      origem: 'manual',
-      createdAt: editItem?.createdAt || new Date().toISOString(),
-    };
-    store.saveLancamento(lanc);
+    
     setLancamentos(store.getLancamentos(empresaId));
     setShowModal(false);
     setSaving(false);
@@ -95,6 +123,38 @@ export default function LancamentosPage() {
     if (!confirm('Deseja excluir este lançamento?')) return;
     store.deleteLancamento(id);
     setLancamentos(store.getLancamentos(empresaId));
+    setSelectedIds(prev => prev.filter(x => x !== id));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map(l => l.id));
+    }
+  };
+
+  const handleBulkReclassify = () => {
+    if (!reclassContaId && !reclassPortadorId) { alert('Selecione uma conta ou um portador.'); return; }
+    const updated = lancamentos.map(l => {
+      if (selectedIds.includes(l.id)) {
+        return { 
+          ...l, 
+          planoContaId: reclassContaId || l.planoContaId,
+          portadorId: reclassPortadorId || l.portadorId 
+        };
+      }
+      return l;
+    });
+    // save to store
+    updated.filter(l => selectedIds.includes(l.id)).forEach(l => store.saveLancamento(l));
+    setLancamentos(store.getLancamentos(empresaId));
+    setSelectedIds([]);
+    setShowReclassModal(false);
   };
 
   const meses: string[] = [];
@@ -111,7 +171,12 @@ export default function LancamentosPage() {
           <div className="page-title">Lançamentos</div>
           <div className="page-subtitle">{filtered.length} lançamentos encontrados</div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
+          {selectedIds.length > 0 && (
+            <button className="btn btn-secondary" onClick={() => { setReclassContaId(''); setReclassPortadorId(''); setShowReclassModal(true); }}>
+              🔄 Ações em Lote ({selectedIds.length})
+            </button>
+          )}
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Lançamento</button>
         </div>
       </div>
@@ -200,6 +265,13 @@ export default function LancamentosPage() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: 40, textAlign: 'center' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length} 
+                      onChange={toggleSelectAll} 
+                    />
+                  </th>
                   <th>Data</th>
                   <th>Descrição</th>
                   <th>Plano de Contas</th>
@@ -224,7 +296,10 @@ export default function LancamentosPage() {
                   const pc = planoContas.find(p => p.id === l.planoContaId);
                   const port = portadores.find(p => p.id === l.portadorId);
                   return (
-                    <tr key={l.id}>
+                    <tr key={l.id} style={{ background: selectedIds.includes(l.id) ? 'var(--bg-card2)' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
+                      </td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
                       <td style={{ fontWeight: 500, maxWidth: 200 }}>{l.descricao}</td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
@@ -260,16 +335,26 @@ export default function LancamentosPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              {(['receita', 'despesa'] as const).map(t => (
-                <button
-                  key={t}
-                  className={`btn ${form.tipo === t ? (t === 'receita' ? 'btn-success' : 'btn-danger') : 'btn-secondary'}`}
-                  style={{ flex: 1, justifyContent: 'center' }}
-                  onClick={() => setForm(f => ({ ...f, tipo: t }))}
-                >
-                  {t === 'receita' ? '↑ Receita' : '↓ Despesa'}
-                </button>
-              ))}
+              {(['receita', 'despesa', 'transferencia'] as const).map(t => {
+                if (editItem && t === 'transferencia') return null;
+                const isSelected = form.tipoTransacao === t;
+                let colorClass = 'btn-secondary';
+                if (isSelected) {
+                  if (t === 'receita') colorClass = 'btn-success';
+                  else if (t === 'despesa') colorClass = 'btn-danger';
+                  else colorClass = 'btn-primary';
+                }
+                return (
+                  <button
+                    key={t}
+                    className={`btn ${colorClass}`}
+                    style={{ flex: 1, justifyContent: 'center' }}
+                    onClick={() => setForm(f => ({ ...f, tipoTransacao: t }))}
+                  >
+                    {t === 'receita' ? '↑ Receita' : t === 'despesa' ? '↓ Despesa' : '⇄ Transferência'}
+                  </button>
+                )
+              })}
             </div>
 
             <div className="form-row">
@@ -289,17 +374,27 @@ export default function LancamentosPage() {
             </div>
 
             <div className="form-row">
+              {form.tipoTransacao !== 'transferencia' ? (
+                <div className="form-group">
+                  <label className="form-label">Plano de Contas *</label>
+                  <select className="form-control" value={form.planoContaId || ''} onChange={e => setForm(f => ({ ...f, planoContaId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {planoContas.filter(p => p.tipo === form.tipoTransacao).map(p => (
+                      <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Portador Destino *</label>
+                  <select className="form-control" value={form.portadorDestinoId || ''} onChange={e => setForm(f => ({ ...f, portadorDestinoId: e.target.value }))}>
+                    <option value="">Selecione o destino...</option>
+                    {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-group">
-                <label className="form-label">Plano de Contas *</label>
-                <select className="form-control" value={form.planoContaId || ''} onChange={e => setForm(f => ({ ...f, planoContaId: e.target.value }))}>
-                  <option value="">Selecione...</option>
-                  {planoContas.filter(p => p.tipo === form.tipo).map(p => (
-                    <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Portador *</label>
+                <label className="form-label">{form.tipoTransacao === 'transferencia' ? 'Portador Origem *' : 'Portador *'}</label>
                 <select className="form-control" value={form.portadorId || ''} onChange={e => setForm(f => ({ ...f, portadorId: e.target.value }))}>
                   <option value="">Selecione...</option>
                   {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -331,6 +426,42 @@ export default function LancamentosPage() {
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? '⏳ Salvando...' : '✓ Salvar Lançamento'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReclassModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowReclassModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Ações em Lote</h2>
+              <button className="modal-close" onClick={() => setShowReclassModal(false)}>✕</button>
+            </div>
+            <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
+              Você está prestes a alterar <strong>{selectedIds.length}</strong> lançamento(s). Escolha o novo Plano de Contas e/ou Portador para aplicá-los a todos os selecionados. Deixe em branco o que não deseja alterar.
+            </div>
+            <div className="form-group">
+              <label className="form-label">Novo Plano de Contas</label>
+              <select className="form-control" value={reclassContaId} onChange={e => setReclassContaId(e.target.value)}>
+                <option value="">Manter atual...</option>
+                {planoContas.map(p => (
+                  <option key={p.id} value={p.id}>{p.tipo === 'receita' ? '↑' : '↓'} {p.codigo} - {p.descricao}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Transferir para Portador</label>
+              <select className="form-control" value={reclassPortadorId} onChange={e => setReclassPortadorId(e.target.value)}>
+                <option value="">Manter atual...</option>
+                {portadores.map(p => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowReclassModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleBulkReclassify}>🔄 Aplicar Alterações</button>
             </div>
           </div>
         </div>

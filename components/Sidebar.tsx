@@ -16,6 +16,9 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Dashboard', href: '/consultor/dashboard', icon: '📊' },
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: '📝' },
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
+      { label: 'Endividamento', href: '/consultor/endividamento', icon: '⚖️' },
+      { label: 'Indicadores', href: '/consultor/indicadores', icon: '🎯' },
+      { label: 'Orçamento', href: '/consultor/orcamento', icon: '💰' },
     ],
   },
   {
@@ -138,6 +141,9 @@ export default function Sidebar({ role }: { role: 'consultor' | 'cliente' }) {
             <div className="user-role">{role === 'consultor' ? 'Consultor Privilege' : 'Acesso Cliente'}</div>
           </div>
         </div>
+        <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={handleLogout}>
+          🚪 Sair do Sistema
+        </button>
       </div>
     </aside>
   );

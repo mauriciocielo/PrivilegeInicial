@@ -16,6 +16,13 @@ export default function ConsultorDashboard() {
   const [portadoresList, setPortadoresList] = useState<{ nome: string; saldo: number; tipo: string }[]>([]);
   const [lancRecentes, setLancRecentes] = useState<ReturnType<typeof store.getLancamentos>>([]);
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [endividamentos, setEndividamentos] = useState<ReturnType<typeof store.getEndividamentos>>([]);
+  const [totalDivida, setTotalDivida] = useState(0);
+  const [indicador, setIndicador] = useState<ReturnType<typeof store.getIndicadores>[0] | null>(null);
+  const [mesSelecionado, setMesSelecionado] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  });
 
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
@@ -28,11 +35,10 @@ export default function ConsultorDashboard() {
     setResumo(r);
 
     const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
-    const mesAtual = new Date();
-    const lancsMs = lancs.filter(l => {
-      const d = new Date(l.data);
-      return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
-    });
+    
+    // Filter by mesSelecionado
+    const lancsMs = lancs.filter(l => l.data.startsWith(mesSelecionado));
+
     const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
@@ -59,7 +65,14 @@ export default function ConsultorDashboard() {
         .slice(0, 6)
         .map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }))
     );
-  }, []);
+
+    const endivs = store.getEndividamentos(eId);
+    setEndividamentos(endivs);
+    setTotalDivida(endivs.reduce((acc, e) => acc + Math.max(0, e.valorAPagar - e.pagamentoMes), 0));
+
+    const inds = store.getIndicadores(eId);
+    setIndicador(inds.find(i => i.mes === mesSelecionado) || null);
+  }, [mesSelecionado]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
@@ -69,7 +82,15 @@ export default function ConsultorDashboard() {
     return () => window.removeEventListener('empresaChange', handler);
   }, [load]);
 
-  const mesAtualLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const [anoLabel, mesLabel] = mesSelecionado.split('-');
+  const mesAtualLabel = new Date(Number(anoLabel), Number(mesLabel)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const mesesOptions: string[] = [];
+  const hoje = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    mesesOptions.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
 
   return (
     <>
@@ -78,7 +99,19 @@ export default function ConsultorDashboard() {
           <div className="page-title">Dashboard Operacional</div>
           <div className="page-subtitle">{empresa?.razaoSocial} — {mesAtualLabel}</div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: 12 }}>
+          <select 
+            className="form-control" 
+            value={mesSelecionado} 
+            onChange={e => setMesSelecionado(e.target.value)}
+            style={{ width: 160 }}
+          >
+            {mesesOptions.map(m => {
+              const [y, mo] = m.split('-');
+              const d = new Date(Number(y), Number(mo)-1, 1);
+              return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
+            })}
+          </select>
           <a href="/consultor/lancamentos" className="btn btn-primary">
             ＋ Novo Lançamento
           </a>
@@ -118,6 +151,40 @@ export default function ConsultorDashboard() {
             <div className="stat-value">{fmt.currency(totais.portadores)}</div>
             <div className="stat-change up">▲ Todos portadores</div>
           </div>
+          <div className="stat-card" style={{ borderTop: '4px solid #f59e0b', background: 'var(--bg-card)' }}>
+            <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>⚖️</div>
+            <div className="stat-label">Endividamento Ativo</div>
+            <div className="stat-value" style={{ color: '#b45309' }}>{fmt.currency(totalDivida)}</div>
+            <div className="stat-change" style={{ color: '#d97706' }}>Em aberto</div>
+          </div>
+        </div>
+
+        {/* Indicadores de Negócio */}
+        <div className="card" style={{ marginBottom: 24, padding: '16px 20px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ minWidth: 150 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>🎯 Indicadores do Mês</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Acompanhamento manual</div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', gap: 24, borderLeft: '1px solid var(--border)', paddingLeft: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>Faturamento (Realizado)</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)' }}>{fmt.currency(indicador?.faturamento || 0)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Meta: {fmt.currency(empresa?.receitaMensalEstimada || 0)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>Compras (Realizadas)</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--red)' }}>{fmt.currency(indicador?.compras || 0)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Meta: {fmt.currency(empresa?.comprasMensalEstimada || 0)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>Inadimplência</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>{indicador?.inadimplencia || 0}%</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sobre o faturamento</div>
+            </div>
+          </div>
+          {!indicador && (
+            <a href="/consultor/indicadores" className="btn btn-secondary btn-sm" style={{ alignSelf: 'center' }}>＋ Preencher</a>
+          )}
         </div>
 
         {/* Charts Row */}
@@ -222,6 +289,47 @@ export default function ConsultorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Endividamentos List (Se houver) */}
+        {endividamentos.length > 0 && (
+          <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card-header">
+              <div>
+                <div className="card-title">Resumo de Endividamentos</div>
+                <div className="card-subtitle">Contratos e financiamentos em andamento</div>
+              </div>
+              <a href="/consultor/endividamento" className="btn btn-secondary btn-sm">Ver Detalhes →</a>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Banco / Conta</th>
+                    <th>Contrato</th>
+                    <th>Taxa</th>
+                    <th>Faltantes</th>
+                    <th>Parcela</th>
+                    <th style={{ textAlign: 'right' }}>Saldo Devedor Estimado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {endividamentos.slice(0, 5).map(e => (
+                    <tr key={e.id}>
+                      <td style={{ fontWeight: 500 }}>{e.banco}</td>
+                      <td>{e.contrato}</td>
+                      <td>{e.taxa}%</td>
+                      <td>{e.parcelasFaltantes}</td>
+                      <td style={{ color: 'var(--red)' }}>{fmt.currency(e.parcela)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#b45309' }}>
+                        {fmt.currency(Math.max(0, e.valorAPagar - e.pagamentoMes))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Recent Lancamentos */}
         <div className="card">

@@ -33,7 +33,8 @@ export default function UsuariosPage() {
       email: form.email!,
       password: form.newPassword || edit?.password || '123456',
       role: form.role as 'consultor' | 'cliente',
-      empresaIds: form.empresaIds || [],
+      empresaIds: form.role === 'consultor' ? [] : (form.empresaIds || []),
+      receberEmailDiario: !!form.receberEmailDiario,
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveUser(u);
@@ -151,19 +152,36 @@ export default function UsuariosPage() {
                 <input type="password" className="form-control" value={form.newPassword||''} onChange={e=>setForm(f=>({...f,newPassword:e.target.value}))} />
               </div>
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginTop: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)' }}>
+                <input 
+                  type="checkbox" 
+                  checked={!!form.receberEmailDiario} 
+                  onChange={e => setForm(f => ({ ...f, receberEmailDiario: e.target.checked }))} 
+                />
+                Receber diariamente e-mail com informações financeiras
+              </label>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 16 }}>
               <label className="form-label">Empresas Vinculadas</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                {empresas.map(e => {
-                  const checked = (form.empresaIds || []).includes(e.id);
-                  return (
-                    <label key={e.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius-sm)', border:`1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, cursor:'pointer', background: checked ? 'var(--accent-glow)' : 'transparent', fontSize: 13, color: checked ? 'var(--accent-light)' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
-                      <input type="checkbox" style={{display:'none'}} checked={checked} onChange={() => toggleEmpresa(e.id)} />
-                      {checked ? '✓' : '○'} {e.nomeFantasia}
-                    </label>
-                  );
-                })}
-              </div>
+              {form.role === 'consultor' ? (
+                <div style={{ padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  👔 <strong>Consultor:</strong> Possui acesso total ao sistema e a todas as empresas cadastradas.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {empresas.map(e => {
+                    const checked = (form.empresaIds || []).includes(e.id);
+                    return (
+                      <label key={e.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius-sm)', border:`1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, cursor:'pointer', background: checked ? 'var(--accent-glow)' : 'transparent', fontSize: 13, color: checked ? 'var(--accent-light)' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+                        <input type="checkbox" style={{display:'none'}} checked={checked} onChange={() => toggleEmpresa(e.id)} />
+                        {checked ? '✓' : '○'} {e.nomeFantasia}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>

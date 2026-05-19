@@ -53,6 +53,8 @@ export default function EmpresasPage() {
       responsavel: form.responsavel || '',
       email: form.email || '',
       telefone: form.telefone || '',
+      receitaMensalEstimada: Number(form.receitaMensalEstimada) || 0,
+      comprasMensalEstimada: Number(form.comprasMensalEstimada) || 0,
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveEmpresa(emp);
@@ -172,6 +174,16 @@ export default function EmpresasPage() {
               <div className="form-group">
                 <label className="form-label">Telefone</label>
                 <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone||''} onChange={e=>setForm(f=>({...f,telefone:e.target.value}))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Receita Mensal Esperada (R$)</label>
+                <input type="number" step="0.01" className="form-control" value={form.receitaMensalEstimada||0} onChange={e=>setForm(f=>({...f,receitaMensalEstimada:Number(e.target.value)}))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Compras Mensais Esperadas (R$)</label>
+                <input type="number" step="0.01" className="form-control" value={form.comprasMensalEstimada||0} onChange={e=>setForm(f=>({...f,comprasMensalEstimada:Number(e.target.value)}))} />
               </div>
             </div>
             <div className="form-actions">
