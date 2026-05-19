@@ -132,6 +132,8 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
       portadorId: detected.portadorId || portadores[0]?.id || '',
       status: 'realizado',
       origem: 'manual',
+      attachmentName: fileData?.name,
+      attachmentData: fileData?.base64,
       createdAt: new Date().toISOString(),
     };
     store.saveLancamento(item);
@@ -173,7 +175,7 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
             style={{ fontSize: 13, flex: 1 }}
             onKeyDown={e => e.key === 'Enter' && handleParse()}
           />
-          
+
           <input
             type="file"
             accept="image/*,application/pdf"

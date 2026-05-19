@@ -1,10 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
 
 interface GeminiTipsProps {
   empresaId: string;
+  dataIni?: string;
+  dataFim?: string;
+  status?: string;
+  portadorId?: string;
+  contextKey?: string;
 }
 
 interface TipItem {
@@ -13,24 +18,27 @@ interface TipItem {
   text: string;
 }
 
-export default function GeminiTips({ empresaId }: GeminiTipsProps) {
+export default function GeminiTips({ empresaId, dataIni, dataFim, status = 'realizado', portadorId = '', contextKey = '' }: GeminiTipsProps) {
   const [tips, setTips] = useState<TipItem[]>([]);
   const [loading, setLoading] = useState(false);
   const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
-  useEffect(() => {
-    generateTips();
-  }, [empresaId]);
-
-  const generateTips = async () => {
+  const generateTips = useCallback(async () => {
     setLoading(true);
     const e = store.getEmpresas().find(x => x.id === empresaId);
-    const lancs = store.getLancamentos(empresaId).filter(l => l.status === 'realizado');
+    let lancs = store.getLancamentos(empresaId);
+    if (status) lancs = lancs.filter(l => l.status === status);
+    if (portadorId) lancs = lancs.filter(l => l.portadorId === portadorId);
     const mesAtual = new Date();
-    const lancsMs = lancs.filter(l => {
-      const d = new Date(l.data);
-      return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
-    });
+    const periodLabel = dataIni && dataFim
+      ? `${fmt.date(dataIni)} a ${fmt.date(dataFim)}`
+      : mesAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    const lancsMs = dataIni && dataFim
+      ? lancs.filter(l => l.data >= dataIni && l.data <= dataFim)
+      : lancs.filter(l => {
+        const d = new Date(l.data);
+        return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
+      });
 
     const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
@@ -51,7 +59,7 @@ export default function GeminiTips({ empresaId }: GeminiTipsProps) {
       .join(', ');
 
     const prompt = `Você é o robô Privilege AI, assistente contábil e de inteligência financeira de elite do escritório Privilege Consultoria.
-Analise a saúde de fluxo de caixa da empresa "${e?.razaoSocial || 'Cliente'}" no período atual:
+Analise a saúde de fluxo de caixa da empresa "${e?.razaoSocial || 'Cliente'}" no período "${periodLabel}", considerando os filtros atuais da tela:
 - Faturamento (Receitas): R$ ${rec.toLocaleString('pt-BR')}
 - Custos/Despesas Totais: R$ ${desp.toLocaleString('pt-BR')}
 - Margem Líquida Realizada: R$ ${saldo.toLocaleString('pt-BR')}
@@ -156,7 +164,14 @@ Responda em Português do Brasil.`;
     }
     setTips(mockTips);
     setLoading(false);
-  };
+  }, [empresaId, dataIni, dataFim, status, portadorId, contextKey]);
+
+  useEffect(() => {
+    generateTips();
+    const handler = () => generateTips();
+    window.addEventListener('cfDataChange', handler);
+    return () => window.removeEventListener('cfDataChange', handler);
+  }, [generateTips]);
 
   return (
     <div style={{ marginBottom: 28 }}>

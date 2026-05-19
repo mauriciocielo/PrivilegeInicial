@@ -119,7 +119,12 @@ export default function ConsultorDashboard() {
       </div>
 
       <div className="page-body">
-        <GeminiTips empresaId={empresaId} />
+        <GeminiTips
+          empresaId={empresaId}
+          dataIni={`${mesSelecionado}-01`}
+          dataFim={`${mesSelecionado}-${new Date(Number(anoLabel), Number(mesLabel), 0).getDate()}`}
+          contextKey={mesSelecionado}
+        />
         
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>

@@ -391,7 +391,14 @@ export default function RelatoriosPage() {
       </div>
 
       <div className="page-body">
-        <GeminiTips empresaId={empresaId} />
+        <GeminiTips
+          empresaId={empresaId}
+          dataIni={dataIni}
+          dataFim={dataFim}
+          status={statusFiltro}
+          portadorId={portadorFiltro}
+          contextKey={`${tipo}-${dataIni}-${dataFim}-${statusFiltro}-${portadorFiltro}`}
+        />
 
         {/* Config */}
         <div className="card card-sm" style={{ marginBottom: 20 }}>

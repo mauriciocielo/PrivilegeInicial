@@ -11,6 +11,14 @@ export default function EmpresasPage() {
   const [search, setSearch] = useState('');
   const [fetchingCnpj, setFetchingCnpj] = useState(false);
 
+  const inferAtividade = (descricao?: string): Empresa['atividade'] => {
+    const text = (descricao || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (text.includes('industria') || text.includes('fabricacao') || text.includes('confeccao')) return 'Indústria';
+    if (text.includes('comercio') || text.includes('varejista') || text.includes('atacadista')) return 'Comércio';
+    if (text.includes('servico') || text.includes('consultoria') || text.includes('manutencao')) return 'Serviço';
+    return undefined;
+  };
+
   const fetchCnpjData = async () => {
     const rawCnpj = form.cnpj?.replace(/\D/g, '');
     if (!rawCnpj || rawCnpj.length !== 14) {
@@ -19,20 +27,28 @@ export default function EmpresasPage() {
     }
     setFetchingCnpj(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${rawCnpj}`);
-      if (!res.ok) throw new Error('Não foi possível obter dados para este CNPJ.');
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v2/${rawCnpj}`);
+      if (res.status === 404) throw new Error('CNPJ não encontrado na base de dados da Receita Federal.');
+      if (res.status === 429) throw new Error('Limite de consultas excedido. Tente novamente em alguns minutos.');
+      if (!res.ok) throw new Error('O serviço de consulta de CNPJ está temporariamente instável. Preencha manualmente.');
+
       const data = await res.json();
+      const responsavel = data.qsa?.[0]?.nome_socio || data.qsa?.[0]?.nome || data.qsa?.[0]?.nome_representante_legal || '';
+      const atividadeTexto = data.cnae_fiscal_descricao || (data.cnaes && data.cnaes[0]?.descricao) || data.descricao_atividade_principal || data.razao_social;
+      const atividade = inferAtividade(atividadeTexto);
+
       setForm(f => ({
         ...f,
         razaoSocial: data.razao_social || data.nome || '',
         nomeFantasia: data.nome_fantasia || data.fantasia || data.razao_social || data.nome || '',
-        responsavel: data.qsa?.[0]?.nome || '',
+        responsavel,
         email: data.email || '',
         telefone: data.ddd_telefone_1 || data.telefone || '',
+        atividade: atividade || f.atividade,
       }));
     } catch (err) {
       console.error(err);
-      alert('Erro ao buscar dados na Receita Federal. O CNPJ pode ser inválido ou o serviço está temporariamente instável. Preencha manualmente.');
+      alert(err instanceof Error ? err.message : 'Erro inesperado ao buscar dados do CNPJ.');
     } finally {
       setFetchingCnpj(false);
     }
@@ -53,6 +69,7 @@ export default function EmpresasPage() {
       responsavel: form.responsavel || '',
       email: form.email || '',
       telefone: form.telefone || '',
+      atividade: form.atividade,
       receitaMensalEstimada: Number(form.receitaMensalEstimada) || 0,
       comprasMensalEstimada: Number(form.comprasMensalEstimada) || 0,
       createdAt: edit?.createdAt || new Date().toISOString(),
@@ -103,6 +120,7 @@ export default function EmpresasPage() {
                   <th>Nome Fantasia</th>
                   <th>CNPJ</th>
                   <th>Responsável</th>
+                  <th>Atividade</th>
                   <th>Contato</th>
                   <th>Ações</th>
                 </tr>
@@ -114,6 +132,7 @@ export default function EmpresasPage() {
                     <td>{e.nomeFantasia}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.cnpj}</td>
                     <td>{e.responsavel || '-'}</td>
+                    <td>{e.atividade ? <span className="badge badge-blue">{e.atividade}</span> : '-'}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{e.email}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -124,7 +143,7 @@ export default function EmpresasPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">🏢</div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
+                  <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">🏢</div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
                 )}
               </tbody>
             </table>
@@ -142,18 +161,18 @@ export default function EmpresasPage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Razão Social *</label>
-                <input className="form-control" value={form.razaoSocial||''} onChange={e=>setForm(f=>({...f,razaoSocial:e.target.value}))} />
+                <input className="form-control" value={form.razaoSocial || ''} onChange={e => setForm(f => ({ ...f, razaoSocial: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">Nome Fantasia</label>
-                <input className="form-control" value={form.nomeFantasia||''} onChange={e=>setForm(f=>({...f,nomeFantasia:e.target.value}))} />
+                <input className="form-control" value={form.nomeFantasia || ''} onChange={e => setForm(f => ({ ...f, nomeFantasia: e.target.value }))} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">CNPJ *</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="form-control" placeholder="Apenas números (14 dígitos)" value={form.cnpj||''} onChange={e=>setForm(f=>({...f,cnpj:e.target.value}))} />
+                  <input className="form-control" placeholder="Apenas números (14 dígitos)" value={form.cnpj || ''} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} />
                   {!edit && (
                     <button type="button" className="btn btn-secondary" onClick={fetchCnpjData} disabled={fetchingCnpj} style={{ padding: '8px 12px', fontSize: 12 }}>
                       {fetchingCnpj ? '⏳' : '🔍 Buscar Receita'}
@@ -163,27 +182,38 @@ export default function EmpresasPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Responsável</label>
-                <input className="form-control" value={form.responsavel||''} onChange={e=>setForm(f=>({...f,responsavel:e.target.value}))} />
+                <input className="form-control" value={form.responsavel || ''} onChange={e => setForm(f => ({ ...f, responsavel: e.target.value }))} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">E-mail</label>
-                <input type="email" className="form-control" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} />
+                <label className="form-label">Atividade da Empresa</label>
+                <select className="form-control" value={form.atividade || ''} onChange={e => setForm(f => ({ ...f, atividade: e.target.value as Empresa['atividade'] }))}>
+                  <option value="">Selecione...</option>
+                  <option value="Comércio">Comércio</option>
+                  <option value="Serviço">Serviço</option>
+                  <option value="Indústria">Indústria</option>
+                </select>
               </div>
               <div className="form-group">
+                <label className="form-label">E-mail</label>
+                <input type="email" className="form-control" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
                 <label className="form-label">Telefone</label>
-                <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone||''} onChange={e=>setForm(f=>({...f,telefone:e.target.value}))} />
+                <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone || ''} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Receita Mensal Esperada (R$)</label>
-                <input type="number" step="0.01" className="form-control" value={form.receitaMensalEstimada||0} onChange={e=>setForm(f=>({...f,receitaMensalEstimada:Number(e.target.value)}))} />
+                <input type="number" step="0.01" className="form-control" value={form.receitaMensalEstimada || 0} onChange={e => setForm(f => ({ ...f, receitaMensalEstimada: Number(e.target.value) }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">Compras Mensais Esperadas (R$)</label>
-                <input type="number" step="0.01" className="form-control" value={form.comprasMensalEstimada||0} onChange={e=>setForm(f=>({...f,comprasMensalEstimada:Number(e.target.value)}))} />
+                <input type="number" step="0.01" className="form-control" value={form.comprasMensalEstimada || 0} onChange={e => setForm(f => ({ ...f, comprasMensalEstimada: Number(e.target.value) }))} />
               </div>
             </div>
             <div className="form-actions">

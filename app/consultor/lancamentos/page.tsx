@@ -1,26 +1,30 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Lancamento, PlanoConta, Portador } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import { uid } from '../../../lib/store';
 
-type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string };
+type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean };
 
 export default function LancamentosPage() {
   const [empresaId, setEmpresaId] = useState('e1');
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '' });
+  const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false });
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
-  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita'|'despesa'|'transferencia', portadorDestinoId?: string }>({});
+  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string }>({});
+  const [contaSearch, setContaSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showReclassModal, setShowReclassModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'reclassificar' | 'transferir'>('reclassificar');
   const [reclassContaId, setReclassContaId] = useState('');
+  const [reclassContaSearch, setReclassContaSearch] = useState('');
   const [reclassPortadorId, setReclassPortadorId] = useState('');
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
 
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
@@ -28,6 +32,13 @@ export default function LancamentosPage() {
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
   }, []);
+
+  const matchesConta = (conta: PlanoConta, search: string) => {
+    const term = search.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    if (!term) return true;
+    const text = `${conta.codigo} ${conta.descricao}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return text.includes(term);
+  };
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
@@ -37,20 +48,27 @@ export default function LancamentosPage() {
     return () => window.removeEventListener('empresaChange', handler);
   }, [load]);
 
-  const filtered = lancamentos.filter(l => {
-    if (filtros.tipo && l.tipo !== filtros.tipo) return false;
-    if (filtros.status && l.status !== filtros.status) return false;
-    if (filtros.portadorId && l.portadorId !== filtros.portadorId) return false;
-    if (filtros.search && !l.descricao.toLowerCase().includes(filtros.search.toLowerCase())) return false;
-    if (filtros.mes && !l.data.startsWith(filtros.mes)) return false;
-    return true;
-  }).sort((a, b) => b.data.localeCompare(a.data));
+  const filtered = useMemo(() => {
+    return lancamentos.filter(l => {
+      if (filtros.tipo && l.tipo !== filtros.tipo) return false;
+      if (filtros.status && l.status !== filtros.status) return false;
+      if (filtros.portadorId && l.portadorId !== filtros.portadorId) return false;
+      if (filtros.search && !l.descricao.toLowerCase().includes(filtros.search.toLowerCase())) return false;
+      if (filtros.mes && !l.data.startsWith(filtros.mes)) return false;
+      if (filtros.semPlano) {
+        const hasPlan = planoContas.some(pc => pc.id === l.planoContaId);
+        if (hasPlan && l.planoContaId !== 'transf') return false;
+      }
+      return true;
+    }).sort((a, b) => b.data.localeCompare(a.data));
+  }, [lancamentos, filtros, planoContas]);
 
-  const totRec = filtered.filter(l => l.tipo === 'receita' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0);
-  const totDesp = filtered.filter(l => l.tipo === 'despesa' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0);
+  const totRec = useMemo(() => filtered.filter(l => l.tipo === 'receita' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0), [filtered]);
+  const totDesp = useMemo(() => filtered.filter(l => l.tipo === 'despesa' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0), [filtered]);
 
   const openNew = () => {
     setEditItem(null);
+    setContaSearch('');
     setForm({
       tipoTransacao: 'receita',
       tipo: 'receita',
@@ -64,6 +82,7 @@ export default function LancamentosPage() {
 
   const openEdit = (l: Lancamento) => {
     setEditItem(l);
+    setContaSearch('');
     setForm({ ...l, tipoTransacao: l.tipo });
     setShowModal(true);
   };
@@ -76,7 +95,7 @@ export default function LancamentosPage() {
       }
       setSaving(true);
       await new Promise(r => setTimeout(r, 300));
-      
+
       const ts = new Date().toISOString();
       // Despesa (Saída da Origem)
       store.saveLancamento({
@@ -88,7 +107,7 @@ export default function LancamentosPage() {
         id: uid(), empresaId, data: form.data, descricao: `[Transf. Entrada] ${form.descricao}`, valor: Number(form.valor),
         tipo: 'receita', planoContaId: 'transf', portadorId: form.portadorDestinoId, status: form.status as any, origem: 'manual', createdAt: ts
       });
-      
+
     } else {
       if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
         alert('Preencha todos os campos obrigatórios.');
@@ -108,12 +127,14 @@ export default function LancamentosPage() {
         status: form.status as 'previsto' | 'realizado',
         numeroDocumento: form.numeroDocumento,
         observacao: form.observacao,
+        attachmentName: form.attachmentName,
+        attachmentData: form.attachmentData,
         origem: 'manual',
         createdAt: editItem?.createdAt || new Date().toISOString(),
       };
       store.saveLancamento(lanc);
     }
-    
+
     setLancamentos(store.getLancamentos(empresaId));
     setShowModal(false);
     setSaving(false);
@@ -130,6 +151,17 @@ export default function LancamentosPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      setForm(f => ({ ...f, attachmentName: file.name, attachmentData: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.length === filtered.length) {
       setSelectedIds([]);
@@ -138,31 +170,73 @@ export default function LancamentosPage() {
     }
   };
 
+  const selectMissing = () => {
+    const ids = filtered.filter(l => !l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId)).map(l => l.id);
+    setSelectedIds(ids);
+  };
+
   const handleBulkReclassify = () => {
+    if (bulkMode === 'transferir') {
+      if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
+      if (!transferDate) { alert('Informe a data da transferência.'); return; }
+      const ts = new Date().toISOString();
+      const newLancamentos: Lancamento[] = [];
+      lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
+        if (l.portadorId === reclassPortadorId) return;
+        newLancamentos.push({
+          id: uid(),
+          empresaId,
+          data: transferDate,
+          descricao: `[Transf. Saída] ${l.descricao}`,
+          valor: Number(l.valor),
+          tipo: 'despesa', planoContaId: 'transf', portadorId: l.portadorId,
+          status: 'realizado', origem: 'manual', createdAt: ts,
+        });
+        newLancamentos.push({
+          id: uid(),
+          empresaId,
+          data: transferDate,
+          descricao: `[Transf. Entrada] ${l.descricao}`,
+          valor: Number(l.valor),
+          tipo: 'receita', planoContaId: 'transf', portadorId: reclassPortadorId,
+          status: 'realizado', origem: 'manual', createdAt: ts,
+        });
+      });
+      store.saveLancamentos(newLancamentos);
+      setLancamentos(store.getLancamentos(empresaId));
+      setSelectedIds([]);
+      setShowReclassModal(false);
+      return;
+    }
+
     if (!reclassContaId && !reclassPortadorId) { alert('Selecione uma conta ou um portador.'); return; }
-    const updated = lancamentos.map(l => {
-      if (selectedIds.includes(l.id)) {
-        return { 
-          ...l, 
-          planoContaId: reclassContaId || l.planoContaId,
-          portadorId: reclassPortadorId || l.portadorId 
-        };
-      }
-      return l;
-    });
-    // save to store
-    updated.filter(l => selectedIds.includes(l.id)).forEach(l => store.saveLancamento(l));
+    const updatedItems = lancamentos
+      .filter(l => selectedIds.includes(l.id))
+      .map(l => ({
+        ...l,
+        planoContaId: reclassContaId || l.planoContaId,
+        portadorId: reclassPortadorId || l.portadorId
+      }));
+
+    store.saveLancamentos(updatedItems);
     setLancamentos(store.getLancamentos(empresaId));
     setSelectedIds([]);
     setShowReclassModal(false);
   };
 
-  const meses: string[] = [];
-  const hoje = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-    meses.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-  }
+  const meses = useMemo(() => {
+    const list: string[] = [];
+    const hoje = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return list;
+  }, []);
+
+  const modalPlanoContas = useMemo(() => {
+    return planoContas.filter(p => p.tipo === form.tipoTransacao && matchesConta(p, contaSearch));
+  }, [planoContas, form.tipoTransacao, contaSearch]);
 
   return (
     <>
@@ -172,10 +246,18 @@ export default function LancamentosPage() {
           <div className="page-subtitle">{filtered.length} lançamentos encontrados</div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary" onClick={selectMissing} title="Selecionar todos os lançamentos sem plano de contas configurado">
+            🎯 Selecionar s/ Plano
+          </button>
           {selectedIds.length > 0 && (
-            <button className="btn btn-secondary" onClick={() => { setReclassContaId(''); setReclassPortadorId(''); setShowReclassModal(true); }}>
-              🔄 Ações em Lote ({selectedIds.length})
-            </button>
+            <>
+              <button className="btn btn-secondary" onClick={() => { setBulkMode('reclassificar'); setReclassContaId(''); setReclassContaSearch(''); setReclassPortadorId(''); setTransferDate(new Date().toISOString().split('T')[0]); setShowReclassModal(true); }}>
+                🔄 Ações em Lote ({selectedIds.length})
+              </button>
+              <button className="btn btn-primary" onClick={() => { setBulkMode('transferir'); setReclassContaId(''); setReclassContaSearch(''); setReclassPortadorId(''); setTransferDate(new Date().toISOString().split('T')[0]); setShowReclassModal(true); }}>
+                ⇄ Transferir em Lote
+              </button>
+            </>
           )}
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Lançamento</button>
         </div>
@@ -226,7 +308,7 @@ export default function LancamentosPage() {
                 <option value="">Todos os meses</option>
                 {meses.map(m => {
                   const [y, mo] = m.split('-');
-                  const d = new Date(Number(y), Number(mo)-1, 1);
+                  const d = new Date(Number(y), Number(mo) - 1, 1);
                   return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
                 })}
               </select>
@@ -251,8 +333,12 @@ export default function LancamentosPage() {
                 {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
-            {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes) && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setFiltros({ tipo:'',status:'',portadorId:'',search:'',mes:'' })}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
+              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>Sem Plano</label>
+            </div>
+            {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano) && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false })}>
                 ✕ Limpar
               </button>
             )}
@@ -266,10 +352,10 @@ export default function LancamentosPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40, textAlign: 'center' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={filtered.length > 0 && selectedIds.length === filtered.length} 
-                      onChange={toggleSelectAll} 
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={toggleSelectAll}
                     />
                   </th>
                   <th>Data</th>
@@ -301,7 +387,19 @@ export default function LancamentosPage() {
                         <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
-                      <td style={{ fontWeight: 500, maxWidth: 200 }}>{l.descricao}</td>
+                      <td style={{ fontWeight: 500, maxWidth: 200 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {l.descricao}
+                          {l.attachmentData && (
+                            <a
+                              href={`data:application/octet-stream;base64,${l.attachmentData}`}
+                              download={l.attachmentName}
+                              title={`Anexo: ${l.attachmentName}`}
+                              style={{ textDecoration: 'none', fontSize: 14 }}
+                            >📎</a>
+                          )}
+                        </div>
+                      </td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
                       <td style={{ fontSize: 12 }}>{port?.nome || '-'}</td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
@@ -377,9 +475,16 @@ export default function LancamentosPage() {
               {form.tipoTransacao !== 'transferencia' ? (
                 <div className="form-group">
                   <label className="form-label">Plano de Contas *</label>
+                  <input
+                    className="form-control"
+                    placeholder="Pesquisar por código ou descrição..."
+                    value={contaSearch}
+                    onChange={e => setContaSearch(e.target.value)}
+                    style={{ marginBottom: 8 }}
+                  />
                   <select className="form-control" value={form.planoContaId || ''} onChange={e => setForm(f => ({ ...f, planoContaId: e.target.value }))}>
                     <option value="">Selecione...</option>
-                    {planoContas.filter(p => p.tipo === form.tipoTransacao).map(p => (
+                    {modalPlanoContas.map(p => (
                       <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
                     ))}
                   </select>
@@ -405,7 +510,7 @@ export default function LancamentosPage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Status</label>
-                <select className="form-control" value={form.status || 'realizado'} onChange={e => setForm(f => ({ ...f, status: e.target.value as 'realizado'|'previsto' }))}>
+                <select className="form-control" value={form.status || 'realizado'} onChange={e => setForm(f => ({ ...f, status: e.target.value as 'realizado' | 'previsto' }))}>
                   <option value="realizado">Realizado</option>
                   <option value="previsto">Previsto</option>
                 </select>
@@ -419,6 +524,14 @@ export default function LancamentosPage() {
             <div className="form-group">
               <label className="form-label">Observação</label>
               <textarea className="form-control" placeholder="Observações adicionais..." value={form.observacao || ''} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Comprovante / Anexo</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="file" className="form-control" onChange={handleFileChange} style={{ fontSize: 12 }} />
+                {form.attachmentName && <span style={{ fontSize: 11, color: 'var(--green)' }}>✓ {form.attachmentName}</span>}
+              </div>
             </div>
 
             <div className="form-actions">
@@ -441,7 +554,7 @@ export default function LancamentosPage() {
             <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
               Você está prestes a alterar <strong>{selectedIds.length}</strong> lançamento(s). Escolha o novo Plano de Contas e/ou Portador para aplicá-los a todos os selecionados. Deixe em branco o que não deseja alterar.
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ display: bulkMode === 'transferir' ? 'none' : undefined }}>
               <label className="form-label">Novo Plano de Contas</label>
               <select className="form-control" value={reclassContaId} onChange={e => setReclassContaId(e.target.value)}>
                 <option value="">Manter atual...</option>
@@ -451,9 +564,9 @@ export default function LancamentosPage() {
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Transferir para Portador</label>
+              <label className="form-label">{bulkMode === 'transferir' ? 'Portador Destino' : 'Transferir para Portador'}</label>
               <select className="form-control" value={reclassPortadorId} onChange={e => setReclassPortadorId(e.target.value)}>
-                <option value="">Manter atual...</option>
+                <option value="">{bulkMode === 'transferir' ? 'Selecione o destino...' : 'Manter atual...'}</option>
                 {portadores.map(p => (
                   <option key={p.id} value={p.id}>{p.nome}</option>
                 ))}

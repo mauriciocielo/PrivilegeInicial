@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { store } from '../../lib/store';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,14 +35,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <svg viewBox="0 0 100 100" width="64" height="64">
-            <circle cx="50" cy="50" r="46" fill="#f8fafc" />
-            <rect x="36" y="44" width="8" height="24" rx="1" fill="#600000" />
-            <rect x="49" y="33" width="8" height="35" rx="1" fill="#600000" />
-            <rect x="62" y="22" width="8" height="46" rx="1" fill="#600000" />
-            <path d="M 28 72 L 40 55 L 49 60 L 76 26" fill="none" stroke="#600000" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M 66 26 L 76 26 L 76 36" fill="none" stroke="#600000" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <BrandLogo size={72} showText={false} />
         </div>
         <h1 className="login-title" style={{ letterSpacing: '4px', textTransform: 'uppercase', fontSize: '22px', fontWeight: 800 }}>PRIVILEGE</h1>
         <p className="login-sub">Consultoria Financeira • Fluxo de Caixa</p>

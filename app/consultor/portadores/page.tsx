@@ -34,10 +34,10 @@ export default function PortadoresPage() {
 
   const openNew = () => {
     setEdit(null);
-    setForm({ tipo: 'conta_corrente', saldoInicial: 0, ativo: true, empresaId });
+    setForm({ tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: new Date().toISOString().split('T')[0], ativo: true, empresaId }); // Always set a default date for new
     setShowModal(true);
   };
-  const openEdit = (p: Portador) => { setEdit(p); setForm({ ...p }); setShowModal(true); };
+  const openEdit = (p: Portador) => { setEdit(p); setForm({ ...p, saldoInicialData: p.saldoInicialData || new Date().toISOString().split('T')[0] }); setShowModal(true); }; // Ensure date is set for existing
 
   const handleSave = () => {
     if (!form.nome) { alert('Informe o nome do portador.'); return; }
@@ -48,6 +48,7 @@ export default function PortadoresPage() {
       banco: form.banco,
       agencia: form.agencia,
       conta: form.conta,
+      saldoInicialData: form.saldoInicialData,
       saldoInicial: Number(form.saldoInicial) || 0,
       ativo: form.ativo !== false,
       empresaId,
@@ -126,7 +127,7 @@ export default function PortadoresPage() {
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                         {p.agencia ? `${p.agencia} / ${p.conta}` : '-'}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt.currency(p.saldoInicial)}</td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt.currency(p.saldoInicial)} ({fmt.date(p.saldoInicialData || '')})</td>
                       <td style={{ fontWeight: 700, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(saldo)}</td>
                       <td>
                         <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span>
@@ -159,11 +160,11 @@ export default function PortadoresPage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Nome *</label>
-                <input className="form-control" placeholder="Ex: Banco do Brasil CC" value={form.nome||''} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} />
+                <input className="form-control" placeholder="Ex: Banco do Brasil CC" value={form.nome || ''} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">Tipo</label>
-                <select className="form-control" value={form.tipo||'conta_corrente'} onChange={e=>setForm(f=>({...f,tipo:e.target.value as Portador['tipo']}))}>
+                <select className="form-control" value={form.tipo || 'conta_corrente'} onChange={e => setForm(f => ({ ...f, tipo: e.target.value as Portador['tipo'] }))}>
                   <option value="conta_corrente">Conta Corrente</option>
                   <option value="poupanca">Poupança</option>
                   <option value="aplicacao">Aplicação</option>
@@ -177,21 +178,25 @@ export default function PortadoresPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Banco</label>
-                  <input className="form-control" placeholder="Ex: Banco do Brasil" value={form.banco||''} onChange={e=>setForm(f=>({...f,banco:e.target.value}))} />
+                  <input className="form-control" placeholder="Ex: Banco do Brasil" value={form.banco || ''} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Agência</label>
-                  <input className="form-control" placeholder="0000-0" value={form.agencia||''} onChange={e=>setForm(f=>({...f,agencia:e.target.value}))} />
+                  <input className="form-control" placeholder="0000-0" value={form.agencia || ''} onChange={e => setForm(f => ({ ...f, agencia: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Conta</label>
-                  <input className="form-control" placeholder="00000-0" value={form.conta||''} onChange={e=>setForm(f=>({...f,conta:e.target.value}))} />
+                  <input className="form-control" placeholder="00000-0" value={form.conta || ''} onChange={e => setForm(f => ({ ...f, conta: e.target.value }))} />
                 </div>
               </div>
             )}
             <div className="form-group">
               <label className="form-label">Saldo Inicial (R$)</label>
-              <input type="number" step="0.01" className="form-control" value={form.saldoInicial||0} onChange={e=>setForm(f=>({...f,saldoInicial:parseFloat(e.target.value)}))} />
+              <input type="number" step="0.01" className="form-control" value={form.saldoInicial || 0} onChange={e => setForm(f => ({ ...f, saldoInicial: parseFloat(e.target.value) }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data do Saldo Inicial</label>
+              <input type="date" className="form-control" value={form.saldoInicialData || new Date().toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, saldoInicialData: e.target.value }))} />
             </div>
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>

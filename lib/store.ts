@@ -22,6 +22,7 @@ export interface Empresa {
   responsavel: string;
   email: string;
   telefone: string;
+  atividade?: 'Comércio' | 'Serviço' | 'Indústria';
   receitaMensalEstimada?: number;
   comprasMensalEstimada?: number;
   createdAt: string;
@@ -47,6 +48,7 @@ export interface Portador {
   agencia?: string;
   conta?: string;
   saldoInicial: number;
+  saldoInicialData?: string;
   ativo: boolean;
   empresaId: string;
 }
@@ -100,9 +102,14 @@ export interface Lancamento {
   origem: 'manual' | 'ofx';
   ofxId?: string;
   createdAt: string;
+  attachmentName?: string;
+  attachmentData?: string; // Conteúdo em Base64
 }
 
 // ---- Defaults ----
+const STORAGE_VERSION_KEY = 'cf_storage_version';
+const STORAGE_VERSION = '5';
+
 const DEFAULT_USERS: User[] = [
   {
     id: 'u1',
@@ -133,6 +140,7 @@ const DEFAULT_EMPRESAS: Empresa[] = [
     responsavel: 'João Silva',
     email: 'contato@techsol.com',
     telefone: '(11) 99999-0001',
+    atividade: 'Serviço',
     createdAt: new Date().toISOString(),
   },
   {
@@ -143,6 +151,7 @@ const DEFAULT_EMPRESAS: Empresa[] = [
     responsavel: 'Maria Santos',
     email: 'contato@combrasil.com',
     telefone: '(11) 99999-0002',
+    atividade: 'Comércio',
     createdAt: new Date().toISOString(),
   },
 ];
@@ -287,23 +296,23 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
 ];
 
 const DEFAULT_PORTADORES: Portador[] = [
-  { id: 'p1', nome: 'Caixa Geral', tipo: 'caixa', saldoInicial: 5000, ativo: true, empresaId: 'e1' },
-  { id: 'p2', nome: 'Banco do Brasil CC', tipo: 'conta_corrente', banco: 'Banco do Brasil', agencia: '1234-5', conta: '00001-2', saldoInicial: 50000, ativo: true, empresaId: 'e1' },
-  { id: 'p3', nome: 'Itaú Poupança', tipo: 'poupanca', banco: 'Itaú', agencia: '5678-9', conta: '00002-3', saldoInicial: 20000, ativo: true, empresaId: 'e1' },
-  { id: 'p4', nome: 'Cartão Corporativo', tipo: 'cartao', saldoInicial: 0, ativo: true, empresaId: 'e1' },
+  { id: 'p1', nome: 'Caixa Geral', tipo: 'caixa', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
+  { id: 'p2', nome: 'Banco do Brasil CC', tipo: 'conta_corrente', banco: 'Banco do Brasil', agencia: '1234-5', conta: '00001-2', saldoInicial: 50000, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
+  { id: 'p3', nome: 'Itaú Poupança', tipo: 'poupanca', banco: 'Itaú', agencia: '5678-9', conta: '00002-3', saldoInicial: 20000, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
+  { id: 'p4', nome: 'Cartão Corporativo', tipo: 'cartao', saldoInicial: 0, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
 ];
 
 function gerarLancamentos(): Lancamento[] {
   const lancamentos: Lancamento[] = [];
   const hoje = new Date();
-  
+
   const receitas = [
     { desc: 'Recebimento Pix - Venda Óculos', valor: 450, planoId: 'pc1_1_3' },
     { desc: 'Recebimento Cartão de Crédito - Parcelas', valor: 8500, planoId: 'pc1_1_2' },
     { desc: 'Recebimento Cheque - Venda Balcão', valor: 1200, planoId: 'pc1_1_1' },
     { desc: 'Recebimento Pix - Consulta Opto', valor: 250, planoId: 'pc1_1_3' },
   ];
-  
+
   const despesas = [
     { desc: 'Pagamento Lentes Essilor', valor: 3500, planoId: 'pc2_1_2' },
     { desc: 'Aluguel Loja Central', valor: 2500, planoId: 'pc3_1_17' },
@@ -356,7 +365,11 @@ function gerarLancamentos(): Lancamento[] {
 }
 
 // ---- Store Class ----
+type StoredRecord = { id: string };
+
 class DataStore {
+  private initialized = false;
+
   private get<T>(key: string, fallback: T): T {
     if (typeof window === 'undefined') return fallback;
     const raw = localStorage.getItem(key);
@@ -364,21 +377,117 @@ class DataStore {
     try { return JSON.parse(raw) as T; } catch { return fallback; }
   }
 
-  private set(key: string, value: unknown) {
+  private set(key: string, value: unknown, silent = false) {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(value));
+    if (!silent) window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key } }));
   }
 
   private init() {
-    if (typeof window === 'undefined') return;
-    if (!localStorage.getItem('cf_initialized_v3')) {
-      this.set('cf_users', DEFAULT_USERS);
-      this.set('cf_empresas', DEFAULT_EMPRESAS);
-      this.set('cf_plano_contas', DEFAULT_PLANO_CONTAS);
-      this.set('cf_portadores', DEFAULT_PORTADORES);
-      this.set('cf_lancamentos', gerarLancamentos());
-      this.set('cf_initialized_v3', true);
+    if (typeof window === 'undefined' || this.initialized) return;
+    this.initialized = true;
+
+    const hasAnyData = [
+      'cf_users',
+      'cf_empresas',
+      'cf_plano_contas',
+      'cf_portadores',
+      'cf_lancamentos',
+    ].some(key => localStorage.getItem(key));
+
+    if (!hasAnyData) {
+      this.seedDatabase();
+      return;
     }
+
+    this.ensureRequiredCollections();
+
+    if (localStorage.getItem(STORAGE_VERSION_KEY) !== STORAGE_VERSION) {
+      this.migrateDatabase();
+    }
+  }
+
+  private seedDatabase() {
+    // Usa silent=true para evitar disparar eventos durante a carga inicial
+    this.set('cf_users', DEFAULT_USERS, true);
+    this.set('cf_empresas', DEFAULT_EMPRESAS, true);
+    this.set('cf_plano_contas', DEFAULT_PLANO_CONTAS, true);
+    this.set('cf_portadores', DEFAULT_PORTADORES, true);
+    this.set('cf_lancamentos', gerarLancamentos(), true);
+    this.set('cf_endividamentos', [], true);
+    this.set('cf_indicadores', [], true);
+    this.set('cf_orcamentos', [], true);
+    this.set('cf_initialized_v3', true, true);
+    this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
+  }
+
+  private ensureRequiredCollections() {
+    if (!localStorage.getItem('cf_users')) this.set('cf_users', DEFAULT_USERS);
+    if (!localStorage.getItem('cf_empresas')) this.set('cf_empresas', DEFAULT_EMPRESAS);
+    if (!localStorage.getItem('cf_plano_contas')) this.set('cf_plano_contas', DEFAULT_PLANO_CONTAS);
+    if (!localStorage.getItem('cf_portadores')) this.set('cf_portadores', DEFAULT_PORTADORES);
+    if (!localStorage.getItem('cf_lancamentos')) this.set('cf_lancamentos', gerarLancamentos());
+    if (!localStorage.getItem('cf_endividamentos')) this.set('cf_endividamentos', []);
+    if (!localStorage.getItem('cf_indicadores')) this.set('cf_indicadores', []);
+    if (!localStorage.getItem('cf_orcamentos')) this.set('cf_orcamentos', []);
+  }
+
+  private mergeDefaults<T extends StoredRecord>(current: T[], defaults: T[]): T[] {
+    const currentById = new Map(current.map(item => [item.id, item]));
+    const defaultById = new Map(defaults.map(item => [item.id, item]));
+
+    const merged = current.map(item => {
+      const defaultItem = defaultById.get(item.id);
+      return defaultItem ? { ...defaultItem, ...item } : item;
+    });
+
+    defaults.forEach(item => {
+      if (!currentById.has(item.id)) merged.push(item);
+    });
+
+    return merged;
+  }
+
+  private syncCollection<T extends StoredRecord>(key: string, defaults: T[]) {
+    const current = this.get<T[]>(key, defaults);
+    const merged = this.mergeDefaults(current, defaults);
+
+    if (JSON.stringify(current) !== JSON.stringify(merged)) {
+      this.set(key, merged);
+    }
+  }
+
+  private migrateDatabase() {
+    this.syncCollection('cf_users', DEFAULT_USERS);
+    this.syncCollection('cf_empresas', DEFAULT_EMPRESAS);
+    this.syncCollection('cf_plano_contas', DEFAULT_PLANO_CONTAS);
+    this.syncCollection('cf_portadores', DEFAULT_PORTADORES);
+
+    const users = this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
+    this.set('cf_users', users);
+    this.set('cf_initialized_v3', true);
+    this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
+  }
+
+  private withMauricioPassword(users: User[]): User[] {
+    let changed = false;
+    const updatedUsers = users.map(user => {
+      const userText = `${user.name} ${user.email}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+      if (userText.includes('mauricio') && user.password !== '123456') {
+        changed = true;
+        return { ...user, password: '123456' };
+      }
+
+      return user;
+    });
+
+    // Não dispara evento aqui para evitar loop infinito em componentes que ouvem cfDataChange
+    if (changed) this.set('cf_users', updatedUsers, true);
+    return updatedUsers;
   }
 
   // Auth
@@ -402,7 +511,10 @@ class DataStore {
   }
 
   // Users
-  getUsers(): User[] { this.init(); return this.get<User[]>('cf_users', DEFAULT_USERS); }
+  getUsers(): User[] {
+    this.init();
+    return this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
+  }
   saveUser(user: User) {
     const users = this.getUsers();
     const idx = users.findIndex(u => u.id === user.id);
@@ -493,6 +605,16 @@ class DataStore {
     if (idx >= 0) list[idx] = lancamento; else list.push(lancamento);
     this.set('cf_lancamentos', list);
   }
+  saveLancamentos(lancamentos: Lancamento[]) {
+    const list = this.getLancamentos();
+    const ids = new Set(lancamentos.map(l => l.id));
+
+    // Remove os antigos e adiciona os novos para garantir unicidade
+    const filtered = list.filter(l => !ids.has(l.id));
+    const newList = [...filtered, ...lancamentos];
+
+    this.set('cf_lancamentos', newList);
+  }
   deleteLancamento(id: string) {
     this.set('cf_lancamentos', this.getLancamentos().filter(l => l.id !== id));
   }
@@ -550,7 +672,9 @@ class DataStore {
     const portador = this.getPortadores().find(p => p.id === portadorId);
     if (!portador) return 0;
     const lancamentos = this.getLancamentos(empresaId).filter(
-      l => l.portadorId === portadorId && l.status === 'realizado'
+      l => l.portadorId === portadorId && l.status === 'realizado' &&
+        // Inclui apenas lançamentos na ou após a data do saldo inicial
+        (!portador.saldoInicialData || l.data >= portador.saldoInicialData)
     );
     const total = lancamentos.reduce((acc, l) => {
       return l.tipo === 'receita' ? acc + l.valor : acc - l.valor;

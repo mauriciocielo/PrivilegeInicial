@@ -2,6 +2,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { store, User, Empresa } from '../lib/store';
 import { useState, useEffect } from 'react';
+import BrandLogo from './BrandLogo';
 
 interface NavItem {
   label: string;
@@ -14,6 +15,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     section: 'Principal',
     items: [
       { label: 'Dashboard', href: '/consultor/dashboard', icon: '📊' },
+      { label: 'Administrativo', href: '/consultor/administrativo', icon: '🧭' },
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: '📝' },
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
       { label: 'Endividamento', href: '/consultor/endividamento', icon: '⚖️' },
@@ -85,20 +87,7 @@ export default function Sidebar({ role }: { role: 'consultor' | 'cliente' }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ flexShrink: 0 }}>
-          <svg viewBox="0 0 100 100" width="36" height="36">
-            <circle cx="50" cy="50" r="46" fill="#f8fafc" />
-            <rect x="36" y="44" width="8" height="24" rx="1" fill="#600000" />
-            <rect x="49" y="33" width="8" height="35" rx="1" fill="#600000" />
-            <rect x="62" y="22" width="8" height="46" rx="1" fill="#600000" />
-            <path d="M 28 72 L 40 55 L 49 60 L 76 26" fill="none" stroke="#600000" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M 66 26 L 76 26 L 76 36" fill="none" stroke="#600000" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <div>
-          <div className="logo-text" style={{ letterSpacing: '2px', fontSize: '13px', fontWeight: 800 }}>PRIVILEGE</div>
-          <div className="logo-sub">{role === 'consultor' ? 'Portal do Consultor' : 'Portal do Cliente'}</div>
-        </div>
+        <BrandLogo size={36} subtitle={role === 'consultor' ? 'Portal do Consultor' : 'Portal do Cliente'} />
       </div>
 
       {empresas.length > 0 && (
