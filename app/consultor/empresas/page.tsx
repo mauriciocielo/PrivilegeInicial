@@ -27,24 +27,26 @@ export default function EmpresasPage() {
     }
     setFetchingCnpj(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v2/${rawCnpj}`);
+      // Usando v1 como fallback ou v2 para dados mais detalhados
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${rawCnpj}`);
       if (res.status === 404) throw new Error('CNPJ não encontrado na base de dados da Receita Federal.');
       if (res.status === 429) throw new Error('Limite de consultas excedido. Tente novamente em alguns minutos.');
       if (!res.ok) throw new Error('O serviço de consulta de CNPJ está temporariamente instável. Preencha manualmente.');
 
       const data = await res.json();
-      const responsavel = data.qsa?.[0]?.nome_socio || data.qsa?.[0]?.nome || data.qsa?.[0]?.nome_representante_legal || '';
-      const atividadeTexto = data.cnae_fiscal_descricao || (data.cnaes && data.cnaes[0]?.descricao) || data.descricao_atividade_principal || data.razao_social;
+      const responsavel = data.qsa?.[0]?.nome_socio || data.qsa?.[0]?.nome || data.nome_socio_administrador || '';
+      const atividadeTexto = data.cnae_fiscal_descricao || data.estabelecimento?.atividade_principal?.descricao || data.razao_social;
       const atividade = inferAtividade(atividadeTexto);
 
       setForm(f => ({
         ...f,
-        razaoSocial: data.razao_social || data.nome || '',
-        nomeFantasia: data.nome_fantasia || data.fantasia || data.razao_social || data.nome || '',
+        razaoSocial: (data.razao_social || data.nome || data.nome_fantasia || '').toUpperCase(),
+        nomeFantasia: (data.nome_fantasia || data.fantasia || data.razao_social || '').toUpperCase(),
         responsavel,
         email: data.email || '',
         telefone: data.ddd_telefone_1 || data.telefone || '',
         atividade: atividade || f.atividade,
+        cnpj: rawCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
       }));
     } catch (err) {
       console.error(err);
@@ -54,10 +56,22 @@ export default function EmpresasPage() {
     }
   };
 
-  useEffect(() => { setList(store.getEmpresas()); }, []);
+  useEffect(() => {
+    setList(store.getEmpresas());
+  }, []);
 
   const openNew = () => { setEdit(null); setForm({}); setShowModal(true); };
   const openEdit = (e: Empresa) => { setEdit(e); setForm({ ...e }); setShowModal(true); };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(f => ({ ...f, logoData: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = () => {
     if (!form.razaoSocial || !form.cnpj) { alert('Preencha Razão Social e CNPJ.'); return; }
@@ -70,19 +84,25 @@ export default function EmpresasPage() {
       email: form.email || '',
       telefone: form.telefone || '',
       atividade: form.atividade,
+      dataInicioContrato: form.dataInicioContrato,
+      grupoEconomico: form.grupoEconomico,
       receitaMensalEstimada: Number(form.receitaMensalEstimada) || 0,
       comprasMensalEstimada: Number(form.comprasMensalEstimada) || 0,
+      logoData: form.logoData,
+      bancoBoleto: form.bancoBoleto || 'nenhum',
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveEmpresa(emp);
-    setList(store.getEmpresas());
+    const updated = store.getEmpresas();
+    setList(updated);
     setShowModal(false);
   };
 
   const handleDelete = (id: string) => {
     if (!confirm('Excluir esta empresa? Todos os dados relacionados serão afetados.')) return;
     store.deleteEmpresa(id);
-    setList(store.getEmpresas());
+    const updated = store.getEmpresas();
+    setList(updated);
   };
 
   const filtered = list.filter(e =>
@@ -128,7 +148,21 @@ export default function EmpresasPage() {
               <tbody>
                 {filtered.map(e => (
                   <tr key={e.id}>
-                    <td style={{ fontWeight: 600 }}>{e.razaoSocial}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {e.logoData ? (
+                          <img src={e.logoData} alt="Logo" style={{ maxHeight: 24, maxWidth: 48, objectFit: 'contain', borderRadius: 4 }} />
+                        ) : (
+                          <div style={{ width: 32, height: 24, background: 'var(--bg-card2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--text-muted)' }}>🏢</div>
+                        )}
+                        <div>
+                          <div>{e.razaoSocial}</div>
+                          {e.bancoBoleto === 'c6' && (
+                            <span className="badge badge-gray" style={{ fontSize: 9, padding: '2px 6px', background: '#000', color: '#fff', display: 'inline-block', marginTop: 4 }}>🖤 C6 Bank Boletos</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     <td>{e.nomeFantasia}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.cnpj}</td>
                     <td>{e.responsavel || '-'}</td>
@@ -157,6 +191,16 @@ export default function EmpresasPage() {
             <div className="modal-header">
               <h2 className="modal-title">{edit ? 'Editar Empresa' : 'Nova Empresa'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Início do Contrato</label>
+                <input type="date" className="form-control" value={form.dataInicioContrato || ''} onChange={e => setForm(f => ({ ...f, dataInicioContrato: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Grupo Econômico</label>
+                <input className="form-control" placeholder="Ex: Grupo Privilege" value={form.grupoEconomico || ''} onChange={e => setForm(f => ({ ...f, grupoEconomico: e.target.value }))} />
+              </div>
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -205,6 +249,13 @@ export default function EmpresasPage() {
                 <label className="form-label">Telefone</label>
                 <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone || ''} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
               </div>
+              <div className="form-group">
+                <label className="form-label">Logotipo da Empresa</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="file" accept="image/*" onChange={handleLogoChange} style={{ fontSize: 12 }} />
+                  {form.logoData && <img src={form.logoData} alt="Miniatura" style={{ maxHeight: 28, maxWidth: 60, objectFit: 'contain', border: '1px solid var(--border-light)', borderRadius: 4 }} />}
+                </div>
+              </div>
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -214,6 +265,15 @@ export default function EmpresasPage() {
               <div className="form-group">
                 <label className="form-label">Compras Mensais Esperadas (R$)</label>
                 <input type="number" step="0.01" className="form-control" value={form.comprasMensalEstimada || 0} onChange={e => setForm(f => ({ ...f, comprasMensalEstimada: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Integração de Boleto (Banco Emissor)</label>
+                <select className="form-control" value={form.bancoBoleto || 'nenhum'} onChange={e => setForm(f => ({ ...f, bancoBoleto: e.target.value as any }))}>
+                  <option value="nenhum">Nenhuma integração (Padrão)</option>
+                  <option value="c6">C6 Bank (Emissão de Boletos)</option>
+                </select>
               </div>
             </div>
             <div className="form-actions">

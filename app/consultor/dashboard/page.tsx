@@ -42,11 +42,13 @@ export default function ConsultorDashboard() {
     const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
+    const [anoPeriodo, mesPeriodo] = mesSelecionado.split('-');
+    const dataFimPeriodo = `${mesSelecionado}-${new Date(Number(anoPeriodo), Number(mesPeriodo), 0).getDate()}`;
     const ports = store.getPortadores(eId);
-    const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId), 0);
+    const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId, dataFimPeriodo), 0);
 
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
-    setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId), tipo: p.tipo })));
+    setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
 
     const sorted = [...lancs].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
     setLancRecentes(sorted);
@@ -152,9 +154,9 @@ export default function ConsultorDashboard() {
           </div>
           <div className="stat-card purple">
             <div className="stat-icon purple">🏦</div>
-            <div className="stat-label">Saldo Total em Caixa</div>
+            <div className="stat-label">Saldo em Caixa no Periodo</div>
             <div className="stat-value">{fmt.currency(totais.portadores)}</div>
-            <div className="stat-change up">▲ Todos portadores</div>
+            <div className="stat-change up">Fechamento dos portadores</div>
           </div>
           <div className="stat-card" style={{ borderTop: '4px solid #f59e0b', background: 'var(--bg-card)' }}>
             <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>⚖️</div>
@@ -202,7 +204,7 @@ export default function ConsultorDashboard() {
               </div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={resumo} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -228,7 +230,7 @@ export default function ConsultorDashboard() {
               </div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie data={categorias} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value">
                     {categorias.map((entry, i) => <Cell key={i} fill={entry.color} />)}
@@ -251,7 +253,7 @@ export default function ConsultorDashboard() {
               </div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={resumo}>
                   <defs>
                     <linearGradient id="gradSaldo" x1="0" y1="0" x2="0" y2="1">
@@ -271,7 +273,7 @@ export default function ConsultorDashboard() {
 
           <div className="card">
             <div className="card-header">
-              <div className="card-title">Saldo por Portador</div>
+              <div className="card-title">Saldo por Portador no Periodo</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {portadoresList.map((p, i) => {

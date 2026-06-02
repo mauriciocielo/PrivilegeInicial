@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { store, PlanoConta } from '../../../lib/store';
+import { store, PlanoConta, type TransactionPattern } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 
 export default function PlanoContasPage() {
@@ -12,9 +12,16 @@ export default function PlanoContasPage() {
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'receita' | 'despesa'>('todos');
   const [search, setSearch] = useState('');
 
+  // Estados de Regras de IA
+  const [activePageTab, setActivePageTab] = useState<'contas' | 'regras'>('contas');
+  const [regras, setRegras] = useState<TransactionPattern[]>([]);
+  const [showRegraModal, setShowRegraModal] = useState(false);
+  const [regraForm, setRegraForm] = useState<Partial<TransactionPattern>>({});
+
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
     setPlano(store.getPlanoContas(eId));
+    setRegras(store.getTransactionPatterns(eId));
   }, []);
 
   useEffect(() => {
@@ -24,6 +31,29 @@ export default function PlanoContasPage() {
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
   }, [load]);
+
+  const handleSaveRegra = () => {
+    if (!regraForm.pattern || !regraForm.categoryId) {
+      alert('Preencha o termo da regra e selecione a categoria.');
+      return;
+    }
+    const pt: TransactionPattern = {
+      id: regraForm.id || 'pt_' + Math.random().toString(36).slice(2, 9),
+      empresaId,
+      pattern: regraForm.pattern!,
+      categoryId: regraForm.categoryId!,
+    };
+    store.saveTransactionPattern(pt);
+    setRegras(store.getTransactionPatterns(empresaId));
+    setShowRegraModal(false);
+    setRegraForm({});
+  };
+
+  const handleDeleteRegra = (id: string) => {
+    if (!confirm('Deseja excluir esta regra de classificação automática?')) return;
+    store.deleteTransactionPattern(id);
+    setRegras(store.getTransactionPatterns(empresaId));
+  };
 
   const openNew = (parent?: PlanoConta) => {
     setEdit(null);
@@ -105,72 +135,149 @@ export default function PlanoContasPage() {
       </div>
 
       <div className="page-body">
-        <div className="card card-sm" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="tabs" style={{ margin: 0, border: 'none' }}>
-              {(['todos','receita','despesa'] as const).map(t => (
-                <button key={t} className={`tab ${filtroTipo === t ? 'active' : ''}`} onClick={() => setFiltroTipo(t)} style={{ padding: '6px 14px' }}>
-                  {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : '↓ Despesas'}
-                </button>
-              ))}
-            </div>
-            <div className="search-bar">
-              <span>🔍</span>
-              <input placeholder="Buscar conta..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-          </div>
+        {/* Abas Principais */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 10 }}>
+          <button className={`btn ${activePageTab === 'contas' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setActivePageTab('contas')}>
+            📋 Estrutura de Contas
+          </button>
+          <button className={`btn ${activePageTab === 'regras' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setActivePageTab('regras')}>
+            🧠 Regras de Classificação IA
+          </button>
         </div>
 
-        <div className="card">
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Descrição</th>
-                  <th>Tipo</th>
-                  <th>Nível</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(pc => (
-                  <tr key={pc.id} style={{ opacity: pc.ativo ? 1 : 0.5 }}>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
-                    <td style={getNivelStyle(pc.nivel)}>
-                      {pc.nivel > 1 && <span style={{ color: 'var(--border-light)', marginRight: 4 }}>{'└─'.padStart(pc.nivel * 2 - 2, '  ')}</span>}
-                      {pc.descricao}
-                    </td>
-                    <td>
-                      <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
-                        {pc.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
-                    <td>
-                      <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
-                        {pc.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {pc.nivel < 3 && (
-                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
-                        )}
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
-                        <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
-                          {pc.ativo ? '⏸️' : '▶️'}
-                        </button>
-                        <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {activePageTab === 'contas' && (
+          <>
+            <div className="card card-sm" style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="tabs" style={{ margin: 0, border: 'none' }}>
+                  {(['todos','receita','despesa'] as const).map(t => (
+                    <button key={t} className={`tab ${filtroTipo === t ? 'active' : ''}`} onClick={() => setFiltroTipo(t)} style={{ padding: '6px 14px' }}>
+                      {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : '↓ Despesas'}
+                    </button>
+                  ))}
+                </div>
+                <div className="search-bar">
+                  <span>🔍</span>
+                  <input placeholder="Buscar conta..." value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Descrição</th>
+                      <th>Tipo</th>
+                      <th>Nível</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(pc => (
+                      <tr key={pc.id} style={{ opacity: pc.ativo ? 1 : 0.5 }}>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
+                        <td style={getNivelStyle(pc.nivel)}>
+                          {pc.nivel > 1 && <span style={{ color: 'var(--border-light)', marginRight: 4 }}>{'└─'.padStart(pc.nivel * 2 - 2, '  ')}</span>}
+                          {pc.descricao}
+                        </td>
+                        <td>
+                          <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                            {pc.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
+                        <td>
+                          <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
+                            {pc.ativo ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {pc.nivel < 3 && (
+                              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
+                            )}
+                            <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
+                              {pc.ativo ? '⏸️' : '▶️'}
+                            </button>
+                            <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activePageTab === 'regras' && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                Regras automáticas aprendidas pelo sistema a partir dos seus lançamentos ou configuradas manualmente.
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={() => { setRegraForm({}); setShowRegraModal(true); }}>
+                ＋ Nova Regra Manual
+              </button>
+            </div>
+
+            <div className="card">
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Padrão de Texto (Histórico)</th>
+                      <th>Categoria Vinculada</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {regras.length === 0 ? (
+                      <tr>
+                        <td colSpan={3}>
+                          <div className="empty-state">
+                            <div className="empty-state-icon">🧠</div>
+                            <h3>Nenhuma regra configurada</h3>
+                            <p>O sistema cria regras automaticamente quando você categoriza transações no OFX.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      regras.map(r => {
+                        const pc = plano.find(p => p.id === r.categoryId);
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{r.pattern}</td>
+                            <td>
+                              {pc ? (
+                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                                  {pc.codigo} - {pc.descricao}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>Categoria não encontrada ({r.categoryId})</span>
+                              )}
+                            </td>
+                            <td>
+                              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteRegra(r.id)}>
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {showModal && (
@@ -235,6 +342,48 @@ export default function PlanoContasPage() {
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave}>✓ Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showRegraModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowRegraModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Nova Regra de IA</h2>
+              <button className="modal-close" onClick={() => setShowRegraModal(false)}>✕</button>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label">Termo / Histórico Bancário *</label>
+              <input 
+                className="form-control" 
+                placeholder="Ex: POSTO IPIRANGA, MERCADINHO, PIX TRANSF..." 
+                value={regraForm.pattern || ''} 
+                onChange={e => setRegraForm(f => ({ ...f, pattern: e.target.value.toUpperCase() }))} 
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Ao importar um OFX, qualquer histórico que contenha este texto será sugerido para a categoria selecionada abaixo.
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label">Categoria Correspondente *</label>
+              <select 
+                className="form-control" 
+                value={regraForm.categoryId || ''} 
+                onChange={e => setRegraForm(f => ({ ...f, categoryId: e.target.value }))}
+              >
+                <option value="">Selecione...</option>
+                {plano.filter(p => p.nivel === 3 && p.ativo).map(p => (
+                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : 'Despesa'})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowRegraModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSaveRegra}>✓ Salvar Regra</button>
             </div>
           </div>
         </div>

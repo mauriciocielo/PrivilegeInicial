@@ -6,6 +6,7 @@ export interface OFXTransaction {
   date: string;
   amount: number;
   description: string;
+  memo?: string;
   checkNum?: string;
   fitId: string;
 }
@@ -83,12 +84,19 @@ export function parseOFX(content: string): OFXResult {
     const dtposted = extractTag(block, 'DTPOSTED');
     const trnamt = extractTag(block, 'TRNAMT');
     const fitid = extractTag(block, 'FITID');
-    const memo = extractTag(block, 'MEMO') || extractTag(block, 'NAME') || 'Lançamento OFX';
+    
+    const name = extractTag(block, 'NAME');
+    const memo = extractTag(block, 'MEMO');
+    
     const checknum = extractTag(block, 'CHECKNUM');
     
     if (!dtposted || !trnamt) continue;
     
     const amount = parseFloat(trnamt.replace(',', '.'));
+    
+    // Se ambos existirem, NAME é a descrição principal e MEMO a descrição secundária
+    const description = name || memo || 'Lançamento OFX';
+    const detailMemo = name ? memo : undefined;
     
     result.transactions.push({
       id: fitid || `ofx_${Date.now()}_${Math.random()}`,
@@ -96,7 +104,8 @@ export function parseOFX(content: string): OFXResult {
       type: amount > 0 ? 'CREDIT' : 'DEBIT',
       date: parseDate(dtposted),
       amount: Math.abs(amount),
-      description: memo,
+      description,
+      memo: detailMemo || undefined,
       checkNum: checknum || undefined,
     });
   }
@@ -111,14 +120,14 @@ export function generateSampleOFX(): string {
   const fmt = (d: Date) => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   
   const transactions = [
-    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 12500.00, memo: 'TED RECEBIDA - CLIENTE ABC', fitId: 'FIT001' },
-    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 7), amount: -3500.00, memo: 'PAGTO FORNECEDOR XYZ', fitId: 'FIT002' },
-    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 10), amount: 8750.50, memo: 'PIX RECEBIDO - VENDAS', fitId: 'FIT003' },
-    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 12), amount: -850.00, memo: 'ENERGIA ELETRICA - CPFL', fitId: 'FIT004' },
-    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 15), amount: -12000.00, memo: 'FOLHA DE PAGAMENTO', fitId: 'FIT005' },
-    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 18), amount: 5000.00, memo: 'SERVICOS PRESTADOS - NF 0045', fitId: 'FIT006' },
-    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 20), amount: -2100.00, memo: 'SIMPLES NACIONAL', fitId: 'FIT007' },
-    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 22), amount: -45.80, memo: 'TARIFA BANCARIA', fitId: 'FIT008' },
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 12500.00, name: 'TED RECEBIDA', memo: 'RECEBIMENTO CLIENTE ABC LTDA', fitId: 'FIT001' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 7), amount: -3500.00, name: 'PAGTO FORNECEDOR', memo: 'COMPRA DE INSUMOS E EMBALAGENS', fitId: 'FIT002' },
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 10), amount: 8750.50, name: 'PIX RECEBIDO', memo: 'VENDAS DE MERCADORIAS DIVERSAS', fitId: 'FIT003' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 12), amount: -850.00, name: 'DEBITO CPFL', memo: 'ENERGIA ELETRICA CONSUMO DO MES', fitId: 'FIT004' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 15), amount: -12000.00, name: 'FOLHA PAGTO', memo: 'SALARIOS COLABORADORES DO MES', fitId: 'FIT005' },
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 18), amount: 5000.00, name: 'SERVICOS PRESTADOS', memo: 'FATURAMENTO NOTA FISCAL 0045', fitId: 'FIT006' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 20), amount: -2100.00, name: 'PAGTO DAS', memo: 'IMPOSTOS SIMPLES NACIONAL', fitId: 'FIT007' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 22), amount: -45.80, name: 'DEB TARIFA', memo: 'TARIFA MANUTENÇÃO DE CONTA CC', fitId: 'FIT008' },
   ];
   
   const trnList = transactions.map(t => `
@@ -127,6 +136,7 @@ export function generateSampleOFX(): string {
       <DTPOSTED>${fmt(t.date)}</DTPOSTED>
       <TRNAMT>${t.amount.toFixed(2)}</TRNAMT>
       <FITID>${t.fitId}</FITID>
+      <NAME>${t.name}</NAME>
       <MEMO>${t.memo}</MEMO>
     </STMTTRN>`).join('');
   

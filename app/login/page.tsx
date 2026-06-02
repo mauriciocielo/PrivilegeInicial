@@ -19,7 +19,7 @@ export default function LoginPage() {
     const user = store.login(email, password);
     if (user) {
       store.setCurrentUser(user);
-      router.replace(user.role === 'consultor' ? '/consultor/dashboard' : '/cliente/dashboard');
+      router.replace(user.role === 'consultor' || user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
     } else {
       setError('E-mail ou senha incorretos.');
       setLoading(false);

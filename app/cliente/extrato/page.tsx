@@ -127,7 +127,14 @@ export default function ClienteExtrato() {
                   return (
                     <tr key={l.id}>
                       <td style={{ fontSize:12, color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{fmt.date(l.data)}</td>
-                      <td style={{ fontWeight:500 }}>{l.descricao}</td>
+                      <td style={{ fontWeight:500 }}>
+                        <div>{l.descricao}</div>
+                        {l.observacao && (
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                            {l.observacao}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{pc?.descricao || '-'}</td>
                       <td style={{ fontSize:12 }}>{port?.nome || '-'}</td>
                       <td><span className={`badge ${l.status==='realizado'?'badge-blue':'badge-yellow'}`}>{l.status==='realizado'?'Realizado':'Previsto'}</span></td>

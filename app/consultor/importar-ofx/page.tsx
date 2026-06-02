@@ -41,10 +41,22 @@ export default function ImportarOFXPage() {
       const text = e.target?.result as string;
       const result = parseOFX(text);
       setOfxInfo({ bankId: result.bankId, acctId: result.acctId, dtStart: result.dtStart, dtEnd: result.dtEnd });
-      // Filter already imported
+      
+      // Filtrar lançamentos já importados
       const existing = store.getLancamentos(empresaId);
       const existingIds = new Set(existing.filter(l => l.ofxId).map(l => l.ofxId));
       const newTrns = result.transactions.filter(t => !existingIds.has(t.fitId));
+      
+      // Auto-categorizar com base nas inteligências aprendidas
+      const newCatMap: Record<string, string> = {};
+      newTrns.forEach(t => {
+        const suggested = store.classifyDescription(empresaId, t.description);
+        if (suggested) {
+          newCatMap[t.id] = suggested;
+        }
+      });
+      setCatMap(prev => ({ ...prev, ...newCatMap }));
+
       setTransactions(newTrns);
       setSelected(new Set(newTrns.map(t => t.id)));
       setDone(false);
@@ -63,14 +75,56 @@ export default function ImportarOFXPage() {
     const text = generateSampleOFX();
     const result = parseOFX(text);
     setOfxInfo({ bankId: result.bankId, acctId: result.acctId, dtStart: result.dtStart, dtEnd: result.dtEnd });
-    setTransactions(result.transactions);
-    setSelected(new Set(result.transactions.map(t => t.id)));
+
+    // Filtrar transações que já foram importadas (evitar duplicados)
+    const existing = store.getLancamentos(empresaId);
+    const existingIds = new Set(existing.map(l => l.ofxId).filter(Boolean));
+    const newTrns = result.transactions.filter(t => !existingIds.has(t.fitId));
+
+    // Auto-categorizar com base nas inteligências aprendidas
+    const newCatMap: Record<string, string> = {};
+    newTrns.forEach(t => {
+      const suggested = store.classifyDescription(empresaId, t.description);
+      if (suggested) {
+        newCatMap[t.id] = suggested;
+      }
+    });
+    setCatMap(prev => ({ ...prev, ...newCatMap }));
+
+    setTransactions(newTrns);
+    setSelected(new Set(newTrns.map(t => t.id)));
     setDone(false);
   };
 
   const toggleAll = () => {
     if (selected.size === transactions.length) setSelected(new Set());
     else setSelected(new Set(transactions.map(t => t.id)));
+  };
+
+  const handleReconcile = (t: OFXTransaction, manualId: string) => {
+    if (!portadorId) { alert('Selecione um portador.'); return; }
+    const lancamentoOfx: Lancamento = {
+      id: uid(),
+      empresaId,
+      data: t.date,
+      descricao: t.description,
+      valor: t.amount,
+      tipo: t.type === 'CREDIT' ? 'receita' : 'despesa',
+      planoContaId: catMap[t.id] || (t.type === 'CREDIT' ? 'pc4' : 'pc30'),
+      portadorId,
+      status: 'realizado',
+      numeroDocumento: t.checkNum,
+      observacao: t.memo,
+      origem: 'ofx',
+      ofxId: t.fitId,
+      createdAt: new Date().toISOString(),
+    };
+    store.reconciliar(lancamentoOfx, manualId);
+    setTransactions(prev => prev.filter(item => item.id !== t.id));
+    const s = new Set(selected);
+    s.delete(t.id);
+    setSelected(s);
+    alert('Transação OFX conciliada com o lançamento previsto com sucesso!');
   };
 
   const handleImport = async () => {
@@ -91,6 +145,7 @@ export default function ImportarOFXPage() {
         portadorId,
         status: 'realizado',
         numeroDocumento: t.checkNum,
+        observacao: t.memo,
         origem: 'ofx',
         ofxId: t.fitId,
         createdAt: new Date().toISOString(),
@@ -247,24 +302,65 @@ export default function ImportarOFXPage() {
                         />
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(t.date)}</td>
-                      <td style={{ fontWeight: 500, maxWidth: 250 }}>{t.description}</td>
+                      <td style={{ fontWeight: 500, maxWidth: 250 }}>
+                        <div>{t.description}</div>
+                        {t.memo && (
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                            {t.memo}
+                          </div>
+                        )}
+                        {(() => {
+                          const matches = store.getPotentialMatches({
+                            empresaId,
+                            data: t.date,
+                            valor: t.amount,
+                            tipo: t.type === 'CREDIT' ? 'receita' : 'despesa'
+                          });
+                          if (matches.length > 0) {
+                            return (
+                              <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(96,0,0,0.06)', color: 'var(--accent)', borderRadius: 4, fontWeight: 600 }}>💡 Conciliação</span>
+                                <button 
+                                  onClick={() => handleReconcile(t, matches[0].id)}
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ padding: '2px 6px', fontSize: 10, border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', borderRadius: 4 }}
+                                >
+                                  🤝 Conciliar: "{matches[0].descricao}"
+                                </button>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </td>
                       <td>
                         <span className={`badge ${t.type === 'CREDIT' ? 'badge-green' : 'badge-red'}`}>
                           {t.type === 'CREDIT' ? '↑ Crédito' : '↓ Débito'}
                         </span>
                       </td>
                       <td>
-                        <select
-                          className="form-control"
-                          style={{ padding: '4px 8px', fontSize: 12 }}
-                          value={catMap[t.id] || ''}
-                          onChange={e => setCatMap(m => ({ ...m, [t.id]: e.target.value }))}
-                        >
-                          <option value="">Auto-categorizar</option>
-                          {planoContas.filter(p => p.tipo === (t.type === 'CREDIT' ? 'receita' : 'despesa')).map(p => (
-                            <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
-                          ))}
-                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <select
+                            className="form-control"
+                            style={{ 
+                              padding: '4px 8px', 
+                              fontSize: 12,
+                              border: store.classifyDescription(empresaId, t.description) ? '1.5px solid var(--accent)' : '1px solid var(--border-light)',
+                              background: store.classifyDescription(empresaId, t.description) ? 'rgba(96,0,0,0.03)' : 'transparent',
+                              fontWeight: store.classifyDescription(empresaId, t.description) ? 600 : 'normal'
+                            }}
+                            value={catMap[t.id] || ''}
+                            onChange={e => setCatMap(m => ({ ...m, [t.id]: e.target.value }))}
+                          >
+                            <option value="">Auto-categorizar</option>
+                            {planoContas.filter(p => p.tipo === (t.type === 'CREDIT' ? 'receita' : 'despesa')).map(p => (
+                              <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
+                            ))}
+                          </select>
+                          {store.classifyDescription(empresaId, t.description) && (
+                            <span title="Categoria auto-sugerida pela Inteligência Privilege baseada em seus lançamentos anteriores" style={{ fontSize: 14, cursor: 'help' }}>🧠</span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: t.type === 'CREDIT' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap' }}>
                         {t.type === 'CREDIT' ? '+' : '-'}{fmt.currency(t.amount)}

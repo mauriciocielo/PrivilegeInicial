@@ -7,10 +7,12 @@ export interface User {
   name: string;
   email: string;
   password: string;
-  role: 'consultor' | 'cliente';
+  role: 'administrador' | 'consultor' | 'cliente';
   empresaIds: string[];
   avatar?: string;
+  avatarData?: string;
   receberEmailDiario?: boolean;
+  allowedRoutes?: string[];
   createdAt: string;
 }
 
@@ -23,9 +25,31 @@ export interface Empresa {
   email: string;
   telefone: string;
   atividade?: 'Comércio' | 'Serviço' | 'Indústria';
+  tipo?: 'empresa' | 'condominio';
+  taxaMensalPadrao?: number;
+  fundoReservaPct?: number;
+  dataInicioContrato?: string;
+  grupoEconomico?: string;
   receitaMensalEstimada?: number;
   comprasMensalEstimada?: number;
+  logoData?: string;
+  bancoBoleto?: 'nenhum' | 'c6';
   createdAt: string;
+}
+
+export interface Unidade {
+  id: string;
+  condominioId: string;
+  identificacao: string;
+  proprietario: string;
+  proprietarioCpf?: string;
+  fracaoIdeal: number;
+  email: string;
+  telefone: string;
+  moradorNome?: string;
+  moradorCpf?: string;
+  moradorEmail?: string;
+  moradorTelefone?: string;
 }
 
 export interface PlanoConta {
@@ -53,9 +77,18 @@ export interface Portador {
   empresaId: string;
 }
 
+export interface PagamentoEndividamento {
+  id: string;
+  data: string;
+  valorTotal: number;
+  valorJuros: number;
+  valorAmortizacao: number;
+}
+
 export interface Endividamento {
   id: string;
   empresaId: string;
+  tipo: 'bancario' | 'tributario';
   banco: string;
   conta: string;
   contrato: string;
@@ -69,6 +102,18 @@ export interface Endividamento {
   valorAPagar: number;
   garantia: string;
   pagamentoMes: number;
+  pagamentos?: PagamentoEndividamento[];
+}
+
+export interface AtaAtendimento {
+  id: string;
+  empresaId: string;
+  consultorId: string;
+  data: string;
+  titulo: string;
+  conteudo: string;
+  participantes: string;
+  createdAt: string;
 }
 
 export interface IndicadorMensal {
@@ -101,14 +146,110 @@ export interface Lancamento {
   observacao?: string;
   origem: 'manual' | 'ofx';
   ofxId?: string;
+  unidadeId?: string;
+  clienteId?: string; // Vincula ao Cliente/Fornecedor cadastrado
   createdAt: string;
   attachmentName?: string;
   attachmentData?: string; // Conteúdo em Base64
 }
 
+export interface Cliente {
+  id: string;
+  empresaId: string;
+  tipo: 'cliente' | 'fornecedor' | 'ambos';
+  nome: string;
+  nomeFantasia?: string;
+  cpfCnpj: string;
+  email?: string;
+  telefone?: string;
+  celular?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  contato?: string; // Nome do responsável / contato
+  observacao?: string;
+  limiteCredito?: number;
+  ativo: boolean;
+  createdAt: string;
+}
+
+export interface NfsE {
+  id: string;
+  empresaId: string;
+  // Numeração
+  numero: string;              // Número da NFS-e (gerado localmente)
+  serie: string;               // Série (default '1')
+  codigoVerificacao?: string;  // Código de verificação retornado pela prefeitura
+  // Status
+  status: 'rascunho' | 'emitida' | 'cancelada';
+  motivoCancelamento?: string;
+  // Prestador (empresa emissora)
+  prestadorCnpj: string;
+  prestadorRazaoSocial: string;
+  prestadorInscricaoMunicipal?: string;
+  prestadorEndereco?: string;
+  prestadorCidade?: string;
+  prestadorUf?: string;
+  prestadorCep?: string;
+  // Tomador (cliente)
+  clienteId?: string;
+  tomadorCnpjCpf: string;
+  tomadorRazaoSocial: string;
+  tomadorEmail?: string;
+  tomadorEndereco?: string;
+  tomadorCidade?: string;
+  tomadorUf?: string;
+  tomadorCep?: string;
+  tomadorInscricaoMunicipal?: string;
+  // Serviço
+  dataEmissao: string;         // YYYY-MM-DD
+  dataCompetencia: string;     // YYYY-MM (mês de competência)
+  codigoServico: string;       // Lista de Serviços (LC116)
+  cnae?: string;
+  discriminacao: string;       // Descrição detalhada do serviço
+  municipioPrestacao?: string;
+  // Valores
+  valorServicos: number;
+  valorDeducoes: number;
+  valorPis: number;
+  valorCofins: number;
+  valorInss: number;
+  valorIr: number;
+  valorCsll: number;
+  issRetido: boolean;
+  valorIss: number;
+  aliquotaIss: number;         // % ISS
+  valorBaseCalculo: number;
+  valorLiquido: number;
+  // Vínculo financeiro
+  lancamentoId?: string;       // ID do lançamento (Conta a Receber) gerado
+  portadorId?: string;
+  planoContaId?: string;
+  vencimento?: string;         // Data de vencimento da conta a receber
+  // Controle
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TransactionPattern {
+  id: string;
+  empresaId: string;
+  pattern: string; // Parte do texto do histórico
+  categoryId: string; // ID da categoria a ser aplicada
+}
+
+export interface SituacaoFiscal {
+  id: string;
+  empresaId: string;
+  dataVerificacao: string;
+  status: 'regular' | 'pendencia' | 'atencao';
+  observacoes: string;
+}
+
 // ---- Defaults ----
 const STORAGE_VERSION_KEY = 'cf_storage_version';
-const STORAGE_VERSION = '5';
+const STORAGE_VERSION = '7';
 
 const DEFAULT_USERS: User[] = [
   {
@@ -116,8 +257,17 @@ const DEFAULT_USERS: User[] = [
     name: 'Admin Consultor',
     email: 'consultor@sistema.com',
     password: '123456',
-    role: 'consultor',
-    empresaIds: ['e1', 'e2'],
+    role: 'administrador',
+    empresaIds: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'u_privilege',
+    name: 'Privilege Consultoria',
+    email: 'consultoria@privilegecontabilidade.com.br',
+    password: '145236',
+    role: 'administrador',
+    empresaIds: [],
     createdAt: new Date().toISOString(),
   },
   {
@@ -126,34 +276,38 @@ const DEFAULT_USERS: User[] = [
     email: 'cliente@empresa.com',
     password: '123456',
     role: 'cliente',
-    empresaIds: ['e1'],
+    empresaIds: [],
     createdAt: new Date().toISOString(),
   },
 ];
 
 const DEFAULT_EMPRESAS: Empresa[] = [
   {
-    id: 'e1',
-    razaoSocial: 'Tech Solutions Ltda',
-    nomeFantasia: 'TechSol',
+    id: 'emp_demo',
+    razaoSocial: 'PRIVILEGE BPO & SERVICOS FINANCEIROS LTDA',
+    nomeFantasia: 'Privilege BPO',
     cnpj: '12.345.678/0001-90',
-    responsavel: 'João Silva',
-    email: 'contato@techsol.com',
-    telefone: '(11) 99999-0001',
+    responsavel: 'Maurício Cielo',
+    email: 'bpo@privilege.com',
+    telefone: '(54) 99999-9999',
     atividade: 'Serviço',
+    tipo: 'empresa',
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'e2',
-    razaoSocial: 'Comércio Brasil S/A',
-    nomeFantasia: 'ComBrasil',
+    id: 'condo_demo',
+    razaoSocial: 'CONDOMINIO RESIDENCIAL PRIVILEGE',
+    nomeFantasia: 'Residencial Privilege',
     cnpj: '98.765.432/0001-10',
-    responsavel: 'Maria Santos',
-    email: 'contato@combrasil.com',
-    telefone: '(11) 99999-0002',
-    atividade: 'Comércio',
+    responsavel: 'Síndico João Silva',
+    email: 'condominio@privilege.com',
+    telefone: '(54) 88888-8888',
+    atividade: 'Serviço',
+    tipo: 'condominio',
+    taxaMensalPadrao: 350.00,
+    fundoReservaPct: 10,
     createdAt: new Date().toISOString(),
-  },
+  }
 ];
 
 const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
@@ -303,67 +457,8 @@ const DEFAULT_PORTADORES: Portador[] = [
 ];
 
 function gerarLancamentos(): Lancamento[] {
-  const lancamentos: Lancamento[] = [];
-  const hoje = new Date();
-
-  const receitas = [
-    { desc: 'Recebimento Pix - Venda Óculos', valor: 450, planoId: 'pc1_1_3' },
-    { desc: 'Recebimento Cartão de Crédito - Parcelas', valor: 8500, planoId: 'pc1_1_2' },
-    { desc: 'Recebimento Cheque - Venda Balcão', valor: 1200, planoId: 'pc1_1_1' },
-    { desc: 'Recebimento Pix - Consulta Opto', valor: 250, planoId: 'pc1_1_3' },
-  ];
-
-  const despesas = [
-    { desc: 'Pagamento Lentes Essilor', valor: 3500, planoId: 'pc2_1_2' },
-    { desc: 'Aluguel Loja Central', valor: 2500, planoId: 'pc3_1_17' },
-    { desc: 'Energia Elétrica Copel', valor: 780, planoId: 'pc3_1_11' },
-    { desc: 'Internet Fibra', valor: 150, planoId: 'pc3_1_12' },
-    { desc: 'Imposto DAS Simples', valor: 1400, planoId: 'pc3_3_1' },
-    { desc: 'Honorários Contabilidade', valor: 600, planoId: 'pc3_1_14' },
-    { desc: 'Salário Atendente Loja', valor: 2100, planoId: 'pc3_5_2' },
-    { desc: 'Pró-Labore Diretores', valor: 5000, planoId: 'pc3_5_15' },
-    { desc: 'Tarifa Bancária Cresol', valor: 45, planoId: 'pc3_6_1' },
-  ];
-
-  let id = 1;
-  for (let m = 5; m >= 0; m--) {
-    const mes = new Date(hoje.getFullYear(), hoje.getMonth() - m, 1);
-    receitas.forEach((r) => {
-      const dia = Math.floor(Math.random() * 20) + 1;
-      lancamentos.push({
-        id: `l${id++}`,
-        empresaId: 'e1',
-        data: new Date(mes.getFullYear(), mes.getMonth(), dia).toISOString().split('T')[0],
-        descricao: r.desc,
-        valor: r.valor + Math.floor(Math.random() * 200 - 100),
-        tipo: 'receita',
-        planoContaId: r.planoId,
-        portadorId: Math.random() > 0.5 ? 'p2' : 'p1',
-        status: m > 0 ? 'realizado' : (Math.random() > 0.5 ? 'realizado' : 'previsto'),
-        origem: 'manual',
-        createdAt: new Date().toISOString(),
-      });
-    });
-    despesas.forEach((d) => {
-      const dia = Math.floor(Math.random() * 25) + 1;
-      lancamentos.push({
-        id: `l${id++}`,
-        empresaId: 'e1',
-        data: new Date(mes.getFullYear(), mes.getMonth(), dia).toISOString().split('T')[0],
-        descricao: d.desc,
-        valor: d.valor + Math.floor(Math.random() * 100 - 50),
-        tipo: 'despesa',
-        planoContaId: d.planoId,
-        portadorId: Math.random() > 0.7 ? 'p2' : 'p1',
-        status: m > 0 ? 'realizado' : (Math.random() > 0.3 ? 'realizado' : 'previsto'),
-        origem: 'manual',
-        createdAt: new Date().toISOString(),
-      });
-    });
-  }
-  return lancamentos;
+  return [];
 }
-
 // ---- Store Class ----
 type StoredRecord = { id: string };
 
@@ -387,6 +482,40 @@ class DataStore {
     if (typeof window === 'undefined' || this.initialized) return;
     this.initialized = true;
 
+    // Remove legacy seeded default companies (e1/TechSol, e2/ComBrasil) if they exist
+    const empresasRaw = localStorage.getItem('cf_empresas');
+    if (empresasRaw) {
+      try {
+        const empresas = JSON.parse(empresasRaw) as Empresa[];
+        const filteredEmpresas = empresas.filter(e => e.id !== 'e1' && e.id !== 'e2');
+        if (empresas.length !== filteredEmpresas.length) {
+          localStorage.setItem('cf_empresas', JSON.stringify(filteredEmpresas));
+
+          const cleanCollection = (key: string, filterFn: (item: any) => boolean) => {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                  localStorage.setItem(key, JSON.stringify(parsed.filter(filterFn)));
+                }
+              } catch {}
+            }
+          };
+
+          cleanCollection('cf_lancamentos', l => l.empresaId !== 'e1' && l.empresaId !== 'e2');
+          cleanCollection('cf_portadores', p => p.empresaId !== 'e1' && p.empresaId !== 'e2');
+          cleanCollection('cf_plano_contas', pc => pc.empresaId !== 'e1' && pc.empresaId !== 'e2');
+          cleanCollection('cf_endividamentos', e => e.empresaId !== 'e1' && e.empresaId !== 'e2');
+
+          const saved = sessionStorage.getItem('cf_empresa_sel');
+          if (saved === 'e1' || saved === 'e2') {
+            sessionStorage.removeItem('cf_empresa_sel');
+          }
+        }
+      } catch {}
+    }
+
     const hasAnyData = [
       'cf_users',
       'cf_empresas',
@@ -408,15 +537,76 @@ class DataStore {
   }
 
   private seedDatabase() {
-    // Usa silent=true para evitar disparar eventos durante a carga inicial
+    const defaultEmpresas = DEFAULT_EMPRESAS;
+    
+    // Gera plano contas para as empresas padrão
+    const seededPlanoContas: PlanoConta[] = [];
+    const seededPortadores: Portador[] = [];
+    
+    defaultEmpresas.forEach(emp => {
+      const idMap: Record<string, string> = {};
+      const newPcs = DEFAULT_PLANO_CONTAS.map(p => {
+        const newId = 'pc_' + emp.id + '_' + p.id;
+        idMap[p.id] = newId;
+        
+        let descricao = p.descricao;
+        if (emp.tipo === 'condominio') {
+          if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
+          else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
+          else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
+          else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
+          else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
+          else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
+          else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
+          else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
+        }
+        
+        return {
+          ...p,
+          id: newId,
+          descricao,
+          empresaId: emp.id
+        };
+      });
+      newPcs.forEach(p => {
+        if (p.parentId && idMap[p.parentId]) {
+          p.parentId = idMap[p.parentId];
+        }
+      });
+      seededPlanoContas.push(...newPcs);
+      
+      seededPortadores.push(
+        { id: `port_${emp.id}_1`, nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 15000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id },
+        { id: `port_${emp.id}_2`, nome: 'Fundo Caixa / Caixinha', tipo: 'caixa', saldoInicial: 500, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
+      );
+      
+      if (emp.tipo === 'condominio') {
+        seededPortadores.push(
+          { id: `port_${emp.id}_reserva`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
+        );
+      }
+    });
+
+    const seededUnits: Unidade[] = [
+      { id: 'uni_1', condominioId: 'condo_demo', identificacao: 'Apto 101', proprietario: 'Carlos Souza', proprietarioCpf: '123.456.789-00', fracaoIdeal: 0.12, email: 'carlos@email.com', telefone: '(54) 99111-2222', moradorNome: 'Carlos Souza', moradorCpf: '123.456.789-00', moradorEmail: 'carlos@email.com', moradorTelefone: '(54) 99111-2222' },
+      { id: 'uni_2', condominioId: 'condo_demo', identificacao: 'Apto 102', proprietario: 'Ana Maria', proprietarioCpf: '987.654.321-11', fracaoIdeal: 0.12, email: 'ana@email.com', telefone: '(54) 99111-3333', moradorNome: 'Rodrigo Silva (Inquilino)', moradorCpf: '456.789.123-22', moradorEmail: 'rodrigo@email.com', moradorTelefone: '(54) 99111-9999' },
+      { id: 'uni_3', condominioId: 'condo_demo', identificacao: 'Apto 201', proprietario: 'Felipe Dias', proprietarioCpf: '111.222.333-44', fracaoIdeal: 0.13, email: 'felipe@email.com', telefone: '(54) 99111-4444', moradorNome: 'Felipe Dias', moradorCpf: '111.222.333-44', moradorEmail: 'felipe@email.com', moradorTelefone: '(54) 99111-4444' },
+      { id: 'uni_4', condominioId: 'condo_demo', identificacao: 'Apto 202', proprietario: 'Julia Silva', proprietarioCpf: '555.666.777-88', fracaoIdeal: 0.13, email: 'julia@email.com', telefone: '(54) 99111-5555', moradorNome: 'Julia Silva', moradorCpf: '555.666.777-88', moradorEmail: 'julia@email.com', moradorTelefone: '(54) 99111-5555' },
+      { id: 'uni_5', condominioId: 'condo_demo', identificacao: 'Apto 301', proprietario: 'Roberto Santos', proprietarioCpf: '999.888.777-66', fracaoIdeal: 0.25, email: 'roberto@email.com', telefone: '(54) 99111-6666', moradorNome: 'Juliana Mendes (Inquilina)', moradorCpf: '888.777.666-55', moradorEmail: 'juliana@email.com', moradorTelefone: '(54) 99111-8888' },
+      { id: 'uni_6', condominioId: 'condo_demo', identificacao: 'Apto 302', proprietario: 'Fernanda Rocha', proprietarioCpf: '222.333.444-55', fracaoIdeal: 0.25, email: 'fernanda@email.com', telefone: '(54) 99111-7777', moradorNome: 'Fernanda Rocha', moradorCpf: '222.333.444-55', moradorEmail: 'fernanda@email.com', moradorTelefone: '(54) 99111-7777' },
+    ];
+
     this.set('cf_users', DEFAULT_USERS, true);
-    this.set('cf_empresas', DEFAULT_EMPRESAS, true);
-    this.set('cf_plano_contas', DEFAULT_PLANO_CONTAS, true);
-    this.set('cf_portadores', DEFAULT_PORTADORES, true);
-    this.set('cf_lancamentos', gerarLancamentos(), true);
+    this.set('cf_empresas', defaultEmpresas, true);
+    this.set('cf_plano_contas', seededPlanoContas, true);
+    this.set('cf_portadores', seededPortadores, true);
+    this.set('cf_unidades', seededUnits, true);
+    this.set('cf_lancamentos', [], true);
     this.set('cf_endividamentos', [], true);
     this.set('cf_indicadores', [], true);
     this.set('cf_orcamentos', [], true);
+    this.set('cf_atas', [], true);
+    this.set('cf_transaction_patterns', [], true);
     this.set('cf_initialized_v3', true, true);
     this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
   }
@@ -426,10 +616,16 @@ class DataStore {
     if (!localStorage.getItem('cf_empresas')) this.set('cf_empresas', DEFAULT_EMPRESAS);
     if (!localStorage.getItem('cf_plano_contas')) this.set('cf_plano_contas', DEFAULT_PLANO_CONTAS);
     if (!localStorage.getItem('cf_portadores')) this.set('cf_portadores', DEFAULT_PORTADORES);
-    if (!localStorage.getItem('cf_lancamentos')) this.set('cf_lancamentos', gerarLancamentos());
+    if (!localStorage.getItem('cf_unidades')) this.set('cf_unidades', []);
+    if (!localStorage.getItem('cf_lancamentos')) this.set('cf_lancamentos', []);
     if (!localStorage.getItem('cf_endividamentos')) this.set('cf_endividamentos', []);
     if (!localStorage.getItem('cf_indicadores')) this.set('cf_indicadores', []);
     if (!localStorage.getItem('cf_orcamentos')) this.set('cf_orcamentos', []);
+    if (!localStorage.getItem('cf_atas')) this.set('cf_atas', []);
+    if (!localStorage.getItem('cf_situacao_fiscal')) this.set('cf_situacao_fiscal', []);
+    if (!localStorage.getItem('cf_transaction_patterns')) this.set('cf_transaction_patterns', []);
+    if (!localStorage.getItem('cf_clientes')) this.set('cf_clientes', []);
+    if (!localStorage.getItem('cf_nfse')) this.set('cf_nfse', []);
   }
 
   private mergeDefaults<T extends StoredRecord>(current: T[], defaults: T[]): T[] {
@@ -472,7 +668,7 @@ class DataStore {
   private withMauricioPassword(users: User[]): User[] {
     let changed = false;
     const updatedUsers = users.map(user => {
-      const userText = `${user.name} ${user.email}`
+      const userText = `${ user.name } ${ user.email }`
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
@@ -599,24 +795,188 @@ class DataStore {
     const all = this.get<Lancamento[]>('cf_lancamentos', []);
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
+
+  getPotentialMatches(ofx: Partial<Lancamento>): Lancamento[] {
+    if (!ofx.empresaId) return [];
+    const list = this.getLancamentos(ofx.empresaId);
+    return list.filter(l =>
+      l.status === 'previsto' &&
+      l.tipo === ofx.tipo &&
+      // Margem de 5 dias para conferência
+      Math.abs(new Date(l.data + 'T12:00:00').getTime() - new Date((ofx.data || '') + 'T12:00:00').getTime()) <= 5 * 24 * 60 * 60 * 1000 &&
+      // Valor exato ou com diferença mínima (centavos)
+      Math.abs(l.valor - (ofx.valor || 0)) < 0.01
+    );
+  }
+
+  reconciliar(ofxData: Lancamento, manualId?: string) {
+    const list = this.getLancamentos();
+
+    if (manualId) {
+      const idx = list.findIndex(l => l.id === manualId);
+      if (idx !== -1) {
+        list[idx] = {
+          ...list[idx],
+          status: 'realizado',
+          valor: ofxData.valor,
+          data: ofxData.data,
+          origem: 'ofx',
+          ofxId: ofxData.ofxId || ofxData.id
+        };
+        this.learnPattern(list[idx].empresaId, list[idx].descricao, list[idx].planoContaId);
+      }
+    } else {
+      list.push({ ...ofxData, status: 'realizado' });
+      this.learnPattern(ofxData.empresaId, ofxData.descricao, ofxData.planoContaId);
+    }
+    this.set('cf_lancamentos', list);
+  }
+
+  // Helper para limpar descrições bancárias (remove datas, números isolados e símbolos)
+  private normalizeText(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[0-9]{2,}/g, "") // Remove números longos (geralmente IDs ou datas)
+      .replace(/[^A-Z ]/g, " ") // Mantém apenas letras e espaços
+      .replace(/\s+/g, " ") // Remove espaços duplos
+      .trim();
+  }
+
+  // Lógica de Inteligência: Classificação por Padrão
+  classifyDescription(empresaId: string, description: string): string | null {
+    const patterns = this.getTransactionPatterns(empresaId);
+    const cleanDesc = this.normalizeText(description);
+
+    const match = patterns.find(p => {
+      const cleanPattern = this.normalizeText(p.pattern);
+      return cleanDesc.includes(cleanPattern) || cleanPattern.includes(cleanDesc);
+    });
+
+    return match ? match.categoryId : null;
+  }
+
+  learnPattern(empresaId: string, description: string, categoryId: string) {
+    if (!description || description.length < 3 || !categoryId) return;
+    const patterns = this.getTransactionPatterns();
+    const cleanDesc = this.normalizeText(description);
+
+    const existing = patterns.find(p =>
+      p.empresaId === empresaId && this.normalizeText(p.pattern) === cleanDesc
+    );
+
+    if (existing) {
+      if (existing.categoryId !== categoryId) {
+        existing.categoryId = categoryId;
+        this.saveTransactionPattern(existing);
+      }
+    } else {
+      this.saveTransactionPattern({
+        id: 'pt_' + Math.random().toString(36).slice(2, 9),
+        empresaId,
+        pattern: cleanDesc,
+        categoryId
+      });
+    }
+  }
+
   saveLancamento(lancamento: Lancamento) {
     const list = this.getLancamentos();
     const idx = list.findIndex(l => l.id === lancamento.id);
-    if (idx >= 0) list[idx] = lancamento; else list.push(lancamento);
+
+    if (idx >= 0) {
+      const old = list[idx];
+      // Se o usuário alterou a categoria manualmente, o sistema "aprende"
+      if (old.planoContaId !== lancamento.planoContaId) {
+        this.learnPattern(lancamento.empresaId, lancamento.descricao, lancamento.planoContaId);
+      }
+      list[idx] = lancamento;
+    } else {
+      // Se for um novo lançamento e tiver categoria válida, o sistema também aprende!
+      if (lancamento.planoContaId) {
+        this.learnPattern(lancamento.empresaId, lancamento.descricao, lancamento.planoContaId);
+      }
+      list.push(lancamento);
+    }
     this.set('cf_lancamentos', list);
   }
+
   saveLancamentos(lancamentos: Lancamento[]) {
     const list = this.getLancamentos();
     const ids = new Set(lancamentos.map(l => l.id));
 
-    // Remove os antigos e adiciona os novos para garantir unicidade
+    const processed = lancamentos.map(l => {
+      // Inteligência na importação: se não tiver categoria, tenta classificar pelo histórico
+      if (!l.planoContaId || l.planoContaId === '') {
+        const autoId = this.classifyDescription(l.empresaId, l.descricao);
+        if (autoId) return { ...l, planoContaId: autoId };
+      }
+      return l;
+    });
+
     const filtered = list.filter(l => !ids.has(l.id));
-    const newList = [...filtered, ...lancamentos];
+    const newList = [...filtered, ...processed];
 
     this.set('cf_lancamentos', newList);
   }
   deleteLancamento(id: string) {
     this.set('cf_lancamentos', this.getLancamentos().filter(l => l.id !== id));
+  }
+
+  // Clientes / Fornecedores
+  getClientes(empresaId?: string): Cliente[] {
+    this.init();
+    const all = this.get<Cliente[]>('cf_clientes', []);
+    return empresaId ? all.filter(c => c.empresaId === empresaId) : all;
+  }
+  saveCliente(cliente: Cliente) {
+    const list = this.getClientes();
+    const idx = list.findIndex(c => c.id === cliente.id);
+    if (idx >= 0) list[idx] = cliente; else list.push(cliente);
+    this.set('cf_clientes', list);
+  }
+  deleteCliente(id: string) {
+    this.set('cf_clientes', this.getClientes().filter(c => c.id !== id));
+  }
+
+  // NFS-e
+  getNfsE(empresaId?: string): NfsE[] {
+    this.init();
+    const all = this.get<NfsE[]>('cf_nfse', []);
+    return empresaId ? all.filter(n => n.empresaId === empresaId) : all;
+  }
+  saveNfsE(nfse: NfsE) {
+    const list = this.getNfsE();
+    const idx = list.findIndex(n => n.id === nfse.id);
+    if (idx >= 0) list[idx] = { ...nfse, updatedAt: new Date().toISOString() };
+    else list.push(nfse);
+    this.set('cf_nfse', list);
+  }
+  deleteNfsE(id: string) {
+    this.set('cf_nfse', this.getNfsE().filter(n => n.id !== id));
+  }
+  getNextNfseNumero(empresaId: string): string {
+    const list = this.getNfsE(empresaId).filter(n => n.status !== 'cancelada');
+    const nums = list.map(n => parseInt(n.numero, 10)).filter(n => !isNaN(n));
+    const max = nums.length > 0 ? Math.max(...nums) : 0;
+    return String(max + 1).padStart(6, '0');
+  }
+
+  // Unidades do Condomínio
+  getUnidades(condominioId?: string): Unidade[] {
+    this.init();
+    const all = this.get<Unidade[]>('cf_unidades', []);
+    return condominioId ? all.filter(u => u.condominioId === condominioId) : all;
+  }
+  saveUnidade(unidade: Unidade) {
+    const list = this.getUnidades();
+    const idx = list.findIndex(u => u.id === unidade.id);
+    if (idx >= 0) list[idx] = unidade; else list.push(unidade);
+    this.set('cf_unidades', list);
+  }
+  deleteUnidade(id: string) {
+    this.set('cf_unidades', this.getUnidades().filter(u => u.id !== id));
   }
 
   // Endividamento
@@ -633,6 +993,52 @@ class DataStore {
   }
   deleteEndividamento(id: string) {
     this.set('cf_endividamentos', this.getEndividamentos().filter(l => l.id !== id));
+  }
+
+  // Atas
+  getAtas(empresaId?: string): AtaAtendimento[] {
+    this.init();
+    const all = this.get<AtaAtendimento[]>('cf_atas', []);
+    return empresaId ? all.filter(a => a.empresaId === empresaId) : all;
+  }
+  saveAta(ata: AtaAtendimento) {
+    const list = this.getAtas();
+    const idx = list.findIndex(a => a.id === ata.id);
+    if (idx >= 0) list[idx] = ata; else list.push(ata);
+    this.set('cf_atas', list);
+  }
+  deleteAta(id: string) {
+    this.set('cf_atas', this.getAtas().filter(a => a.id !== id));
+  }
+
+  // Padrões de Classificação
+  getTransactionPatterns(empresaId?: string): TransactionPattern[] {
+    this.init();
+    const all = this.get<TransactionPattern[]>('cf_transaction_patterns', []);
+    return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
+  }
+
+  saveTransactionPattern(pattern: TransactionPattern) {
+    const list = this.getTransactionPatterns();
+    const idx = list.findIndex(p => p.id === pattern.id);
+    if (idx >= 0) list[idx] = pattern; else list.push(pattern);
+    this.set('cf_transaction_patterns', list);
+  }
+
+  deleteTransactionPattern(id: string) {
+    const list = this.getTransactionPatterns().filter(p => p.id !== id);
+    this.set('cf_transaction_patterns', list);
+  }
+
+  // Situação Fiscal
+  getSituacaoFiscal(empresaId: string): SituacaoFiscal[] {
+    this.init();
+    return this.get<SituacaoFiscal[]>('cf_situacao_fiscal', []).filter(s => s.empresaId === empresaId);
+  }
+  saveSituacaoFiscal(item: SituacaoFiscal) {
+    const all = this.get<SituacaoFiscal[]>('cf_situacao_fiscal', []);
+    all.push(item);
+    this.set('cf_situacao_fiscal', all);
   }
 
   // Indicadores Mensais
@@ -668,13 +1074,14 @@ class DataStore {
   }
 
   // Helpers
-  getSaldoPortador(portadorId: string, empresaId: string): number {
+  getSaldoPortador(portadorId: string, empresaId: string, dataFim?: string): number {
     const portador = this.getPortadores().find(p => p.id === portadorId);
     if (!portador) return 0;
+    if (dataFim && portador.saldoInicialData && portador.saldoInicialData > dataFim) return 0;
     const lancamentos = this.getLancamentos(empresaId).filter(
       l => l.portadorId === portadorId && l.status === 'realizado' &&
-        // Inclui apenas lançamentos na ou após a data do saldo inicial
-        (!portador.saldoInicialData || l.data >= portador.saldoInicialData)
+        (!portador.saldoInicialData || l.data >= portador.saldoInicialData) &&
+        (!dataFim || l.data <= dataFim)
     );
     const total = lancamentos.reduce((acc, l) => {
       return l.tipo === 'receita' ? acc + l.valor : acc - l.valor;
@@ -686,10 +1093,10 @@ class DataStore {
     const hoje = new Date();
     return Array.from({ length: meses }, (_, i) => {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
-      const lancamentos = this.getLancamentos(empresaId).filter(l => {
-        const d = new Date(l.data);
-        return d.getFullYear() === mes.getFullYear() && d.getMonth() === mes.getMonth() && l.status === 'realizado';
-      });
+      const mesStr = mes.toISOString().substring(0, 7); // formato YYYY-MM
+      const lancamentos = this.getLancamentos(empresaId).filter(l => 
+        l.data.startsWith(mesStr) && l.status === 'realizado'
+      );
       const receitas = lancamentos.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
       const despesas = lancamentos.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
       return {
@@ -699,6 +1106,109 @@ class DataStore {
         saldo: receitas - despesas,
       };
     });
+  }
+
+  getResumoMensalGrupoEconomico(grupoEconomico: string, meses = 6) {
+    const hoje = new Date();
+    const empresasDoGrupo = this.getEmpresas().filter(e => e.grupoEconomico === grupoEconomico);
+    const todosLancamentosDoGrupo: Lancamento[] = [];
+
+    empresasDoGrupo.forEach(empresa => {
+      todosLancamentosDoGrupo.push(...this.getLancamentos(empresa.id));
+    });
+
+    return Array.from({ length: meses }, (_, i) => {
+      const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
+      const mesStr = mes.toISOString().substring(0, 7);
+      const lancamentosDoMes = todosLancamentosDoGrupo.filter(l => 
+        l.data.startsWith(mesStr) && l.status === 'realizado'
+      );
+      const receitas = lancamentosDoMes.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+      const despesas = lancamentosDoMes.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
+      return {
+        mes: mes.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
+        receitas,
+        despesas,
+        saldo: receitas - despesas,
+      };
+    });
+  }
+
+  exportBackup(): string {
+    const keys = [
+      'cf_users',
+      'cf_empresas',
+      'cf_plano_contas',
+      'cf_portadores',
+      'cf_lancamentos',
+      'cf_endividamentos',
+      'cf_indicadores',
+      'cf_orcamentos',
+      'cf_atas',
+      'cf_situacao_fiscal',
+      'cf_transaction_patterns',
+      'cf_clientes',
+      'cf_nfse'
+    ];
+    const data: Record<string, unknown> = {};
+    if (typeof window !== 'undefined') {
+      keys.forEach(key => {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            data[key] = JSON.parse(raw);
+          } catch {
+            data[key] = null;
+          }
+        }
+      });
+    }
+    return JSON.stringify({
+      version: STORAGE_VERSION,
+      timestamp: new Date().toISOString(),
+      data
+    }, null, 2);
+  }
+
+  importBackup(jsonString: string): { success: boolean; error?: string } {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (!parsed || typeof parsed !== 'object') {
+        return { success: false, error: 'Formato de arquivo de backup inválido.' };
+      }
+      if (!parsed.data || typeof parsed.data !== 'object') {
+        return { success: false, error: 'Os dados do backup estão ausentes ou corrompidos.' };
+      }
+
+      const data = parsed.data as Record<string, unknown>;
+      
+      // Validação de sanidade básica dos dados
+      const requiredKeys = ['cf_empresas', 'cf_plano_contas'];
+      for (const reqKey of requiredKeys) {
+        if (!data[reqKey] || !Array.isArray(data[reqKey])) {
+          return { success: false, error: `Dados essenciais (${reqKey}) estão ausentes ou no formato incorreto.` };
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        // Grava as coleções que vieram no backup
+        Object.entries(data).forEach(([key, value]) => {
+          if (key.startsWith('cf_') && value !== null) {
+            localStorage.setItem(key, JSON.stringify(value));
+          }
+        });
+
+        // Configura a versão do storage
+        localStorage.setItem(STORAGE_VERSION_KEY, parsed.version || STORAGE_VERSION);
+
+        // Notifica todos os listeners de que a base mudou
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all' } }));
+      }
+      
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Falha ao processar o JSON: ' + (e as Error).message };
+    }
   }
 }
 

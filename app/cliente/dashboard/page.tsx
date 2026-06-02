@@ -38,10 +38,11 @@ export default function ClienteDashboard() {
     const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
+    const dataFimPeriodo = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0];
     const ports = store.getPortadores(eId);
-    const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId), 0);
+    const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId, dataFimPeriodo), 0);
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
-    setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId), tipo: p.tipo })));
+    setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
 
     const plano = store.getPlanoContas(eId);
     const despCats: Record<string, number> = {};
@@ -98,7 +99,7 @@ export default function ClienteDashboard() {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saldo em Caixa</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saldo em Caixa no Periodo</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {fmt.currency(totais.portadores)}
             </div>
@@ -145,7 +146,7 @@ export default function ClienteDashboard() {
               </div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={resumo} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -164,7 +165,7 @@ export default function ClienteDashboard() {
               <div className="card-title">Distribuição de Despesas</div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie data={categorias} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">
                     {categorias.map((entry, i) => <Cell key={i} fill={entry.color} />)}
@@ -187,7 +188,7 @@ export default function ClienteDashboard() {
               </div>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={tendencia}>
                   <defs>
                     <linearGradient id="gradPos" x1="0" y1="0" x2="0" y2="1">
@@ -207,7 +208,7 @@ export default function ClienteDashboard() {
 
           <div className="card">
             <div className="card-header">
-              <div className="card-title">Saldo por Portador</div>
+              <div className="card-title">Saldo por Portador no Periodo</div>
             </div>
             {portadoresList.map((p, i) => {
               const pct = totais.portadores > 0 ? (Math.max(0, p.saldo) / Math.max(totais.portadores, 1)) * 100 : 0;

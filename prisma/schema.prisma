@@ -1,0 +1,291 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  password           String
+  role               String   // "administrador" | "consultor" | "cliente"
+  empresaIds         String[] // Array de IDs de empresas autorizadas
+  avatarData         String?  // Base64 ou URL da foto
+  receberEmailDiario Boolean  @default(false)
+  allowedRoutes      String[] // Array de caminhos autorizados para consultores
+  createdAt          DateTime @default(now())
+}
+
+model Empresa {
+  id                    String            @id @default(uuid())
+  razaoSocial           String
+  nomeFantasia          String
+  cnpj                  String            @unique
+  responsavel           String
+  email                 String
+  telefone              String
+  atividade             String?           // "Comércio" | "Serviço" | "Indústria"
+  tipo                  String            @default("empresa") // "empresa" | "condominio"
+  taxaMensalPadrao      Float?
+  fundoReservaPct       Float?
+  dataInicioContrato    String?
+  grupoEconomico        String?
+  receitaMensalEstimada Float?
+  comprasMensalEstimada Float?
+  logoData              String?           // Base64 da logo
+  bancoBoleto           String            @default("nenhum") // "nenhum" | "c6"
+  createdAt             DateTime          @default(now())
+  unidades              Unidade[]
+  planoContas           PlanoConta[]
+  portadores            Portador[]
+  lancamentos           Lancamento[]
+  endividamentos        Endividamento[]
+  atas                  AtaAtendimento[]
+  indicadores           IndicadorMensal[]
+  orcamentos            OrcamentoMensal[]
+  clientes              Cliente[]
+  nfsList               NfsE[]
+  patterns              TransactionPattern[]
+  situacoesFiscais      SituacaoFiscal[]
+}
+
+model Unidade {
+  id             String      @id @default(uuid())
+  condominioId   String
+  condominio     Empresa     @relation(fields: [condominioId], references: [id], onDelete: Cascade)
+  identificacao  String
+  proprietario   String
+  proprietarioCpf String?
+  fracaoIdeal    Float
+  email          String
+  telefone       String
+  moradorNome    String?
+  moradorCpf     String?
+  moradorEmail   String?
+  moradorTelefone String?
+  lancamentos    Lancamento[]
+}
+
+model PlanoConta {
+  id           String               @id @default(uuid())
+  codigo       String
+  descricao    String
+  tipo         String               // "receita" | "despesa"
+  nivel        Int
+  parentId     String?
+  parent       PlanoConta?          @relation("PlanoContaHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     PlanoConta[]         @relation("PlanoContaHierarchy")
+  ativo        Boolean              @default(true)
+  empresaId    String
+  empresa      Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  dreCategoria String?
+  lancamentos  Lancamento[]
+  patterns     TransactionPattern[]
+}
+
+model Portador {
+  id               String       @id @default(uuid())
+  nome             String
+  tipo             String       // "conta_corrente" | "poupanca" | "aplicacao" | "caixa" | "cartao" | "outro"
+  banco            String?
+  agencia          String?
+  conta            String?
+  saldoInicial     Float
+  saldoInicialData String?
+  ativo            Boolean      @default(true)
+  empresaId        String
+  empresa          Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lancamentos      Lancamento[]
+}
+
+model Endividamento {
+  id                String                 @id @default(uuid())
+  empresaId         String
+  empresa           Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tipo              String                 // "bancario" | "tributario"
+  banco             String
+  conta             String
+  contrato          String
+  descricaoContrato String?
+  taxa              Float
+  taxaTipo          String?                // "am" | "aa"
+  indexador         String
+  parcela           Int
+  parcelasFaltantes Int
+  valorQuitacao     Float
+  valorAPagar       Float
+  garantia          String
+  pagamentoMes      Int
+  pagamentos        PagamentoEndividamento[]
+}
+
+model PagamentoEndividamento {
+  id              String        @id @default(uuid())
+  endividamentoId String
+  endividamento   Endividamento @relation(fields: [endividamentoId], references: [id], onDelete: Cascade)
+  data            String
+  valorTotal      Float
+  valorJuros      Float
+  valorAmortizacao Float
+}
+
+model AtaAtendimento {
+  id           String   @id @default(uuid())
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  consultorId  String
+  data         String
+  titulo       String
+  conteudo     String
+  participantes String
+  createdAt    DateTime @default(now())
+}
+
+model IndicadorMensal {
+  id           String   @id @default(uuid())
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  mes          String   // YYYY-MM
+  faturamento  Float
+  compras      Float
+  inadimplencia Float
+}
+
+model OrcamentoMensal {
+  id        String   @id @default(uuid())
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  mes       String   // YYYY-MM
+  // Categorias mapeadas como chaves de string para valores de Float no prisma requerem tabela relacional
+  valores   OrcamentoValor[]
+}
+
+model OrcamentoValor {
+  id               String          @id @default(uuid())
+  orcamentoId      String
+  orcamento        OrcamentoMensal @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+  planoContaId     String
+  valor            Float
+}
+
+model Lancamento {
+  id              String      @id @default(uuid())
+  empresaId       String
+  empresa         Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  data            String
+  descricao       String
+  valor           Float
+  tipo            String      // "receita" | "despesa"
+  planoContaId    String
+  planoConta      PlanoConta  @relation(fields: [planoContaId], references: [id])
+  portadorId      String
+  portador        Portador    @relation(fields: [portadorId], references: [id])
+  status          String      // "previsto" | "realizado"
+  numeroDocumento String?
+  observacao      String?
+  origem          String      @default("manual") // "manual" | "ofx"
+  ofxId           String?
+  unidadeId       String?
+  unidade         Unidade?    @relation(fields: [unidadeId], references: [id])
+  clienteId       String?
+  cliente         Cliente?    @relation(fields: [clienteId], references: [id])
+  attachmentName  String?
+  attachmentData  String?     // Base64 ou link
+  createdAt       DateTime    @default(now())
+  nfsList         NfsE[]
+}
+
+model Cliente {
+  id            String       @id @default(uuid())
+  empresaId     String
+  empresa       Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tipo          String       // "cliente" | "fornecedor" | "ambos"
+  nome          String
+  nomeFantasia  String?
+  cpfCnpj       String
+  email         String?
+  telefone      String?
+  celular       String?
+  endereco      String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  contato       String?
+  observacao    String?
+  limiteCredito Float?
+  ativo         Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  lancamentos   Lancamento[]
+  nfsList       NfsE[]
+}
+
+model NfsE {
+  id                          String      @id @default(uuid())
+  empresaId                   String
+  empresa                     Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  numero                      String
+  serie                       String      @default("1")
+  codigoVerificacao           String?
+  status                      String      // "rascunho" | "emitida" | "cancelada"
+  motivoCancelamento          String?
+  prestadorCnpj               String
+  prestadorRazaoSocial        String
+  prestadorInscricaoMunicipal String?
+  prestadorEndereco           String?
+  prestadorCidade             String?
+  prestadorUf                 String?
+  prestadorCep                String?
+  clienteId                   String?
+  cliente                     Cliente?    @relation(fields: [clienteId], references: [id])
+  tomadorCnpjCpf              String
+  tomadorRazaoSocial          String
+  tomadorEmail                String?
+  tomadorEndereco             String?
+  tomadorCidade               String?
+  tomadorUf                   String?
+  tomadorCep                  String?
+  tomadorInscricaoMunicipal   String?
+  dataEmissao                 String
+  dataCompetencia             String
+  codigoServico               String
+  cnae                        String?
+  discriminacao               String
+  municipioPrestacao          String?
+  valorServicos               Float
+  valorDeducoes               Float
+  valorPis                    Float
+  valorCofins                 Float
+  valorInss                   Float
+  valorIr                     Float
+  valorCsll                   Float
+  issRetido                   Boolean     @default(false)
+  valorIss                    Float
+  aliquotaIss                 Float
+  valorBaseCalculo            Float
+  valorLiquido                Float
+  lancamentoId                String?
+  lancamento                  Lancamento? @relation(fields: [lancamentoId], references: [id])
+  createdAt                   DateTime    @default(now())
+  updatedAt                   DateTime?   @updatedAt
+}
+
+model TransactionPattern {
+  id         String     @id @default(uuid())
+  empresaId  String
+  empresa    Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  pattern    String
+  categoryId String
+  planoConta PlanoConta @relation(fields: [categoryId], references: [id])
+}
+
+model SituacaoFiscal {
+  id              String   @id @default(uuid())
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  dataVerificacao String
+  status          String   // "regular" | "pendencia" | "atencao"
+  observacoes     String
+}

@@ -4,8 +4,22 @@ import { store, Empresa } from '../../../lib/store';
 import { fmt, generatePDF, generateXLS, buildFluxoCaixaData } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 
+const isContaRedutoraReceita = (descricao: string) => descricao.trim().startsWith('( - )');
+
+const getMonthsInRange = (start: string, end: string) => {
+  const months = [];
+  const dStart = new Date(start + 'T12:00:00');
+  const dEnd = new Date(end + 'T12:00:00');
+  let curr = new Date(dStart.getFullYear(), dStart.getMonth(), 1);
+  while (curr <= dEnd) {
+    months.push(new Date(curr));
+    curr.setMonth(curr.getMonth() + 1);
+  }
+  return months;
+};
+
 export default function RelatoriosPage() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresaId, setEmpresaId] = useState('');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [tipo, setTipo] = useState<'fluxo' | 'extrato' | 'dre'>('fluxo');
   const [dataIni, setDataIni] = useState(() => {
@@ -21,33 +35,73 @@ export default function RelatoriosPage() {
   const [expandedSubs, setExpandedSubs] = useState<Record<string, boolean>>({});
 
   const load = useCallback((eId: string) => {
-    setEmpresaId(eId);
-    setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
+    const list = store.getEmpresas();
+    let targetId = eId;
+    if (!list.find(e => e.id === targetId)) {
+      if (list.length > 0) {
+        targetId = list[0].id;
+        sessionStorage.setItem('cf_empresa_sel', targetId);
+      }
+    }
+    setEmpresaId(targetId);
+    setEmpresa(list.find(e => e.id === targetId) || null);
   }, []);
 
+  useEffect(() => {
+    const saved = sessionStorage.getItem('cf_empresa_sel') || '';
+    load(saved);
+
+    const handler = (e: Event) => load((e as CustomEvent).detail);
+    window.addEventListener('empresaChange', handler);
+
+    const dataHandler = () => {
+      const currentSaved = sessionStorage.getItem('cf_empresa_sel') || '';
+      load(currentSaved);
+    };
+    window.addEventListener('cfDataChange', dataHandler);
+
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataHandler);
+    };
+  }, [load]);
+
   const drilldownData = useMemo(() => {
-    const lancs = store.getLancamentos(empresaId).filter(l => l.data >= dataIni && l.data <= dataFim);
+    const allLancs = store.getLancamentos(empresaId);
+    const months = getMonthsInRange(dataIni, dataFim);
+    const plano = store.getPlanoContas(empresaId);
+
+    const lancs = allLancs.filter(l => l.data >= dataIni && l.data <= dataFim);
     let filteredLancs = lancs;
     if (portadorFiltro) filteredLancs = filteredLancs.filter(l => l.portadorId === portadorFiltro);
     if (statusFiltro) filteredLancs = filteredLancs.filter(l => l.status === statusFiltro);
 
-    const plano = store.getPlanoContas(empresaId);
-    
+    const initGroup = (id: string, label: string, isDespesa: boolean) => ({
+      id, label, isDespesa, total: 0,
+      monthlyTotals: months.reduce((acc, m) => {
+        acc[m.toISOString().slice(0, 7)] = 0;
+        return acc;
+      }, {} as Record<string, number>),
+      subaccounts: [] as any[]
+    });
+
     const catGroups = {
-      receitas: { id: 'receitas', label: 'Receitas', isDespesa: false, total: 0, subaccounts: [] as any[] },
-      custos: { id: 'custos', label: 'Custos de Mercadoria', isDespesa: true, total: 0, subaccounts: [] as any[] },
-      despesas: { id: 'despesas', label: 'Despesas', isDespesa: true, total: 0, subaccounts: [] as any[] },
-      liberacoes: { id: 'liberacoes', label: 'Liberações Bancárias', isDespesa: false, total: 0, subaccounts: [] as any[] },
-      emprestimos: { id: 'emprestimos', label: 'Empréstimos', isDespesa: true, total: 0, subaccounts: [] as any[] },
-      investimentos: { id: 'investimentos', label: 'Investimentos', isDespesa: true, total: 0, subaccounts: [] as any[] },
+      receitas: initGroup('receitas', 'Receitas', false),
+      custos: initGroup('custos', 'Custos de Mercadoria', true),
+      despesas: initGroup('despesas', 'Despesas', true),
+      liberacoes: initGroup('liberacoes', 'Liberações Bancárias', false),
+      emprestimos: initGroup('emprestimos', 'Empréstimos', true),
+      investimentos: initGroup('investimentos', 'Investimentos', true),
     };
 
-    const subaccountMap: Record<string, { id: string; desc: string; total: number; lancs: any[] }> = {};
+    const subaccountMap: Record<string, any> = {};
 
     filteredLancs.forEach(l => {
       const pc = plano.find(p => p.id === l.planoContaId);
       if (!pc) return;
       const cod = pc.codigo;
+      const valorGerencial = cod.startsWith('1') && isContaRedutoraReceita(pc.descricao) ? -l.valor : l.valor;
+      const mesKey = l.data.slice(0, 7);
 
       let groupKey: keyof typeof catGroups | null = null;
       if (cod.startsWith('1')) groupKey = 'receitas';
@@ -58,17 +112,24 @@ export default function RelatoriosPage() {
       else if (cod.startsWith('5')) groupKey = 'investimentos';
 
       if (groupKey) {
-        catGroups[groupKey].total += l.valor;
+        catGroups[groupKey].total += valorGerencial;
+        catGroups[groupKey].monthlyTotals[mesKey] += valorGerencial;
+
         if (!subaccountMap[l.planoContaId]) {
           subaccountMap[l.planoContaId] = {
             id: l.planoContaId,
             desc: `${pc.codigo} - ${pc.descricao}`,
             total: 0,
+            monthlyTotals: months.reduce((acc, m) => {
+              acc[m.toISOString().slice(0, 7)] = 0;
+              return acc;
+            }, {} as Record<string, number>),
             lancs: []
           };
           catGroups[groupKey].subaccounts.push(subaccountMap[l.planoContaId]);
         }
-        subaccountMap[l.planoContaId].total += l.valor;
+        subaccountMap[l.planoContaId].total += valorGerencial;
+        subaccountMap[l.planoContaId].monthlyTotals[mesKey] += valorGerencial;
         subaccountMap[l.planoContaId].lancs.push(l);
       }
     });
@@ -78,23 +139,27 @@ export default function RelatoriosPage() {
       grp.subaccounts.sort((a, b) => b.total - a.total);
     });
 
-    const recOperacionalBruta = catGroups.receitas.total - catGroups.custos.total - catGroups.despesas.total;
-    const resultadoLiquido = recOperacionalBruta + catGroups.liberacoes.total - catGroups.emprestimos.total - catGroups.investimentos.total;
+    const monthlySummary = months.map(m => {
+      const k = m.toISOString().slice(0, 7);
+      const receitas = catGroups.receitas.monthlyTotals[k];
+      const custos = catGroups.custos.monthlyTotals[k];
+      const despesas = catGroups.despesas.monthlyTotals[k];
+      const liberacoes = catGroups.liberacoes.monthlyTotals[k];
+      const emprestimos = catGroups.emprestimos.monthlyTotals[k];
+      const investimentos = catGroups.investimentos.monthlyTotals[k];
+
+      const recOp = receitas - custos - despesas;
+      const resLiq = recOp + liberacoes - emprestimos - investimentos;
+
+      return { key: k, recOp, resLiq };
+    });
 
     return {
       groups: catGroups,
-      recOperacionalBruta,
-      resultadoLiquido
+      months,
+      monthlySummary
     };
   }, [empresaId, dataIni, dataFim, portadorFiltro, statusFiltro]);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
-    load(saved);
-    const handler = (e: Event) => load((e as CustomEvent).detail);
-    window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
-  }, [load]);
 
   const getTitle = () => tipo === 'fluxo' ? 'Fluxo de Caixa' : tipo === 'extrato' ? 'Extrato Detalhado' : 'DRE — Demonstrativo de Resultado';
   const getPeriodo = () => `${fmt.date(dataIni)} a ${fmt.date(dataFim)}`;
@@ -111,6 +176,13 @@ export default function RelatoriosPage() {
     const plano = store.getPlanoContas(empresaId);
     const portadores = store.getPortadores(empresaId);
     const data = buildFluxoCaixaData(lancs, plano, portadores);
+    const saldosPortadores = portadores
+      .filter(p => p.ativo)
+      .map(p => ({
+        nome: p.nome,
+        saldo: store.getSaldoPortador(p.id, empresaId, dataFim),
+      }));
+    const saldoFinalCaixa = saldosPortadores.reduce((acc, p) => acc + p.saldo, 0);
 
     // Mapeamento Gerencial conforme estrutura solicitada
     let receitas = 0;
@@ -124,19 +196,20 @@ export default function RelatoriosPage() {
       const pc = plano.find(p => p.id === l.planoContaId);
       if (!pc) return;
       const cod = pc.codigo;
+      const valorGerencial = cod.startsWith('1') && isContaRedutoraReceita(pc.descricao) ? -l.valor : l.valor;
 
       if (cod.startsWith('1')) {
-        receitas += l.valor;
+        receitas += valorGerencial;
       } else if (cod.startsWith('2')) {
-        custos += l.valor;
+        custos += valorGerencial;
       } else if (cod.startsWith('3')) {
-        despesas += l.valor;
+        despesas += valorGerencial;
       } else if (cod.startsWith('4.1')) {
-        liberacoes += l.valor;
+        liberacoes += valorGerencial;
       } else if (cod.startsWith('4.2')) {
-        emprestimos += l.valor;
+        emprestimos += valorGerencial;
       } else if (cod.startsWith('5')) {
-        investimentos += l.valor;
+        investimentos += valorGerencial;
       }
     });
 
@@ -191,11 +264,13 @@ export default function RelatoriosPage() {
         ['(=) Resultado Líquido Final', fmt.currency(resultadoFinal)],
       ];
 
-      setPreview({ rows, totais: [
-        { label: 'Lucro Bruto', value: fmt.currency(lucroBruto), color: lucroBruto >= 0 ? 'green' : 'red' },
-        { label: 'Lucro Operacional', value: fmt.currency(lucroOperacional), color: lucroOperacional >= 0 ? 'green' : 'red' },
-        { label: 'Resultado Líquido Final', value: fmt.currency(resultadoFinal), color: resultadoFinal >= 0 ? 'green' : 'red' },
-      ]});
+      setPreview({
+        rows, totais: [
+          { label: 'Lucro Bruto', value: fmt.currency(lucroBruto), color: lucroBruto >= 0 ? 'green' : 'red' },
+          { label: 'Lucro Operacional', value: fmt.currency(lucroOperacional), color: lucroOperacional >= 0 ? 'green' : 'red' },
+          { label: 'Resultado Líquido Final', value: fmt.currency(resultadoFinal), color: resultadoFinal >= 0 ? 'green' : 'red' },
+        ]
+      });
     } else if (tipo === 'fluxo') {
       const rows: (string | number)[][] = [
         ['Receitas', fmt.currency(receitas)],
@@ -205,21 +280,29 @@ export default function RelatoriosPage() {
         ['Liberações Bancárias', fmt.currency(liberacoes)],
         ['Empréstimos', fmt.currency(emprestimos)],
         ['Investimentos', fmt.currency(investimentos)],
-        ['(=) Resultado Mensal Líquido (Operacional + Liberações - Empréstimos - Investimentos)', fmt.currency(resultadoLiquido)]
+        ['(=) Resultado Mensal Líquido (Operacional + Liberações - Empréstimos - Investimentos)', fmt.currency(resultadoLiquido)],
+        ['', ''],
+        [`Saldos Finais dos Portadores ate ${fmt.date(dataFim)}`, ''],
+        ...saldosPortadores.map(p => [p.nome, fmt.currency(p.saldo)]),
       ];
-      setPreview({ rows, totais: [
-        { label: 'Rec. Operacional Bruta', value: fmt.currency(recOperacionalBruta), color: recOperacionalBruta >= 0 ? 'green' : 'red' },
-        { label: 'Resultado Mensal Líquido', value: fmt.currency(resultadoLiquido), color: resultadoLiquido >= 0 ? 'green' : 'red' },
-        { label: 'Registros no Período', value: String(lancs.length) }
-      ]});
+      setPreview({
+        rows, totais: [
+          { label: 'Rec. Operacional Bruta', value: fmt.currency(recOperacionalBruta), color: recOperacionalBruta >= 0 ? 'green' : 'red' },
+          { label: 'Resultado Mensal Líquido', value: fmt.currency(resultadoLiquido), color: resultadoLiquido >= 0 ? 'green' : 'red' },
+          { label: 'Saldo Caixa Final', value: fmt.currency(saldoFinalCaixa), color: saldoFinalCaixa >= 0 ? 'green' : 'red' },
+          { label: 'Registros no Período', value: String(lancs.length) }
+        ]
+      });
     } else {
       const rows = data.map(d => [d.data, d.descricao, d.tipo, d.planoConta, d.portador, d.status, d.valor]);
-      setPreview({ rows, totais: [
-        { label: 'Total Receitas', value: fmt.currency(receitas), color: 'green' },
-        { label: 'Total Despesas', value: fmt.currency(despesas), color: 'red' },
-        { label: 'Resultado', value: fmt.currency(receitas - despesas), color: (receitas - despesas) >= 0 ? 'green' : 'red' },
-        { label: 'Registros', value: String(lancs.length) },
-      ]});
+      setPreview({
+        rows, totais: [
+          { label: 'Total Receitas', value: fmt.currency(receitas), color: 'green' },
+          { label: 'Total Despesas', value: fmt.currency(despesas), color: 'red' },
+          { label: 'Resultado', value: fmt.currency(receitas - despesas), color: (receitas - despesas) >= 0 ? 'green' : 'red' },
+          { label: 'Registros', value: String(lancs.length) },
+        ]
+      });
     }
   };
 
@@ -263,15 +346,12 @@ export default function RelatoriosPage() {
 
   const handlePrint = () => { window.print(); };
 
-  const renderGroupRow = (id: string, group: any, totalReceitas: number) => {
+  const renderGroupRow = (id: string, group: any, months: Date[]) => {
     const isExpanded = !!expandedGroups[id];
-    const displayVal = group.isDespesa ? `-${fmt.currency(group.total)}` : fmt.currency(group.total);
-    const valueColor = group.total > 0 ? (group.isDespesa ? 'var(--red)' : 'var(--green)') : 'var(--text-muted)';
-    const pctV = totalReceitas > 0 && group.total > 0 ? ((group.total / totalReceitas) * 100).toFixed(1) + '%' : '0.0%';
-    
+    const valueColor = group.total < 0 ? 'var(--red)' : group.total > 0 ? (group.isDespesa ? 'var(--red)' : 'var(--green)') : 'var(--text-muted)';
     return (
       <div key={id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-        <div 
+        <div
           onClick={() => setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }))}
           style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -282,18 +362,27 @@ export default function RelatoriosPage() {
           className="accordion-header-row"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ 
-              fontSize: 9, 
-              color: 'var(--text-muted)', 
+            <span style={{
+              fontSize: 9,
+              color: 'var(--text-muted)',
               display: 'inline-block',
-              transform: isExpanded ? 'rotate(90deg)' : 'none', 
-              transition: 'transform 0.15s ease' 
+              transform: isExpanded ? 'rotate(90deg)' : 'none',
+              transition: 'transform 0.15s ease'
             }}>▶</span>
             <span>{group.label}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, minWidth: 40, textAlign: 'right' }}>{pctV}</span>
-            <span style={{ color: valueColor, fontWeight: 700, minWidth: 100, textAlign: 'right' }}>{displayVal}</span>
+            {months.map(m => {
+              const val = group.monthlyTotals[m.toISOString().slice(0, 7)];
+              return (
+                <span key={m.getTime()} style={{ color: val === 0 ? 'var(--text-muted)' : valueColor, fontWeight: 700, minWidth: 100, textAlign: 'right' }}>
+                  {group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}
+                </span>
+              );
+            })}
+            <span style={{ color: valueColor, fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+              {group.isDespesa && group.total !== 0 ? '-' : ''}{fmt.currency(group.total)}
+            </span>
           </div>
         </div>
 
@@ -305,9 +394,6 @@ export default function RelatoriosPage() {
               </div>
             ) : group.subaccounts.map((sub: any) => {
               const isSubExpanded = !!expandedSubs[sub.id];
-              const subVal = group.isDespesa ? `-${fmt.currency(sub.total)}` : fmt.currency(sub.total);
-              const subPctV = totalReceitas > 0 && sub.total > 0 ? ((sub.total / totalReceitas) * 100).toFixed(1) + '%' : '0.0%';
-              
               return (
                 <div key={sub.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.02)' }}>
                   <div
@@ -320,18 +406,27 @@ export default function RelatoriosPage() {
                     className="accordion-sub-row"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ 
-                        fontSize: 8, 
-                        color: 'var(--text-muted)', 
+                      <span style={{
+                        fontSize: 8,
+                        color: 'var(--text-muted)',
                         display: 'inline-block',
-                        transform: isSubExpanded ? 'rotate(90deg)' : 'none', 
-                        transition: 'transform 0.15s ease' 
+                        transform: isSubExpanded ? 'rotate(90deg)' : 'none',
+                        transition: 'transform 0.15s ease'
                       }}>▶</span>
                       <span style={{ color: 'var(--text-secondary)' }}>{sub.desc}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, minWidth: 40, textAlign: 'right' }}>{subPctV}</span>
-                      <span style={{ fontWeight: 600, color: group.isDespesa ? 'var(--red)' : 'var(--green)', minWidth: 100, textAlign: 'right' }}>{subVal}</span>
+                      {months.map(m => {
+                        const val = sub.monthlyTotals[m.toISOString().slice(0, 7)];
+                        return (
+                          <span key={m.getTime()} style={{ fontWeight: 600, color: val === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right' }}>
+                            {group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}
+                          </span>
+                        );
+                      })}
+                      <span style={{ fontWeight: 700, color: sub.total === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+                        {group.isDespesa && sub.total !== 0 ? '-' : ''}{fmt.currency(sub.total)}
+                      </span>
                     </div>
                   </div>
 
@@ -350,10 +445,17 @@ export default function RelatoriosPage() {
                           {sub.lancs.map((l: any) => (
                             <tr key={l.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.01)' }}>
                               <td style={{ padding: '6px 8px', color: 'var(--text-muted)' }}>{fmt.date(l.data)}</td>
-                              <td style={{ padding: '6px 8px', fontWeight: 500, color: 'var(--text-main)' }}>{l.descricao}</td>
+                              <td style={{ padding: '6px 8px', fontWeight: 500, color: 'var(--text-main)' }}>
+                                <div>{l.descricao}</div>
+                                {l.observacao && (
+                                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, fontWeight: 'normal' }}>
+                                    {l.observacao}
+                                  </div>
+                                )}
+                              </td>
                               <td style={{ padding: '6px 8px', color: 'var(--text-secondary)' }}>{portadores.find(p => p.id === l.portadorId)?.nome || '-'}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: l.tipo === 'receita' ? 'var(--green)' : 'var(--red)' }}>
-                                {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: (l.valorLinha ?? l.valor) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                {fmt.currency(l.valorLinha ?? (l.tipo === 'receita' ? l.valor : -l.valor))}
                               </td>
                             </tr>
                           ))}
@@ -461,16 +563,30 @@ export default function RelatoriosPage() {
             </div>
           </div>
           {tipo === 'fluxo' ? (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', padding: '10px 18px',
+                background: 'var(--bg-base)', borderBottom: '2px solid var(--border)',
+                fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase'
+              }}>
+                <span>Categorias</span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {drilldownData.months.map(m => (
+                    <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{m.toLocaleString('pt-BR', { month: 'short', year: '2-digit' })}</span>
+                  ))}
+                  <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>Total Acum.</span>
+                </div>
+              </div>
+
               {/* 1. Receitas */}
-              {renderGroupRow('receitas', drilldownData.groups.receitas, drilldownData.groups.receitas.total)}
-              
+              {renderGroupRow('receitas', drilldownData.groups.receitas, drilldownData.months)}
+
               {/* 2. Custos de Mercadoria */}
-              {renderGroupRow('custos', drilldownData.groups.custos, drilldownData.groups.receitas.total)}
-              
+              {renderGroupRow('custos', drilldownData.groups.custos, drilldownData.months)}
+
               {/* 3. Despesas */}
-              {renderGroupRow('despesas', drilldownData.groups.despesas, drilldownData.groups.receitas.total)}
-              
+              {renderGroupRow('despesas', drilldownData.groups.despesas, drilldownData.months)}
+
               {/* 4. Receita Operacional Bruta */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -479,19 +595,26 @@ export default function RelatoriosPage() {
                 borderTop: '1px solid rgba(96,0,0,0.1)'
               }}>
                 <span>(=) Receita Operacional Bruta (Receita - Custos - Despesas)</span>
-                <span style={{ color: drilldownData.recOperacionalBruta >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
-                  {fmt.currency(drilldownData.recOperacionalBruta)}
-                </span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {drilldownData.monthlySummary.map(s => (
+                    <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.recOp >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      {fmt.currency(s.recOp)}
+                    </span>
+                  ))}
+                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                    {fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0))}
+                  </span>
+                </div>
               </div>
 
               {/* 5. Liberações Bancárias */}
-              {renderGroupRow('liberacoes', drilldownData.groups.liberacoes, drilldownData.groups.receitas.total)}
+              {renderGroupRow('liberacoes', drilldownData.groups.liberacoes, drilldownData.months)}
 
               {/* 6. Empréstimos */}
-              {renderGroupRow('emprestimos', drilldownData.groups.emprestimos, drilldownData.groups.receitas.total)}
+              {renderGroupRow('emprestimos', drilldownData.groups.emprestimos, drilldownData.months)}
 
               {/* 7. Investimentos */}
-              {renderGroupRow('investimentos', drilldownData.groups.investimentos, drilldownData.groups.receitas.total)}
+              {renderGroupRow('investimentos', drilldownData.groups.investimentos, drilldownData.months)}
 
               {/* 8. Resultado Mensal Líquido */}
               <div style={{
@@ -500,19 +623,26 @@ export default function RelatoriosPage() {
                 fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(96,0,0,0.15)',
                 borderBottom: '1px solid rgba(96,0,0,0.08)'
               }}>
-                <span>(=) Resultado Mensal Líquido (Operacional + Liberações - Empréstimos - Investimentos)</span>
-                <span style={{ color: drilldownData.resultadoLiquido >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
-                  {fmt.currency(drilldownData.resultadoLiquido)}
-                </span>
+                <span>(=) Resultado Mensal Líquido</span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {drilldownData.monthlySummary.map(s => (
+                    <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resLiq >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      {fmt.currency(s.resLiq)}
+                    </span>
+                  ))}
+                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                    {fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0))}
+                  </span>
+                </div>
               </div>
-              
+
               {/* Saldos dos Portadores */}
               <div style={{ marginTop: 20, borderTop: '2px dashed var(--border)', paddingTop: 16 }}>
                 <div style={{ padding: '0 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>
-                  Saldos Finais dos Portadores (Atuais)
+                  Saldos Finais dos Portadores no Período
                 </div>
                 {store.getPortadores(empresaId).filter(p => p.ativo).map(p => {
-                  const saldo = store.getSaldoPortador(p.id, empresaId);
+                  const saldo = store.getSaldoPortador(p.id, empresaId, dataFim);
                   return (
                     <div key={p.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -537,26 +667,13 @@ export default function RelatoriosPage() {
                   {preview?.rows.length === 0 ? (
                     <tr><td colSpan={9}>
                       <div className="empty-state">
-                        <div className="empty-state-icon">📄</div>
-                        <h3>Nenhum dado encontrado</h3>
-                        <p>Ajuste o período ou os filtros.</p>
+                        <div className="empty-state-icon">📋</div>
+                        <h3>Nenhum dado para o período</h3>
                       </div>
                     </td></tr>
-                  ) : preview?.rows.map((row, ri) => (
-                    <tr key={ri}>
-                      {row.map((cell, ci) => {
-                        const isVal = String(cell).includes('R$');
-                        const isReceita = String(row[2]) === 'Receita';
-                        return (
-                          <td key={ci} style={{
-                            fontSize: 12.5,
-                            color: isVal ? (isReceita ? 'var(--green)' : 'var(--red)') : undefined,
-                            fontWeight: isVal ? 600 : undefined,
-                          }}>
-                            {cell}
-                          </td>
-                        );
-                      })}
+                  ) : preview?.rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => <td key={j}>{cell}</td>)}
                     </tr>
                   ))}
                 </tbody>

@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { store, PlanoConta, Portador, Lancamento } from '../lib/store';
-import { uid } from '../lib/store';
+import { store, type PlanoConta, type Portador, type Lancamento, uid } from '../lib/store';
 import { fmt } from '../lib/reports';
 
 interface GeminiQuickEntryProps {
@@ -15,6 +14,9 @@ interface Attachment {
   name: string;
 }
 
+// Recomenda-se mover a API_KEY para um arquivo .env como NEXT_PUBLIC_GEMINI_API_KEY
+const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+
 export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEntryProps) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,6 @@ export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEn
   const [detected, setDetected] = useState<Partial<Lancamento> | null>(null);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
   useEffect(() => {
     setPlanoContas(store.getPlanoContas(empresaId).filter(p => p.nivel === 3 && p.ativo));
@@ -131,7 +132,7 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
       planoContaId: detected.planoContaId || planoContas[0]?.id || '',
       portadorId: detected.portadorId || portadores[0]?.id || '',
       status: 'realizado',
-      origem: 'manual',
+      origem: 'manual' as const,
       attachmentName: fileData?.name,
       attachmentData: fileData?.base64,
       createdAt: new Date().toISOString(),

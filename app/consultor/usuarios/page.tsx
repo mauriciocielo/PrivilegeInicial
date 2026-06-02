@@ -3,6 +3,29 @@ import { useState, useEffect } from 'react';
 import { store, User, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 
+const AVAILABLE_SCREENS = [
+  { label: '📊 Dashboard', route: '/consultor/dashboard' },
+  { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
+  { label: '🧠 Inteligência Financeira', route: '/consultor/inteligencia' },
+  { label: '📝 Lançamentos', route: '/consultor/lancamentos' },
+  { label: '📂 Importar OFX', route: '/consultor/importar-ofx' },
+  { label: '⚖️ Endividamento', route: '/consultor/endividamento' },
+  { label: '🎯 Indicadores', route: '/consultor/indicadores' },
+  { label: '💰 Orçamento', route: '/consultor/orcamento' },
+  { label: '👥 Clientes / Fornecedores', route: '/consultor/clientes' },
+  { label: '💸 Contas a Pagar', route: '/consultor/contas-pagar' },
+  { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
+  { label: '🧾 NFS-e', route: '/consultor/nfse' },
+  { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: '🏢 Empresas', route: '/consultor/empresas' },
+  { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
+  { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
+  { label: '📝 Atas de Atendimento', route: '/consultor/atas' },
+  { label: '🏦 Portadores / Contas', route: '/consultor/portadores' },
+  { label: '📈 Relatórios', route: '/consultor/relatorios' },
+  { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
+];
+
 export default function UsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -16,25 +39,55 @@ export default function UsuariosPage() {
     setEmpresas(store.getEmpresas());
   }, []);
 
-  const openNew = () => { setEdit(null); setForm({ role: 'cliente', empresaIds: [] }); setShowModal(true); };
-  const openEdit = (u: User) => { setEdit(u); setForm({ ...u, newPassword: '' }); setShowModal(true); };
+  const openNew = () => { 
+    setEdit(null); 
+    setForm({ role: 'cliente', empresaIds: [], allowedRoutes: ['/consultor/dashboard'] }); 
+    setShowModal(true); 
+  };
+  
+  const openEdit = (u: User) => { 
+    setEdit(u); 
+    setForm({ ...u, newPassword: '', allowedRoutes: u.allowedRoutes || ['/consultor/dashboard'] }); 
+    setShowModal(true); 
+  };
 
   const toggleEmpresa = (id: string) => {
     const ids = form.empresaIds || [];
     setForm(f => ({ ...f, empresaIds: ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id] }));
   };
 
+  const toggleRoute = (route: string) => {
+    const routes = form.allowedRoutes || [];
+    setForm(f => ({
+      ...f,
+      allowedRoutes: routes.includes(route) ? routes.filter(x => x !== route) : [...routes, route]
+    }));
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(f => ({ ...f, avatarData: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = () => {
     if (!form.name || !form.email) { alert('Preencha nome e e-mail.'); return; }
     if (!edit && !form.newPassword) { alert('Informe uma senha para o novo usuário.'); return; }
+    
     const u: User = {
       id: edit?.id || uid(),
       name: form.name!,
       email: form.email!,
       password: form.newPassword || edit?.password || '123456',
-      role: form.role as 'consultor' | 'cliente',
-      empresaIds: form.role === 'consultor' ? [] : (form.empresaIds || []),
+      role: (form.role || 'cliente') as any,
+      empresaIds: form.role === 'cliente' ? (form.empresaIds || []) : [],
       receberEmailDiario: !!form.receberEmailDiario,
+      avatarData: form.avatarData,
+      allowedRoutes: form.role === 'consultor' ? (form.allowedRoutes || ['/consultor/dashboard']) : undefined,
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveUser(u);
@@ -54,8 +107,8 @@ export default function UsuariosPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Usuários</div>
-          <div className="page-subtitle">{users.length} usuários cadastrados</div>
+          <div className="page-title">Usuários e Permissões</div>
+          <div className="page-subtitle">{users.length} usuários cadastrados no sistema</div>
         </div>
         <div className="header-actions">
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Usuário</button>
@@ -77,8 +130,8 @@ export default function UsuariosPage() {
                 <tr>
                   <th>Usuário</th>
                   <th>E-mail</th>
-                  <th>Perfil</th>
-                  <th>Empresas Vinculadas</th>
+                  <th>Perfil / Nível</th>
+                  <th>Empresas / Telas</th>
                   <th>Cadastrado em</th>
                   <th>Ações</th>
                 </tr>
@@ -86,25 +139,65 @@ export default function UsuariosPage() {
               <tbody>
                 {filtered.map(u => {
                   const initials = u.name.split(' ').map(w => w[0]).slice(0,2).join('');
-                  const emps = empresas.filter(e => u.empresaIds.includes(e.id));
+                  const emps = empresas.filter(e => u.empresaIds?.includes(e.id));
+                  
+                  let roleText = '🏢 Cliente';
+                  let roleBadge = 'badge-blue';
+                  if (u.role === 'administrador') {
+                    roleText = '💎 Administrador';
+                    roleBadge = 'badge-green';
+                  } else if (u.role === 'consultor') {
+                    roleText = '👔 Consultor';
+                    roleBadge = 'badge-purple';
+                  }
+
                   return (
                     <tr key={u.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className="user-avatar" style={{ width:32, height:32, fontSize:12 }}>{initials}</div>
+                          <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {u.avatarData ? (
+                              <img src={u.avatarData} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                            ) : (
+                              initials
+                            )}
+                          </div>
                           <span style={{ fontWeight: 500 }}>{u.name}</span>
                         </div>
                       </td>
                       <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td>
-                        <span className={`badge ${u.role === 'consultor' ? 'badge-purple' : 'badge-blue'}`}>
-                          {u.role === 'consultor' ? '👔 Consultor' : '🏢 Cliente'}
+                        <span className={`badge ${roleBadge}`}>
+                          {roleText}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12 }}>
-                        {emps.length === 0 ? <span style={{ color: 'var(--text-muted)' }}>Nenhuma</span> : emps.map(e => (
-                          <span key={e.id} className="badge badge-gray" style={{ marginRight: 4 }}>{e.nomeFantasia}</span>
-                        ))}
+                      <td style={{ fontSize: 12, maxWidth: 300 }}>
+                        {u.role === 'administrador' && (
+                          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Acesso Total (Todas as Telas e Empresas)</span>
+                        )}
+                        {u.role === 'consultor' && (
+                          <div>
+                            <strong style={{ display: 'block', marginBottom: 2 }}>Telas permitidas ({u.allowedRoutes?.length || 0}):</strong>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                              {(u.allowedRoutes || ['/consultor/dashboard']).map(r => {
+                                const screen = AVAILABLE_SCREENS.find(s => s.route === r);
+                                return (
+                                  <span key={r} className="badge badge-gray" style={{ fontSize: 10 }}>
+                                    {screen?.label.split(' ')[1] || r.split('/').pop()}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {u.role === 'cliente' && (
+                          <div>
+                            <strong style={{ display: 'block', marginBottom: 2 }}>Empresas:</strong>
+                            {emps.length === 0 ? <span style={{ color: 'var(--text-muted)' }}>Nenhuma</span> : emps.map(e => (
+                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4 }}>{e.nomeFantasia}</span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
                       <td>
@@ -126,9 +219,10 @@ export default function UsuariosPage() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal modal-lg">
             <div className="modal-header">
-              <h2 className="modal-title">{edit ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+              <h2 className="modal-title">{edit ? 'Editar Usuário e Permissões' : 'Novo Usuário'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
+            
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Nome Completo *</label>
@@ -139,12 +233,18 @@ export default function UsuariosPage() {
                 <input type="email" className="form-control" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} />
               </div>
             </div>
+            
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Perfil</label>
-                <select className="form-control" value={form.role||'cliente'} onChange={e=>setForm(f=>({...f,role:e.target.value as 'consultor'|'cliente'}))}>
-                  <option value="consultor">Consultor</option>
-                  <option value="cliente">Cliente</option>
+                <label className="form-label">Perfil de Acesso</label>
+                <select 
+                  className="form-control" 
+                  value={form.role||'cliente'} 
+                  onChange={e=>setForm(f=>({...f,role:e.target.value as any}))}
+                >
+                  <option value="administrador">💎 Administrador (Acesso Total)</option>
+                  <option value="consultor">👔 Consultor (Acesso Customizado)</option>
+                  <option value="cliente">🏢 Cliente (Acesso à Empresa)</option>
                 </select>
               </div>
               <div className="form-group">
@@ -152,38 +252,97 @@ export default function UsuariosPage() {
                 <input type="password" className="form-control" value={form.newPassword||''} onChange={e=>setForm(f=>({...f,newPassword:e.target.value}))} />
               </div>
             </div>
-            <div className="form-group" style={{ marginTop: 16 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={!!form.receberEmailDiario} 
-                  onChange={e => setForm(f => ({ ...f, receberEmailDiario: e.target.checked }))} 
-                />
-                Receber diariamente e-mail com informações financeiras
-              </label>
+
+            <div className="form-row" style={{ marginTop: 16 }}>
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={!!form.receberEmailDiario} 
+                    onChange={e => setForm(f => ({ ...f, receberEmailDiario: e.target.checked }))} 
+                  />
+                  Receber resumo financeiro diário por e-mail
+                </label>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Foto do Usuário</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ fontSize: 12 }} />
+                  {form.avatarData && (
+                    <img 
+                      src={form.avatarData} 
+                      alt="Miniatura" 
+                      style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border-light)' }} 
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="form-group" style={{ marginTop: 16 }}>
-              <label className="form-label">Empresas Vinculadas</label>
-              {form.role === 'consultor' ? (
-                <div style={{ padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  👔 <strong>Consultor:</strong> Possui acesso total ao sistema e a todas as empresas cadastradas.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  {empresas.map(e => {
-                    const checked = (form.empresaIds || []).includes(e.id);
+            {/* Customização baseada no tipo de acesso */}
+            {form.role === 'administrador' && (
+              <div style={{ marginTop: 16, padding: '16px', background: 'rgba(46, 204, 113, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--green)' }}>
+                <span style={{ fontSize: 16, marginRight: 8 }}>💎</span>
+                <strong>Perfil Administrador:</strong> Este usuário terá acesso irrestrito a todas as empresas, configurações, geração de arquivos de remessa, relatórios e telas do sistema.
+              </div>
+            )}
+
+            {form.role === 'consultor' && (
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Telas e Rotas Autorizadas (Selecione quais telas o consultor poderá acessar)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                  {AVAILABLE_SCREENS.map(screen => {
+                    const checked = (form.allowedRoutes || []).includes(screen.route);
+                    const isDashboard = screen.route === '/consultor/dashboard';
                     return (
-                      <label key={e.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius-sm)', border:`1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, cursor:'pointer', background: checked ? 'var(--accent-glow)' : 'transparent', fontSize: 13, color: checked ? 'var(--accent-light)' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
-                        <input type="checkbox" style={{display:'none'}} checked={checked} onChange={() => toggleEmpresa(e.id)} />
-                        {checked ? '✓' : '○'} {e.nomeFantasia}
+                      <label 
+                        key={screen.route} 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 8, 
+                          padding: '6px 10px', 
+                          borderRadius: 'var(--radius-sm)', 
+                          border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, 
+                          cursor: isDashboard ? 'not-allowed' : 'pointer', 
+                          background: checked ? 'var(--accent-glow)' : 'transparent', 
+                          fontSize: 12, 
+                          color: checked ? 'var(--accent-light)' : 'var(--text-secondary)',
+                          opacity: isDashboard ? 0.7 : 1
+                        }}
+                      >
+                        <input 
+                          type="checkbox" 
+                          checked={checked || isDashboard} 
+                          disabled={isDashboard}
+                          onChange={() => toggleRoute(screen.route)}
+                        />
+                        {screen.label}
                       </label>
                     );
                   })}
                 </div>
-              )}
-            </div>
-            <div className="form-actions">
+              </div>
+            )}
+
+            {form.role === 'cliente' && (
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Empresas Vinculadas</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {empresas.map(e => {
+                    const checked = (form.empresaIds || []).includes(e.id);
+                    return (
+                      <label key={e.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius-sm)', border:`1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, cursor:'pointer', background: checked ? 'var(--accent-glow)' : 'transparent', fontSize: 13, color: checked ? 'var(--accent-light)' : 'var(--text-secondary)' }}>
+                        <input type="checkbox" style={{display:'none'}} checked={checked} onChange={() => toggleEmpresa(e.id)} />
+                        {checked ? '✓' : '○'} {e.nomeFantasia || e.razaoSocial}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="form-actions" style={{ marginTop: 24 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave}>✓ Salvar Usuário</button>
             </div>
