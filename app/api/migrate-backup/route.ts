@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 import crypto from 'crypto';
 
+async function runInBatches<T>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T) => Promise<void>
+) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(fn));
+  }
+}
+
 async function migrateEmpresas(empresas: any[]) {
   console.log(`Migrando ${empresas.length} empresas...`);
   for (const e of empresas) {
@@ -162,31 +173,35 @@ async function migrateUnidades(unidades: any[]) {
 async function migratePlanoContas(planoContas: any[]) {
   console.log(`Migrando ${planoContas.length} planos de contas (Passo 1)...`);
   
+  // 1. Upsert unique companies first to prevent concurrency issues
+  const uniqueEmpresaIds = Array.from(new Set(planoContas.map(pc => String(pc.empresaId || 'empresa_default'))));
   const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
   const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
 
-  for (const pc of planoContas) {
-    if (!pc.id) continue;
-    try {
-      const empresaId = String(pc.empresaId || 'empresa_default');
-      
-      if (!empresaIdsSet.has(empresaId)) {
-        await db.empresa.upsert({
-          where: { id: empresaId },
-          update: {},
-          create: {
-            id: empresaId,
-            razaoSocial: 'Empresa Auto-Criada',
-            nomeFantasia: 'Empresa Auto-Criada',
-            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-            responsavel: 'Responsável',
-            email: 'contato@empresa.com',
-            telefone: '0000000000',
-          }
-        });
-        empresaIdsSet.add(empresaId);
-      }
+  for (const empresaId of uniqueEmpresaIds) {
+    if (!empresaIdsSet.has(empresaId)) {
+      await db.empresa.upsert({
+        where: { id: empresaId },
+        update: {},
+        create: {
+          id: empresaId,
+          razaoSocial: 'Empresa Auto-Criada',
+          nomeFantasia: 'Empresa Auto-Criada',
+          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+          responsavel: 'Responsável',
+          email: 'contato@empresa.com',
+          telefone: '0000000000',
+        }
+      });
+      empresaIdsSet.add(empresaId);
+    }
+  }
 
+  // 2. Upsert PlanoConta records in parallel batches of 30 to speed up database connection times on Serverless
+  await runInBatches(planoContas, 30, async (pc) => {
+    if (!pc.id) return;
+    const empresaId = String(pc.empresaId || 'empresa_default');
+    try {
       await db.planoConta.upsert({
         where: { id: String(pc.id) },
         update: {
@@ -215,10 +230,11 @@ async function migratePlanoContas(planoContas: any[]) {
       console.error('Erro no PlanoConta (Passo 1):', pc, err);
       throw new Error(`Erro no PlanoConta (ID: ${pc.id}): ${(err as Error).message}`);
     }
-  }
+  });
 
   console.log('Atualizando relações hierárquicas do plano de contas (Passo 2)...');
-  for (const pc of planoContas) {
+  // 3. Update parent relations in parallel batches of 30
+  await runInBatches(planoContas, 30, async (pc) => {
     if (pc.id && pc.parentId) {
       try {
         await db.planoConta.update({
@@ -229,7 +245,7 @@ async function migratePlanoContas(planoContas: any[]) {
         console.error('Erro no PlanoConta (Passo 2 - parentId):', pc, err);
       }
     }
-  }
+  });
 }
 
 async function migratePortadores(portadores: any[]) {
