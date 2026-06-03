@@ -15,7 +15,7 @@ const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.Cartesian
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
 const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
 
-type ActiveTab = 'geral' | 'dre' | 'capital';
+type ActiveTab = 'geral' | 'dre' | 'capital' | 'chat';
 
 export default function InteligenciaFinanceiraPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -24,6 +24,17 @@ export default function InteligenciaFinanceiraPage() {
   const [portadores, setPortadores] = useState<Portador[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('geral');
+
+  // Estado para o Chat de IA
+  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'ai'; text: string; timestamp: string }[]>([
+    {
+      sender: 'ai',
+      text: 'Olá! Sou o Privilege AI Copilot. Posso simular cenários de crise, projetar o caixa futuro da sua empresa ou analisar margens. Pergunte-me algo como: "O que acontece se eu perder 20% das minhas receitas?" ou "Qual meu ponto de equilíbrio atual?"',
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Sliders do Simulador de Cenários
   const [simReceitasDelta, setSimReceitasDelta] = useState(0); // em % (ex: +10%)
@@ -36,10 +47,30 @@ export default function InteligenciaFinanceiraPage() {
 
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
-    setLancamentos(store.getLancamentos(eId));
-    setPlanoContas(store.getPlanoContas(eId));
-    setPortadores(store.getPortadores(eId));
+    const isGroup = eId.startsWith('grupo:');
+    const grupoName = isGroup ? eId.split(':')[1] : '';
     setEmpresas(store.getEmpresas());
+
+    if (isGroup) {
+      const empsInGroup = store.getEmpresas().filter(e => e.grupoEconomico === grupoName);
+      const targetLancs: Lancamento[] = [];
+      const targetPorts: Portador[] = [];
+      const targetPlano: PlanoConta[] = [];
+
+      empsInGroup.forEach(emp => {
+        targetLancs.push(...store.getLancamentos(emp.id));
+        targetPorts.push(...store.getPortadores(emp.id));
+        targetPlano.push(...store.getPlanoContas(emp.id));
+      });
+
+      setLancamentos(targetLancs);
+      setPortadores(targetPorts);
+      setPlanoContas(targetPlano);
+    } else {
+      setLancamentos(store.getLancamentos(eId));
+      setPlanoContas(store.getPlanoContas(eId));
+      setPortadores(store.getPortadores(eId));
+    }
   }, []);
 
   const generateAISimulationInsights = async () => {
@@ -159,6 +190,130 @@ Responda em Português do Brasil.`;
 
     setAiInsights(mockTips);
     setAiLoading(false);
+  };
+
+  const sendChatMessage = async (msgText: string) => {
+    if (!msgText.trim()) return;
+
+    // Add user message to history
+    const userMsg = {
+      sender: 'user' as const,
+      text: msgText,
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const updatedMessages = [...chatMessages, userMsg];
+    setChatMessages(updatedMessages);
+    setChatInput('');
+    setChatLoading(true);
+
+    const activeCompany = empresas.find(x => x.id === empresaId);
+    const companyName = activeCompany?.razaoSocial || (empresaId.startsWith('grupo:') ? `Grupo Consolidado ${empresaId.split(':')[1]}` : 'Cliente');
+
+    // Build the monthly history string
+    const dreHistoryStr = dreMeses.map(m =>
+      `- Mês ${m.mes}: Receita ROB R$ ${m.receita.toLocaleString('pt-BR')}, Custos Variáveis R$ ${m.custo.toLocaleString('pt-BR')}, Despesas Fixas R$ ${m.despesa.toLocaleString('pt-BR')}, EBITDA R$ ${m.ebitda.toLocaleString('pt-BR')}, Result. Líquido R$ ${m.resultadoLiquido.toLocaleString('pt-BR')}`
+    ).join('\n');
+
+    // Get recent transactions
+    const sortedLancs = [...lancamentos]
+      .filter(l => l.status === 'realizado')
+      .sort((a, b) => b.data.localeCompare(a.data))
+      .slice(0, 10);
+
+    const recentLancsStr = sortedLancs.map(l => {
+      const pc = planoContas.find(p => p.id === l.planoContaId);
+      return `- ${fmt.date(l.data)}: [${l.tipo.toUpperCase()}] ${l.descricao} - R$ ${l.valor.toLocaleString('pt-BR')} (Categoria: ${pc?.descricao || 'Outros'})`;
+    }).join('\n');
+
+    // Compile entire financial context
+    const contextPrompt = `Você é o Privilege AI Copilot, o consultor financeiro virtual e CFO de elite da Privilege Consultoria. Você está ajudando a gerir as finanças da empresa "${companyName}".
+Aqui estão os dados financeiros reais e atuais da empresa para embasar suas respostas e simulações:
+
+CONTEXTO DA EMPRESA:
+- Nome da Empresa/Grupo: ${companyName}
+- Saldo Atual Total em Caixa: R$ ${runway.caixaTotal.toLocaleString('pt-BR')}
+- Ponto de Equilíbrio (Break-Even) Mensal: R$ ${breakEven.pontoEquilibrio.toLocaleString('pt-BR')}
+- Fundo de Reserva / Runway Atual: ${runway.mesesRunway === Infinity ? 'Sem custos fixos' : runway.mesesRunway.toFixed(1) + ' meses'}
+- Prazo Médio de Recebimento (PMR): ${prazosOriginais.pmr} dias
+- Prazo Médio de Pagamento (PMP): ${prazosOriginais.pmp} dias
+- Ciclo Financeiro (de Caixa): ${prazosOriginais.pmr - prazosOriginais.pmp} dias
+- Necessidade de Capital de Giro (NCG) de Partida: R$ ${prazosOriginais.ncg.toLocaleString('pt-BR')}
+
+HISTÓRICO RECENTE DO DRE (ÚLTIMOS MESES):
+${dreHistoryStr || 'Nenhum lançamento DRE histórico registrado.'}
+
+DADOS DA SIMULAÇÃO OPERATIVA ATUAL (Ajustada nos Sliders do Painel):
+- Simulação de Receita: ${simReceitasDelta >= 0 ? '+' : ''}${simReceitasDelta}%
+- Simulação de Custos & Despesas: ${simCustosDelta >= 0 ? '+' : ''}${simCustosDelta}%
+- Simulação PMR: ${simulacoes.pmrSim} dias (variação de ${simPmrShift >= 0 ? '+' : ''}${simPmrShift} dias)
+- Simulação PMP: ${simulacoes.pmpSim} dias (variação de ${simPmpShift >= 0 ? '+' : ''}${simPmpShift} dias)
+- Impacto Simulado na NCG (NCG Delta): R$ ${simulacoes.ncgDelta.toLocaleString('pt-BR')}
+- Novo NCG Necessário Simulado: R$ ${simulacoes.ncgSim.toLocaleString('pt-BR')}
+
+ÚLTIMOS LANÇAMENTOS DO EXTRATO REALIZADO:
+${recentLancsStr || 'Nenhum lançamento recente.'}
+
+INSTRUÇÕES DE COMPORTAMENTO:
+1. Responda de forma extremamente focada e estratégica como um CFO profissional de elite da Privilege Consultoria.
+2. Sempre use os números fornecidos acima de maneira coerente e real. Se o usuário perguntar sobre cenários de crise ou otimização, faça os cálculos mentais com base no faturamento, custos fixos e variáveis, e mostre o impacto exato no runway (em meses) e no saldo acumulado.
+3. Dê conselhos e planos de ação práticos (ex: renegociar prazos com determinados tipos de fornecedores, antecipar recebíveis, reduzir custos fixos, ajustar margem de contribuição, aplicar o superávit).
+4. Mantenha as respostas bem estruturadas em português, usando listas, tópicos em negrito e formatação markdown profissional. Evite termos genéricos, seja direto aos números.
+5. Nunca invente dados que contradigam o contexto real fornecido.`;
+
+    const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+
+    const contents = updatedMessages.slice(-10).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: m.text }]
+    }));
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: contextPrompt }]
+            }
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          setChatMessages(prev => [
+            ...prev,
+            {
+              sender: 'ai',
+              text: text,
+              timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+          setChatLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Gemini Chat Error:', err);
+    }
+
+    // Fallback if API fails or rate limit hit
+    await new Promise(r => setTimeout(r, 1000));
+    setChatMessages(prev => [
+      ...prev,
+      {
+        sender: 'ai',
+        text: 'Desculpe, ocorreu uma oscilação na conexão com os servidores Privilege AI. Deixe-me dar um parecer com base nos nossos relatórios:\n\n* **Saldo Total:** ' + fmt.currency(runway.caixaTotal) + '\n* **Necessidade de Giro:** ' + fmt.currency(simulacoes.ncgSim) + ' (Variação: ' + fmt.currency(simulacoes.ncgDelta) + ')\n* **Runway Estimado:** ' + (runway.mesesRunway === Infinity ? 'Sem custos fixos' : runway.mesesRunway.toFixed(1) + ' meses') + '.\n\nTente enviar sua pergunta novamente.',
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setChatLoading(false);
   };
 
   useEffect(() => {
@@ -306,14 +461,19 @@ Responda em Português do Brasil.`;
 
   // --- 4. RUNWAY (CUSTO FIXO DE SOBREVIVÊNCIA) ---
   const runway = useMemo(() => {
-    const caixaTotal = portadores.reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId), 0);
+    const caixaTotal = portadores.reduce((acc, p) => acc + store.getSaldoPortador(p.id, p.empresaId), 0);
     const CFMed = breakEven.custosFixosMed || 1;
     const mesesRunway = caixaTotal / CFMed;
     return {
       caixaTotal,
       mesesRunway
     };
-  }, [portadores, empresaId, breakEven]);
+  }, [portadores, breakEven]);
+
+  const companyName = useMemo(() => {
+    const activeCompany = empresas.find(x => x.id === empresaId);
+    return activeCompany?.razaoSocial || (empresaId.startsWith('grupo:') ? `Grupo Consolidado ${empresaId.split(':')[1]}` : 'Cliente');
+  }, [empresas, empresaId]);
 
   // --- 5. GRÁFICO DE PROJEÇÃO DE CAIXA DE 6 MESES (BASELINE VS SIMULADO) ---
   const projecoesData = useMemo(() => {
@@ -377,6 +537,9 @@ Responda em Português do Brasil.`;
           </button>
           <button className={`btn ${activeTab === 'capital' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('capital')}>
             ⛓️ Capital de Giro (NCG)
+          </button>
+          <button className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('chat')}>
+            💬 Privilege AI Copilot
           </button>
         </div>
 
@@ -715,6 +878,184 @@ Responda em Português do Brasil.`;
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)', gap: 20 }}>
+            {/* Chat Container */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '620px', padding: 0, overflow: 'hidden', border: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
+              
+              {/* Chat Header */}
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-card2)' }}>
+                <span style={{ fontSize: 24 }}>💬</span>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>Privilege AI Copilot</h3>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CFO Virtual de Elite — Conectado em tempo real ao seu caixa</span>
+                </div>
+              </div>
+
+              {/* Messages List */}
+              <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {chatMessages.map((msg, index) => {
+                  const isAi = msg.sender === 'ai';
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isAi ? 'flex-start' : 'flex-end',
+                      maxWidth: '85%',
+                      alignSelf: isAi ? 'flex-start' : 'flex-end',
+                      gap: 4
+                    }}>
+                      <div style={{
+                        padding: '12px 16px',
+                        borderRadius: isAi ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
+                        background: isAi ? 'var(--bg-card2)' : 'var(--primary)',
+                        color: isAi ? 'var(--text-main)' : '#ffffff',
+                        border: isAi ? '1px solid var(--border-light)' : 'none',
+                        boxShadow: 'var(--shadow-sm)',
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {msg.text}
+                      </div>
+                      <span style={{ fontSize: 9, color: 'var(--text-muted)', margin: '0 4px' }}>
+                        {msg.timestamp}
+                      </span>
+                    </div>
+                  );
+                })}
+                {chatLoading && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    alignSelf: 'flex-start',
+                    background: 'var(--bg-card2)',
+                    padding: '12px 16px',
+                    borderRadius: '16px 16px 16px 4px',
+                    border: '1px solid var(--border-light)',
+                    fontSize: 13,
+                    color: 'var(--text-muted)'
+                  }}>
+                    <span className="animate-pulse">🧠 Analisando dados da empresa...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input Footer */}
+              <div style={{ padding: 16, borderTop: '1px solid var(--border-light)', background: 'var(--bg-card2)' }}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Digite sua dúvida ou simulação financeira..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    disabled={chatLoading}
+                    style={{ fontSize: 13 }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !chatLoading) {
+                        sendChatMessage(chatInput);
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => sendChatMessage(chatInput)}
+                    disabled={chatLoading || !chatInput.trim()}
+                    style={{ padding: '0 20px', fontSize: 13 }}
+                  >
+                    Enviar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar of the Chat: Key Metrics & Suggestions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              
+              {/* Quick Suggestions */}
+              <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>💡</span> Sugestões Rápidas
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    onClick={() => {
+                      setChatInput('O que acontece se eu perder 20% das minhas receitas nos próximos meses?');
+                    }}
+                  >
+                    📉 Cenário: Perda de 20% de Receita
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    onClick={() => {
+                      setChatInput('Qual é o meu ponto de equilíbrio (Break-Even) e como posso melhorá-lo?');
+                    }}
+                  >
+                    ⚖️ Como melhorar meu Break-Even?
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    onClick={() => {
+                      setChatInput('Analise a necessidade de capital de giro (NCG) simulada. Que ações devo tomar?');
+                    }}
+                  >
+                    ⛓️ Diagnóstico de Capital de Giro (NCG)
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    onClick={() => {
+                      setChatInput('Qual é o runway da empresa em meses e que medidas garantem mais estabilidade?');
+                    }}
+                  >
+                    ⏳ Análise de Sobrevivência (Runway)
+                  </button>
+                </div>
+              </div>
+
+              {/* Sidebar Summary Card */}
+              <div className="card" style={{ background: 'linear-gradient(135deg, rgba(96,0,0,0.02) 0%, var(--bg-card) 100%)', border: '1px solid var(--border-light)' }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>📊</span> Resumo de Contexto
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Empresa Ativa:</span>
+                    <strong style={{ maxWidth: '160px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={companyName}>{companyName}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Saldo em Caixa:</span>
+                    <strong>{fmt.currency(runway.caixaTotal)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Break-Even:</span>
+                    <strong>{fmt.currency(breakEven.pontoEquilibrio)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Runway:</span>
+                    <strong style={{ color: runway.mesesRunway >= 3 ? 'var(--green)' : '#d97706' }}>
+                      {runway.mesesRunway === Infinity ? 'Sem custos' : runway.mesesRunway.toFixed(1) + ' meses'}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Ciclo Financeiro:</span>
+                    <strong style={{ color: prazosOriginais.pmr - prazosOriginais.pmp >= 0 ? 'var(--red)' : 'var(--green)' }}>
+                      {prazosOriginais.pmr - prazosOriginais.pmp} dias
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         )}

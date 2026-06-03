@@ -449,7 +449,6 @@ export default function LancamentosPage() {
   const handleBulkReclassify = () => {
     if (bulkMode === 'transferir') {
       if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
-      if (!transferDate) { alert('Informe a data da transferência.'); return; }
       const ts = new Date().toISOString();
       const newLancamentos: Lancamento[] = [];
       lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
@@ -457,7 +456,7 @@ export default function LancamentosPage() {
         newLancamentos.push({
           id: uid(),
           empresaId,
-          data: transferDate,
+          data: l.data,
           descricao: `[Transf. Saída] ${l.descricao}`,
           valor: Math.abs(l.valor),
           tipo: 'despesa', planoContaId: 'transf', portadorId: l.portadorId,
@@ -466,7 +465,7 @@ export default function LancamentosPage() {
         newLancamentos.push({
           id: uid(),
           empresaId,
-          data: transferDate,
+          data: l.data,
           descricao: `[Transf. Entrada] ${l.descricao}`,
           valor: Math.abs(l.valor),
           tipo: 'receita', planoContaId: 'transf', portadorId: reclassPortadorId,
@@ -474,7 +473,6 @@ export default function LancamentosPage() {
         });
       });
 
-      selectedIds.forEach(id => store.deleteLancamento(id));
       newLancamentos.forEach(item => store.saveLancamento(item));
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds([]);
@@ -864,14 +862,13 @@ export default function LancamentosPage() {
 
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
               {bulkMode === 'transferir'
-                ? `Mover o saldo de ${selectedIds.length} lançamentos para outro portador via transferência.`
+                ? `Mover o saldo de ${selectedIds.length} lançamentos para outro portador criando uma transferência correspondente.`
                 : `Alterar categoria ou portador de ${selectedIds.length} lançamentos simultaneamente.`}
             </p>
 
             {bulkMode === 'transferir' ? (
-              <div className="form-group">
-                <label className="form-label">Data da Transferência</label>
-                <input type="date" className="form-control" value={transferDate} onChange={e => setTransferDate(e.target.value)} />
+              <div style={{ padding: '12px 14px', background: 'var(--bg-card2)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 16, border: '1px dashed var(--border-light)', lineHeight: '1.4' }}>
+                ℹ️ <strong>Nota:</strong> As datas e os portadores dos lançamentos originais serão mantidos intactos. As transferências serão geradas automaticamente na mesma data de cada lançamento selecionado.
               </div>
             ) : (
               <div className="form-group">
