@@ -95,24 +95,32 @@ async function migrateUsers(users: any[]) {
 
 async function migrateUnidades(unidades: any[]) {
   console.log(`Migrando ${unidades.length} unidades...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const uni of unidades) {
     if (!uni.id) continue;
     try {
       const condominioId = String(uni.condominioId || 'condo_default');
-      await db.empresa.upsert({
-        where: { id: condominioId },
-        update: {},
-        create: {
-          id: condominioId,
-          razaoSocial: 'Condomínio Auto-Criado',
-          nomeFantasia: 'Condomínio Auto-Criado',
-          cnpj: `CNPJ-${condominioId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@condominio.com',
-          telefone: '0000000000',
-          tipo: 'condominio'
-        }
-      });
+      
+      if (!empresaIdsSet.has(condominioId)) {
+        await db.empresa.upsert({
+          where: { id: condominioId },
+          update: {},
+          create: {
+            id: condominioId,
+            razaoSocial: 'Condomínio Auto-Criado',
+            nomeFantasia: 'Condomínio Auto-Criado',
+            cnpj: `CNPJ-${condominioId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@condominio.com',
+            telefone: '0000000000',
+            tipo: 'condominio'
+          }
+        });
+        empresaIdsSet.add(condominioId);
+      }
 
       await db.unidade.upsert({
         where: { id: String(uni.id) },
@@ -153,23 +161,31 @@ async function migrateUnidades(unidades: any[]) {
 
 async function migratePlanoContas(planoContas: any[]) {
   console.log(`Migrando ${planoContas.length} planos de contas (Passo 1)...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const pc of planoContas) {
     if (!pc.id) continue;
     try {
       const empresaId = String(pc.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.planoConta.upsert({
         where: { id: String(pc.id) },
@@ -218,23 +234,31 @@ async function migratePlanoContas(planoContas: any[]) {
 
 async function migratePortadores(portadores: any[]) {
   console.log(`Migrando ${portadores.length} portadores...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const p of portadores) {
     if (!p.id) continue;
     try {
       const empresaId = String(p.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.portador.upsert({
         where: { id: String(p.id) },
@@ -271,23 +295,31 @@ async function migratePortadores(portadores: any[]) {
 
 async function migrateClientes(clientes: any[]) {
   console.log(`Migrando ${clientes.length} clientes...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const c of clientes) {
     if (!c.id) continue;
     try {
       const empresaId = String(c.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.cliente.upsert({
         where: { id: String(c.id) },
@@ -337,7 +369,29 @@ async function migrateClientes(clientes: any[]) {
 }
 
 async function migrateLancamentos(lancamentos: any[]) {
-  console.log(`Migrando ${lancamentos.length} lançamentos...`);
+  console.log(`Migrando ${lancamentos.length} lançamentos com cache de ID local...`);
+  
+  // Cache check for existing rows to reduce queries drastically
+  const [
+    existingEmpresas,
+    existingPlanoContas,
+    existingPortadores,
+    existingUnidades,
+    existingClientes
+  ] = await Promise.all([
+    db.empresa.findMany({ select: { id: true } }),
+    db.planoConta.findMany({ select: { id: true } }),
+    db.portador.findMany({ select: { id: true } }),
+    db.unidade.findMany({ select: { id: true } }),
+    db.cliente.findMany({ select: { id: true } })
+  ]);
+
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+  const planoContaIdsSet = new Set(existingPlanoContas.map(pc => pc.id));
+  const portadorIdsSet = new Set(existingPortadores.map(p => p.id));
+  const unidadeIdsSet = new Set(existingUnidades.map(u => u.id));
+  const clienteIdsSet = new Set(existingClientes.map(c => c.id));
+
   for (const l of lancamentos) {
     if (!l.id) continue;
     try {
@@ -345,48 +399,57 @@ async function migrateLancamentos(lancamentos: any[]) {
       const planoContaId = String(l.planoContaId || 'plano_default');
       const portadorId = String(l.portadorId || 'portador_default');
 
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
-      await db.planoConta.upsert({
-        where: { id: planoContaId },
-        update: {},
-        create: {
-          id: planoContaId,
-          codigo: '999',
-          descricao: 'Plano de Conta Auto-Criado',
-          tipo: String(l.tipo || 'despesa'),
-          nivel: 1,
-          empresaId: empresaId,
-          ativo: true
-        }
-      });
+      if (!planoContaIdsSet.has(planoContaId)) {
+        await db.planoConta.upsert({
+          where: { id: planoContaId },
+          update: {},
+          create: {
+            id: planoContaId,
+            codigo: '999',
+            descricao: 'Plano de Conta Auto-Criado',
+            tipo: String(l.tipo || 'despesa'),
+            nivel: 1,
+            empresaId: empresaId,
+            ativo: true
+          }
+        });
+        planoContaIdsSet.add(planoContaId);
+      }
 
-      await db.portador.upsert({
-        where: { id: portadorId },
-        update: {},
-        create: {
-          id: portadorId,
-          nome: 'Portador Auto-Criado',
-          tipo: 'outro',
-          saldoInicial: 0,
-          empresaId: empresaId,
-          ativo: true
-        }
-      });
+      if (!portadorIdsSet.has(portadorId)) {
+        await db.portador.upsert({
+          where: { id: portadorId },
+          update: {},
+          create: {
+            id: portadorId,
+            nome: 'Portador Auto-Criado',
+            tipo: 'outro',
+            saldoInicial: 0,
+            empresaId: empresaId,
+            ativo: true
+          }
+        });
+        portadorIdsSet.add(portadorId);
+      }
 
-      if (l.unidadeId) {
+      if (l.unidadeId && !unidadeIdsSet.has(l.unidadeId)) {
         await db.unidade.upsert({
           where: { id: String(l.unidadeId) },
           update: {},
@@ -400,9 +463,10 @@ async function migrateLancamentos(lancamentos: any[]) {
             fracaoIdeal: 0
           }
         });
+        unidadeIdsSet.add(l.unidadeId);
       }
 
-      if (l.clienteId) {
+      if (l.clienteId && !clienteIdsSet.has(l.clienteId)) {
         await db.cliente.upsert({
           where: { id: String(l.clienteId) },
           update: {},
@@ -415,6 +479,7 @@ async function migrateLancamentos(lancamentos: any[]) {
             ativo: true
           }
         });
+        clienteIdsSet.add(l.clienteId);
       }
 
       await db.lancamento.upsert({
@@ -466,23 +531,31 @@ async function migrateLancamentos(lancamentos: any[]) {
 
 async function migrateEndividamentos(endividamentos: any[]) {
   console.log(`Migrando ${endividamentos.length} endividamentos...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const end of endividamentos) {
     if (!end.id) continue;
     try {
       const empresaId = String(end.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       const currentEnd = await db.endividamento.upsert({
         where: { id: String(end.id) },
@@ -549,23 +622,31 @@ async function migrateEndividamentos(endividamentos: any[]) {
 
 async function migrateAtas(atas: any[]) {
   console.log(`Migrando ${atas.length} atas de atendimento...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const ata of atas) {
     if (!ata.id) continue;
     try {
       const empresaId = String(ata.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.ataAtendimento.upsert({
         where: { id: String(ata.id) },
@@ -596,23 +677,31 @@ async function migrateAtas(atas: any[]) {
 
 async function migrateIndicadores(indicadores: any[]) {
   console.log(`Migrando ${indicadores.length} indicadores mensais...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const ind of indicadores) {
     if (!ind.id) continue;
     try {
       const empresaId = String(ind.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.indicadorMensal.upsert({
         where: { id: String(ind.id) },
@@ -641,23 +730,35 @@ async function migrateIndicadores(indicadores: any[]) {
 
 async function migrateOrcamentos(orcamentos: any[]) {
   console.log(`Migrando ${orcamentos.length} orçamentos mensais...`);
+  
+  const [existingEmpresas, existingPlanoContas] = await Promise.all([
+    db.empresa.findMany({ select: { id: true } }),
+    db.planoConta.findMany({ select: { id: true } })
+  ]);
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+  const planoContaIdsSet = new Set(existingPlanoContas.map(pc => pc.id));
+
   for (const orc of orcamentos) {
     if (!orc.id) continue;
     try {
       const empresaId = String(orc.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       const currentOrc = await db.orcamentoMensal.upsert({
         where: { id: String(orc.id) },
@@ -677,19 +778,22 @@ async function migrateOrcamentos(orcamentos: any[]) {
           where: { orcamentoId: currentOrc.id }
         });
         for (const [planoContaId, valor] of Object.entries(orc.categorias)) {
-          await db.planoConta.upsert({
-            where: { id: planoContaId },
-            update: {},
-            create: {
-              id: planoContaId,
-              codigo: '999',
-              descricao: 'Plano de Conta Auto-Criado',
-              tipo: 'despesa',
-              nivel: 1,
-              empresaId: empresaId,
-              ativo: true
-            }
-          });
+          if (!planoContaIdsSet.has(planoContaId)) {
+            await db.planoConta.upsert({
+              where: { id: planoContaId },
+              update: {},
+              create: {
+                id: planoContaId,
+                codigo: '999',
+                descricao: 'Plano de Conta Auto-Criado',
+                tipo: 'despesa',
+                nivel: 1,
+                empresaId: empresaId,
+                ativo: true
+              }
+            });
+            planoContaIdsSet.add(planoContaId);
+          }
 
           await db.orcamentoValor.create({
             data: {
@@ -710,23 +814,31 @@ async function migrateOrcamentos(orcamentos: any[]) {
 
 async function migrateNfse(nfse: any[]) {
   console.log(`Migrando ${nfse.length} notas fiscais (NFS-e)...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const n of nfse) {
     if (!n.id) continue;
     try {
       const empresaId = String(n.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.nfsE.upsert({
         where: { id: String(n.id) },
@@ -827,23 +939,31 @@ async function migrateNfse(nfse: any[]) {
 
 async function migrateSituacaoFiscal(situacaoFiscal: any[]) {
   console.log(`Migrando ${situacaoFiscal.length} situações fiscais...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
   for (const sf of situacaoFiscal) {
     if (!sf.id) continue;
     try {
       const empresaId = String(sf.empresaId || 'empresa_default');
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
       await db.situacaoFiscal.upsert({
         where: { id: String(sf.id) },
@@ -870,39 +990,53 @@ async function migrateSituacaoFiscal(situacaoFiscal: any[]) {
 
 async function migrateTransactionPatterns(patterns: any[]) {
   console.log(`Migrando ${patterns.length} padrões de transação...`);
+  
+  const [existingEmpresas, existingPlanoContas] = await Promise.all([
+    db.empresa.findMany({ select: { id: true } }),
+    db.planoConta.findMany({ select: { id: true } })
+  ]);
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+  const planoContaIdsSet = new Set(existingPlanoContas.map(pc => pc.id));
+
   for (const tp of patterns) {
     if (!tp.id) continue;
     try {
       const empresaId = String(tp.empresaId || 'empresa_default');
       const categoryId = String(tp.categoryId || 'plano_default');
 
-      await db.empresa.upsert({
-        where: { id: empresaId },
-        update: {},
-        create: {
-          id: empresaId,
-          razaoSocial: 'Empresa Auto-Criada',
-          nomeFantasia: 'Empresa Auto-Criada',
-          cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
-          responsavel: 'Responsável',
-          email: 'contato@empresa.com',
-          telefone: '0000000000',
-        }
-      });
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
 
-      await db.planoConta.upsert({
-        where: { id: categoryId },
-        update: {},
-        create: {
-          id: categoryId,
-          codigo: '999',
-          descricao: 'Plano de Conta Auto-Criado',
-          tipo: 'despesa',
-          nivel: 1,
-          empresaId: empresaId,
-          ativo: true
-        }
-      });
+      if (!planoContaIdsSet.has(categoryId)) {
+        await db.planoConta.upsert({
+          where: { id: categoryId },
+          update: {},
+          create: {
+            id: categoryId,
+            codigo: '999',
+            descricao: 'Plano de Conta Auto-Criado',
+            tipo: 'despesa',
+            nivel: 1,
+            empresaId: empresaId,
+            ativo: true
+          }
+        });
+        planoContaIdsSet.add(categoryId);
+      }
 
       await db.transactionPattern.upsert({
         where: { id: String(tp.id) },
