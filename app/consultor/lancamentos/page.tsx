@@ -89,7 +89,7 @@ export default function LancamentosPage() {
       };
       store.saveLancamento(updated);
       setLancamentos(store.getLancamentos(empresaId));
-      
+
       // Dispatch event to update references elsewhere if needed
       window.dispatchEvent(new CustomEvent('lancamentoChange'));
     } catch (e) {
@@ -134,7 +134,7 @@ export default function LancamentosPage() {
     setLancamentos(store.getLancamentos(eId));
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
-    
+
     const emp = store.getEmpresas().find(e => e.id === eId) || null;
     setActiveCompany(emp);
   }, []);
@@ -233,7 +233,7 @@ export default function LancamentosPage() {
       })()));
       let portadorId = l.portadorId;
       let portadorDestinoId = other ? other.portadorId : '';
-      
+
       if (l.tipo === 'receita') {
         portadorId = other ? other.portadorId : '';
         portadorDestinoId = l.portadorId;
@@ -534,7 +534,7 @@ export default function LancamentosPage() {
     if (bulkMode === 'transferir') {
       if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
       const ts = new Date().toISOString();
-      
+
       lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
         if (l.portadorId === reclassPortadorId) return;
 
@@ -657,22 +657,22 @@ export default function LancamentosPage() {
 
         {/* Quick Tabs for Accounts Payable/Receivable */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
-          <button 
-            className={`btn ${(!filtros.status && !filtros.tipo) ? 'btn-primary' : 'btn-secondary'}`} 
+          <button
+            className={`btn ${(!filtros.status && !filtros.tipo) ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: '', tipo: '' }))}
           >
             📋 Todos os Lançamentos
           </button>
-          <button 
-            className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'receita') ? 'btn-primary' : 'btn-secondary'}`} 
+          <button
+            className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'receita') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'receita' }))}
           >
             💰 Contas a Receber (Pendentes)
           </button>
-          <button 
-            className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'despesa') ? 'btn-primary' : 'btn-secondary'}`} 
+          <button
+            className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'despesa') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'despesa' }))}
           >
@@ -845,7 +845,7 @@ export default function LancamentosPage() {
                             />
                           </div>
                         ) : (
-                          <div 
+                          <div
                             className="editable-cell"
                             onDoubleClick={() => {
                               setInlineEditRowId(l.id);
@@ -959,8 +959,8 @@ export default function LancamentosPage() {
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           {l.status === 'previsto' && l.tipo === 'receita' && activeCompany?.bancoBoleto === 'c6' && (
-                            <button 
-                              className="btn btn-secondary btn-sm" 
+                            <button
+                              className="btn btn-secondary btn-sm"
                               style={{ padding: '4px 8px', fontSize: 11, background: '#000', color: '#fff', border: 'none', marginRight: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                               onClick={() => handleOpenC6Boleto(l)}
                             >
@@ -1244,7 +1244,8 @@ export default function LancamentosPage() {
       {showC6BoletoModal && c6BoletoLanc && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowC6BoletoModal(false)}>
           <div className="modal c6-boleto-modal-container" style={{ maxWidth: 800, padding: 24, background: '#fff', color: '#000', fontFamily: 'Courier New, monospace', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               @media print {
                 body * {
                   visibility: hidden !important;
@@ -1427,13 +1428,13 @@ export default function LancamentosPage() {
                       const isWide = (idx * 5) % 3 === 0;
                       const isGap = (idx * 7) % 4 === 0;
                       return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            width: isWide ? 4.5 : 1.5, 
-                            background: isGap ? 'transparent' : '#000', 
-                            marginRight: 1 
-                          }} 
+                        <div
+                          key={idx}
+                          style={{
+                            width: isWide ? 4.5 : 1.5,
+                            background: isGap ? 'transparent' : '#000',
+                            marginRight: 1
+                          }}
                         />
                       );
                     })}
@@ -1447,13 +1448,13 @@ export default function LancamentosPage() {
                     {Array.from({ length: 64 }).map((_, idx) => {
                       const fill = (idx * 5) % 3 === 0 || idx < 8 || idx % 8 === 0 || (idx > 50 && idx % 2 === 0);
                       return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            width: '12.5%', 
-                            height: '12.5%', 
-                            background: fill ? '#000' : 'transparent' 
-                          }} 
+                        <div
+                          key={idx}
+                          style={{
+                            width: '12.5%',
+                            height: '12.5%',
+                            background: fill ? '#000' : 'transparent'
+                          }}
                         />
                       );
                     })}

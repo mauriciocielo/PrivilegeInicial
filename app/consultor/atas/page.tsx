@@ -11,6 +11,7 @@ export default function AtasConsultorPage() {
   const [showModal, setShowModal] = useState(false);
   const [editAta, setEditAta] = useState<AtaAtendimento | null>(null);
   const [form, setForm] = useState<Partial<AtaAtendimento>>({});
+  const [viewAta, setViewAta] = useState<AtaAtendimento | null>(null);
 
   const loadData = useCallback((id: string) => {
     setEmpresaId(id);
@@ -52,7 +53,7 @@ export default function AtasConsultorPage() {
 
   const handleSave = () => {
     if (!form.titulo || !form.data || !form.conteudo) {
-      alert('Preencha data, titulo e conteudo da ata.');
+      alert('Preencha data, título e conteúdo da ata.');
       return;
     }
 
@@ -77,8 +78,37 @@ export default function AtasConsultorPage() {
     setAtas(store.getAtas(empresaId));
   };
 
+  const handlePrintAta = (ata: AtaAtendimento) => {
+    setViewAta(ata);
+    // Espera o modal renderizar antes de imprimir
+    setTimeout(() => window.print(), 300);
+  };
+
+  const consultorNome = (id: string) =>
+    consultores.find(c => c.id === id)?.name || 'Consultor';
+
   return (
     <>
+      {/* CSS de impressão da ata */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          .ata-print-container,
+          .ata-print-container * { visibility: visible !important; }
+          .ata-print-container {
+            position: absolute !important;
+            left: 0 !important; top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 40px !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            color: #000 !important;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
       <div className="page-header">
         <div>
           <div className="page-title">Atas de Atendimento</div>
@@ -87,7 +117,7 @@ export default function AtasConsultorPage() {
           </div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={openNew}>Nova Ata</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Nova Ata</button>
         </div>
       </div>
 
@@ -98,10 +128,10 @@ export default function AtasConsultorPage() {
               <thead>
                 <tr>
                   <th style={{ width: 120 }}>Data</th>
-                  <th>Titulo</th>
+                  <th>Título</th>
                   <th>Consultor</th>
                   <th>Participantes</th>
-                  <th style={{ width: 130 }}>Acoes</th>
+                  <th style={{ width: 170 }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,12 +146,14 @@ export default function AtasConsultorPage() {
                     <tr key={ata.id}>
                       <td style={{ fontWeight: 500 }}>{new Date(ata.data + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
                       <td style={{ fontWeight: 600 }}>{ata.titulo}</td>
-                      <td>{consultores.find(c => c.id === ata.consultorId)?.name || 'Consultor'}</td>
+                      <td>{consultorNome(ata.consultorId)}</td>
                       <td>{ata.participantes || '-'}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(ata)}>Editar</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(ata.id)}>Excluir</button>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>👁 Ver</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => handlePrintAta(ata)}>🖨 PDF</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(ata)}>✏️</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(ata.id)}>🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -133,12 +165,13 @@ export default function AtasConsultorPage() {
         </div>
       </div>
 
+      {/* Modal edição / criação */}
       {showModal && (
         <div className="modal-overlay" onClick={event => event.target === event.currentTarget && setShowModal(false)}>
           <div className="modal modal-lg">
             <div className="modal-header">
               <h2 className="modal-title">{editAta ? 'Editar Ata' : 'Nova Ata'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>x</button>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
 
             <div className="form-row">
@@ -147,7 +180,7 @@ export default function AtasConsultorPage() {
                 <input type="date" className="form-control" value={form.data || ''} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="form-label">Consultor</label>
+                <label className="form-label">Consultor Responsável</label>
                 <select className="form-control" value={form.consultorId || ''} onChange={e => setForm(f => ({ ...f, consultorId: e.target.value }))}>
                   <option value="">Selecione...</option>
                   {consultores.map(consultor => (
@@ -158,20 +191,20 @@ export default function AtasConsultorPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Titulo *</label>
+              <label className="form-label">Título *</label>
               <input className="form-control" value={form.titulo || ''} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
             </div>
 
             <div className="form-group">
               <label className="form-label">Participantes</label>
-              <input className="form-control" value={form.participantes || ''} onChange={e => setForm(f => ({ ...f, participantes: e.target.value }))} />
+              <input className="form-control" placeholder="Ex: João Silva, Maria Santos..." value={form.participantes || ''} onChange={e => setForm(f => ({ ...f, participantes: e.target.value }))} />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Conteudo *</label>
+              <label className="form-label">Conteúdo / Pauta *</label>
               <textarea
                 className="form-control"
-                style={{ minHeight: 180, resize: 'vertical' }}
+                style={{ minHeight: 200, resize: 'vertical' }}
                 value={form.conteudo || ''}
                 onChange={e => setForm(f => ({ ...f, conteudo: e.target.value }))}
               />
@@ -180,6 +213,123 @@ export default function AtasConsultorPage() {
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave}>Salvar Ata</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal visualização / impressão */}
+      {viewAta && (
+        <div className="modal-overlay no-print" onClick={e => e.target === e.currentTarget && setViewAta(null)}>
+          <div
+            className="modal modal-lg ata-print-container"
+            style={{ maxWidth: 760, background: 'var(--bg-card)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Cabeçalho da modal — oculto na impressão */}
+            <div className="modal-header no-print" style={{ marginBottom: 24 }}>
+              <h2 className="modal-title">📄 Visualizar Ata</h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => window.print()}
+                >
+                  🖨 Imprimir / Salvar PDF
+                </button>
+                <button className="modal-close" onClick={() => setViewAta(null)}>✕</button>
+              </div>
+            </div>
+
+            {/* Conteúdo da ata — visível na impressão */}
+            <div style={{ padding: '0 4px' }}>
+              {/* Cabeçalho da ata */}
+              <div style={{
+                borderBottom: '3px solid var(--accent)',
+                paddingBottom: 20,
+                marginBottom: 24,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 16,
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--accent)', marginBottom: 6 }}>
+                    Privilege Contabilidade e Consultoria
+                  </div>
+                  <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
+                    Ata de Atendimento
+                  </h1>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+                    {empresa?.nomeFantasia || empresa?.razaoSocial}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15, marginBottom: 2 }}>
+                    {new Date(viewAta.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  </div>
+                  <div>Nº {viewAta.id.slice(-8).toUpperCase()}</div>
+                </div>
+              </div>
+
+              {/* Título */}
+              <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Assunto / Pauta</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{viewAta.titulo}</div>
+              </div>
+
+              {/* Informações */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Consultor Responsável</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{consultorNome(viewAta.consultorId)}</div>
+                </div>
+                <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Participantes</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>{viewAta.participantes || '—'}</div>
+                </div>
+              </div>
+
+              {/* Conteúdo */}
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Conteúdo / Deliberações</div>
+                <div style={{
+                  background: 'var(--bg-base)',
+                  borderRadius: 10,
+                  padding: '18px 20px',
+                  border: '1px solid var(--border)',
+                  fontSize: 14,
+                  lineHeight: 1.8,
+                  whiteSpace: 'pre-wrap',
+                  color: 'var(--text-primary)',
+                }}>
+                  {viewAta.conteudo}
+                </div>
+              </div>
+
+              {/* Rodapé da ata */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
+                  <div>
+                    <div style={{ borderTop: '1px solid var(--text-muted)', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      Assinatura do Consultor Responsável
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: 'var(--text-primary)' }}>
+                      {consultorNome(viewAta.consultorId)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ borderTop: '1px solid var(--text-muted)', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      Assinatura do Representante da Empresa
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: 'var(--text-primary)' }}>
+                      {empresa?.nomeFantasia}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Documento gerado em {new Date().toLocaleDateString('pt-BR')} — Privilege Contabilidade e Consultoria
+                </div>
+              </div>
             </div>
           </div>
         </div>
