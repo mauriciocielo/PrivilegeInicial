@@ -11,11 +11,15 @@ let dbInstance: PrismaClient;
 
 if (typeof window === 'undefined') {
   // Rodando no servidor
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const isProduction = process.env.NODE_ENV === 'production';
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+  });
   const adapter = new PrismaPg(pool);
   dbInstance = globalThis.prisma || new PrismaClient({ adapter });
   
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction) {
     globalThis.prisma = dbInstance;
   }
 } else {
