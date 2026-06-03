@@ -90,7 +90,7 @@ export default function TransitionProvider({ children }: { children: React.React
           console.error('Erro ao auto-salvar lançamentos no banco:', err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
         }
-      }, 3000);
+      }, 300);
     };
 
     window.addEventListener('cfDataChange', handleDataChange as any);
@@ -101,7 +101,7 @@ export default function TransitionProvider({ children }: { children: React.React
     };
   }, [pathname]);
 
-  // Polling em tempo real (a cada 5 segundos) para sincronização multi-usuário de lançamentos
+  // Polling em tempo real (a cada 1.5 segundos) para sincronização multi-usuário de lançamentos
   useEffect(() => {
     if (pathname !== '/consultor/lancamentos') return;
 
@@ -135,7 +135,7 @@ export default function TransitionProvider({ children }: { children: React.React
       } catch (err) {
         console.error('Erro no polling de tempo real:', err);
       }
-    }, 5000);
+    }, 1500);
 
     return () => clearInterval(pollInterval);
   }, [pathname]);

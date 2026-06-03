@@ -224,10 +224,10 @@ export default function LancamentosPage() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
     load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
-    // Também recarrega plano de contas quando ele for alterado em outra tela
     const dataChangeHandler = () => {
       const current = sessionStorage.getItem('cf_empresa_sel') || 'e1';
       setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
+      setLancamentos(store.getLancamentos(current));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);
