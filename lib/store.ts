@@ -1418,11 +1418,13 @@ class DataStore {
 
       const data = parsed.data as Record<string, unknown>;
       
-      // Validação de sanidade básica dos dados
-      const requiredKeys = ['cf_empresas', 'cf_plano_contas'];
-      for (const reqKey of requiredKeys) {
-        if (!data[reqKey] || !Array.isArray(data[reqKey])) {
-          return { success: false, error: `Dados essenciais (${reqKey}) estão ausentes ou no formato incorreto.` };
+      // Validação de sanidade básica dos dados (ignora se for importação parcial)
+      if (!parsed.isPartial) {
+        const requiredKeys = ['cf_empresas', 'cf_plano_contas'];
+        for (const reqKey of requiredKeys) {
+          if (!data[reqKey] || !Array.isArray(data[reqKey])) {
+            return { success: false, error: `Dados essenciais (${reqKey}) estão ausentes ou no formato incorreto.` };
+          }
         }
       }
 

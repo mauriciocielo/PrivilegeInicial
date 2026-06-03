@@ -6,7 +6,8 @@
 
 export async function syncBackupInChunks(
   backupText: string,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
+  collectionsToSync?: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const parsed = JSON.parse(backupText);
@@ -38,6 +39,9 @@ export async function syncBackupInChunks(
     ];
 
     for (const col of collectionsOrder) {
+      if (collectionsToSync && !collectionsToSync.includes(col.key)) {
+        continue;
+      }
       const items = data[col.key];
       if (!Array.isArray(items) || items.length === 0) {
         continue;

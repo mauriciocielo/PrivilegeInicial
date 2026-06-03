@@ -138,7 +138,7 @@ export default function LancamentosPage() {
       if (l.planoContaId === 'transf') return false;
       const pc = planoContas.find(p => p.id === l.planoContaId);
       if (pc?.tipo === 'transferencia') return false;
-      return !l.planoContaId || l.planoContaId === '';
+      return !l.planoContaId || l.planoContaId === '' || !pc;
     });
 
     if (duvidosos.length === 0) {
@@ -179,7 +179,7 @@ export default function LancamentosPage() {
       if (l.planoContaId === 'transf') return false;
       const pc = planoContas.find(p => p.id === l.planoContaId);
       if (pc?.tipo === 'transferencia') return false;
-      return !l.planoContaId || l.planoContaId === '';
+      return !l.planoContaId || l.planoContaId === '' || !pc;
     });
 
     if (list.length === 0) {
@@ -242,6 +242,7 @@ export default function LancamentosPage() {
       if (e.key === 'Escape') {
         setShowModal(false);
         setShowReclassModal(false);
+        setSelectedIds([]);
         setShowCardImportModal(false);
         setShowC6BoletoModal(false);
         cancelInlineEdit();
@@ -706,6 +707,10 @@ export default function LancamentosPage() {
     return planoContas.filter(p => p.tipo === form.tipoTransacao && matchesConta(p, contaSearch));
   }, [planoContas, form.tipoTransacao, contaSearch]);
 
+  const selectedLancamentosList = useMemo(() => {
+    return lancamentos.filter(l => selectedIds.includes(l.id));
+  }, [lancamentos, selectedIds]);
+
   return (
     <>
       <div className="page-header">
@@ -730,46 +735,6 @@ export default function LancamentosPage() {
               </button>
             </>
           )}
-          <div style={{ position: 'relative' }}>
-            <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
-              ❓ Exportar Duvidosos ▾
-            </button>
-            {showExportMenu && (
-              <div 
-                style={{ 
-                  position: 'absolute', 
-                  right: 0, 
-                  top: '100%', 
-                  marginTop: 6,
-                  background: 'var(--bg-card)', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: 8, 
-                  boxShadow: 'var(--shadow-md)', 
-                  padding: 6, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: 4, 
-                  zIndex: 100,
-                  minWidth: 200
-                }}
-              >
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
-                  onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
-                >
-                  📊 Baixar Planilha (CSV)
-                </button>
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
-                  onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
-                >
-                  🖨️ Imprimir PDF (Conferência)
-                </button>
-              </div>
-            )}
-          </div>
           <div style={{ position: 'relative' }}>
             <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
               ❓ Exportar Duvidosos ▾
@@ -1263,54 +1228,136 @@ export default function LancamentosPage() {
 
       {/* Modal de Ações em Lote (Reclassificação ou Transferência) */}
       {showReclassModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowReclassModal(false)}>
-          <div className="modal">
-            <div className="modal-header">
-              <h2 className="modal-title">{bulkMode === 'transferir' ? 'Transferir em Lote' : 'Ações em Lote'}</h2>
-              <button className="modal-close" onClick={() => setShowReclassModal(false)}>✕</button>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowReclassModal(false); setSelectedIds([]); } }}>
+          <div className="modal modal-lg" style={{ maxWidth: '650px', padding: '24px' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', marginBottom: '16px' }}>
+              <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{bulkMode === 'transferir' ? '⇄ Transferir em Lote' : '🔄 Ações em Lote'}</span>
+                <span className="badge badge-purple" style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '12px' }}>
+                  {selectedIds.length} selecionados
+                </span>
+              </h2>
+              <button className="modal-close" onClick={() => { setShowReclassModal(false); setSelectedIds([]); }}>✕</button>
             </div>
 
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
               {bulkMode === 'transferir'
                 ? `Mover o saldo de ${selectedIds.length} lançamentos para outro portador criando uma transferência correspondente.`
                 : `Alterar categoria ou portador de ${selectedIds.length} lançamentos simultaneamente.`}
             </p>
 
+            {/* Lista resumida de lançamentos selecionados (Visualização Premium) */}
+            <div style={{ 
+              background: 'var(--bg-card2)', 
+              borderRadius: '8px', 
+              border: '1px solid var(--border)', 
+              padding: '12px', 
+              marginBottom: '20px' 
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>📋 Lançamentos selecionados para alteração:</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 800 }}>{selectedLancamentosList.length} itens</span>
+              </div>
+              <div style={{ maxHeight: '110px', overflowY: 'auto', fontSize: '11.5px', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                {selectedLancamentosList.map(l => {
+                  const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
+                  return (
+                    <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-base)', padding: '6px 8px', borderRadius: '4px', borderLeft: `3px solid ${l.tipo === 'receita' ? 'var(--green)' : 'var(--red)'}` }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{fmt.date(l.data)}</span>
+                      <span style={{ flex: 1, marginLeft: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={l.descricao}>{l.descricao}</span>
+                      <span style={{ fontWeight: 700, color: l.tipo === 'receita' ? 'var(--green)' : 'var(--red)', marginLeft: '8px' }}>
+                        {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {bulkMode === 'transferir' ? (
-              <div style={{ padding: '12px 14px', background: 'var(--bg-card2)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 16, border: '1px dashed var(--border-light)', lineHeight: '1.4' }}>
-                ℹ️ <strong>Nota:</strong> As datas e os portadores dos lançamentos originais serão mantidos intactos. As transferências serão geradas automaticamente na mesma data de cada lançamento selecionado.
+              <div style={{ 
+                padding: '12px 14px', 
+                background: 'rgba(59, 130, 246, 0.08)', 
+                borderRadius: '8px', 
+                fontSize: '12.5px', 
+                color: 'var(--text-secondary)', 
+                marginBottom: '20px', 
+                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                lineHeight: '1.4' 
+              }}>
+                💡 <strong>Como funciona a transferência em lote:</strong><br />
+                Os lançamentos selecionados serão convertidos em transferências. Para cada um, será mantido o lançamento de saída no portador original e criada uma contrapartida de entrada no portador de destino selecionado (mantendo a mesma data e valor).
               </div>
             ) : (
-              <div className="form-group">
-                <label className="form-label">Nova Categoria (Opcional)</label>
-                <div className="search-bar" style={{ marginBottom: 8 }}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🏷️</span> Nova Categoria (Opcional)
+                </label>
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <input
-                    placeholder="Filtrar categorias..."
+                    placeholder="🔍 Digite para filtrar categorias..."
                     className="form-control form-control-sm"
                     value={reclassContaSearch}
                     onChange={e => setReclassContaSearch(e.target.value)}
+                    style={{ fontSize: '12px' }}
                   />
+                  <select 
+                    className="form-control" 
+                    value={reclassContaId} 
+                    onChange={e => setReclassContaId(e.target.value)} 
+                    size={4} 
+                    style={{ 
+                      maxHeight: '120px', 
+                      fontSize: '12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      background: 'var(--bg-card)'
+                    }}
+                  >
+                    <option value="">Manter categoria original</option>
+                    {planoContas.filter(p => matchesConta(p, reclassContaSearch)).map(pc => (
+                      <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
+                    ))}
+                  </select>
                 </div>
-                <select className="form-control" value={reclassContaId} onChange={e => setReclassContaId(e.target.value)} size={4} style={{ maxHeight: 100 }}>
-                  <option value="">Manter original</option>
-                  {planoContas.filter(p => matchesConta(p, reclassContaSearch)).map(pc => (
-                    <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
-                  ))}
-                </select>
               </div>
             )}
 
-            <div className="form-group">
-              <label className="form-label">{bulkMode === 'transferir' ? 'Portador Destino' : 'Novo Portador (Opcional)'}</label>
-              <select className="form-control" value={reclassPortadorId} onChange={e => setReclassPortadorId(e.target.value)}>
-                <option value="">{bulkMode === 'transferir' ? 'Selecione...' : 'Manter original'}</option>
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>💳</span> {bulkMode === 'transferir' ? 'Portador Destino *' : 'Novo Portador (Opcional)'}
+              </label>
+              <select 
+                className="form-control" 
+                value={reclassPortadorId} 
+                onChange={e => setReclassPortadorId(e.target.value)}
+                style={{ fontSize: '12.5px' }}
+              >
+                <option value="">{bulkMode === 'transferir' ? 'Selecione o destino...' : 'Manter portador original'}</option>
                 {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
 
-            <div className="form-actions">
-              <button className="btn btn-secondary" onClick={() => setShowReclassModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleBulkReclassify}>Executar Ação</button>
+            <div className="form-actions" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => { setShowReclassModal(false); setSelectedIds([]); }}
+                style={{ padding: '8px 16px', fontSize: '12.5px' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleBulkReclassify}
+                style={{ 
+                  padding: '8px 20px', 
+                  fontSize: '12.5px',
+                  background: bulkMode === 'transferir' ? 'var(--primary-color)' : 'var(--accent)',
+                  borderColor: bulkMode === 'transferir' ? 'var(--primary-color)' : 'var(--accent)'
+                }}
+              >
+                {bulkMode === 'transferir' ? '🔄 Realizar Transferências' : '⚡ Executar Alterações'}
+              </button>
             </div>
           </div>
         </div>
@@ -1629,81 +1676,6 @@ export default function LancamentosPage() {
                   <div style={{ fontSize: 7, fontWeight: 'bold', color: '#000' }}>PIX COBRANÇA</div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Layout de Impressão de Lançamentos Duvidosos (oculto na tela, visível no papel) */}
-      {showPrintDuvidosos && (
-        <div className="print-only-layout-duvidosos" style={{ display: 'none' }}>
-          <div style={{ padding: '30px', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff' }}>
-            <style dangerouslySetInnerHTML={{
-              __html: `
-              @media print {
-                body * {
-                  visibility: hidden !important;
-                }
-                .print-only-layout-duvidosos, .print-only-layout-duvidosos * {
-                  visibility: visible !important;
-                }
-                .print-only-layout-duvidosos {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  box-shadow: none !important;
-                  border: none !important;
-                }
-              }
-            ` }} />
-            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 15, marginBottom: 20 }}>
-              <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
-                Lançamentos Pendentes de Classificação (Duvidosos)
-              </h1>
-              <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>
-                {activeCompany?.razaoSocial} • CNPJ {activeCompany?.cnpj}
-              </p>
-              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
-                Gerado em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
-              </p>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #000' }}>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Data</th>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Descrição / Histórico</th>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Portador</th>
-                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #000' }}>Valor</th>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000', width: '250px' }}>Identificação do Cliente (O que se refere?)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {duvidososList.map(l => {
-                  const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
-                  return (
-                    <tr key={l.id} style={{ borderBottom: '1px solid #ddd' }}>
-                      <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
-                      <td style={{ padding: '8px', fontWeight: 500 }}>
-                        {l.descricao}
-                        {l.observacao && <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>{l.observacao}</div>}
-                      </td>
-                      <td style={{ padding: '8px' }}>{port}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: l.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
-                        {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
-                      </td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid #000' }}></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            <div style={{ marginTop: '50px', fontSize: '11px', color: '#555', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
-              <strong>Instruções para o Cliente:</strong> Por favor, verifique as transações acima listadas e preencha a última coluna indicando a finalidade de cada lançamento (Ex: "Fornecedor X", "Recebimento Cliente Y", "Aluguel", etc.) para que possamos realizar a classificação contábil adequada no sistema.
             </div>
           </div>
         </div>

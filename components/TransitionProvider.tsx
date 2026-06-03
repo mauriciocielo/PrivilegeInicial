@@ -55,6 +55,9 @@ export default function TransitionProvider({ children }: { children: React.React
     let timeoutId: NodeJS.Timeout;
 
     const handleDataChange = (event: any) => {
+      // Sincroniza apenas na tela de lançamentos
+      if (pathname !== '/consultor/lancamentos') return;
+
       // Ignora se for a sincronização inicial
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       
@@ -72,19 +75,19 @@ export default function TransitionProvider({ children }: { children: React.React
 
       timeoutId = setTimeout(async () => {
         try {
-          console.log('☁️ Auto-salvando dados no PostgreSQL...');
+          console.log('☁️ Auto-salvando lançamentos no PostgreSQL...');
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           const backupData = store.exportBackup();
-          const syncResult = await syncBackupInChunks(backupData);
+          const syncResult = await syncBackupInChunks(backupData, undefined, ['cf_lancamentos']);
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
           } else {
-            console.error('Erro ao auto-salvar no banco:', syncResult.error);
+            console.error('Erro ao auto-salvar lançamentos no banco:', syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           }
         } catch (err) {
-          console.error('Erro ao auto-salvar no banco:', err);
+          console.error('Erro ao auto-salvar lançamentos no banco:', err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
         }
       }, 3000);
@@ -96,10 +99,12 @@ export default function TransitionProvider({ children }: { children: React.React
       clearTimeout(timeoutId);
       window.removeEventListener('cfDataChange', handleDataChange as any);
     };
-  }, []);
+  }, [pathname]);
 
-  // Polling em tempo real (a cada 5 segundos) para sincronização multi-usuário
+  // Polling em tempo real (a cada 5 segundos) para sincronização multi-usuário de lançamentos
   useEffect(() => {
+    if (pathname !== '/consultor/lancamentos') return;
+
     const pollInterval = setInterval(async () => {
       // Se a sincronização inicial não terminou, ignora
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
@@ -109,19 +114,19 @@ export default function TransitionProvider({ children }: { children: React.React
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
-        const res = await fetch('/api/migrate-backup');
+        const res = await fetch('/api/migrate-backup?collection=cf_lancamentos');
         if (!res.ok) return;
         const backup = await res.json();
         if (backup && backup.data) {
           const localString = store.exportBackup();
           const localParsed = JSON.parse(localString);
           
-          // Compara as coleções locais e remotas para ver se há novidades
-          const remoteStr = JSON.stringify(backup.data);
-          const localStr = JSON.stringify(localParsed.data);
+          // Compara apenas a coleção de lançamentos para ver se há novidades
+          const remoteStr = JSON.stringify(backup.data.cf_lancamentos || []);
+          const localStr = JSON.stringify(localParsed.data.cf_lancamentos || []);
           
           if (remoteStr !== localStr) {
-            console.log('☁️ Sincronizando alterações remotas do PostgreSQL em tempo real...');
+            console.log('☁️ Sincronizando lançamentos remotos do PostgreSQL em tempo real...');
             sessionStorage.setItem('cf_sync_in_progress', 'true');
             store.importBackup(JSON.stringify(backup));
             sessionStorage.setItem('cf_sync_in_progress', 'false');
@@ -133,7 +138,7 @@ export default function TransitionProvider({ children }: { children: React.React
     }, 5000);
 
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     if (pathname !== prevPathnameRef.current) {

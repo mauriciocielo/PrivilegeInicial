@@ -1121,8 +1121,23 @@ async function migrateTransactionPatterns(patterns: any[]) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const requestedCollection = searchParams.get('collection');
+
+    if (requestedCollection === 'cf_lancamentos') {
+      const cf_lancamentos = await db.lancamento.findMany();
+      return NextResponse.json({
+        version: '7',
+        isPartial: true,
+        timestamp: new Date().toISOString(),
+        data: {
+          cf_lancamentos
+        }
+      });
+    }
+
     const cf_empresas = await db.empresa.findMany();
     const cf_users = await db.user.findMany();
     const cf_unidades = await db.unidade.findMany();
