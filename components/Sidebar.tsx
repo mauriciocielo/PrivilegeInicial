@@ -71,8 +71,10 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
     section: 'Minha Empresa',
     items: [
       { label: 'Dashboard', href: '/cliente/dashboard', icon: '📊' },
+      { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: '🧠' },
       { label: 'Extrato', href: '/cliente/extrato', icon: '📋' },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: '📝' },
+      { label: 'Relatórios', href: '/cliente/relatorios', icon: '📈' },
     ],
   },
 ];

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
@@ -17,6 +17,28 @@ export default function ClienteDashboard() {
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
   const [userName, setUserName] = useState('');
+  
+  const [mesSelecionado, setMesSelecionado] = useState(() => {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const meses = useMemo(() => {
+    const list: string[] = [];
+    const hoje = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return list;
+  }, []);
+
+  const [dataIni, dataFim] = useMemo(() => {
+    const [ano, mes] = mesSelecionado.split('-').map(Number);
+    const dIni = `${mesSelecionado}-01`;
+    const dFim = new Date(ano, mes, 0).toISOString().split('T')[0];
+    return [dIni, dFim];
+  }, [mesSelecionado]);
 
   useEffect(() => {
     const u = store.getCurrentUser();
@@ -27,7 +49,7 @@ export default function ClienteDashboard() {
 
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
-  const load = useCallback((eId: string) => {
+  const load = useCallback((eId: string, mesSel: string) => {
     const user = store.getCurrentUser();
     const e = store.getEmpresas().find(x => x.id === eId && (!user || user.empresaIds.includes(x.id))) || null;
     setEmpresa(e);
@@ -38,11 +60,7 @@ export default function ClienteDashboard() {
     setTendencia(r);
 
     const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
-    const mesAtual = new Date();
-    const lancsMs = lancs.filter(l => {
-      const d = new Date(l.data);
-      return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
-    });
+    const lancsMs = lancs.filter(l => l.data.startsWith(mesSel));
     const plano = store.getPlanoContas(eId);
     const rec = lancsMs.filter(l => l.tipo === 'receita' && l.planoContaId !== 'transf').reduce((a, l) => {
       const pc = plano.find(p => p.id === l.planoContaId);
@@ -51,7 +69,8 @@ export default function ClienteDashboard() {
     }, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').reduce((a, l) => a + l.valor, 0);
 
-    const dataFimPeriodo = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0];
+    const [ano, mes] = mesSel.split('-').map(Number);
+    const dataFimPeriodo = new Date(ano, mes, 0).toISOString().split('T')[0];
     const ports = store.getPortadores(eId);
     const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId, dataFimPeriodo), 0);
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
@@ -72,14 +91,19 @@ export default function ClienteDashboard() {
   useEffect(() => {
     const user = store.getCurrentUser();
     const eId = user?.empresaIds?.[0] || sessionStorage.getItem('cf_empresa_sel') || 'e1';
-    load(eId);
-    const handler = (e: Event) => load((e as CustomEvent).detail);
+    load(eId, mesSelecionado);
+    const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
-  }, [load]);
+  }, [load, mesSelecionado]);
 
   const margem = totais.receitas > 0 ? ((totais.saldo / totais.receitas) * 100) : 0;
-  const mesAtualLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  
+  const mesAtualLabel = useMemo(() => {
+    const [y, mo] = mesSelecionado.split('-');
+    const d = new Date(Number(y), Number(mo) - 1, 1);
+    return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  }, [mesSelecionado]);
 
   return (
     <>
@@ -87,6 +111,24 @@ export default function ClienteDashboard() {
         <div>
           <div className="page-title">Visão Geral — {empresa?.nomeFantasia}</div>
           <div className="page-subtitle">{mesAtualLabel} • Dados financeiros em tempo real</div>
+        </div>
+        <div className="header-actions">
+          <select 
+            className="form-control" 
+            value={mesSelecionado} 
+            onChange={e => setMesSelecionado(e.target.value)}
+            style={{ width: '200px' }}
+          >
+            {meses.map(m => {
+              const [y, mo] = m.split('-');
+              const d = new Date(Number(y), Number(mo) - 1, 1);
+              return (
+                <option key={m} value={m}>
+                  {d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
 
@@ -118,7 +160,12 @@ export default function ClienteDashboard() {
           </div>
         </div>
         
-        <GeminiTips empresaId={empresaId} />
+        <GeminiTips 
+          empresaId={empresaId} 
+          dataIni={dataIni} 
+          dataFim={dataFim} 
+          contextKey={mesSelecionado} 
+        />
 
         {/* KPIs */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>

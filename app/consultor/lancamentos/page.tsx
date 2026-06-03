@@ -497,30 +497,60 @@ export default function LancamentosPage() {
     if (bulkMode === 'transferir') {
       if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
       const ts = new Date().toISOString();
-      const newLancamentos: Lancamento[] = [];
+      
       lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
         if (l.portadorId === reclassPortadorId) return;
-        newLancamentos.push({
+
+        // Limpar descrição de qualquer prefixo de transferência
+        const cleanDesc = l.descricao
+          .replace(/^\[Transf\. Saída\] /, '')
+          .replace(/^\[Transf\. Entrada\] /, '');
+
+        const originalCreatedAt = l.createdAt || ts;
+
+        // Determinar o tipo da contrapartida e as descrições
+        const originalTipo = l.tipo;
+        let originalDesc = '';
+        let destTipo: 'receita' | 'despesa';
+        let destDesc = '';
+
+        if (originalTipo === 'receita') {
+          originalDesc = `[Transf. Entrada] ${cleanDesc}`;
+          destTipo = 'despesa';
+          destDesc = `[Transf. Saída] ${cleanDesc}`;
+        } else {
+          originalDesc = `[Transf. Saída] ${cleanDesc}`;
+          destTipo = 'receita';
+          destDesc = `[Transf. Entrada] ${cleanDesc}`;
+        }
+
+        // Modificar o lançamento original (em vez de duplicar no mesmo portador)
+        const updatedOriginal: Lancamento = {
+          ...l,
+          descricao: originalDesc,
+          planoContaId: 'transf',
+          createdAt: originalCreatedAt,
+        };
+
+        // Criar a contrapartida no portador de destino
+        const contrapartida: Lancamento = {
           id: uid(),
-          empresaId,
+          empresaId: l.empresaId,
           data: l.data,
-          descricao: `[Transf. Saída] ${l.descricao}`,
-          valor: Math.abs(l.valor),
-          tipo: 'despesa', planoContaId: 'transf', portadorId: l.portadorId,
-          status: 'realizado', origem: 'manual', createdAt: ts,
-        });
-        newLancamentos.push({
-          id: uid(),
-          empresaId,
-          data: l.data,
-          descricao: `[Transf. Entrada] ${l.descricao}`,
-          valor: Math.abs(l.valor),
-          tipo: 'receita', planoContaId: 'transf', portadorId: reclassPortadorId,
-          status: 'realizado', origem: 'manual', createdAt: ts,
-        });
+          descricao: destDesc,
+          valor: l.valor,
+          tipo: destTipo,
+          planoContaId: 'transf',
+          portadorId: reclassPortadorId,
+          status: l.status,
+          origem: l.origem || 'manual',
+          createdAt: originalCreatedAt,
+        };
+
+        store.saveLancamento(updatedOriginal);
+        store.saveLancamento(contrapartida);
       });
 
-      newLancamentos.forEach(item => store.saveLancamento(item));
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds([]);
       setShowReclassModal(false);
