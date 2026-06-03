@@ -1137,6 +1137,7 @@ class DataStore {
   }
 
   exportBackup(): string {
+    this.init();
     const keys = [
       'cf_users',
       'cf_empresas',
