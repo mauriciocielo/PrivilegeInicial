@@ -114,12 +114,29 @@ export function parseOFX(content: string): OFXResult {
 }
 
 // Gera OFX de exemplo para testes
-export function generateSampleOFX(): string {
+export function generateSampleOFX(bankCode: string = '001'): string {
   const hoje = new Date();
   const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
   const fmt = (d: Date) => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   
-  const transactions = [
+  const isSicredi = bankCode === '748';
+  const isItau = bankCode === '341';
+  const isNubank = bankCode === '260';
+  
+  const transactions = isSicredi ? [
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 14200.00, name: 'PIX RECEBIDO SICREDI', memo: 'RECEBIMENTO COOPERADO ABC', fitId: 'SIC001' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 8), amount: -420.00, name: 'DEBITO ENERGIA CPFL', memo: 'CONVENIO DE ARRECADACAO SICREDI', fitId: 'SIC002' },
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 12), amount: 9500.00, name: 'TED RECEBIDA', memo: 'TRANSF SICREDI ENTRE CONTAS', fitId: 'SIC003' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 15), amount: -15.00, name: 'TARIFA BANCARIA', memo: 'MANUTENCAO CONTA COOPERATIVA', fitId: 'SIC004' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 20), amount: -1800.00, name: 'PAGTO FORNECEDOR', memo: 'DUPLICATA LIQUIDADA SICREDI', fitId: 'SIC005' },
+  ] : isItau ? [
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 11000.00, name: 'PIX RECEBIDO ITAU', memo: 'VENDAS DE MERCADORIAS', fitId: 'ITU001' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 7), amount: -3000.00, name: 'PAGTO ITAU BNDES', memo: 'FINANCIAMENTO PARCELA', fitId: 'ITU002' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 14), amount: -55.00, name: 'TARIFA BANCARIA', memo: 'COBRANCA MENSAL CONTAS PJ', fitId: 'ITU003' },
+  ] : isNubank ? [
+    { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 8000.00, name: 'PIX NUBANK PJ', memo: 'VENDAS ONLINE CONTROLE', fitId: 'NUB001' },
+    { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 10), amount: -1500.00, name: 'PAGAMENTO BOLETO', memo: 'SERVICOS DE NUVEM CLOUD', fitId: 'NUB002' },
+  ] : [
     { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 5), amount: 12500.00, name: 'TED RECEBIDA', memo: 'RECEBIMENTO CLIENTE ABC LTDA', fitId: 'FIT001' },
     { type: 'DEBIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 7), amount: -3500.00, name: 'PAGTO FORNECEDOR', memo: 'COMPRA DE INSUMOS E EMBALAGENS', fitId: 'FIT002' },
     { type: 'CREDIT', date: new Date(hoje.getFullYear(), hoje.getMonth(), 10), amount: 8750.50, name: 'PIX RECEBIDO', memo: 'VENDAS DE MERCADORIAS DIVERSAS', fitId: 'FIT003' },

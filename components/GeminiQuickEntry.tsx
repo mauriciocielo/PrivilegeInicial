@@ -17,6 +17,10 @@ interface Attachment {
 // Recomenda-se mover a API_KEY para um arquivo .env como NEXT_PUBLIC_GEMINI_API_KEY
 const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
+const SpeechRecognition = typeof window !== 'undefined'
+  ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+  : null;
+
 export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEntryProps) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,6 +28,60 @@ export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEn
   const [detected, setDetected] = useState<Partial<Lancamento> | null>(null);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
+
+  // Estados e funções para comando de voz (Voice AI)
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleListening = () => {
+    if (!SpeechRecognition) {
+      alert('Seu navegador não suporta reconhecimento de voz. Experimente no Google Chrome ou Edge.');
+      return;
+    }
+    
+    if (isListening) {
+      const recognition = (window as any)._recognition;
+      if (recognition) {
+        recognition.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = 'pt-BR';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onerror = (e: any) => {
+        console.error('Erro no Speech Recognition:', e);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.onresult = (event: any) => {
+        const resultText = event.results[0][0].transcript;
+        setText(resultText);
+        // Disparar análise de IA imediatamente
+        setTimeout(() => {
+          handleParseSpeech(resultText);
+        }, 100);
+      };
+
+      (window as any)._recognition = rec;
+      rec.start();
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+    }
+  };
 
   useEffect(() => {
     setPlanoContas(store.getPlanoContas(empresaId).filter(p => p.nivel === 3 && p.ativo));
@@ -52,6 +110,15 @@ export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEn
 
   const handleParse = async () => {
     if (!text.trim() && !fileData) return;
+    await parseContent(text, fileData);
+  };
+
+  const handleParseSpeech = async (speechText: string) => {
+    if (!speechText.trim()) return;
+    await parseContent(speechText, null);
+  };
+
+  const parseContent = async (inputText: string, file: Attachment | null) => {
     setLoading(true);
     setDetected(null);
 
@@ -60,8 +127,8 @@ export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEn
     const ontem = ontemD.toISOString().split('T')[0];
 
     const promptText = `Você é um robô assistente especializado em contabilidade financeira para a Privilege Consultoria.
-Analise a descrição textual fornecida: "${text}".
-${fileData ? 'Analise também visualmente o arquivo de comprovante/fatura/nota fiscal anexado e extraia prioritariamente dele os valores exatos, data do pagamento e descrição.' : ''}
+Analise a descrição textual fornecida: "${inputText}".
+${file ? 'Analise também visualmente o arquivo de comprovante/fatura/nota fiscal anexado e extraia prioritariamente dele os valores exatos, data do pagamento e descrição.' : ''}
 
 Com base nesses dados, preencha o lançamento financeiro e escolha a subconta contábil mais apropriada do Plano de Contas e o Portador mais apropriado das listas fornecidas abaixo:
 
@@ -74,7 +141,7 @@ ${portadores.map(p => `- ID: ${p.id}, NOME: ${p.nome}`).join('\n')}
 Retorne estritamente um objeto JSON válido sem blocos de código markdown contendo:
 {
   "descricao": "Descrição curta do lançamento (ex: Pagamento de Lentes Essilor, Recebimento Pix Cliente João, Tarifa Bancária)",
-  "valor": 123.45 (número exato extraído do texto ou arquivo),
+  "valor": 123.45,
   "tipo": "receita" ou "despesa",
   "data": "AAAA-MM-DD" (data do pagamento extraída do comprovante/texto, se for hoje use "${hoje}", se ontem use "${ontem}", senão deduza),
   "planoContaId": "ID do plano de contas mais adequado",
@@ -84,11 +151,11 @@ Retorne estritamente um objeto JSON válido sem blocos de código markdown conte
 Se o documento/texto não especificar o portador ou plano de contas, escolha a categoria mais lógica do plano e o primeiro portador como padrão.`;
 
     const parts: any[] = [{ text: promptText }];
-    if (fileData) {
+    if (file) {
       parts.push({
         inlineData: {
-          mimeType: fileData.mimeType,
-          data: fileData.base64
+          mimeType: file.mimeType,
+          data: file.base64
         }
       });
     }
@@ -166,16 +233,49 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Ex: Recebi R$ 350,00 via Pix ontem para o Caixa Geral..."
-            value={text}
-            onChange={e => setText(e.target.value)}
-            disabled={loading}
-            style={{ fontSize: 13, flex: 1 }}
-            onKeyDown={e => e.key === 'Enter' && handleParse()}
-          />
+          <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder={isListening ? "Ouvindo... Fale o lançamento e eu identificarei 🎙️" : "Ex: Recebi R$ 350,00 via Pix ontem para o Caixa Geral..."}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              disabled={loading}
+              style={{ 
+                fontSize: 13, 
+                flex: 1, 
+                paddingRight: '40px',
+                borderColor: isListening ? 'var(--red)' : undefined, 
+                boxShadow: isListening ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : undefined 
+              }}
+              onKeyDown={e => e.key === 'Enter' && handleParse()}
+            />
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={loading}
+              title={isListening ? "Parar gravação" : "Falar lançamento contábil (Voz)"}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '16px',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isListening ? 'var(--red)' : 'var(--text-muted)',
+                zIndex: 10
+              }}
+              className={isListening ? 'animate-pulse' : ''}
+            >
+              {isListening ? '🔴' : '🎙️'}
+            </button>
+          </div>
 
           <input
             type="file"

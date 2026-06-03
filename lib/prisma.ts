@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -8,10 +10,7 @@ declare global {
 let dbInstance: PrismaClient;
 
 if (typeof window === 'undefined') {
-  // Rodando no servidor - importa dinamicamente os drivers para evitar erros de compilação no client browser
-  const { Pool } = require('pg');
-  const { PrismaPg } = require('@prisma/adapter-pg');
-  
+  // Rodando no servidor
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const adapter = new PrismaPg(pool);
   dbInstance = globalThis.prisma || new PrismaClient({ adapter });

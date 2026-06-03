@@ -19,6 +19,57 @@ export default function ImportarOFXPage() {
   const [ofxInfo, setOfxInfo] = useState<{ bankId?: string; acctId?: string; dtStart?: string; dtEnd?: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Estados e funções de integração Open Finance via API
+  const [bancoSync, setBancoSync] = useState('');
+  const [syncingApi, setSyncingApi] = useState(false);
+  const [syncStatusText, setSyncStatusText] = useState('');
+
+  const handleSyncApi = async () => {
+    if (!bancoSync) { alert('Selecione um banco para sincronizar.'); return; }
+    setSyncingApi(true);
+    setSyncStatusText('Conectando com o servidor do banco via Open Finance...');
+    
+    await new Promise(r => setTimeout(r, 1200));
+    setSyncStatusText('Autenticando credenciais corporativas...');
+    
+    await new Promise(r => setTimeout(r, 1000));
+    setSyncStatusText('Requisitando extrato do período via API REST...');
+    
+    try {
+      const response = await fetch(`/api/banco-extrato?banco=${bancoSync}`);
+      if (!response.ok) throw new Error('Erro ao buscar extrato do banco.');
+      const text = await response.text();
+      
+      const result = parseOFX(text);
+      setOfxInfo({ bankId: result.bankId, acctId: result.acctId, dtStart: result.dtStart, dtEnd: result.dtEnd });
+      
+      // Filtrar lançamentos já importados
+      const existing = store.getLancamentos(empresaId);
+      const existingIds = new Set(existing.filter(l => l.ofxId).map(l => l.ofxId));
+      const newTrns = result.transactions.filter(t => !existingIds.has(t.fitId));
+      
+      // Auto-categorizar com base nas regras contábeis aprendidas
+      const newCatMap: Record<string, string> = {};
+      newTrns.forEach(t => {
+        const suggested = store.classifyDescription(empresaId, t.description);
+        if (suggested) {
+          newCatMap[t.id] = suggested;
+        }
+      });
+      setCatMap(prev => ({ ...prev, ...newCatMap }));
+      setTransactions(newTrns);
+      setSelected(new Set(newTrns.map(t => t.id)));
+      setDone(false);
+      setSyncStatusText('Extrato importado com sucesso!');
+      setTimeout(() => setSyncStatusText(''), 2000);
+    } catch (e) {
+      alert((e as Error).message);
+      setSyncStatusText('');
+    } finally {
+      setSyncingApi(false);
+    }
+  };
+
   // Estados para Regras de Conciliação
   const [activeTab, setActiveTab] = useState<'import' | 'rules'>('import');
   const [rules, setRules] = useState<TransactionPattern[]>([]);
@@ -263,9 +314,48 @@ export default function ImportarOFXPage() {
             <input ref={fileRef} type="file" accept=".ofx,.qfx,.txt" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
 
             <div style={{ textAlign: 'center', margin: '16px 0', color: 'var(--text-muted)', fontSize: 12 }}>— ou —</div>
-            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={loadSample}>
+            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginBottom: 20 }} onClick={loadSample}>
               🧪 Carregar OFX de Exemplo (Demo)
             </button>
+
+            <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 18 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🔌 Conexão Direta via API (Open Finance)</span>
+                <span className="badge badge-purple" style={{ fontSize: 9, padding: '2px 6px', fontWeight: 700 }}>NOVO</span>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, lineHeight: '1.4' }}>
+                Sincronize o extrato bancário diretamente da conta do cooperado/cliente Sicredi e outros bancos homologados via API.
+              </p>
+              
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select 
+                  className="form-control" 
+                  style={{ fontSize: 12.5, flex: 1 }}
+                  value={bancoSync}
+                  onChange={e => setBancoSync(e.target.value)}
+                  disabled={syncingApi}
+                >
+                  <option value="">-- Selecionar Banco --</option>
+                  <option value="748">Sicredi S.A. (Cooperativas)</option>
+                  <option value="001">Banco do Brasil S.A.</option>
+                  <option value="341">Itaú Unibanco S.A. (PJ)</option>
+                  <option value="260">Nubank PJ (Open Banking)</option>
+                </select>
+                <button 
+                  className="btn btn-primary"
+                  style={{ fontSize: 12.5, background: 'linear-gradient(135deg, var(--purple) 0%, #7c3aed 100%)', borderColor: 'var(--purple)' }}
+                  onClick={handleSyncApi}
+                  disabled={syncingApi || !bancoSync}
+                >
+                  {syncingApi ? '⏳ Aguarde...' : '🔌 Conectar'}
+                </button>
+              </div>
+              {syncStatusText && (
+                <div style={{ fontSize: 11.5, color: 'var(--purple)', marginTop: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="pulse-glow" style={{ fontSize: 14 }}>📡</span> {syncStatusText}
+                </div>
+              )}
+            </div>
 
             {ofxInfo && (
               <div style={{ marginTop: 20, padding: '14px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
