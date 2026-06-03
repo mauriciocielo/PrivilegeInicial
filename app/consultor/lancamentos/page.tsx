@@ -124,9 +124,75 @@ export default function LancamentosPage() {
   const [showC6BoletoModal, setShowC6BoletoModal] = useState(false);
   const [c6BoletoLanc, setC6BoletoLanc] = useState<Lancamento | null>(null);
 
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showPrintDuvidosos, setShowPrintDuvidosos] = useState(false);
+  const [duvidososList, setDuvidososList] = useState<Lancamento[]>([]);
+
   const handleOpenC6Boleto = (l: Lancamento) => {
     setC6BoletoLanc(l);
     setShowC6BoletoModal(true);
+  };
+
+  const handleExportCsvDuvidosos = () => {
+    const duvidosos = lancamentos.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = planoContas.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return !l.planoContaId || l.planoContaId === '';
+    });
+
+    if (duvidosos.length === 0) {
+      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para exportar.');
+      return;
+    }
+
+    const headers = ['Data', 'Descrição', 'Valor (R$)', 'Tipo', 'Portador', 'Identificação do Cliente (O que se refere?)'];
+    const rows = duvidosos.map(l => {
+      const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
+      const valorStr = (l.tipo === 'receita' ? '+' : '-') + l.valor.toFixed(2).replace('.', ',');
+      const dataStr = fmt.date(l.data);
+      return [
+        `"${dataStr}"`,
+        `"${l.descricao.replace(/"/g, '""')}"`,
+        `"${valorStr}"`,
+        `"${l.tipo === 'receita' ? 'Receita' : 'Despesa'}"`,
+        `"${port.replace(/"/g, '""')}"`,
+        '""'
+      ];
+    });
+
+    const csvContent = '\ufeff' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const nomeEmpresa = activeCompany ? activeCompany.nomeFantasia.replace(/[^a-zA-Z0-9]/g, '_') : 'empresa';
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lancamentos_duvidosos_${nomeEmpresa}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrintDuvidosos = () => {
+    const list = lancamentos.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = planoContas.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return !l.planoContaId || l.planoContaId === '';
+    });
+
+    if (list.length === 0) {
+      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para imprimir.');
+      return;
+    }
+
+    setDuvidososList(list);
+    setShowPrintDuvidosos(true);
+    setTimeout(() => {
+      window.print();
+      setShowPrintDuvidosos(false);
+    }, 300);
   };
 
   const load = useCallback((eId: string) => {
@@ -664,6 +730,86 @@ export default function LancamentosPage() {
               </button>
             </>
           )}
+          <div style={{ position: 'relative' }}>
+            <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
+              ❓ Exportar Duvidosos ▾
+            </button>
+            {showExportMenu && (
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  right: 0, 
+                  top: '100%', 
+                  marginTop: 6,
+                  background: 'var(--bg-card)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: 8, 
+                  boxShadow: 'var(--shadow-md)', 
+                  padding: 6, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 4, 
+                  zIndex: 100,
+                  minWidth: 200
+                }}
+              >
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                  onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
+                >
+                  📊 Baixar Planilha (CSV)
+                </button>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                  onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
+                >
+                  🖨️ Imprimir PDF (Conferência)
+                </button>
+              </div>
+            )}
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
+              ❓ Exportar Duvidosos ▾
+            </button>
+            {showExportMenu && (
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  right: 0, 
+                  top: '100%', 
+                  marginTop: 6,
+                  background: 'var(--bg-card)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: 8, 
+                  boxShadow: 'var(--shadow-md)', 
+                  padding: 6, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 4, 
+                  zIndex: 100,
+                  minWidth: 200
+                }}
+              >
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                  onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
+                >
+                  📊 Baixar Planilha (CSV)
+                </button>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                  onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
+                >
+                  🖨️ Imprimir PDF (Conferência)
+                </button>
+              </div>
+            )}
+          </div>
           <button className="btn btn-secondary" onClick={openCardImport}>💳 Importar Cartão</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Lançamento</button>
         </div>
@@ -1483,6 +1629,156 @@ export default function LancamentosPage() {
                   <div style={{ fontSize: 7, fontWeight: 'bold', color: '#000' }}>PIX COBRANÇA</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Layout de Impressão de Lançamentos Duvidosos (oculto na tela, visível no papel) */}
+      {showPrintDuvidosos && (
+        <div className="print-only-layout-duvidosos" style={{ display: 'none' }}>
+          <div style={{ padding: '30px', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff' }}>
+            <style dangerouslySetInnerHTML={{
+              __html: `
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                .print-only-layout-duvidosos, .print-only-layout-duvidosos * {
+                  visibility: visible !important;
+                }
+                .print-only-layout-duvidosos {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
+              }
+            ` }} />
+            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 15, marginBottom: 20 }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
+                Lançamentos Pendentes de Classificação (Duvidosos)
+              </h1>
+              <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>
+                {activeCompany?.razaoSocial} • CNPJ {activeCompany?.cnpj}
+              </p>
+              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
+                Gerado em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
+              </p>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #000' }}>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Data</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Descrição / Histórico</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Portador</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #000' }}>Valor</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000', width: '250px' }}>Identificação do Cliente (O que se refere?)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {duvidososList.map(l => {
+                  const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
+                  return (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #ddd' }}>
+                      <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
+                      <td style={{ padding: '8px', fontWeight: 500 }}>
+                        {l.descricao}
+                        {l.observacao && <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>{l.observacao}</div>}
+                      </td>
+                      <td style={{ padding: '8px' }}>{port}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: l.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
+                        {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                      </td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid #000' }}></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: '50px', fontSize: '11px', color: '#555', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+              <strong>Instruções para o Cliente:</strong> Por favor, verifique as transações acima listadas e preencha a última coluna indicando a finalidade de cada lançamento (Ex: "Fornecedor X", "Recebimento Cliente Y", "Aluguel", etc.) para que possamos realizar a classificação contábil adequada no sistema.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Layout de Impressão de Lançamentos Duvidosos (oculto na tela, visível no papel) */}
+      {showPrintDuvidosos && (
+        <div className="print-only-layout-duvidosos" style={{ display: 'none' }}>
+          <div style={{ padding: '30px', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff' }}>
+            <style dangerouslySetInnerHTML={{
+              __html: `
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                .print-only-layout-duvidosos, .print-only-layout-duvidosos * {
+                  visibility: visible !important;
+                }
+                .print-only-layout-duvidosos {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
+              }
+            ` }} />
+            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 15, marginBottom: 20 }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
+                Lançamentos Pendentes de Classificação (Duvidosos)
+              </h1>
+              <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>
+                {activeCompany?.razaoSocial} • CNPJ {activeCompany?.cnpj}
+              </p>
+              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
+                Gerado em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
+              </p>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #000' }}>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Data</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Descrição / Histórico</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Portador</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #000' }}>Valor</th>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000', width: '250px' }}>Identificação do Cliente (O que se refere?)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {duvidososList.map(l => {
+                  const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
+                  return (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #ddd' }}>
+                      <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
+                      <td style={{ padding: '8px', fontWeight: 500 }}>
+                        {l.descricao}
+                        {l.observacao && <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>{l.observacao}</div>}
+                      </td>
+                      <td style={{ padding: '8px' }}>{port}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: l.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
+                        {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                      </td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid #000' }}></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: '50px', fontSize: '11px', color: '#555', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+              <strong>Instruções para o Cliente:</strong> Por favor, verifique as transações acima listadas e preencha a última coluna indicando a finalidade de cada lançamento (Ex: "Fornecedor X", "Recebimento Cliente Y", "Aluguel", etc.) para que possamos realizar a classificação contábil adequada no sistema.
             </div>
           </div>
         </div>

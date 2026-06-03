@@ -10,6 +10,7 @@ export default function TransitionProvider({ children }: { children: React.React
   const [displayChildren, setDisplayChildren] = useState(children);
   const [transitionStage, setTransitionStage] = useState('fade-in');
   const prevPathnameRef = useRef(pathname);
+  const hasPendingChangesRef = useRef(false);
 
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
@@ -57,9 +58,15 @@ export default function TransitionProvider({ children }: { children: React.React
       // Ignora se for a sincronização inicial
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       
+      // Ignora se for alteração disparada pelo próprio polling de sincronização
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
       // Ignora chaves temporárias ou não relevantes
       const key = event?.detail?.key;
       if (key === 'cf_current_user' || key === 'cf_postgres_synced') return;
+
+      // Sinaliza que há modificações locais aguardando envio
+      hasPendingChangesRef.current = true;
 
       clearTimeout(timeoutId);
 
@@ -71,6 +78,7 @@ export default function TransitionProvider({ children }: { children: React.React
           const syncResult = await syncBackupInChunks(backupData);
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
+            hasPendingChangesRef.current = false;
           } else {
             console.error('Erro ao auto-salvar no banco:', syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
@@ -88,6 +96,43 @@ export default function TransitionProvider({ children }: { children: React.React
       clearTimeout(timeoutId);
       window.removeEventListener('cfDataChange', handleDataChange as any);
     };
+  }, []);
+
+  // Polling em tempo real (a cada 5 segundos) para sincronização multi-usuário
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      // Se a sincronização inicial não terminou, ignora
+      if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
+      // Se há modificações locais pendentes de envio, ignora para não sobrescrever o que o usuário está digitando
+      if (hasPendingChangesRef.current) return;
+      // Se outra sincronização/importação já está em andamento, ignora
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
+      try {
+        const res = await fetch('/api/migrate-backup');
+        if (!res.ok) return;
+        const backup = await res.json();
+        if (backup && backup.data) {
+          const localString = store.exportBackup();
+          const localParsed = JSON.parse(localString);
+          
+          // Compara as coleções locais e remotas para ver se há novidades
+          const remoteStr = JSON.stringify(backup.data);
+          const localStr = JSON.stringify(localParsed.data);
+          
+          if (remoteStr !== localStr) {
+            console.log('☁️ Sincronizando alterações remotas do PostgreSQL em tempo real...');
+            sessionStorage.setItem('cf_sync_in_progress', 'true');
+            store.importBackup(JSON.stringify(backup));
+            sessionStorage.setItem('cf_sync_in_progress', 'false');
+          }
+        }
+      } catch (err) {
+        console.error('Erro no polling de tempo real:', err);
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   useEffect(() => {

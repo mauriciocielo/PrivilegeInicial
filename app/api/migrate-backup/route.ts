@@ -17,7 +17,24 @@ async function migrateEmpresas(empresas: any[]) {
   console.log(`Migrando ${empresas.length} empresas...`);
   for (const e of empresas) {
     if (!e.id) continue;
+    const empresaId = String(e.id);
+    const cnpj = String(e.cnpj || '');
     try {
+      if (cnpj) {
+        const conflictCnpj = await db.empresa.findFirst({
+          where: {
+            cnpj: cnpj,
+            NOT: { id: empresaId }
+          }
+        });
+        if (conflictCnpj) {
+          console.log(`Resolvendo conflito de CNPJ para ${cnpj}: excluindo ID antigo ${conflictCnpj.id}`);
+          await db.empresa.delete({
+            where: { id: conflictCnpj.id }
+          });
+        }
+      }
+
       await db.empresa.upsert({
         where: { id: String(e.id) },
         update: {
@@ -71,10 +88,39 @@ async function migrateUsers(users: any[]) {
   console.log(`Migrando ${users.length} usuários...`);
   for (const u of users) {
     if (!u.email) continue;
+    const userId = String(u.id || crypto.randomUUID());
+    const email = String(u.email);
     try {
+      const conflictEmail = await db.user.findFirst({
+        where: {
+          email: email,
+          NOT: { id: userId }
+        }
+      });
+      if (conflictEmail) {
+        console.log(`Resolvendo conflito de email para ${email}: excluindo ID antigo ${conflictEmail.id}`);
+        await db.user.delete({
+          where: { id: conflictEmail.id }
+        });
+      }
+
+      const conflictId = await db.user.findFirst({
+        where: {
+          id: userId,
+          NOT: { email: email }
+        }
+      });
+      if (conflictId) {
+        console.log(`Resolvendo conflito de ID para ${userId}: excluindo email antigo ${conflictId.email}`);
+        await db.user.delete({
+          where: { id: conflictId.id }
+        });
+      }
+
       await db.user.upsert({
-        where: { email: String(u.email) },
+        where: { id: userId },
         update: {
+          email: email,
           name: String(u.name || ''),
           password: String(u.password || ''),
           role: String(u.role || 'cliente'),
@@ -85,9 +131,9 @@ async function migrateUsers(users: any[]) {
           allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
         },
         create: {
-          id: String(u.id || crypto.randomUUID()),
+          id: userId,
+          email: email,
           name: String(u.name || ''),
-          email: String(u.email),
           password: String(u.password || ''),
           role: String(u.role || 'cliente'),
           empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
