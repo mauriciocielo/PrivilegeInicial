@@ -132,6 +132,7 @@ export default function LancamentosPage() {
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
     setLancamentos(store.getLancamentos(eId));
+    // Carrega todas as contas analíticas (nível 3) incluindo transferências
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
 
@@ -157,8 +158,17 @@ export default function LancamentosPage() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
     load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
+    // Também recarrega plano de contas quando ele for alterado em outra tela
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || 'e1';
+      setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
+    };
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, [load]);
 
   useEffect(() => {
@@ -620,6 +630,13 @@ export default function LancamentosPage() {
   }, []);
 
   const modalPlanoContas = useMemo(() => {
+    if (form.tipoTransacao === 'transferencia') {
+      // Inclui contas cujo tipo é transferência OU cujo código começa com '6'
+      return planoContas.filter(p =>
+        (p.tipo === 'transferencia' || p.codigo.startsWith('6')) &&
+        matchesConta(p, contaSearch)
+      );
+    }
     return planoContas.filter(p => p.tipo === form.tipoTransacao && matchesConta(p, contaSearch));
   }, [planoContas, form.tipoTransacao, contaSearch]);
 
@@ -877,11 +894,8 @@ export default function LancamentosPage() {
 
                       {/* Plano de Contas - Single Click to Edit */}
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: 0 }}>
-                        {l.planoContaId === 'transf' || (() => {
-                          const pc = planoContas.find(p => p.id === l.planoContaId);
-                          return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
-                        })() ? (
-                          <div style={{ padding: '8px 14px' }}>-</div>
+                        {l.planoContaId === 'transf' ? (
+                          <div style={{ padding: '8px 14px', color: 'var(--accent)', fontStyle: 'italic', fontSize: 11 }}>⇄ Transf.</div>
                         ) : inlineEditRowId === l.id && inlineEditField === 'planoContaId' ? (
                           <div style={{ padding: '4px' }}>
                             <select
@@ -896,7 +910,14 @@ export default function LancamentosPage() {
                               style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
                             >
                               <option value="">-- Sem Categoria --</option>
-                              {planoContas.filter(p => p.tipo === l.tipo).map(pc => (
+                              {planoContas.filter(p => {
+                                const isTransfLanc = l.planoContaId === 'transf' || (() => {
+                                  const pcL = planoContas.find(x => x.id === l.planoContaId);
+                                  return pcL?.tipo === 'transferencia' || pcL?.codigo.startsWith('6');
+                                })();
+                                if (isTransfLanc) return p.tipo === 'transferencia' || p.codigo.startsWith('6');
+                                return p.tipo === l.tipo;
+                              }).map(pc => (
                                 <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
                               ))}
                             </select>
