@@ -9,7 +9,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'FluxoCaixa Pro — Sistema de Gestão Financeira',
+  title: 'Privilege Contabilidade e Consultoria',
   description: 'Portal de gestão de fluxo de caixa para consultores e clientes. Lançamentos, importação OFX, relatórios e dashboards financeiros.',
 };
 
