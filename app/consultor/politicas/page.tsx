@@ -59,13 +59,9 @@ export default function PoliticasFinanceirasPage() {
     const all = store.getEmpresas();
     setEmpresas(all);
 
-    const emp = all.find(e => e.id === eId);
-    if (emp) {
-      const field = POLICY_INFO[activeTab].field;
-      setPolicyText(emp[field] || '');
-    } else {
-      setPolicyText('');
-    }
+    const globalPols = store.getGlobalPolicies();
+    const field = POLICY_INFO[activeTab].field;
+    setPolicyText(globalPols[field] || '');
     setAiDraft('');
   }, [activeTab]);
 
@@ -87,33 +83,19 @@ export default function PoliticasFinanceirasPage() {
 
   // Atualiza o texto do editor quando a aba mudar
   useEffect(() => {
-    if (empresaId) {
-      const emp = empresas.find(e => e.id === empresaId);
-      if (emp) {
-        const field = POLICY_INFO[activeTab].field;
-        setPolicyText(emp[field] || '');
-      } else {
-        setPolicyText('');
-      }
-      setAiDraft('');
-    }
-  }, [activeTab, empresaId, empresas]);
+    const globalPols = store.getGlobalPolicies();
+    const field = POLICY_INFO[activeTab].field;
+    setPolicyText(globalPols[field] || '');
+    setAiDraft('');
+  }, [activeTab]);
 
   const handleSave = () => {
-    if (!empresaId) return;
-    const emp = empresas.find(e => e.id === empresaId);
-    if (!emp) return;
-
     const field = POLICY_INFO[activeTab].field;
-    const updated: Empresa = {
-      ...emp,
-      [field]: policyText
-    };
-
-    store.saveEmpresa(updated);
-    // Atualiza a lista local de empresas
-    setEmpresas(store.getEmpresas());
-    store.logAction(empresaId, 'Edição', `Atualizou a ${POLICY_INFO[activeTab].title}`);
+    store.saveGlobalPolicy(field, policyText);
+    
+    if (empresaId) {
+      store.logAction(empresaId, 'Edição', `Atualizou a ${POLICY_INFO[activeTab].title} (Global)`);
+    }
     alert('Política salva com sucesso!');
   };
 
@@ -159,7 +141,7 @@ REGRAS DE FORMATAÇÃO E ESTRUTURA:
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -680,6 +680,23 @@ class DataStore {
     if (!localStorage.getItem('cf_clientes')) this.set('cf_clientes', []);
     if (!localStorage.getItem('cf_nfse')) this.set('cf_nfse', []);
     if (!localStorage.getItem('cf_audit_logs')) this.set('cf_audit_logs', []);
+    if (!localStorage.getItem('cf_politicas_globais')) {
+      const empresas = this.get<Empresa[]>('cf_empresas', []);
+      const empWithPolicies = empresas.find(e => 
+        e.politicaReceberTexto || 
+        e.politicaCobrancaTexto || 
+        e.politicaComprasTexto || 
+        e.politicaPagamentosTexto || 
+        e.politicaCreditoTexto
+      );
+      this.set('cf_politicas_globais', {
+        politicaReceberTexto: empWithPolicies?.politicaReceberTexto || '',
+        politicaCobrancaTexto: empWithPolicies?.politicaCobrancaTexto || '',
+        politicaComprasTexto: empWithPolicies?.politicaComprasTexto || '',
+        politicaPagamentosTexto: empWithPolicies?.politicaPagamentosTexto || '',
+        politicaCreditoTexto: empWithPolicies?.politicaCreditoTexto || '',
+      });
+    }
 
     // Retrofitting das contas de transferências (Código 6)
     try {
@@ -804,6 +821,24 @@ class DataStore {
   }
   deleteUser(id: string) {
     this.set('cf_users', this.getUsers().filter(u => u.id !== id));
+  }
+
+  // Políticas Financeiras Globais
+  getGlobalPolicies(): Record<string, string> {
+    this.init();
+    return this.get<Record<string, string>>('cf_politicas_globais', {
+      politicaReceberTexto: '',
+      politicaCobrancaTexto: '',
+      politicaComprasTexto: '',
+      politicaPagamentosTexto: '',
+      politicaCreditoTexto: '',
+    });
+  }
+
+  saveGlobalPolicy(field: string, text: string) {
+    const current = this.getGlobalPolicies();
+    current[field] = text;
+    this.set('cf_politicas_globais', current);
   }
 
   // Empresas

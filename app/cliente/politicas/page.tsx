@@ -51,12 +51,12 @@ export default function ClientePoliticasPage() {
     const emp = all.find(e => e.id === eId);
     if (emp) {
       setEmpresa(emp);
-      const field = POLICY_INFO[activeTab].field;
-      setPolicyText(emp[field] || '');
     } else {
       setEmpresa(null);
-      setPolicyText('');
     }
+    const globalPols = store.getGlobalPolicies();
+    const field = POLICY_INFO[activeTab].field;
+    setPolicyText(globalPols[field] || '');
   }, [activeTab]);
 
   useEffect(() => {
@@ -88,12 +88,11 @@ export default function ClientePoliticasPage() {
       const emp = all.find(e => e.id === empresaId);
       if (emp) {
         setEmpresa(emp);
-        const field = POLICY_INFO[activeTab].field;
-        setPolicyText(emp[field] || '');
-      } else {
-        setPolicyText('');
       }
     }
+    const globalPols = store.getGlobalPolicies();
+    const field = POLICY_INFO[activeTab].field;
+    setPolicyText(globalPols[field] || '');
   }, [activeTab, empresaId]);
 
   const handlePrint = () => {
