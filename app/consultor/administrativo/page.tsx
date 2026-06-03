@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { store, Empresa, Lancamento, User, AuditLog } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { syncBackupInChunks } from '../../../lib/sync-helper';
 
 export default function AdministrativoPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [migrating, setMigrating] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState('');
 
   // Estados de Auditoria e Fechamento
   const [selectedAuditEmpresaId, setSelectedAuditEmpresaId] = useState('');
@@ -32,14 +34,12 @@ export default function AdministrativoPage() {
   const handleMigrateToPostgres = async () => {
     if (!confirm('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?')) return;
     setMigrating(true);
+    setMigrationProgress('Iniciando...');
     try {
       const backupData = store.exportBackup();
-      const res = await fetch('/api/migrate-backup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: backupData
+      const result = await syncBackupInChunks(backupData, (msg) => {
+        setMigrationProgress(msg);
       });
-      const result = await res.json();
       if (result.success) {
         alert('🎉 Migração concluída com sucesso! Todos os dados locais foram salvos no PostgreSQL no Railway.');
       } else {
@@ -49,6 +49,7 @@ export default function AdministrativoPage() {
       alert('❌ Erro de rede na migração: ' + (e as Error).message);
     } finally {
       setMigrating(false);
+      setMigrationProgress('');
     }
   };
 
@@ -260,7 +261,7 @@ export default function AdministrativoPage() {
         return;
       }
       const client = win.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
+        client_id: clientId.trim(),
         scope: 'https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response.access_token) {
@@ -292,9 +293,12 @@ export default function AdministrativoPage() {
     setCalendarLoading(true);
     setCalendarError(null);
     try {
-      const timeMin = new Date().toISOString();
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const nextWeekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59).toISOString();
+      
       const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&orderBy=startTime&singleEvents=true&maxResults=25`,
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${todayStart}&timeMax=${nextWeekEnd}&orderBy=startTime&singleEvents=true&maxResults=50`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -305,7 +309,14 @@ export default function AdministrativoPage() {
           setGcalToken(null);
           throw new Error('Sessão expirada. Por favor, conecte novamente.');
         }
-        throw new Error('Falha ao buscar compromissos do Google Calendar.');
+        let detailedError = 'Falha ao buscar compromissos do Google Calendar.';
+        try {
+          const errJson = await res.json();
+          if (errJson.error?.message) {
+            detailedError = `Erro do Google: ${errJson.error.message}`;
+          }
+        } catch (_) {}
+        throw new Error(detailedError);
       }
       const data = await res.json();
       setCalendarEvents(data.items || []);
@@ -329,7 +340,7 @@ export default function AdministrativoPage() {
         return;
       }
       const client = win.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
+        client_id: clientId.trim(),
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
         callback: (response: any) => {
           if (response.access_token) {
@@ -364,6 +375,44 @@ export default function AdministrativoPage() {
       return summary.includes(term) || description.includes(term) || attendees.includes(term);
     });
   }, [calendarEvents, calendarSearch]);
+
+  // Helper para agrupar compromissos da semana por dia
+  const groupedEvents = useMemo(() => {
+    const groups: Record<string, { date: Date; label: string; events: any[] }> = {};
+    
+    // Inicializa os próximos 7 dias (incluindo hoje)
+    const now = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const key = d.toISOString().split('T')[0];
+      const dayLabel = i === 0 
+        ? 'Hoje' 
+        : i === 1 
+          ? 'Amanhã' 
+          : d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+      
+      const formattedLabel = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+      
+      groups[key] = {
+        date: d,
+        label: formattedLabel,
+        events: []
+      };
+    }
+    
+    // Distribui os eventos do calendário nos dias correspondentes
+    filteredEvents.forEach(event => {
+      const start = event.start?.dateTime ? new Date(event.start.dateTime) : event.start?.date ? new Date(event.start.date) : null;
+      if (start) {
+        const key = start.toISOString().split('T')[0];
+        if (groups[key]) {
+          groups[key].events.push(event);
+        }
+      }
+    });
+    
+    return Object.values(groups);
+  }, [filteredEvents]);
 
   // Debounced backup automático ao alterar lançamentos, empresas ou usuários
   useEffect(() => {
@@ -541,93 +590,90 @@ export default function AdministrativoPage() {
                       {calendarSearch ? 'Nenhum compromisso corresponde à pesquisa.' : 'Nenhum compromisso agendado para os próximos dias.'}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '380px', overflowY: 'auto', paddingRight: 4 }}>
-                      {filteredEvents.map((event) => {
-                        const start = event.start?.dateTime ? new Date(event.start.dateTime) : event.start?.date ? new Date(event.start.date) : null;
-                        const end = event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : null;
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '420px', overflowY: 'auto', paddingRight: 4 }}>
+                      {groupedEvents.map((group) => {
+                        const hasEvents = group.events.length > 0;
+                        const isGroupToday = group.label.startsWith('Hoje');
                         
-                        const dateString = start ? start.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : 'Sem data';
-                        const timeString = start && event.start?.dateTime ? `${start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${end ? end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}` : 'Dia Inteiro';
-                        const isToday = start && start.toDateString() === new Date().toDateString();
-
                         return (
-                          <div 
-                            key={event.id}
-                            style={{ 
-                              display: 'flex', 
-                              gap: 16, 
-                              padding: 12, 
-                              background: isToday ? 'rgba(16, 185, 129, 0.03)' : 'var(--bg-card2)', 
-                              border: isToday ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border-light)', 
-                              borderRadius: 'var(--radius-sm)',
-                              alignItems: 'flex-start',
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <div style={{ 
-                              background: isToday ? 'var(--green-bg)' : 'var(--accent-glow)', 
-                              color: isToday ? 'var(--green)' : 'var(--accent-light)', 
-                              padding: '8px 12px', 
-                              borderRadius: 8, 
-                              textAlign: 'center',
-                              minWidth: 72,
-                              fontWeight: 700,
-                              fontSize: 11
-                            }}>
-                              <div style={{ textTransform: 'uppercase', fontSize: 9 }}>{dateString.split(' de ')[1] || dateString.split(' ')[1] || ''}</div>
-                              <div style={{ fontSize: 18, lineHeight: 1.2 }}>{dateString.split(' de ')[0] || dateString.split(' ')[0] || ''}</div>
-                              <div style={{ fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', marginTop: 4 }}>{timeString}</div>
+                          <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)', marginBottom: 4 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: isGroupToday ? 'var(--accent)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {isGroupToday && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }}></span>}
+                                {group.label}
+                              </span>
+                              <span className="badge badge-gray" style={{ fontSize: 9, padding: '2px 6px', fontWeight: 600 }}>
+                                {group.events.length} {group.events.length === 1 ? 'evento' : 'eventos'}
+                              </span>
                             </div>
+                            
+                            {hasEvents ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {group.events.map((event) => {
+                                  const start = event.start?.dateTime ? new Date(event.start.dateTime) : event.start?.date ? new Date(event.start.date) : null;
+                                  const end = event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : null;
+                                  
+                                  const timeString = start && event.start?.dateTime 
+                                    ? `${start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${end ? end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}` 
+                                    : 'Dia Inteiro';
 
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <h4 style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                {event.summary || 'Sem título'}
-                                {isToday && (
-                                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: 'var(--green-bg)', color: 'var(--green)', borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Hoje
-                                  </span>
-                                )}
-                              </h4>
-                              {event.description && (
-                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
-                                  {event.description}
-                                </p>
-                              )}
-                              {event.attendees && event.attendees.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-                                  {event.attendees.slice(0, 3).map((attendee: any, idx: number) => (
-                                    <span 
-                                      key={idx} 
+                                  return (
+                                    <div 
+                                      key={event.id}
                                       style={{ 
-                                        fontSize: 10, 
-                                        background: 'rgba(0, 0, 0, 0.05)', 
-                                        padding: '2px 6px', 
-                                        borderRadius: 100, 
-                                        color: 'var(--text-secondary)'
+                                        display: 'flex', 
+                                        gap: 12, 
+                                        padding: '10px 12px', 
+                                        background: 'var(--bg-card2)', 
+                                        border: '1px solid var(--border-light)', 
+                                        borderRadius: 'var(--radius-sm)',
+                                        alignItems: 'center',
+                                        transition: 'all 0.2s ease'
                                       }}
+                                      className="calendar-event-item"
                                     >
-                                      {attendee.email}
-                                    </span>
-                                  ))}
-                                  {event.attendees.length > 3 && (
-                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'center' }}>
-                                      +{event.attendees.length - 3} mais
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                                      <div style={{ 
+                                        background: 'var(--accent-glow)', 
+                                        color: 'var(--accent-light)', 
+                                        padding: '4px 8px', 
+                                        borderRadius: 6, 
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        ⏰ {timeString}
+                                      </div>
 
-                            {event.htmlLink && (
-                              <a 
-                                href={event.htmlLink} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="btn btn-secondary btn-sm"
-                                style={{ padding: '4px 8px', fontSize: 11, alignSelf: 'center' }}
-                              >
-                                Ver no Agenda ↗
-                              </a>
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h4 style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {event.summary || 'Sem título'}
+                                        </h4>
+                                        {event.description && (
+                                          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {event.description}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {event.htmlLink && (
+                                        <a 
+                                          href={event.htmlLink} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          className="btn btn-secondary btn-sm"
+                                          style={{ padding: '3px 8px', fontSize: 10, alignSelf: 'center', whiteSpace: 'nowrap' }}
+                                        >
+                                          Ver ↗
+                                        </a>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4, fontStyle: 'italic', marginBottom: 4 }}>
+                                Nenhum compromisso.
+                              </div>
                             )}
                           </div>
                         );
@@ -781,7 +827,7 @@ export default function AdministrativoPage() {
                   disabled={migrating}
                   style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
                 >
-                  {migrating ? '⏳ Enviando Dados...' : '☁️ Enviar Dados Locais para PostgreSQL'}
+                  {migrating ? `⏳ ${migrationProgress || 'Enviando Dados...'}` : '☁️ Enviar Dados Locais para PostgreSQL'}
                 </button>
                 
                 <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 12, marginTop: 4 }}>

@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
 import { store } from '../lib/store';
+import { syncBackupInChunks } from '../lib/sync-helper';
 
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,11 +31,12 @@ export default function TransitionProvider({ children }: { children: React.React
         } else {
           console.log('☁️ Banco de dados remoto vazio. Inicializando com dados locais...');
           const backupData = store.exportBackup();
-          await fetch('/api/migrate-backup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: backupData
-          });
+          const syncResult = await syncBackupInChunks(backupData);
+          if (!syncResult.success) {
+            console.error('Erro ao inicializar banco remoto:', syncResult.error);
+            window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+            return;
+          }
         }
         sessionStorage.setItem('cf_postgres_synced', 'true');
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
@@ -66,14 +68,11 @@ export default function TransitionProvider({ children }: { children: React.React
           console.log('☁️ Auto-salvando dados no PostgreSQL...');
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           const backupData = store.exportBackup();
-          const res = await fetch('/api/migrate-backup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: backupData
-          });
-          if (res.ok) {
+          const syncResult = await syncBackupInChunks(backupData);
+          if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
           } else {
+            console.error('Erro ao auto-salvar no banco:', syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           }
         } catch (err) {
