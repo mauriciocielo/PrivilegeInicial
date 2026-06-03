@@ -16,6 +16,13 @@ export default function AdministrativoPage() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
+  // Estados do Google Calendar
+  const [gcalToken, setGcalToken] = useState<string | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarSearch, setCalendarSearch] = useState('');
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+
   const handleMigrateToPostgres = async () => {
     if (!confirm('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?')) return;
     setMigrating(true);
@@ -54,11 +61,13 @@ export default function AdministrativoPage() {
   // Carrega configurações salvas do Google Drive
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setClientId(localStorage.getItem('cf_gdrive_client_id') || '310782991079-f1diunnjeknqtk29btuqotrop23nlfvd.apps.googleusercontent.com');
+      setClientId(localStorage.getItem('cf_gdrive_client_id') || '310782991079-2puqblm2vf16bprje07ksrtf4fbsasoh.apps.googleusercontent.com');
       setAutoBackup(localStorage.getItem('cf_gdrive_auto') === 'true');
       setLastSyncTime(localStorage.getItem('cf_gdrive_last_sync') || null);
       const token = sessionStorage.getItem('cf_gdrive_token');
       if (token) setGdriveToken(token);
+      const calToken = sessionStorage.getItem('cf_gcal_token');
+      if (calToken) setGcalToken(calToken);
     }
   }, []);
 
@@ -217,6 +226,83 @@ export default function AdministrativoPage() {
     }
   };
 
+  const fetchCalendarEvents = async (token: string) => {
+    setCalendarLoading(true);
+    setCalendarError(null);
+    try {
+      const timeMin = new Date().toISOString();
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&orderBy=startTime&singleEvents=true&maxResults=25`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      if (!res.ok) {
+        if (res.status === 401) {
+          sessionStorage.removeItem('cf_gcal_token');
+          setGcalToken(null);
+          throw new Error('Sessão expirada. Por favor, conecte novamente.');
+        }
+        throw new Error('Falha ao buscar compromissos do Google Calendar.');
+      }
+      const data = await res.json();
+      setCalendarEvents(data.items || []);
+    } catch (err: any) {
+      console.error(err);
+      setCalendarError(err.message || 'Erro ao carregar agenda.');
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleConnectGCal = () => {
+    if (!clientId) {
+      alert('Por favor, informe seu Google Client ID nas configurações de backup para conectar.');
+      return;
+    }
+    try {
+      const win = window as any;
+      if (!win.google?.accounts?.oauth2) {
+        alert('O SDK do Google ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        return;
+      }
+      const client = win.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+        callback: (response: any) => {
+          if (response.access_token) {
+            setGcalToken(response.access_token);
+            sessionStorage.setItem('cf_gcal_token', response.access_token);
+            alert('Google Calendar conectado com sucesso!');
+          } else {
+            alert('Falha na autenticação do Google Calendar.');
+          }
+        },
+      });
+      client.requestAccessToken();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao iniciar fluxo do Google Calendar. Verifique se o Client ID está correto.');
+    }
+  };
+
+  useEffect(() => {
+    if (gcalToken) {
+      fetchCalendarEvents(gcalToken);
+    }
+  }, [gcalToken]);
+
+  const filteredEvents = useMemo(() => {
+    if (!calendarSearch.trim()) return calendarEvents;
+    const term = calendarSearch.toLowerCase();
+    return calendarEvents.filter(event => {
+      const summary = (event.summary || '').toLowerCase();
+      const description = (event.description || '').toLowerCase();
+      const attendees = (event.attendees || []).map((a: any) => (a.email || '').toLowerCase()).join(' ');
+      return summary.includes(term) || description.includes(term) || attendees.includes(term);
+    });
+  }, [calendarEvents, calendarSearch]);
+
   // Debounced backup automático ao alterar lançamentos, empresas ou usuários
   useEffect(() => {
     if (!autoBackup || !gdriveToken) return;
@@ -299,33 +385,195 @@ export default function AdministrativoPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 20 }}>
-          <div className="card">
-            <h3 style={{ fontSize: 15, marginBottom: 16 }}>Ranking de Empresas no Mês</h3>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Empresa</th>
-                    <th>Atividade</th>
-                    <th style={{ textAlign: 'right' }}>Receitas</th>
-                    <th style={{ textAlign: 'right' }}>Despesas</th>
-                    <th style={{ textAlign: 'right' }}>Resultado</th>
-                    <th>Registros</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.porEmpresa.map(item => (
-                    <tr key={item.empresa.id}>
-                      <td style={{ fontWeight: 600 }}>{item.empresa.nomeFantasia || item.empresa.razaoSocial}</td>
-                      <td>{item.empresa.atividade || '-'}</td>
-                      <td style={{ textAlign: 'right', color: 'var(--green)', fontWeight: 600 }}>{fmt.currency(item.receitas)}</td>
-                      <td style={{ textAlign: 'right', color: 'var(--red)', fontWeight: 600 }}>{fmt.currency(item.despesas)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: item.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(item.saldo)}</td>
-                      <td>{item.registros}</td>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card">
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>Ranking de Empresas no Mês</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Empresa</th>
+                      <th>Atividade</th>
+                      <th style={{ textAlign: 'right' }}>Receitas</th>
+                      <th style={{ textAlign: 'right' }}>Despesas</th>
+                      <th style={{ textAlign: 'right' }}>Resultado</th>
+                      <th>Registros</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.porEmpresa.map(item => (
+                      <tr key={item.empresa.id}>
+                        <td style={{ fontWeight: 600 }}>{item.empresa.nomeFantasia || item.empresa.razaoSocial}</td>
+                        <td>{item.empresa.atividade || '-'}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--green)', fontWeight: 600 }}>{fmt.currency(item.receitas)}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--red)', fontWeight: 600 }}>{fmt.currency(item.despesas)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: item.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(item.saldo)}</td>
+                        <td>{item.registros}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Agenda do Google Calendar */}
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                  📅 Agenda de Compromissos (Google Calendar)
+                </h3>
+                {gcalToken && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => fetchCalendarEvents(gcalToken)}
+                      disabled={calendarLoading}
+                    >
+                      {calendarLoading ? '⏳ Atualizando...' : '🔄 Sincronizar'}
+                    </button>
+                    <button 
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        sessionStorage.removeItem('cf_gcal_token');
+                        setGcalToken(null);
+                        setCalendarEvents([]);
+                      }}
+                    >
+                      🔌 Desconectar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!gcalToken ? (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                    Conecte sua conta do Google Calendar para visualizar e buscar compromissos de clientes diretamente por aqui.
+                  </p>
+                  <button className="btn btn-primary" onClick={handleConnectGCal}>
+                    🔌 Conectar Google Calendar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="form-group" style={{ marginBottom: 16 }}>
+                    <input 
+                      className="form-control" 
+                      placeholder="Pesquisar por cliente, título ou e-mail de participante..."
+                      value={calendarSearch}
+                      onChange={e => setCalendarSearch(e.target.value)}
+                      style={{ fontSize: 13 }}
+                    />
+                  </div>
+
+                  {calendarLoading && calendarEvents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)' }}>
+                      Carregando compromissos do Google Calendar...
+                    </div>
+                  ) : calendarError ? (
+                    <div style={{ color: 'var(--red)', fontSize: 13, background: 'var(--red-bg)', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                      {calendarError}
+                    </div>
+                  ) : filteredEvents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                      {calendarSearch ? 'Nenhum compromisso corresponde à pesquisa.' : 'Nenhum compromisso agendado para os próximos dias.'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '380px', overflowY: 'auto', paddingRight: 4 }}>
+                      {filteredEvents.map((event) => {
+                        const start = event.start?.dateTime ? new Date(event.start.dateTime) : event.start?.date ? new Date(event.start.date) : null;
+                        const end = event.end?.dateTime ? new Date(event.end.dateTime) : event.end?.date ? new Date(event.end.date) : null;
+                        
+                        const dateString = start ? start.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : 'Sem data';
+                        const timeString = start && event.start?.dateTime ? `${start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${end ? end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}` : 'Dia Inteiro';
+                        const isToday = start && start.toDateString() === new Date().toDateString();
+
+                        return (
+                          <div 
+                            key={event.id}
+                            style={{ 
+                              display: 'flex', 
+                              gap: 16, 
+                              padding: 12, 
+                              background: isToday ? 'rgba(16, 185, 129, 0.03)' : 'var(--bg-card2)', 
+                              border: isToday ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border-light)', 
+                              borderRadius: 'var(--radius-sm)',
+                              alignItems: 'flex-start',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div style={{ 
+                              background: isToday ? 'var(--green-bg)' : 'var(--accent-glow)', 
+                              color: isToday ? 'var(--green)' : 'var(--accent-light)', 
+                              padding: '8px 12px', 
+                              borderRadius: 8, 
+                              textAlign: 'center',
+                              minWidth: 72,
+                              fontWeight: 700,
+                              fontSize: 11
+                            }}>
+                              <div style={{ textTransform: 'uppercase', fontSize: 9 }}>{dateString.split(' de ')[1] || dateString.split(' ')[1] || ''}</div>
+                              <div style={{ fontSize: 18, lineHeight: 1.2 }}>{dateString.split(' de ')[0] || dateString.split(' ')[0] || ''}</div>
+                              <div style={{ fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', marginTop: 4 }}>{timeString}</div>
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <h4 style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {event.summary || 'Sem título'}
+                                {isToday && (
+                                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: 'var(--green-bg)', color: 'var(--green)', borderRadius: 100, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Hoje
+                                  </span>
+                                )}
+                              </h4>
+                              {event.description && (
+                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
+                                  {event.description}
+                                </p>
+                              )}
+                              {event.attendees && event.attendees.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                                  {event.attendees.slice(0, 3).map((attendee: any, idx: number) => (
+                                    <span 
+                                      key={idx} 
+                                      style={{ 
+                                        fontSize: 10, 
+                                        background: 'rgba(0, 0, 0, 0.05)', 
+                                        padding: '2px 6px', 
+                                        borderRadius: 100, 
+                                        color: 'var(--text-secondary)'
+                                      }}
+                                    >
+                                      {attendee.email}
+                                    </span>
+                                  ))}
+                                  {event.attendees.length > 3 && (
+                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                                      +{event.attendees.length - 3} mais
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {event.htmlLink && (
+                              <a 
+                                href={event.htmlLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 8px', fontSize: 11, alignSelf: 'center' }}
+                              >
+                                Ver no Agenda ↗
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

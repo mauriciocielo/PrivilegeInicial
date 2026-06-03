@@ -16,7 +16,6 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     items: [
       { label: 'Administrativo', href: '/consultor/administrativo', icon: '⚙️' },
       { label: 'Dashboard', href: '/consultor/dashboard', icon: '📊' },
-      { label: 'Apresentação Cliente', href: '/consultor/apresentacao', icon: '🎬' },
       { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: '🧠' },
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: '📝' },
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
@@ -155,7 +154,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const handleLogout = () => {
     store.setCurrentUser(null);
-    router.push('/login');
+    router.push('/');
   };
 
   const getFilteredNav = () => {
