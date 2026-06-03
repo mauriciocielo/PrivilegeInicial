@@ -90,6 +90,11 @@ body {
 .app-layout {
   display: flex;
   min-height: 100vh;
+  max-width: 1660px;
+  margin: 0 auto;
+  position: relative;
+  background: var(--bg-base);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.04);
 }
 
 .sidebar {
@@ -98,10 +103,9 @@ body {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  bottom: 0;
+  height: 100vh;
   z-index: 100;
   transition: transform 0.3s ease;
 }
@@ -270,18 +274,11 @@ body {
   color: var(--text-muted);
 }
 
-/* Main content */
 .main-content {
-  margin-left: var(--sidebar-w);
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  transition: margin-left 0.3s ease;
-}
-
-.sidebar.compact ~ .main-content {
-  margin-left: 70px;
 }
 
 .page-header {
@@ -1200,9 +1197,18 @@ tbody tr:last-child {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100% !important;
     transform: translateX(-100%);
+  }
+
+  .app-layout.sidebar-compact .sidebar {
+    width: var(--sidebar-w) !important;
   }
 
   .app-layout.sidebar-open .sidebar {
@@ -1388,10 +1394,10 @@ thead th {
 
 /* Animações de Status */
 .pulse-glow {
-  animation: pulse 1.8s infinite ease-in-out;
+  animation: pulse-orange 1.8s infinite ease-in-out;
 }
 
-@keyframes pulse {
+@keyframes pulse-orange {
   0% {
     transform: scale(0.95);
     opacity: 0.5;
@@ -1407,4 +1413,52 @@ thead th {
     opacity: 0.5;
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
+}
+
+/* Transições e Animações Premium */
+.sidebar {
+  transition: transform 0.3s ease, width 0.3s ease !important;
+}
+
+/* Sincronização do estado Compact */
+.app-layout.sidebar-compact .sidebar {
+  width: 70px !important;
+}
+
+/* Transição de entrada suave para novas telas/páginas */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-content > * {
+  animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Feedback visual para células editáveis inline */
+.editable-cell {
+  transition: all 0.15s ease;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  display: inline-block;
+  min-width: 100%;
+}
+
+.editable-cell:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .editable-cell:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: var(--border) !important;
 }

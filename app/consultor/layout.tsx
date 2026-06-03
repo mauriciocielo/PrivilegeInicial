@@ -57,7 +57,8 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
 
     // Permissão final
     if (user.role === 'administrador') {
-      setAuthorized(companyOk);
+      const isAdminBypass = pathname.startsWith('/consultor/administrativo');
+      setAuthorized(isAdminBypass || companyOk);
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard'];
       const userOk = pathname === '/consultor/dashboard' || allowed.some(route => pathname.startsWith(route));
@@ -66,6 +67,20 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
   }, [router, pathname, selectedEmpresaId]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCompact, setIsSidebarCompact] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsSidebarCompact(localStorage.getItem('cf_sidebar_compact') === 'true');
+    }
+    const handleCompactChange = (e: Event) => {
+      setIsSidebarCompact((e as CustomEvent).detail);
+    };
+    window.addEventListener('cfSidebarCompactChange', handleCompactChange);
+    return () => {
+      window.removeEventListener('cfSidebarCompactChange', handleCompactChange);
+    };
+  }, []);
 
   // Fecha o menu lateral automaticamente ao mudar de rota no mobile
   useEffect(() => {
@@ -75,7 +90,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
   if (!currentUser) return null;
 
   return (
-    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
+    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''} ${isSidebarCompact ? 'sidebar-compact' : ''}`}>
       {/* Botão flutuante para toggle do menu no mobile */}
       <button 
         className="mobile-menu-toggle"

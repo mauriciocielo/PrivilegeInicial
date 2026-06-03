@@ -20,8 +20,23 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
     setSidebarOpen(false);
   }, [pathname]);
 
+  const [isSidebarCompact, setIsSidebarCompact] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsSidebarCompact(localStorage.getItem('cf_sidebar_compact') === 'true');
+    }
+    const handleCompactChange = (e: Event) => {
+      setIsSidebarCompact((e as CustomEvent).detail);
+    };
+    window.addEventListener('cfSidebarCompactChange', handleCompactChange);
+    return () => {
+      window.removeEventListener('cfSidebarCompactChange', handleCompactChange);
+    };
+  }, []);
+
   return (
-    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
+    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''} ${isSidebarCompact ? 'sidebar-compact' : ''}`}>
       {/* Botão flutuante para toggle do menu no mobile */}
       <button 
         className="mobile-menu-toggle"

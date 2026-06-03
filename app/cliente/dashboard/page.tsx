@@ -16,6 +16,14 @@ export default function ClienteDashboard() {
   const [portadoresList, setPortadoresList] = useState<{ nome: string; saldo: number; tipo: string }[]>([]);
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const u = store.getCurrentUser();
+    if (u) {
+      setUserName(u.name);
+    }
+  }, []);
 
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
@@ -96,7 +104,7 @@ export default function ClienteDashboard() {
         }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Olá! Bem-vindo ao seu painel financeiro 👋
+              Olá, {userName}! Bem-vindo ao seu painel financeiro 👋
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
               {empresa?.razaoSocial} • CNPJ: {empresa?.cnpj}

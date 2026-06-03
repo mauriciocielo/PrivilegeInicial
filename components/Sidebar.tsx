@@ -4,6 +4,20 @@ import { store, User, Empresa } from '../lib/store';
 import { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
 
+const getAvatarGradient = (name: string) => {
+  const colors = [
+    ['#8c1a22', '#52080d'], // wine
+    ['#3b82f6', '#1d4ed8'], // blue
+    ['#10b981', '#047857'], // green
+    ['#f59e0b', '#b45309'], // amber
+    ['#8b5cf6', '#6d28d9'], // purple
+    ['#ec4899', '#be185d'], // pink
+  ];
+  const charCodeSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const [c1, c2] = colors[charCodeSum % colors.length];
+  return `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
+};
+
 interface NavItem {
   label: string;
   href: string;
@@ -122,6 +136,25 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const [isSidebarCompact, setIsSidebarCompact] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cf_sidebar_compact') === 'true';
+      setIsSidebarCompact(saved);
+      // Dispatch immediately to synchronize outer layouts
+      window.dispatchEvent(new CustomEvent('cfSidebarCompactChange', { detail: saved }));
+    }
+  }, []);
+
+  const toggleCompact = () => {
+    const next = !isSidebarCompact;
+    setIsSidebarCompact(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cf_sidebar_compact', String(next));
+      window.dispatchEvent(new CustomEvent('cfSidebarCompactChange', { detail: next }));
+    }
+  };
+
   const [pendenciasReconciliacao, setPendenciasReconciliacao] = useState(0);
 
   // Carregar contagem de pendências de conciliação
@@ -174,10 +207,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const isConsultorOrAdmin = role === 'consultor' || role === 'administrador';
 
-  const selectableEmpresas = empresas.filter(e => {
-    if (!isConsultorOrAdmin) return true;
-    return appMode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio';
-  });
+  const selectableEmpresas = empresas;
 
   // Obter grupos econômicos únicos
   const gruposEconomicos = Array.from(new Set(
@@ -190,25 +220,37 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const u = store.getCurrentUser();
     setUser(u);
     if (u) {
-      const savedMode = (sessionStorage.getItem('cf_app_mode') || 'empresarial') as 'empresarial' | 'condominio';
-      setAppMode(savedMode);
-      
       const all = store.getEmpresas();
       const allowed = isConsultorOrAdmin ? all : all.filter(e => u.empresaIds.includes(e.id));
       setEmpresas(allowed);
 
-      const filtered = allowed.filter(e => savedMode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio');
       const saved = sessionStorage.getItem('cf_empresa_sel');
-      if (saved && (saved.startsWith('grupo:') || filtered.find(e => e.id === saved))) {
-        setSelectedEmpresa(saved);
-      } else if (filtered.length > 0) {
-        setSelectedEmpresa(filtered[0].id);
-        sessionStorage.setItem('cf_empresa_sel', filtered[0].id);
+      let targetId = '';
+      if (saved && (saved.startsWith('grupo:') || allowed.find(e => e.id === saved))) {
+        targetId = saved;
+      } else if (allowed.length > 0) {
+        targetId = allowed[0].id;
+      }
+
+      setSelectedEmpresa(targetId);
+      if (targetId) {
+        sessionStorage.setItem('cf_empresa_sel', targetId);
+        const isGroup = targetId.startsWith('grupo:');
+        let initialMode: 'empresarial' | 'condominio' = 'empresarial';
+        if (!isGroup) {
+          const emp = allowed.find(e => e.id === targetId);
+          if (emp && emp.tipo === 'condominio') {
+            initialMode = 'condominio';
+          }
+        }
+        setAppMode(initialMode);
+        sessionStorage.setItem('cf_app_mode', initialMode);
       } else {
-        setSelectedEmpresa('');
+        setAppMode('empresarial');
+        sessionStorage.removeItem('cf_app_mode');
       }
     }
-  }, [role]);
+  }, [role, isConsultorOrAdmin]);
 
   const handleModeChange = (mode: 'empresarial' | 'condominio') => {
     setAppMode(mode);
@@ -235,6 +277,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const handleEmpresaChange = (id: string) => {
     setSelectedEmpresa(id);
     sessionStorage.setItem('cf_empresa_sel', id);
+
+    // Auto-detect mode based on selected company type
+    const isGroup = id.startsWith('grupo:');
+    let nextMode: 'empresarial' | 'condominio' = 'empresarial';
+    if (!isGroup) {
+      const emp = empresas.find(e => e.id === id);
+      if (emp && emp.tipo === 'condominio') {
+        nextMode = 'condominio';
+      }
+    }
+    setAppMode(nextMode);
+    sessionStorage.setItem('cf_app_mode', nextMode);
+
     window.dispatchEvent(new CustomEvent('empresaChange', { detail: id }));
     setShowCompanyDropdown(false);
   };
@@ -252,6 +307,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const companyAllowed = (!selectedEmpresa.startsWith('grupo:') && activeEmpresa?.allowedRoutes) || [];
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard') return true;
+      if (item.href === '/consultor/administrativo') return true; // ALWAYS allow administrative screen!
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -303,7 +359,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           <div style={{ fontSize: 20 }} onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}>🛸</div>
         )}
         <button 
-          onClick={() => setIsSidebarCompact(!isSidebarCompact)}
+          onClick={toggleCompact}
           style={{
             background: 'none',
             border: 'none',
@@ -318,44 +374,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         </button>
       </div>
 
-      {isConsultorOrAdmin && !isSidebarCompact && (
-        <div style={{ display: 'flex', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', padding: 4, margin: '8px 16px 16px 16px', border: '1px solid var(--border-light)' }}>
-          <button 
-            onClick={() => handleModeChange('empresarial')}
-            style={{ 
-              flex: 1, 
-              padding: '6px 8px', 
-              fontSize: 11, 
-              fontWeight: 600, 
-              border: 0, 
-              borderRadius: 'calc(var(--radius-sm) - 2px)', 
-              cursor: 'pointer', 
-              background: appMode === 'empresarial' ? 'var(--primary)' : 'transparent',
-              color: appMode === 'empresarial' ? '#fff' : 'var(--text-secondary)',
-              transition: 'all 0.15s'
-            }}
-          >
-            🏢 Empresas
-          </button>
-          <button 
-            onClick={() => handleModeChange('condominio')}
-            style={{ 
-              flex: 1, 
-              padding: '6px 8px', 
-              fontSize: 11, 
-              fontWeight: 600, 
-              border: 0, 
-              borderRadius: 'calc(var(--radius-sm) - 2px)', 
-              cursor: 'pointer', 
-              background: appMode === 'condominio' ? 'var(--primary)' : 'transparent',
-              color: appMode === 'condominio' ? '#fff' : 'var(--text-secondary)',
-              transition: 'all 0.15s'
-            }}
-          >
-            🏘️ Condomínios
-          </button>
-        </div>
-      )}
+
 
       {/* Switcher customizado Premium e Grupo Econômico */}
       {selectableEmpresas.length > 0 && !isSidebarCompact && (
@@ -402,22 +421,50 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 </>
               )}
               
-              <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unidades Individuais</div>
-              {selectableEmpresas.map(e => (
-                <div 
-                  key={e.id}
-                  onClick={() => handleEmpresaChange(e.id)}
-                  style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
-                  className="company-select-item"
-                >
-                  {e.logoData ? (
-                    <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                  ) : (
-                    <span>🏢</span>
-                  )}
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                </div>
-              ))}
+              {/* Empresas Group */}
+              {selectableEmpresas.some(e => e.tipo !== 'condominio') && (
+                <>
+                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</div>
+                  {selectableEmpresas.filter(e => e.tipo !== 'condominio').map(e => (
+                    <div 
+                      key={e.id}
+                      onClick={() => handleEmpresaChange(e.id)}
+                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                      className="company-select-item"
+                    >
+                      {e.logoData ? (
+                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                      ) : (
+                        <span>🏢</span>
+                      )}
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Condomínios Group */}
+              {selectableEmpresas.some(e => e.tipo === 'condominio') && (
+                <>
+                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Condomínios</div>
+                  {selectableEmpresas.filter(e => e.tipo === 'condominio').map(e => (
+                    <div 
+                      key={e.id}
+                      onClick={() => handleEmpresaChange(e.id)}
+                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                      className="company-select-item"
+                    >
+                      {e.logoData ? (
+                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                      ) : (
+                        <span>🏘️</span>
+                      )}
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -523,7 +570,20 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             onClick={() => setShowProfilePopover(!showProfilePopover)}
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: isSidebarCompact ? '4px' : '8px', justifyContent: isSidebarCompact ? 'center' : 'flex-start' }}
           >
-            <div className="user-avatar" style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', minWidth: '32px' }}>
+            <div 
+              className="user-avatar" 
+              style={{ 
+                position: 'relative', 
+                overflow: 'hidden', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                width: '32px', 
+                height: '32px', 
+                minWidth: '32px',
+                background: user ? getAvatarGradient(user.name) : undefined
+              }}
+            >
               {user?.avatarData ? (
                 <img 
                   src={user.avatarData} 

@@ -71,6 +71,39 @@ export default function LancamentosPage() {
   const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string }>({});
   const [contaSearch, setContaSearch] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Estados e funções de apoio para Edição Inline (Rápida)
+  const [inlineEditRowId, setInlineEditRowId] = useState<string | null>(null);
+  const [inlineEditField, setInlineEditField] = useState<'descricao' | 'planoContaId' | 'portadorId' | null>(null);
+  const [inlineValue, setInlineValue] = useState('');
+
+  const saveInlineEdit = (lanc: Lancamento, field: 'descricao' | 'planoContaId' | 'portadorId', value: string) => {
+    if (field === 'descricao' && !value.trim()) {
+      cancelInlineEdit();
+      return;
+    }
+    try {
+      const updated: Lancamento = {
+        ...lanc,
+        [field]: value
+      };
+      store.saveLancamento(updated);
+      setLancamentos(store.getLancamentos(empresaId));
+      
+      // Dispatch event to update references elsewhere if needed
+      window.dispatchEvent(new CustomEvent('lancamentoChange'));
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      cancelInlineEdit();
+    }
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditRowId(null);
+    setInlineEditField(null);
+    setInlineValue('');
+  };
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showReclassModal, setShowReclassModal] = useState(false);
   const [bulkMode, setBulkMode] = useState<'reclassificar' | 'transferir'>('reclassificar');
@@ -127,6 +160,20 @@ export default function LancamentosPage() {
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
   }, [load]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowModal(false);
+        setShowReclassModal(false);
+        setShowCardImportModal(false);
+        setShowC6BoletoModal(false);
+        cancelInlineEdit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const filtered = useMemo(() => {
     return lancamentos.filter(l => {
@@ -595,13 +642,38 @@ export default function LancamentosPage() {
         {/* Filters */}
         <div className="card card-sm" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div className="search-bar">
+            <div className="search-bar" style={{ position: 'relative' }}>
               <span>🔍</span>
               <input
                 placeholder="Buscar descrição..."
                 value={filtros.search}
                 onChange={e => setFiltros(f => ({ ...f, search: e.target.value }))}
+                style={{ paddingRight: filtros.search ? '32px' : undefined }}
               />
+              {filtros.search && (
+                <button
+                  onClick={() => setFiltros(f => ({ ...f, search: '' }))}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10
+                  }}
+                  title="Limpar busca"
+                >
+                  ✕
+                </button>
+              )}
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <select className="form-control" value={filtros.mes} onChange={e => setFiltros(f => ({ ...f, mes: e.target.value }))}>
@@ -687,26 +759,127 @@ export default function LancamentosPage() {
                         <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
-                      <td style={{ fontWeight: 500, maxWidth: 200 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {l.descricao}
-                          {l.attachmentData && (
-                            <a
-                              href={`data:application/octet-stream;base64,${l.attachmentData}`}
-                              download={l.attachmentName}
-                              title={`Anexo: ${l.attachmentName}`}
-                              style={{ textDecoration: 'none', fontSize: 14 }}
-                            >📎</a>
-                          )}
-                        </div>
-                        {l.observacao && (
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
-                            {l.observacao}
+                      {/* Descrição - Double Click to Edit */}
+                      <td style={{ fontWeight: 500, maxWidth: 200, padding: 0 }}>
+                        {inlineEditRowId === l.id && inlineEditField === 'descricao' ? (
+                          <div style={{ padding: '8px' }}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm"
+                              value={inlineValue}
+                              onChange={e => setInlineValue(e.target.value)}
+                              onBlur={() => saveInlineEdit(l, 'descricao', inlineValue)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') saveInlineEdit(l, 'descricao', inlineValue);
+                                else if (e.key === 'Escape') cancelInlineEdit();
+                              }}
+                              autoFocus
+                              style={{ width: '100%', padding: '4px 8px', fontSize: '13px' }}
+                            />
+                          </div>
+                        ) : (
+                          <div 
+                            className="editable-cell"
+                            onDoubleClick={() => {
+                              setInlineEditRowId(l.id);
+                              setInlineEditField('descricao');
+                              setInlineValue(l.descricao);
+                            }}
+                            title="Duplo clique para editar descrição"
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {l.descricao}
+                              {l.attachmentData && (
+                                <a
+                                  href={`data:application/octet-stream;base64,${l.attachmentData}`}
+                                  download={l.attachmentName}
+                                  title={`Anexo: ${l.attachmentName}`}
+                                  style={{ textDecoration: 'none', fontSize: 14 }}
+                                  onClick={e => e.stopPropagation()}
+                                >📎</a>
+                              )}
+                            </div>
+                            {l.observacao && (
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                                {l.observacao}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
-                      <td style={{ fontSize: 12 }}>{port?.nome || '-'}</td>
+
+                      {/* Plano de Contas - Single Click to Edit */}
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: 0 }}>
+                        {l.planoContaId === 'transf' ? (
+                          <div style={{ padding: '8px 14px' }}>-</div>
+                        ) : inlineEditRowId === l.id && inlineEditField === 'planoContaId' ? (
+                          <div style={{ padding: '4px' }}>
+                            <select
+                              className="form-control form-control-sm"
+                              value={inlineValue}
+                              onChange={e => saveInlineEdit(l, 'planoContaId', e.target.value)}
+                              onBlur={cancelInlineEdit}
+                              onKeyDown={e => {
+                                if (e.key === 'Escape') cancelInlineEdit();
+                              }}
+                              autoFocus
+                              style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
+                            >
+                              <option value="">-- Sem Categoria --</option>
+                              {planoContas.filter(p => p.tipo === l.tipo).map(pc => (
+                                <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <div
+                            className="editable-cell"
+                            onClick={() => {
+                              setInlineEditRowId(l.id);
+                              setInlineEditField('planoContaId');
+                              setInlineValue(l.planoContaId || '');
+                            }}
+                            title="Clique para alterar categoria"
+                          >
+                            {pc ? `${pc.codigo} - ${pc.descricao}` : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-- Sem Categoria --</span>}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Portador - Single Click to Edit */}
+                      <td style={{ fontSize: 12, padding: 0 }}>
+                        {inlineEditRowId === l.id && inlineEditField === 'portadorId' ? (
+                          <div style={{ padding: '4px' }}>
+                            <select
+                              className="form-control form-control-sm"
+                              value={inlineValue}
+                              onChange={e => saveInlineEdit(l, 'portadorId', e.target.value)}
+                              onBlur={cancelInlineEdit}
+                              onKeyDown={e => {
+                                if (e.key === 'Escape') cancelInlineEdit();
+                              }}
+                              autoFocus
+                              style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
+                            >
+                              {portadores.map(p => (
+                                <option key={p.id} value={p.id}>{p.nome}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <div
+                            className="editable-cell"
+                            onClick={() => {
+                              setInlineEditRowId(l.id);
+                              setInlineEditField('portadorId');
+                              setInlineValue(l.portadorId);
+                            }}
+                            title="Clique para alterar portador"
+                          >
+                            {port?.nome || '-'}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
                       <td><span className={`badge ${l.status === 'realizado' ? 'badge-blue' : 'badge-yellow'}`}>{l.status === 'realizado' ? 'Realizado' : 'Previsto'}</span></td>
                       <td><span className={`badge ${l.origem === 'ofx' ? 'badge-purple' : 'badge-gray'}`}>{l.origem === 'ofx' ? 'OFX' : 'Manual'}</span></td>

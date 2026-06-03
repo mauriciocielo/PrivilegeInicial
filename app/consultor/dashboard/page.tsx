@@ -23,6 +23,14 @@ export default function ConsultorDashboard() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   });
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const u = store.getCurrentUser();
+    if (u) {
+      setUserName(u.name);
+    }
+  }, []);
 
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
@@ -142,7 +150,14 @@ export default function ConsultorDashboard() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Dashboard Operacional</div>
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span>Dashboard Operacional</span>
+            {userName && (
+              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'var(--border-light)', padding: '4px 12px', borderRadius: '20px' }}>
+                Olá, {userName}! Seja bem-vindo(a) 👋
+              </span>
+            )}
+          </div>
           <div className="page-subtitle">{empresa?.razaoSocial} — {mesAtualLabel}</div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 12 }}>
