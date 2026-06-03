@@ -33,6 +33,11 @@ export default function RelatoriosPage() {
   const [preview, setPreview] = useState<{ rows: (string | number)[][]; totais: { label: string; value: string; color?: string }[] } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedSubs, setExpandedSubs] = useState<Record<string, boolean>>({});
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('46999048990');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   const load = useCallback((eId: string) => {
     const list = store.getEmpresas();
@@ -48,6 +53,7 @@ export default function RelatoriosPage() {
   }, []);
 
   useEffect(() => {
+    setCurrentUser(store.getCurrentUser());
     const saved = sessionStorage.getItem('cf_empresa_sel') || '';
     load(saved);
 
@@ -346,6 +352,73 @@ export default function RelatoriosPage() {
 
   const handlePrint = () => { window.print(); };
 
+  const handleWhatsAppClick = () => {
+    if (!empresa || !preview) return;
+    
+    // Formata mensagem para WhatsApp
+    const periodStr = getPeriodo();
+    let msg = `*Privilege Financeiro - ${getTitle()}*\n`;
+    msg += `🏢 *Empresa:* ${empresa.nomeFantasia || empresa.razaoSocial}\n`;
+    msg += `📅 *Período:* ${periodStr}\n\n`;
+
+    if (tipo === 'fluxo' || tipo === 'dre') {
+      preview.rows.forEach(row => {
+        if (!row[0] && !row[1]) return;
+        if (row[0] && row[1]) {
+          msg += `• *${row[0]}:* ${row[1]}\n`;
+        } else if (row[0]) {
+          msg += `\n*${row[0]}*\n`;
+        }
+      });
+    } else {
+      msg += `*Principais Lançamentos:*\n`;
+      preview.rows.slice(0, 15).forEach(row => {
+        msg += `• ${row[0]} - ${row[1]}: *${row[6]}*\n`;
+      });
+      if (preview.rows.length > 15) {
+        msg += `\n_E mais ${preview.rows.length - 15} lançamentos..._\n`;
+      }
+    }
+
+    msg += `\n*Totais Consolidados:*\n`;
+    preview.totais.forEach(t => {
+      msg += `• *${t.label}:* ${t.value}\n`;
+    });
+
+    msg += `\n*Privilege Contabilidade e Consultoria*`;
+
+    setWhatsappMessage(msg);
+    setWhatsappPhone(empresa.telefone ? empresa.telefone.replace(/\D/g, '') : '46999048990');
+    setShowWhatsAppModal(true);
+  };
+
+  const handleWhatsAppSend = async () => {
+    if (!whatsappPhone || !whatsappMessage) {
+      alert('Por favor, informe o telefone e a mensagem.');
+      return;
+    }
+    setSendingWhatsApp(true);
+    try {
+      const res = await fetch('/api/send-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: whatsappPhone, message: whatsappMessage })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('Relatório enviado com sucesso via WhatsApp!');
+        setShowWhatsAppModal(false);
+      } else {
+        alert(`Falha ao enviar: ${data.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao enviar WhatsApp.');
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const renderGroupRow = (id: string, group: any, months: Date[]) => {
     const isExpanded = !!expandedGroups[id];
     const valueColor = group.total < 0 ? 'var(--red)' : group.total > 0 ? (group.isDespesa ? 'var(--red)' : 'var(--green)') : 'var(--text-muted)';
@@ -489,6 +562,11 @@ export default function RelatoriosPage() {
           <button className="btn btn-primary" onClick={handlePDF} disabled={!!generating}>
             {generating === 'pdf' ? '⏳...' : '📄 PDF'}
           </button>
+          {currentUser?.role === 'administrador' && (
+            <button className="btn" onClick={handleWhatsAppClick} disabled={!!generating} style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 600 }}>
+              💬 WhatsApp
+            </button>
+          )}
         </div>
       </div>
 
@@ -682,6 +760,50 @@ export default function RelatoriosPage() {
           )}
         </div>
       </div>
+
+      {showWhatsAppModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowWhatsAppModal(false)}>
+          <div className="modal modal-md">
+            <div className="modal-header">
+              <h2 className="modal-title">Disparo de Relatório — WhatsApp</h2>
+              <button className="modal-close" onClick={() => setShowWhatsAppModal(false)}>✕</button>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label">Número do WhatsApp (DDD + Número)</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={whatsappPhone} 
+                onChange={e => setWhatsappPhone(e.target.value.replace(/\D/g, ''))} 
+                placeholder="Ex: 46999048990"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label">Mensagem Formatada (Você pode editar se quiser)</label>
+              <textarea 
+                className="form-control" 
+                style={{ minHeight: 250, fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
+                value={whatsappMessage} 
+                onChange={e => setWhatsappMessage(e.target.value)} 
+              />
+            </div>
+
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowWhatsAppModal(false)}>Cancelar</button>
+              <button 
+                className="btn btn-success" 
+                onClick={handleWhatsAppSend} 
+                disabled={sendingWhatsApp}
+                style={{ background: '#25D366', borderColor: '#25D366', color: '#fff' }}
+              >
+                {sendingWhatsApp ? 'Enviando...' : '✓ Enviar via WhatsApp'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { store, User, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
+import ImageCropper from '../../../components/ImageCropper';
 
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
@@ -33,6 +34,7 @@ export default function UsuariosPage() {
   const [edit, setEdit] = useState<User | null>(null);
   const [form, setForm] = useState<Partial<User> & { newPassword?: string }>({});
   const [search, setSearch] = useState('');
+  const [rawImageData, setRawImageData] = useState<string | null>(null);
 
   useEffect(() => {
     setUsers(store.getUsers());
@@ -69,9 +71,10 @@ export default function UsuariosPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      setForm(f => ({ ...f, avatarData: reader.result as string }));
+      setRawImageData(reader.result as string);
     };
     reader.readAsDataURL(file);
+    e.target.value = ''; // Permite selecionar o mesmo arquivo novamente
   };
 
   const handleSave = () => {
@@ -365,6 +368,17 @@ export default function UsuariosPage() {
             </div>
           </div>
         </div>
+      )}
+      {rawImageData && (
+        <ImageCropper
+          src={rawImageData}
+          aspectRatio="circle"
+          onCrop={(cropped) => {
+            setForm(f => ({ ...f, avatarData: cropped }));
+            setRawImageData(null);
+          }}
+          onCancel={() => setRawImageData(null)}
+        />
       )}
     </>
   );

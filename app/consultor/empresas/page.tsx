@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
+import ImageCropper from '../../../components/ImageCropper';
 
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
@@ -33,6 +34,7 @@ export default function EmpresasPage() {
   const [form, setForm] = useState<Partial<Empresa>>({});
   const [search, setSearch] = useState('');
   const [fetchingCnpj, setFetchingCnpj] = useState(false);
+  const [rawImageData, setRawImageData] = useState<string | null>(null);
 
   const inferAtividade = (descricao?: string): Empresa['atividade'] => {
     const text = (descricao || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -107,9 +109,10 @@ export default function EmpresasPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      setForm(f => ({ ...f, logoData: reader.result as string }));
+      setRawImageData(reader.result as string);
     };
     reader.readAsDataURL(file);
+    e.target.value = ''; // Permite selecionar o mesmo arquivo novamente
   };
 
   const handleSave = () => {
@@ -358,6 +361,17 @@ export default function EmpresasPage() {
             </div>
           </div>
         </div>
+      )}
+      {rawImageData && (
+        <ImageCropper
+          src={rawImageData}
+          aspectRatio="rect"
+          onCrop={(cropped) => {
+            setForm(f => ({ ...f, logoData: cropped }));
+            setRawImageData(null);
+          }}
+          onCancel={() => setRawImageData(null)}
+        />
       )}
     </>
   );
