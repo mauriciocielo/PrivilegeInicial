@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { store, Empresa, Lancamento, User } from '../../../lib/store';
+import { store, Empresa, Lancamento, User, AuditLog } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 
 export default function AdministrativoPage() {
@@ -8,6 +8,12 @@ export default function AdministrativoPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [migrating, setMigrating] = useState(false);
+
+  // Estados de Auditoria e Fechamento
+  const [selectedAuditEmpresaId, setSelectedAuditEmpresaId] = useState('');
+  const [fechamentoDateInput, setFechamentoDateInput] = useState('');
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditSearch, setAuditSearch] = useState('');
 
   // Estados do Google Drive Backup
   const [gdriveToken, setGdriveToken] = useState<string | null>(null);
@@ -47,10 +53,66 @@ export default function AdministrativoPage() {
   };
 
   const load = useCallback(() => {
-    setEmpresas(store.getEmpresas());
+    const list = store.getEmpresas();
+    setEmpresas(list);
     setUsers(store.getUsers());
     setLancamentos(store.getLancamentos());
-  }, []);
+
+    let targetEmpId = selectedAuditEmpresaId;
+    if (!targetEmpId && list.length > 0) {
+      targetEmpId = list[0].id;
+      setSelectedAuditEmpresaId(targetEmpId);
+    }
+
+    if (targetEmpId) {
+      const emp = list.find(e => e.id === targetEmpId);
+      setFechamentoDateInput(emp?.fechamentoData || '');
+      setAuditLogs(store.getAuditLogs(targetEmpId));
+    }
+  }, [selectedAuditEmpresaId]);
+
+  const handleSaveFechamento = () => {
+    if (!selectedAuditEmpresaId) return;
+    const emp = empresas.find(e => e.id === selectedAuditEmpresaId);
+    if (!emp) return;
+    try {
+      const updated = { ...emp, fechamentoData: fechamentoDateInput };
+      store.saveEmpresa(updated);
+      store.logAction(selectedAuditEmpresaId, 'Bloqueio', `Definiu limite de fechamento de caixa para ${fechamentoDateInput ? fmt.date(fechamentoDateInput) : 'nenhuma data'}`);
+      alert('Período de fechamento de caixa atualizado com sucesso!');
+      load();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
+  const handleClearFechamento = () => {
+    if (!selectedAuditEmpresaId) return;
+    const emp = empresas.find(e => e.id === selectedAuditEmpresaId);
+    if (!emp) return;
+    try {
+      const updated = { ...emp, fechamentoData: '' };
+      store.saveEmpresa(updated);
+      store.logAction(selectedAuditEmpresaId, 'Bloqueio', 'Removeu limite de fechamento de caixa (período totalmente desbloqueado).');
+      setFechamentoDateInput('');
+      alert('Período de fechamento de caixa totalmente liberado!');
+      load();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
+  const filteredLogs = useMemo(() => {
+    return auditLogs.filter(l => {
+      if (!auditSearch) return true;
+      const term = auditSearch.toLowerCase();
+      return (
+        l.action.toLowerCase().includes(term) ||
+        l.details.toLowerCase().includes(term) ||
+        l.userName.toLowerCase().includes(term)
+      );
+    });
+  }, [auditLogs, auditSearch]);
 
   useEffect(() => {
     load();
@@ -573,6 +635,110 @@ export default function AdministrativoPage() {
                     </div>
                   )}
                 </>
+              )}
+            </div>
+
+            {/* Card de Auditoria e Fechamento de Caixa */}
+            <div className="card">
+              <h3 style={{ fontSize: 15, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                🛡️ Controle de Fechamento & Auditoria
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 16 }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: 12 }}>Empresa Selecionada</label>
+                  <select 
+                    className="form-control" 
+                    value={selectedAuditEmpresaId} 
+                    onChange={e => setSelectedAuditEmpresaId(e.target.value)}
+                    style={{ fontSize: 13 }}
+                  >
+                    <option value="">Selecione uma empresa...</option>
+                    {empresas.map(e => (
+                      <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {selectedAuditEmpresaId && (
+                  <div>
+                    <label className="form-label" style={{ fontSize: 12 }}>Bloquear Lançamentos Até</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        value={fechamentoDateInput} 
+                        onChange={e => setFechamentoDateInput(e.target.value)}
+                        style={{ fontSize: 13 }}
+                      />
+                      <button className="btn btn-primary btn-sm" onClick={handleSaveFechamento} style={{ fontSize: 12, padding: '4px 10px' }}>✓ Salvar</button>
+                      {fechamentoDateInput && (
+                        <button className="btn btn-danger btn-sm" onClick={handleClearFechamento} style={{ fontSize: 12, padding: '4px 10px' }} title="Desbloquear período">🔓</button>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                      Nenhum lançamento poderá ser criado, editado ou excluído igual ou antes desta data.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {selectedAuditEmpresaId ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Histórico de Auditoria (Últimos 1000 logs)</h4>
+                    <input 
+                      className="form-control" 
+                      placeholder="🔍 Filtrar logs..." 
+                      value={auditSearch} 
+                      onChange={e => setAuditSearch(e.target.value)} 
+                      style={{ fontSize: 12, padding: '4px 10px', width: 200 }}
+                    />
+                  </div>
+                  
+                  <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
+                    <table style={{ fontSize: 11.5 }}>
+                      <thead>
+                        <tr>
+                          <th>Data/Hora</th>
+                          <th>Usuário</th>
+                          <th>Ação</th>
+                          <th>Detalhes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLogs.map(l => (
+                          <tr key={l.id}>
+                            <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{new Date(l.timestamp).toLocaleString('pt-BR')}</td>
+                            <td style={{ fontWeight: 600 }}>{l.userName}</td>
+                            <td>
+                              <span className={`badge ${
+                                l.action === 'Criação' ? 'badge-green' : 
+                                l.action === 'Edição' ? 'badge-yellow' : 
+                                l.action === 'Exclusão' ? 'badge-red' : 
+                                l.action === 'Bloqueio' ? 'badge-purple' : 'badge-blue'
+                              }`}>
+                                {l.action}
+                              </span>
+                            </td>
+                            <td>{l.details}</td>
+                          </tr>
+                        ))}
+                        {filteredLogs.length === 0 && (
+                          <tr>
+                            <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                              Nenhum log de auditoria registrado para esta empresa.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
+                  Selecione uma empresa acima para visualizar os logs de auditoria e configurar bloqueios.
+                </div>
               )}
             </div>
           </div>

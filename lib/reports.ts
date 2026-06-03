@@ -125,14 +125,19 @@ export function buildFluxoCaixaData(
   const pcMap = new Map(planoContas.map(p => [p.id, p]));
   const ptMap = new Map(portadores.map(p => [p.id, p]));
 
-  return lancamentos.map(l => ({
-    data: l.data, // YYYY-MM-DD
-    descricao: l.descricao,
-    tipo: l.tipo === 'receita' ? 'Receita' : 'Despesa',
-    planoConta: pcMap.get(l.planoContaId)?.descricao || '-',
-    portador: ptMap.get(l.portadorId)?.nome || '-',
-    status: l.status === 'realizado' ? 'Realizado' : 'Previsto',
-    valor: fmt.currency(l.valor),
-    valorNum: l.valor
-  }));
+  return lancamentos.map(l => {
+    const pc = pcMap.get(l.planoContaId);
+    const isRedutora = pc && pc.codigo.startsWith('1') && pc.descricao.trim().startsWith('( - )');
+    const valorGerencial = isRedutora ? -l.valor : (l.tipo === 'receita' ? l.valor : -l.valor);
+    return {
+      data: l.data, // YYYY-MM-DD
+      descricao: l.descricao,
+      tipo: l.tipo === 'receita' ? 'Receita' : 'Despesa',
+      planoConta: pc?.descricao || '-',
+      portador: ptMap.get(l.portadorId)?.nome || '-',
+      status: l.status === 'realizado' ? 'Realizado' : 'Previsto',
+      valor: fmt.currency(valorGerencial),
+      valorNum: valorGerencial
+    };
+  });
 }

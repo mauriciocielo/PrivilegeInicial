@@ -21,7 +21,15 @@ export async function POST(request: Request) {
     const cleanPhone = String(phone).replace(/\D/g, '');
     const payload: Record<string, any> = {};
 
-    if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
+    const isMeta = whatsappApiUrl.includes('graph.facebook.com');
+
+    if (isMeta) {
+      payload['messaging_product'] = 'whatsapp';
+      payload['recipient_type'] = 'individual';
+      payload['to'] = cleanPhone;
+      payload['type'] = 'text';
+      payload['text'] = { body: message };
+    } else if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
       payload['phone'] = cleanPhone;
       payload['message'] = message;
     } else {
@@ -34,8 +42,9 @@ export async function POST(request: Request) {
 
     const wsHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     if (whatsappApiKey) {
-      if (whatsappApiKey.startsWith('Bearer ')) {
-        wsHeaders['Authorization'] = whatsappApiKey;
+      if (whatsappApiKey.startsWith('Bearer ') || isMeta) {
+        const token = whatsappApiKey.replace('Bearer ', '');
+        wsHeaders['Authorization'] = `Bearer ${token}`;
       } else {
         wsHeaders['Authorization'] = `Bearer ${whatsappApiKey}`;
         wsHeaders['apikey'] = whatsappApiKey;

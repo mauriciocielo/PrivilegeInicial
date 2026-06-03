@@ -35,7 +35,12 @@ export default function ClienteDashboard() {
       const d = new Date(l.data);
       return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
     });
-    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+    const plano = store.getPlanoContas(eId);
+    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => {
+      const pc = plano.find(p => p.id === l.planoContaId);
+      const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+      return a + (isRedutora ? -l.valor : l.valor);
+    }, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
     const dataFimPeriodo = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -44,7 +49,6 @@ export default function ClienteDashboard() {
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
     setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
 
-    const plano = store.getPlanoContas(eId);
     const despCats: Record<string, number> = {};
     lancsMs.filter(l => l.tipo === 'despesa').forEach(l => {
       const pc = plano.find(p => p.id === l.planoContaId);

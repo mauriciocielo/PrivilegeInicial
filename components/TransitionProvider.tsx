@@ -13,10 +13,17 @@ export default function TransitionProvider({ children }: { children: React.React
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
     const syncDb = async () => {
-      if (sessionStorage.getItem('cf_postgres_synced') === 'true') return;
+      if (sessionStorage.getItem('cf_postgres_synced') === 'true') {
+        window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
+        return;
+      }
       try {
+        window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
         const res = await fetch('/api/migrate-backup');
-        if (!res.ok) return;
+        if (!res.ok) {
+          window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+          return;
+        }
         const backup = await res.json();
         if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
           store.importBackup(JSON.stringify(backup));
@@ -30,9 +37,11 @@ export default function TransitionProvider({ children }: { children: React.React
           });
         }
         sessionStorage.setItem('cf_postgres_synced', 'true');
+        window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
       } catch (e) {
         console.error('Erro na auto-sincronização do banco de dados:', e);
         sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
+        window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
       }
     };
     syncDb();
@@ -55,14 +64,21 @@ export default function TransitionProvider({ children }: { children: React.React
       timeoutId = setTimeout(async () => {
         try {
           console.log('☁️ Auto-salvando dados no PostgreSQL...');
+          window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           const backupData = store.exportBackup();
-          await fetch('/api/migrate-backup', {
+          const res = await fetch('/api/migrate-backup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: backupData
           });
+          if (res.ok) {
+            window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
+          } else {
+            window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+          }
         } catch (err) {
           console.error('Erro ao auto-salvar no banco:', err);
+          window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
         }
       }, 3000);
     };

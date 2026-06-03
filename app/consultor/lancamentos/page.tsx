@@ -164,9 +164,30 @@ export default function LancamentosPage() {
   const openEdit = (l: Lancamento) => {
     setEditItem(l);
     setContaSearch('');
-    // Identifica se é uma perna de transferência para manter a UI consistente
-    const tipoTransacao = l.planoContaId === 'transf' ? 'transferencia' : l.tipo;
-    setForm({ ...l, tipoTransacao });
+    if (l.planoContaId === 'transf') {
+      const other = lancamentos.find(x => x.id !== l.id && x.createdAt === l.createdAt && x.planoContaId === 'transf');
+      let portadorId = l.portadorId;
+      let portadorDestinoId = other ? other.portadorId : '';
+      
+      if (l.tipo === 'receita') {
+        portadorId = other ? other.portadorId : '';
+        portadorDestinoId = l.portadorId;
+      }
+
+      const cleanDesc = l.descricao
+        .replace(/^\[Transf\. Saída\] /, '')
+        .replace(/^\[Transf\. Entrada\] /, '');
+
+      setForm({
+        ...l,
+        descricao: cleanDesc,
+        tipoTransacao: 'transferencia',
+        portadorId,
+        portadorDestinoId
+      });
+    } else {
+      setForm({ ...l, tipoTransacao: l.tipo });
+    }
     setShowModal(true);
   };
 
@@ -183,23 +204,34 @@ export default function LancamentosPage() {
       setSaving(true);
       await new Promise(r => setTimeout(r, 300));
 
-      // Se estiver editando um item existente e salvando como transferência, 
-      // removemos o original pois transferências geram um novo par de lançamentos.
-      if (editItem) {
-        store.deleteLancamento(editItem.id);
-      }
+      try {
+        if (editItem) {
+          store.deleteLancamento(editItem.id);
+          if (editItem.planoContaId === 'transf') {
+            const other = lancamentos.find(x => x.id !== editItem.id && x.createdAt === editItem.createdAt && x.planoContaId === 'transf');
+            if (other) {
+              store.deleteLancamento(other.id);
+            }
+          }
+        }
 
-      const ts = new Date().toISOString();
-      // Despesa (Saída da Origem)
-      store.saveLancamento({
-        id: uid(), empresaId, data: form.data!, descricao: `[Transf. Saída] ${form.descricao}`, valor: parseMoney(form.valor),
-        tipo: 'despesa', planoContaId: 'transf', portadorId: form.portadorId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
-      });
-      // Receita (Entrada no Destino)
-      store.saveLancamento({
-        id: uid(), empresaId, data: form.data!, descricao: `[Transf. Entrada] ${form.descricao}`, valor: parseMoney(form.valor),
-        tipo: 'receita', planoContaId: 'transf', portadorId: form.portadorDestinoId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
-      });
+        const ts = new Date().toISOString();
+        store.saveLancamento({
+          id: uid(), empresaId, data: form.data!, descricao: `[Transf. Saída] ${form.descricao}`, valor: parseMoney(form.valor),
+          tipo: 'despesa', planoContaId: 'transf', portadorId: form.portadorId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
+        });
+        store.saveLancamento({
+          id: uid(), empresaId, data: form.data!, descricao: `[Transf. Entrada] ${form.descricao}`, valor: parseMoney(form.valor),
+          tipo: 'receita', planoContaId: 'transf', portadorId: form.portadorDestinoId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
+        });
+
+        setLancamentos(store.getLancamentos(empresaId));
+        setShowModal(false);
+      } catch (e) {
+        alert((e as Error).message);
+      } finally {
+        setSaving(false);
+      }
 
     } else {
       if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
@@ -208,43 +240,64 @@ export default function LancamentosPage() {
       }
       setSaving(true);
       await new Promise(r => setTimeout(r, 300));
-      const lanc: Lancamento = {
-        id: editItem?.id || uid(),
-        empresaId,
-        data: form.data!,
-        descricao: form.descricao!,
-        valor: parseMoney(form.valor),
-        tipo: form.tipoTransacao as 'receita' | 'despesa',
-        planoContaId: form.planoContaId!,
-        portadorId: form.portadorId!,
-        status: (form.status || 'realizado') as 'previsto' | 'realizado',
-        numeroDocumento: form.numeroDocumento,
-        observacao: form.observacao,
-        attachmentName: form.attachmentName,
-        attachmentData: form.attachmentData,
-        origem: 'manual',
-        createdAt: editItem?.createdAt || new Date().toISOString(),
-      };
-      store.saveLancamento(lanc);
-    }
 
-    setLancamentos(store.getLancamentos(empresaId));
-    setShowModal(false);
-    setSaving(false);
+      try {
+        if (editItem && editItem.planoContaId === 'transf') {
+          const other = lancamentos.find(x => x.id !== editItem.id && x.createdAt === editItem.createdAt && x.planoContaId === 'transf');
+          if (other) {
+            store.deleteLancamento(other.id);
+          }
+        }
+
+        const lanc: Lancamento = {
+          id: editItem?.id || uid(),
+          empresaId,
+          data: form.data!,
+          descricao: form.descricao!,
+          valor: parseMoney(form.valor),
+          tipo: form.tipoTransacao as 'receita' | 'despesa',
+          planoContaId: form.planoContaId!,
+          portadorId: form.portadorId!,
+          status: (form.status || 'realizado') as 'previsto' | 'realizado',
+          numeroDocumento: form.numeroDocumento,
+          observacao: form.observacao,
+          attachmentName: form.attachmentName,
+          attachmentData: form.attachmentData,
+          origem: 'manual',
+          createdAt: editItem?.createdAt || new Date().toISOString(),
+        };
+        store.saveLancamento(lanc);
+
+        setLancamentos(store.getLancamentos(empresaId));
+        setShowModal(false);
+      } catch (e) {
+        alert((e as Error).message);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   const handleDelete = (id: string) => {
     if (!confirm('Deseja excluir este lançamento?')) return;
-    store.deleteLancamento(id);
-    setLancamentos(store.getLancamentos(empresaId));
-    setSelectedIds(prev => prev.filter(x => x !== id));
+    try {
+      store.deleteLancamento(id);
+      setLancamentos(store.getLancamentos(empresaId));
+      setSelectedIds(prev => prev.filter(x => x !== id));
+    } catch (e) {
+      alert((e as Error).message);
+    }
   };
 
   const handleBulkDelete = () => {
     if (!confirm(`Deseja excluir os ${selectedIds.length} lançamentos selecionados?`)) return;
-    selectedIds.forEach(id => store.deleteLancamento(id));
-    setLancamentos(store.getLancamentos(empresaId));
-    setSelectedIds([]);
+    try {
+      selectedIds.forEach(id => store.deleteLancamento(id));
+      setLancamentos(store.getLancamentos(empresaId));
+      setSelectedIds([]);
+    } catch (e) {
+      alert((e as Error).message);
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -659,8 +712,8 @@ export default function LancamentosPage() {
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
                       <td><span className={`badge ${l.status === 'realizado' ? 'badge-blue' : 'badge-yellow'}`}>{l.status === 'realizado' ? 'Realizado' : 'Previsto'}</span></td>
                       <td><span className={`badge ${l.origem === 'ofx' ? 'badge-purple' : 'badge-gray'}`}>{l.origem === 'ofx' ? 'OFX' : 'Manual'}</span></td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: l.tipo === 'receita' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap' }}>
-                        {l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: (l.tipo === 'receita' && pc && pc.descricao.trim().startsWith('( - )')) ? 'var(--red)' : l.tipo === 'receita' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap' }}>
+                        {(l.tipo === 'receita' && pc && pc.descricao.trim().startsWith('( - )')) ? '-' : l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
@@ -697,7 +750,6 @@ export default function LancamentosPage() {
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               {(['receita', 'despesa', 'transferencia'] as const).map(t => {
-                if (editItem && t === 'transferencia') return null;
                 const isSelected = form.tipoTransacao === t;
                 let colorClass = 'btn-secondary';
                 if (isSelected) {

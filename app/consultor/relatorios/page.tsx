@@ -136,7 +136,7 @@ export default function RelatoriosPage() {
         }
         subaccountMap[l.planoContaId].total += valorGerencial;
         subaccountMap[l.planoContaId].monthlyTotals[mesKey] += valorGerencial;
-        subaccountMap[l.planoContaId].lancs.push(l);
+        subaccountMap[l.planoContaId].lancs.push({ ...l, valorLinha: valorGerencial });
       }
     });
 
@@ -409,11 +409,27 @@ export default function RelatoriosPage() {
         alert('Relatório enviado com sucesso via WhatsApp!');
         setShowWhatsAppModal(false);
       } else {
-        alert(`Falha ao enviar: ${data.error || 'Erro desconhecido'}`);
+        const confirmFallback = confirm(
+          `A API do WhatsApp não está configurada no servidor (.env).\n\nDeseja abrir o WhatsApp Web/App para enviar esta mensagem manualmente?`
+        );
+        if (confirmFallback) {
+          const cleanPhone = whatsappPhone.replace(/\D/g, '');
+          const encodedText = encodeURIComponent(whatsappMessage);
+          window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`, '_blank');
+          setShowWhatsAppModal(false);
+        }
       }
     } catch (err) {
       console.error(err);
-      alert('Erro de conexão ao enviar WhatsApp.');
+      const confirmFallback = confirm(
+        'Falha de rede ao conectar com o servidor. Deseja abrir o WhatsApp para enviar manualmente?'
+      );
+      if (confirmFallback) {
+        const cleanPhone = whatsappPhone.replace(/\D/g, '');
+        const encodedText = encodeURIComponent(whatsappMessage);
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`, '_blank');
+        setShowWhatsAppModal(false);
+      }
     } finally {
       setSendingWhatsApp(false);
     }

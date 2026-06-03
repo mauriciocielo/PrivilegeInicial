@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { parseOFX, generateSampleOFX, OFXTransaction } from '../../../lib/ofx-parser';
-import { store, Lancamento, PlanoConta, Portador } from '../../../lib/store';
+import { store, Lancamento, PlanoConta, Portador, TransactionPattern } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 
@@ -19,6 +19,14 @@ export default function ImportarOFXPage() {
   const [ofxInfo, setOfxInfo] = useState<{ bankId?: string; acctId?: string; dtStart?: string; dtEnd?: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Estados para Regras de Conciliação
+  const [activeTab, setActiveTab] = useState<'import' | 'rules'>('import');
+  const [rules, setRules] = useState<TransactionPattern[]>([]);
+  const [showRuleModal, setShowRuleModal] = useState(false);
+  const [rulePattern, setRulePattern] = useState('');
+  const [ruleCategory, setRuleCategory] = useState('');
+  const [rulesSearch, setRulesSearch] = useState('');
+
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
     const ports = store.getPortadores(eId).filter(p => p.ativo);
@@ -27,13 +35,47 @@ export default function ImportarOFXPage() {
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
   }, []);
 
+  const loadRules = useCallback(() => {
+    setRules(store.getTransactionPatterns(empresaId));
+  }, [empresaId]);
+
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
     load(saved);
-    const handler = (e: Event) => load((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      load(id);
+    };
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
   }, [load]);
+
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
+
+  const handleSaveRule = () => {
+    if (!rulePattern || !ruleCategory) {
+      alert('Preencha o termo da descrição e a categoria.');
+      return;
+    }
+    store.saveTransactionPattern({
+      id: 'pt_' + Math.random().toString(36).slice(2, 9),
+      empresaId,
+      pattern: rulePattern,
+      categoryId: ruleCategory
+    });
+    loadRules();
+    setShowRuleModal(false);
+    setRulePattern('');
+    setRuleCategory('');
+  };
+
+  const handleDeleteRule = (id: string) => {
+    if (!confirm('Excluir esta regra de autoclassificação?')) return;
+    store.deleteTransactionPattern(id);
+    loadRules();
+  };
 
   const handleFile = (file: File) => {
     const reader = new FileReader();
@@ -119,12 +161,16 @@ export default function ImportarOFXPage() {
       ofxId: t.fitId,
       createdAt: new Date().toISOString(),
     };
-    store.reconciliar(lancamentoOfx, manualId);
-    setTransactions(prev => prev.filter(item => item.id !== t.id));
-    const s = new Set(selected);
-    s.delete(t.id);
-    setSelected(s);
-    alert('Transação OFX conciliada com o lançamento previsto com sucesso!');
+    try {
+      store.reconciliar(lancamentoOfx, manualId);
+      setTransactions(prev => prev.filter(item => item.id !== t.id));
+      const s = new Set(selected);
+      s.delete(t.id);
+      setSelected(s);
+      alert('Transação OFX conciliada com o lançamento previsto com sucesso!');
+    } catch (e) {
+      alert((e as Error).message);
+    }
   };
 
   const handleImport = async () => {
@@ -133,29 +179,33 @@ export default function ImportarOFXPage() {
     if (toImport.length === 0) { alert('Nenhuma transação selecionada.'); return; }
     setImporting(true);
     await new Promise(r => setTimeout(r, 800));
-    toImport.forEach(t => {
-      const lanc: Lancamento = {
+    try {
+      const lancsArray = toImport.map(t => ({
         id: uid(),
         empresaId,
         data: t.date,
         descricao: t.description,
         valor: t.amount,
-        tipo: t.type === 'CREDIT' ? 'receita' : 'despesa',
+        tipo: (t.type === 'CREDIT' ? 'receita' : 'despesa') as 'receita' | 'despesa',
         planoContaId: catMap[t.id] || (t.type === 'CREDIT' ? 'pc4' : 'pc30'),
         portadorId,
-        status: 'realizado',
+        status: 'realizado' as 'realizado',
         numeroDocumento: t.checkNum,
         observacao: t.memo,
-        origem: 'ofx',
+        origem: 'ofx' as 'ofx',
         ofxId: t.fitId,
         createdAt: new Date().toISOString(),
-      };
-      store.saveLancamento(lanc);
-    });
-    setImporting(false);
-    setDone(true);
-    setTransactions(prev => prev.filter(t => !selected.has(t.id)));
-    setSelected(new Set());
+      }));
+
+      store.saveLancamentos(lancsArray);
+      setDone(true);
+      setTransactions(prev => prev.filter(t => !selected.has(t.id)));
+      setSelected(new Set());
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -168,11 +218,29 @@ export default function ImportarOFXPage() {
       </div>
 
       <div className="page-body">
-        {done && (
-          <div className="alert alert-success" style={{ marginBottom: 20 }}>
-            ✅ Transações importadas com sucesso! Acesse os lançamentos para verificar.
-          </div>
-        )}
+        {/* Abas */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12 }}>
+          <button 
+            className={`btn ${activeTab === 'import' ? 'btn-primary' : 'btn-secondary'}`} 
+            onClick={() => setActiveTab('import')}
+          >
+            📂 Importar Extrato (OFX)
+          </button>
+          <button 
+            className={`btn ${activeTab === 'rules' ? 'btn-primary' : 'btn-secondary'}`} 
+            onClick={() => { setActiveTab('rules'); loadRules(); }}
+          >
+            🧠 Regras de Autoclassificação ({rules.length})
+          </button>
+        </div>
+
+        {activeTab === 'import' ? (
+          <>
+            {done && (
+              <div className="alert alert-success" style={{ marginBottom: 20 }}>
+                ✅ Transações importadas com sucesso! Acesse os lançamentos para verificar.
+              </div>
+            )}
 
         <div className="grid-12" style={{ marginBottom: 24 }}>
           {/* Upload area */}
@@ -382,7 +450,128 @@ export default function ImportarOFXPage() {
             </div>
           </div>
         )}
+      </>
+    ) : (
+      <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div className="card-title">Gerenciar Regras de Autoclassificação</div>
+                <div className="card-subtitle">Termos mapeados para categorias específicas na importação de OFX</div>
+              </div>
+              <button className="btn btn-primary" onClick={() => setShowRuleModal(true)}>
+                ＋ Nova Regra
+              </button>
+            </div>
+
+            <div className="card-body" style={{ padding: '0 20px 20px 20px' }}>
+              <div className="search-bar" style={{ marginBottom: 16, marginTop: 16 }}>
+                <span>🔍</span>
+                <input 
+                  placeholder="Buscar regras por descrição..." 
+                  value={rulesSearch} 
+                  onChange={e => setRulesSearch(e.target.value)} 
+                />
+              </div>
+
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Descrição Contém (Termo)</th>
+                      <th>Categoria Sugerida</th>
+                      <th style={{ width: 100, textAlign: 'center' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rules
+                      .filter(r => !rulesSearch || r.pattern.toLowerCase().includes(rulesSearch.toLowerCase()))
+                      .map(r => {
+                        const pc = store.getPlanoContas(empresaId).find(p => p.id === r.categoryId);
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{r.pattern}</td>
+                            <td>
+                              {pc ? (
+                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                                  {pc.codigo} - {pc.descricao}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>Categoria não encontrada</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button 
+                                className="btn btn-danger btn-sm btn-icon" 
+                                onClick={() => handleDeleteRule(r.id)}
+                                title="Excluir regra"
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    {rules.length === 0 && (
+                      <tr>
+                        <td colSpan={3}>
+                          <div className="empty-state">
+                            <div className="empty-state-icon">🧠</div>
+                            <h3>Nenhuma regra configurada</h3>
+                            <p>As regras são geradas automaticamente quando você categoriza lançamentos no OFX ou podem ser adicionadas manualmente clicando no botão acima.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showRuleModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowRuleModal(false)}>
+          <div className="modal modal-md">
+            <div className="modal-header">
+              <h2 className="modal-title">Nova Regra de Autoclassificação</h2>
+              <button className="modal-close" onClick={() => setShowRuleModal(false)}>✕</button>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label">Termo na Descrição do Extrato *</label>
+              <input 
+                className="form-control" 
+                placeholder="Ex: IFOOD, TELEF, SICREDI, JOSÉ SILVA" 
+                value={rulePattern} 
+                onChange={e => setRulePattern(e.target.value)} 
+              />
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                O sistema fará correspondência parcial desse termo (sem distinção entre maiúsculas/minúsculas).
+              </span>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 24 }}>
+              <label className="form-label">Categoria de Destino *</label>
+              <select
+                className="form-control"
+                value={ruleCategory}
+                onChange={e => setRuleCategory(e.target.value)}
+              >
+                <option value="">-- Selecione a Categoria --</option>
+                {planoContas.map(p => (
+                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : 'Despesa'})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowRuleModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSaveRule}>✓ Criar Regra</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

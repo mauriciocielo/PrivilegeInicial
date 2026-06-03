@@ -221,13 +221,18 @@ export async function GET(request: Request) {
           // Suporte flexível de integração de API (pode enviar para Z-API, Evolution API, Twilio, etc.)
           // O payload padrão é adaptável, enviando o destinatário (to/phone/number) e a mensagem (text/message)
           const payload: Record<string, any> = {};
+          const isMeta = whatsappApiUrl.includes('graph.facebook.com');
           
-          // Se for Z-API, Evolution API ou similar, a chave do número costuma ser "phone" ou "number"
-          if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
+          if (isMeta) {
+            payload['messaging_product'] = 'whatsapp';
+            payload['recipient_type'] = 'individual';
+            payload['to'] = cleanPhone;
+            payload['type'] = 'text';
+            payload['text'] = { body: whatsappTextBody };
+          } else if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
             payload['phone'] = cleanPhone;
             payload['message'] = whatsappTextBody;
           } else {
-            // Padrão genérico de mercado
             payload['to'] = cleanPhone;
             payload['phone'] = cleanPhone;
             payload['number'] = cleanPhone;
@@ -237,8 +242,9 @@ export async function GET(request: Request) {
 
           const wsHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
           if (whatsappApiKey) {
-            if (whatsappApiKey.startsWith('Bearer ')) {
-              wsHeaders['Authorization'] = whatsappApiKey;
+            if (whatsappApiKey.startsWith('Bearer ') || isMeta) {
+              const token = whatsappApiKey.replace('Bearer ', '');
+              wsHeaders['Authorization'] = `Bearer ${token}`;
             } else {
               wsHeaders['Authorization'] = `Bearer ${whatsappApiKey}`;
               wsHeaders['apikey'] = whatsappApiKey; // Evolution API usa apikey no header

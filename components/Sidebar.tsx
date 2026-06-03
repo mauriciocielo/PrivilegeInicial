@@ -90,6 +90,34 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [appMode, setAppMode] = useState<'empresarial' | 'condominio'>('empresarial');
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'idle'>('idle');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    // Sincronização de status do banco
+    const initialStatus = sessionStorage.getItem('cf_postgres_synced') === 'true' ? 'synced' : 'idle';
+    setSyncStatus(initialStatus);
+
+    const handleSyncStatus = (e: Event) => {
+      setSyncStatus((e as CustomEvent).detail);
+    };
+    window.addEventListener('cfSyncStatus', handleSyncStatus);
+    return () => window.removeEventListener('cfSyncStatus', handleSyncStatus);
+  }, []);
+
+  useEffect(() => {
+    // Carregamento de tema
+    const saved = localStorage.getItem('cf_theme') || 'light';
+    setTheme(saved as 'light' | 'dark');
+    document.documentElement.setAttribute('data-theme', saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('cf_theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
 
   const activeEmpresa = empresas.find(e => e.id === selectedEmpresa);
 
@@ -282,6 +310,37 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       </nav>
 
       <div className="sidebar-footer">
+        {/* Glow Sync status indicator */}
+        {syncStatus !== 'idle' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 10,
+            fontWeight: 600,
+            padding: '6px 12px',
+            borderRadius: 20,
+            background: syncStatus === 'synced' ? 'var(--green-bg)' : syncStatus === 'syncing' ? 'var(--yellow-bg)' : 'var(--red-bg)',
+            color: syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)',
+            border: `1px solid ${syncStatus === 'synced' ? 'rgba(16, 185, 129, 0.2)' : syncStatus === 'syncing' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+            marginBottom: 12,
+            justifyContent: 'center',
+          }}>
+            <span 
+              className={syncStatus === 'syncing' ? 'pulse-glow' : ''}
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)',
+                display: 'inline-block',
+                boxShadow: `0 0 8px ${syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)'}`
+              }} 
+            />
+            {syncStatus === 'synced' ? 'NUVEM ATUALIZADA' : syncStatus === 'syncing' ? 'SALVANDO NA NUVEM...' : 'ERRO AO SALVAR'}
+          </div>
+        )}
+
         <div className="user-card" style={{ cursor: 'default' }}>
           <div className="user-avatar" style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {user?.avatarData ? (
@@ -301,9 +360,20 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             </div>
           </div>
         </div>
-        <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={handleLogout}>
-          🚪 Sair do Sistema
-        </button>
+        
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={handleLogout}>
+            🚪 Sair
+          </button>
+          <button 
+            className="btn btn-secondary btn-sm" 
+            style={{ width: 36, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, minWidth: 36 }}
+            onClick={toggleTheme}
+            title="Alternar Tema Claro/Escuro"
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
     </aside>
   );

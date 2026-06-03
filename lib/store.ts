@@ -36,7 +36,17 @@ export interface Empresa {
   logoData?: string;
   bancoBoleto?: 'nenhum' | 'c6';
   allowedRoutes?: string[];
+  fechamentoData?: string;
   createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  empresaId: string;
+  timestamp: string;
+  userName: string;
+  action: string;
+  details: string;
 }
 
 export interface Unidade {
@@ -320,7 +330,7 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   { id: 'pc1_1_2', codigo: '1.1.1.002', descricao: 'Recebimento Cartao de Credito/Debito', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
   { id: 'pc1_1_3', codigo: '1.1.1.003', descricao: 'Recebimento Pix', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
   { id: 'pc1_1_4', codigo: '1.1.1.004', descricao: 'Recebimento Antecipação', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_5', codigo: '1.1.1.005', descricao: '( - ) Estorno Antecipação', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_5', codigo: '1.1.1.005', descricao: '( - ) Estorno de Recebimento', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
 
   // 2. CUSTOS OPERACIONAIS (VARIÁVEIS)
   { id: 'pc2', codigo: '2', descricao: 'CUSTOS OPERACIONAIS (VARIÁVEIS)', tipo: 'despesa', nivel: 1, ativo: true, empresaId: 'e1' },
@@ -466,16 +476,31 @@ type StoredRecord = { id: string };
 
 class DataStore {
   private initialized = false;
+  private cache: Record<string, unknown> = {};
 
   private get<T>(key: string, fallback: T): T {
     if (typeof window === 'undefined') return fallback;
+    if (key in this.cache) {
+      return this.cache[key] as T;
+    }
     const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    try { return JSON.parse(raw) as T; } catch { return fallback; }
+    if (!raw) {
+      this.cache[key] = fallback;
+      return fallback;
+    }
+    try {
+      const parsed = JSON.parse(raw) as T;
+      this.cache[key] = parsed;
+      return parsed;
+    } catch {
+      this.cache[key] = fallback;
+      return fallback;
+    }
   }
 
   private set(key: string, value: unknown, silent = false) {
     if (typeof window === 'undefined') return;
+    this.cache[key] = value;
     localStorage.setItem(key, JSON.stringify(value));
     if (!silent) window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key } }));
   }
@@ -609,6 +634,7 @@ class DataStore {
     this.set('cf_orcamentos', [], true);
     this.set('cf_atas', [], true);
     this.set('cf_transaction_patterns', [], true);
+    this.set('cf_audit_logs', [], true);
     this.set('cf_initialized_v3', true, true);
     this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
   }
@@ -628,6 +654,7 @@ class DataStore {
     if (!localStorage.getItem('cf_transaction_patterns')) this.set('cf_transaction_patterns', []);
     if (!localStorage.getItem('cf_clientes')) this.set('cf_clientes', []);
     if (!localStorage.getItem('cf_nfse')) this.set('cf_nfse', []);
+    if (!localStorage.getItem('cf_audit_logs')) this.set('cf_audit_logs', []);
   }
 
   private mergeDefaults<T extends StoredRecord>(current: T[], defaults: T[]): T[] {
@@ -812,11 +839,18 @@ class DataStore {
   }
 
   reconciliar(ofxData: Lancamento, manualId?: string) {
+    if (this.isPeriodLocked(ofxData.empresaId, ofxData.data)) {
+      throw new Error(`Este período está fechado e conciliado (limite: ${this.formatDate(this.getEmpresas().find(e => e.id === ofxData.empresaId)?.fechamentoData || '')}). Não é possível reconciliar transações.`);
+    }
     const list = this.getLancamentos();
 
     if (manualId) {
       const idx = list.findIndex(l => l.id === manualId);
       if (idx !== -1) {
+        const old = list[idx];
+        if (this.isPeriodLocked(old.empresaId, old.data)) {
+          throw new Error(`O lançamento previsto original está em período bloqueado.`);
+        }
         list[idx] = {
           ...list[idx],
           status: 'realizado',
@@ -826,10 +860,12 @@ class DataStore {
           ofxId: ofxData.ofxId || ofxData.id
         };
         this.learnPattern(list[idx].empresaId, list[idx].descricao, list[idx].planoContaId);
+        this.logAction(ofxData.empresaId, 'Conciliação', `Conciliou o lançamento previsto "${list[idx].descricao}" com extrato bancário (R$ ${ofxData.valor.toFixed(2)})`);
       }
     } else {
       list.push({ ...ofxData, status: 'realizado' });
       this.learnPattern(ofxData.empresaId, ofxData.descricao, ofxData.planoContaId);
+      this.logAction(ofxData.empresaId, 'Conciliação', `Importou e conciliou a transação "${ofxData.descricao}" de R$ ${ofxData.valor.toFixed(2)}`);
     }
     this.set('cf_lancamentos', list);
   }
@@ -884,32 +920,49 @@ class DataStore {
   }
 
   saveLancamento(lancamento: Lancamento) {
+    if (this.isPeriodLocked(lancamento.empresaId, lancamento.data)) {
+      throw new Error(`Este período está fechado e conciliado (limite: ${this.formatDate(this.getEmpresas().find(e => e.id === lancamento.empresaId)?.fechamentoData || '')}). Não é possível salvar.`);
+    }
     const list = this.getLancamentos();
     const idx = list.findIndex(l => l.id === lancamento.id);
 
     if (idx >= 0) {
       const old = list[idx];
-      // Se o usuário alterou a categoria manualmente, o sistema "aprende"
+      if (this.isPeriodLocked(old.empresaId, old.data)) {
+        throw new Error(`Não é possível editar este lançamento pois ele estava em um período bloqueado.`);
+      }
       if (old.planoContaId !== lancamento.planoContaId) {
         this.learnPattern(lancamento.empresaId, lancamento.descricao, lancamento.planoContaId);
       }
       list[idx] = lancamento;
+      this.logAction(lancamento.empresaId, 'Edição', `Editou lançamento "${lancamento.descricao}" no valor de R$ ${lancamento.valor.toFixed(2)} (Data: ${lancamento.data})`);
     } else {
-      // Se for um novo lançamento e tiver categoria válida, o sistema também aprende!
       if (lancamento.planoContaId) {
         this.learnPattern(lancamento.empresaId, lancamento.descricao, lancamento.planoContaId);
       }
       list.push(lancamento);
+      this.logAction(lancamento.empresaId, 'Criação', `Criou lançamento "${lancamento.descricao}" no valor de R$ ${lancamento.valor.toFixed(2)} (Data: ${lancamento.data})`);
     }
     this.set('cf_lancamentos', list);
   }
 
   saveLancamentos(lancamentos: Lancamento[]) {
+    if (lancamentos.length === 0) return;
     const list = this.getLancamentos();
     const ids = new Set(lancamentos.map(l => l.id));
 
+    // Validar se alguma importação cai em período bloqueado
+    const lockedEmpresas = new Set<string>();
+    lancamentos.forEach(l => {
+      if (this.isPeriodLocked(l.empresaId, l.data)) {
+        lockedEmpresas.add(l.empresaId);
+      }
+    });
+    if (lockedEmpresas.size > 0) {
+      throw new Error(`Não é possível importar lançamentos pois algumas transações pertencem a um período fechado.`);
+    }
+
     const processed = lancamentos.map(l => {
-      // Inteligência na importação: se não tiver categoria, tenta classificar pelo histórico
       if (!l.planoContaId || l.planoContaId === '') {
         const autoId = this.classifyDescription(l.empresaId, l.descricao);
         if (autoId) return { ...l, planoContaId: autoId };
@@ -919,11 +972,56 @@ class DataStore {
 
     const filtered = list.filter(l => !ids.has(l.id));
     const newList = [...filtered, ...processed];
-
     this.set('cf_lancamentos', newList);
+    
+    const empId = lancamentos[0].empresaId;
+    this.logAction(empId, 'Importação', `Importou lote de ${lancamentos.length} transações.`);
   }
+
   deleteLancamento(id: string) {
-    this.set('cf_lancamentos', this.getLancamentos().filter(l => l.id !== id));
+    const list = this.getLancamentos();
+    const l = list.find(item => item.id === id);
+    if (l) {
+      if (this.isPeriodLocked(l.empresaId, l.data)) {
+        throw new Error(`Este período está fechado e conciliado. Não é possível excluir o lançamento.`);
+      }
+      this.logAction(l.empresaId, 'Exclusão', `Excluiu lançamento "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} (Data: ${l.data})`);
+      this.set('cf_lancamentos', list.filter(item => item.id !== id));
+    }
+  }
+
+  // Helpers de Auditoria e Fechamento
+  isPeriodLocked(empresaId: string, data: string): boolean {
+    const emp = this.getEmpresas().find(e => e.id === empresaId);
+    if (!emp || !emp.fechamentoData) return false;
+    return data <= emp.fechamentoData;
+  }
+
+  getAuditLogs(empresaId?: string): AuditLog[] {
+    this.init();
+    const all = this.get<AuditLog[]>('cf_audit_logs', []);
+    return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
+  }
+
+  logAction(empresaId: string, action: string, details: string) {
+    const logs = this.getAuditLogs();
+    const currentUser = this.getCurrentUser();
+    const newLog: AuditLog = {
+      id: 'log_' + Math.random().toString(36).slice(2, 9),
+      empresaId,
+      timestamp: new Date().toISOString(),
+      userName: currentUser ? currentUser.name : 'Sistema/BPO',
+      action,
+      details
+    };
+    logs.unshift(newLog);
+    this.set('cf_audit_logs', logs.slice(0, 1000));
+  }
+
+  private formatDate(s: string) {
+    if (!s) return '';
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
   }
 
   // Clientes / Fornecedores
@@ -1085,21 +1183,33 @@ class DataStore {
         (!portador.saldoInicialData || l.data >= portador.saldoInicialData) &&
         (!dataFim || l.data <= dataFim)
     );
+    const plano = this.getPlanoContas(empresaId);
     const total = lancamentos.reduce((acc, l) => {
-      return l.tipo === 'receita' ? acc + l.valor : acc - l.valor;
+      if (l.tipo === 'receita') {
+        const pc = plano.find(p => p.id === l.planoContaId);
+        const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+        return isRedutora ? acc - l.valor : acc + l.valor;
+      } else {
+        return acc - l.valor;
+      }
     }, portador.saldoInicial);
     return total;
   }
 
   getResumoMensal(empresaId: string, meses = 6) {
     const hoje = new Date();
+    const plano = this.getPlanoContas(empresaId);
     return Array.from({ length: meses }, (_, i) => {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
       const mesStr = mes.toISOString().substring(0, 7); // formato YYYY-MM
       const lancamentos = this.getLancamentos(empresaId).filter(l => 
         l.data.startsWith(mesStr) && l.status === 'realizado'
       );
-      const receitas = lancamentos.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+      const receitas = lancamentos.filter(l => l.tipo === 'receita').reduce((a, l) => {
+        const pc = plano.find(p => p.id === l.planoContaId);
+        const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+        return a + (isRedutora ? -l.valor : l.valor);
+      }, 0);
       const despesas = lancamentos.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
       return {
         mes: mes.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
@@ -1119,13 +1229,19 @@ class DataStore {
       todosLancamentosDoGrupo.push(...this.getLancamentos(empresa.id));
     });
 
+    const planoMap = new Map(this.getPlanoContas().map(p => [p.id, p]));
+
     return Array.from({ length: meses }, (_, i) => {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
       const mesStr = mes.toISOString().substring(0, 7);
       const lancamentosDoMes = todosLancamentosDoGrupo.filter(l => 
         l.data.startsWith(mesStr) && l.status === 'realizado'
       );
-      const receitas = lancamentosDoMes.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+      const receitas = lancamentosDoMes.filter(l => l.tipo === 'receita').reduce((a, l) => {
+        const pc = planoMap.get(l.planoContaId);
+        const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+        return a + (isRedutora ? -l.valor : l.valor);
+      }, 0);
       const despesas = lancamentosDoMes.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
       return {
         mes: mes.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),

@@ -1322,3 +1322,82 @@ thead th {
   font-size: 10px !important;
   letter-spacing: 0.5px !important;
 }
+
+/* ============================================================
+   TEMA ESCURO (DARK MODE) — DESIGN PREMIUM
+   ============================================================ */
+[data-theme="dark"] {
+  --bg-base: #0a0d16;
+  --bg-card: #111524;
+  --bg-card2: #161c30;
+  --bg-sidebar: #111524;
+  --bg-hover: #161c30;
+  --border: #1e263d;
+  --border-light: #1e263d;
+
+  --accent: #d32f2f;
+  --accent-dark: #9a0007;
+  --accent-light: #ff6659;
+  --accent-glow: rgba(211, 47, 47, 0.08);
+
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] thead tr {
+  background: #161c30 !important;
+}
+
+[data-theme="dark"] tbody tr {
+  border-bottom: 1px solid #1e263d !important;
+}
+
+[data-theme="dark"] tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #111524;
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] input, 
+[data-theme="dark"] select, 
+[data-theme="dark"] textarea {
+  background-color: #161c30;
+  color: #f3f4f6;
+  border-color: #1e263d;
+}
+
+[data-theme="dark"] input:focus, 
+[data-theme="dark"] select:focus, 
+[data-theme="dark"] textarea:focus {
+  border-color: var(--accent);
+}
+
+/* Animações de Status */
+.pulse-glow {
+  animation: pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}

@@ -39,7 +39,11 @@ export default function ConsultorDashboard() {
     // Filter by mesSelecionado
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSelecionado));
 
-    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => {
+      const pc = plano.find(p => p.id === l.planoContaId);
+      const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+      return a + (isRedutora ? -l.valor : l.valor);
+    }, 0);
     const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
     const [anoPeriodo, mesPeriodo] = mesSelecionado.split('-');
