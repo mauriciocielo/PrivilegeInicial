@@ -10,6 +10,30 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
   const [authorized, setAuthorized] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSelectedEmpresaId(sessionStorage.getItem('cf_empresa_sel') || '');
+    }
+
+    const handleEmpresaChange = (e: any) => {
+      setSelectedEmpresaId(e.detail || '');
+    };
+
+    const handleDataChange = () => {
+      setSelectedEmpresaId(sessionStorage.getItem('cf_empresa_sel') || '');
+    };
+
+    window.addEventListener('empresaChange', handleEmpresaChange);
+    window.addEventListener('cfDataChange', handleDataChange);
+
+    return () => {
+      window.removeEventListener('empresaChange', handleEmpresaChange);
+      window.removeEventListener('cfDataChange', handleDataChange);
+    };
+  }, []);
+
   useEffect(() => {
     const user = store.getCurrentUser();
     if (!user) {
@@ -22,20 +46,77 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     }
     setCurrentUser(user);
 
-    // Permissão da rota
+    // Permissão da rota com base na empresa ativa
+    let companyOk = true;
+    if (selectedEmpresaId) {
+      const activeEmpresa = store.getEmpresas().find(e => e.id === selectedEmpresaId);
+      if (activeEmpresa && activeEmpresa.allowedRoutes && activeEmpresa.allowedRoutes.length > 0) {
+        companyOk = pathname === '/consultor/dashboard' || activeEmpresa.allowedRoutes.some(route => pathname.startsWith(route));
+      }
+    }
+
+    // Permissão final
     if (user.role === 'administrador') {
-      setAuthorized(true);
+      setAuthorized(companyOk);
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard'];
-      const isOk = pathname === '/consultor/dashboard' || allowed.some(route => pathname.startsWith(route));
-      setAuthorized(isOk);
+      const userOk = pathname === '/consultor/dashboard' || allowed.some(route => pathname.startsWith(route));
+      setAuthorized(userOk && companyOk);
     }
-  }, [router, pathname]);
+  }, [router, pathname, selectedEmpresaId]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Fecha o menu lateral automaticamente ao mudar de rota no mobile
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   if (!currentUser) return null;
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      {/* Botão flutuante para toggle do menu no mobile */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          top: 12,
+          left: 12,
+          zIndex: 1000,
+          background: 'var(--accent)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '50%',
+          width: 40,
+          height: 40,
+          display: 'none', // Controlado via globals.css
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 20,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          cursor: 'pointer'
+        }}
+      >
+        {sidebarOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Overlay de fundo no mobile */}
+      {sidebarOpen && (
+        <div 
+          className="mobile-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            zIndex: 99,
+            display: 'none' // Controlado via globals.css
+          }}
+        />
+      )}
+
       <Sidebar role={currentUser.role as any} />
       <main className="main-content">
         {authorized ? (

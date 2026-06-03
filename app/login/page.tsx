@@ -108,9 +108,40 @@ export default function LoginPage() {
         <div style={{ marginTop: 24, textAlign: 'center' }}>
           <a
             href="#"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              alert('Um link de recuperação de senha será enviado para o seu e-mail caso ele esteja cadastrado em nossa base.');
+              const emailToRecover = email || prompt('Digite o seu e-mail cadastrado para recuperar o acesso:');
+              if (!emailToRecover) return;
+
+              setLoading(true);
+              setError('');
+              try {
+                const res = await fetch('/api/recover-password', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: emailToRecover })
+                });
+                
+                const result = await res.json();
+                if (res.ok && result.success) {
+                  // Sincroniza imediatamente o LocalStorage com o banco
+                  if (result.backup) {
+                    store.importBackup(JSON.stringify(result.backup));
+                  }
+                  
+                  if (result.emailSent) {
+                    alert('🔑 Uma nova senha temporária foi gerada e enviada para o seu e-mail!');
+                  } else {
+                    alert(`🔑 Senha alterada com sucesso!\n\n(Aviso: Servidor de e-mail SMTP não configurado. Nova senha temporária gerada no banco: ${result.tempPassword})`);
+                  }
+                } else {
+                  setError(result.error || 'Erro ao recuperar senha.');
+                }
+              } catch (err) {
+                setError('Erro de conexão ao tentar recuperar senha.');
+              } finally {
+                setLoading(false);
+              }
             }}
             style={{ color: 'var(--primary-color)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}
           >

@@ -161,15 +161,32 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     if (role === 'cliente') return clienteNav;
     const baseNav = appMode === 'condominio' ? condominioNav : consultorNav;
 
-    if (role === 'administrador') return baseNav;
+    // Filtra rotas com base na configuração da empresa ativa
+    const companyAllowed = activeEmpresa?.allowedRoutes || [];
+    const filterByCompany = (item: NavItem) => {
+      if (item.href === '/consultor/dashboard') return true;
+      if (companyAllowed.length > 0) {
+        return companyAllowed.some(route => item.href.startsWith(route));
+      }
+      return true;
+    };
 
-    // Se consultor, filtra itens
+    if (role === 'administrador') {
+      return baseNav.map(section => {
+        const items = section.items.filter(filterByCompany);
+        return { ...section, items };
+      }).filter(section => section.items.length > 0);
+    }
+
+    // Se consultor, filtra itens do consultor + empresa
     const allowed = user?.allowedRoutes || ['/consultor/dashboard'];
     
     return baseNav.map(section => {
       const items = section.items.filter(item => {
         if (item.href === '/consultor/dashboard') return true;
-        return allowed.some(route => item.href.startsWith(route));
+        const userOk = allowed.some(route => item.href.startsWith(route));
+        const companyOk = filterByCompany(item);
+        return userOk && companyOk;
       });
       return { ...section, items };
     }).filter(section => section.items.length > 0);

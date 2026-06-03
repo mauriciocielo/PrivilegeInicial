@@ -3,6 +3,29 @@ import { useState, useEffect } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 
+const AVAILABLE_SCREENS = [
+  { label: '📊 Dashboard', route: '/consultor/dashboard' },
+  { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
+  { label: '🧠 Inteligência Financeira', route: '/consultor/inteligencia' },
+  { label: '📝 Lançamentos', route: '/consultor/lancamentos' },
+  { label: '📂 Importar OFX', route: '/consultor/importar-ofx' },
+  { label: '⚖️ Endividamento', route: '/consultor/endividamento' },
+  { label: '🎯 Indicadores', route: '/consultor/indicadores' },
+  { label: '💰 Orçamento', route: '/consultor/orcamento' },
+  { label: '👥 Clientes / Fornecedores', route: '/consultor/clientes' },
+  { label: '💸 Contas a Pagar', route: '/consultor/contas-pagar' },
+  { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
+  { label: '🧾 NFS-e', route: '/consultor/nfse' },
+  { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: '🏢 Empresas', route: '/consultor/empresas' },
+  { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
+  { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
+  { label: '📝 Atas de Atendimento', route: '/consultor/atas' },
+  { label: '🏦 Portadores / Contas', route: '/consultor/portadores' },
+  { label: '📈 Relatórios', route: '/consultor/relatorios' },
+  { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
+];
+
 export default function EmpresasPage() {
   const [list, setList] = useState<Empresa[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -60,8 +83,24 @@ export default function EmpresasPage() {
     setList(store.getEmpresas());
   }, []);
 
-  const openNew = () => { setEdit(null); setForm({}); setShowModal(true); };
-  const openEdit = (e: Empresa) => { setEdit(e); setForm({ ...e }); setShowModal(true); };
+  const openNew = () => { 
+    setEdit(null); 
+    setForm({ allowedRoutes: AVAILABLE_SCREENS.map(s => s.route) }); 
+    setShowModal(true); 
+  };
+  const openEdit = (e: Empresa) => { 
+    setEdit(e); 
+    setForm({ ...e, allowedRoutes: e.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route) }); 
+    setShowModal(true); 
+  };
+
+  const toggleRoute = (route: string) => {
+    const routes = form.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route);
+    setForm(f => ({
+      ...f,
+      allowedRoutes: routes.includes(route) ? routes.filter(x => x !== route) : [...routes, route]
+    }));
+  };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,6 +129,7 @@ export default function EmpresasPage() {
       comprasMensalEstimada: Number(form.comprasMensalEstimada) || 0,
       logoData: form.logoData,
       bancoBoleto: form.bancoBoleto || 'nenhum',
+      allowedRoutes: form.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route),
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveEmpresa(emp);
@@ -187,7 +227,7 @@ export default function EmpresasPage() {
 
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="modal">
+          <div className="modal modal-lg">
             <div className="modal-header">
               <h2 className="modal-title">{edit ? 'Editar Empresa' : 'Nova Empresa'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
@@ -274,6 +314,42 @@ export default function EmpresasPage() {
                   <option value="nenhum">Nenhuma integração (Padrão)</option>
                   <option value="c6">C6 Bank (Emissão de Boletos)</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 16 }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>Telas Autorizadas para esta Empresa (Selecione quais recursos estarão ativos)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                {AVAILABLE_SCREENS.map(screen => {
+                  const checked = (form.allowedRoutes || []).includes(screen.route);
+                  const isDashboard = screen.route === '/consultor/dashboard';
+                  return (
+                    <label 
+                      key={screen.route} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 8, 
+                        padding: '6px 10px', 
+                        borderRadius: 'var(--radius-sm)', 
+                        border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, 
+                        cursor: isDashboard ? 'not-allowed' : 'pointer', 
+                        background: checked ? 'var(--accent-glow)' : 'transparent', 
+                        fontSize: 12, 
+                        color: checked ? 'var(--accent-light)' : 'var(--text-secondary)',
+                        opacity: isDashboard ? 0.7 : 1
+                      }}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={checked || isDashboard} 
+                        disabled={isDashboard}
+                        onChange={() => toggleRoute(screen.route)}
+                      />
+                      {screen.label}
+                    </label>
+                  );
+                })}
               </div>
             </div>
             <div className="form-actions">

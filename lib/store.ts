@@ -12,6 +12,7 @@ export interface User {
   avatar?: string;
   avatarData?: string;
   receberEmailDiario?: boolean;
+  phone?: string;
   allowedRoutes?: string[];
   createdAt: string;
 }
@@ -34,6 +35,7 @@ export interface Empresa {
   comprasMensalEstimada?: number;
   logoData?: string;
   bancoBoleto?: 'nenhum' | 'c6';
+  allowedRoutes?: string[];
   createdAt: string;
 }
 

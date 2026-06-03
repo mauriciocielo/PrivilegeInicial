@@ -86,6 +86,7 @@ export default function UsuariosPage() {
       role: (form.role || 'cliente') as any,
       empresaIds: form.role === 'cliente' ? (form.empresaIds || []) : [],
       receberEmailDiario: !!form.receberEmailDiario,
+      phone: form.phone || '',
       avatarData: form.avatarData,
       allowedRoutes: form.role === 'consultor' ? (form.allowedRoutes || ['/consultor/dashboard']) : undefined,
       createdAt: edit?.createdAt || new Date().toISOString(),
@@ -253,17 +254,30 @@ export default function UsuariosPage() {
               </div>
             </div>
 
-            <div className="form-row" style={{ marginTop: 16 }}>
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)' }}>
+             <div className="form-row" style={{ marginTop: 16 }}>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)', marginBottom: 8 }}>
                   <input 
                     type="checkbox" 
                     checked={!!form.receberEmailDiario} 
                     onChange={e => setForm(f => ({ ...f, receberEmailDiario: e.target.checked }))} 
                   />
-                  Receber resumo financeiro diário por e-mail
+                  Receber resumo financeiro diário por e-mail e WhatsApp
                 </label>
               </div>
+              <div className="form-group">
+                <label className="form-label">Telefone / WhatsApp (Ex: 5546999048990) *</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="DDD + Número (apenas números)" 
+                  value={form.phone || ''} 
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '') }))} 
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 16 }}>
               <div className="form-group">
                 <label className="form-label">Foto do Usuário</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -276,6 +290,9 @@ export default function UsuariosPage() {
                     />
                   )}
                 </div>
+              </div>
+              <div className="form-group">
+                {/* Espaçador para alinhamento */}
               </div>
             </div>
 

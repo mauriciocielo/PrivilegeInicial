@@ -2,11 +2,32 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
+import { store } from '../lib/store';
+
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [displayChildren, setDisplayChildren] = useState(children);
   const [transitionStage, setTransitionStage] = useState('fade-in');
   const prevPathnameRef = useRef(pathname);
+
+  // Auto-sincronização com o PostgreSQL ao carregar o site
+  useEffect(() => {
+    const syncDb = async () => {
+      if (sessionStorage.getItem('cf_postgres_synced') === 'true') return;
+      try {
+        const res = await fetch('/api/migrate-backup');
+        if (!res.ok) return;
+        const backup = await res.json();
+        if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
+          store.importBackup(JSON.stringify(backup));
+        }
+        sessionStorage.setItem('cf_postgres_synced', 'true');
+      } catch (e) {
+        console.error('Erro na auto-sincronização do banco de dados:', e);
+      }
+    };
+    syncDb();
+  }, []);
 
   useEffect(() => {
     if (pathname !== prevPathnameRef.current) {

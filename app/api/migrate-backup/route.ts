@@ -1,6 +1,97 @@
 import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 
+export async function GET() {
+  try {
+    // 1. Buscar todas as coleções do banco de dados PostgreSQL
+    const cf_empresas = await db.empresa.findMany();
+    const cf_users = await db.user.findMany();
+    const cf_unidades = await db.unidade.findMany();
+    const cf_plano_contas = await db.planoConta.findMany();
+    const cf_portadores = await db.portador.findMany();
+    const cf_clientes = await db.cliente.findMany();
+    const cf_lancamentos = await db.lancamento.findMany();
+    const cf_endividamentosRaw = await db.endividamento.findMany({
+      include: { pagamentos: true }
+    });
+    const cf_atas = await db.ataAtendimento.findMany();
+    const cf_indicadores = await db.indicadorMensal.findMany();
+    const cf_orcamentosRaw = await db.orcamentoMensal.findMany({
+      include: { valores: true }
+    });
+    const cf_situacao_fiscal = await db.situacaoFiscal.findMany();
+    const cf_transaction_patterns = await db.transactionPattern.findMany();
+    const cf_nfse = await db.nfsE.findMany();
+
+    // 2. Formatar os endividamentos com pagamentos inclusos
+    const cf_endividamentos = cf_endividamentosRaw.map(e => ({
+      id: e.id,
+      empresaId: e.empresaId,
+      tipo: e.tipo,
+      banco: e.banco,
+      conta: e.conta,
+      contrato: e.contrato,
+      descricaoContrato: e.descricaoContrato,
+      taxa: e.taxa,
+      taxaTipo: e.taxaTipo,
+      indexador: e.indexador,
+      parcela: e.parcela,
+      parcelasFaltantes: e.parcelasFaltantes,
+      valorQuitacao: e.valorQuitacao,
+      valorAPagar: e.valorAPagar,
+      garantia: e.garantia,
+      pagamentoMes: e.pagamentoMes,
+      pagamentos: e.pagamentos.map(p => ({
+        id: p.id,
+        data: p.data,
+        valorTotal: p.valorTotal,
+        valorJuros: p.valorJuros,
+        valorAmortizacao: p.valorAmortizacao
+      }))
+    }));
+
+    // 3. Formatar os orçamentos (valores listados de volta para Record<planoContaId, valor>)
+    const cf_orcamentos = cf_orcamentosRaw.map(orc => {
+      const categorias: Record<string, number> = {};
+      orc.valores.forEach(v => {
+        categorias[v.planoContaId] = v.valor;
+      });
+      return {
+        id: orc.id,
+        empresaId: orc.empresaId,
+        mes: orc.mes,
+        categorias
+      };
+    });
+
+    const backupData = {
+      cf_empresas,
+      cf_users,
+      cf_unidades,
+      cf_plano_contas,
+      cf_portadores,
+      cf_clientes,
+      cf_lancamentos,
+      cf_endividamentos,
+      cf_atas,
+      cf_indicadores,
+      cf_orcamentos,
+      cf_situacao_fiscal,
+      cf_transaction_patterns,
+      cf_nfse
+    };
+
+    return NextResponse.json({
+      version: '7',
+      timestamp: new Date().toISOString(),
+      data: backupData
+    });
+  } catch (error) {
+    console.error('Erro ao buscar backup do PostgreSQL:', error);
+    return NextResponse.json({ error: (error as Error).message || 'Erro ao carregar dados' }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { data } = await request.json();
@@ -16,46 +107,48 @@ export async function POST(request: Request) {
       for (const e of data.cf_empresas) {
         if (!e.id) continue;
         try {
-          await db.empresa.upsert({
-            where: { id: String(e.id) },
-            update: {
-              razaoSocial: String(e.razaoSocial || ''),
-              nomeFantasia: String(e.nomeFantasia || ''),
-              cnpj: String(e.cnpj || ''),
-              responsavel: String(e.responsavel || ''),
-              email: String(e.email || ''),
-              telefone: String(e.telefone || ''),
-              atividade: e.atividade ? String(e.atividade) : null,
-              tipo: String(e.tipo || 'empresa'),
-              taxaMensalPadrao: e.taxaMensalPadrao !== undefined ? Number(e.taxaMensalPadrao) : null,
-              fundoReservaPct: e.fundoReservaPct !== undefined ? Number(e.fundoReservaPct) : null,
-              dataInicioContrato: e.dataInicioContrato ? String(e.dataInicioContrato) : null,
-              grupoEconomico: e.grupoEconomico ? String(e.grupoEconomico) : null,
-              receitaMensalEstimada: e.receitaMensalEstimada !== undefined ? Number(e.receitaMensalEstimada) : null,
-              comprasMensalEstimada: e.comprasMensalEstimada !== undefined ? Number(e.comprasMensalEstimada) : null,
-              logoData: e.logoData ? String(e.logoData) : null,
-              bancoBoleto: String(e.bancoBoleto || 'nenhum'),
-            },
-            create: {
-              id: String(e.id),
-              razaoSocial: String(e.razaoSocial || ''),
-              nomeFantasia: String(e.nomeFantasia || ''),
-              cnpj: String(e.cnpj || ''),
-              responsavel: String(e.responsavel || ''),
-              email: String(e.email || ''),
-              telefone: String(e.telefone || ''),
-              atividade: e.atividade ? String(e.atividade) : null,
-              tipo: String(e.tipo || 'empresa'),
-              taxaMensalPadrao: e.taxaMensalPadrao !== undefined ? Number(e.taxaMensalPadrao) : null,
-              fundoReservaPct: e.fundoReservaPct !== undefined ? Number(e.fundoReservaPct) : null,
-              dataInicioContrato: e.dataInicioContrato ? String(e.dataInicioContrato) : null,
-              grupoEconomico: e.grupoEconomico ? String(e.grupoEconomico) : null,
-              receitaMensalEstimada: e.receitaMensalEstimada !== undefined ? Number(e.receitaMensalEstimada) : null,
-              comprasMensalEstimada: e.comprasMensalEstimada !== undefined ? Number(e.comprasMensalEstimada) : null,
-              logoData: e.logoData ? String(e.logoData) : null,
-              bancoBoleto: String(e.bancoBoleto || 'nenhum'),
-            }
-          });
+           await db.empresa.upsert({
+             where: { id: String(e.id) },
+             update: {
+               razaoSocial: String(e.razaoSocial || ''),
+               nomeFantasia: String(e.nomeFantasia || ''),
+               cnpj: String(e.cnpj || ''),
+               responsavel: String(e.responsavel || ''),
+               email: String(e.email || ''),
+               telefone: String(e.telefone || ''),
+               atividade: e.atividade ? String(e.atividade) : null,
+               tipo: String(e.tipo || 'empresa'),
+               taxaMensalPadrao: e.taxaMensalPadrao !== undefined ? Number(e.taxaMensalPadrao) : null,
+               fundoReservaPct: e.fundoReservaPct !== undefined ? Number(e.fundoReservaPct) : null,
+               dataInicioContrato: e.dataInicioContrato ? String(e.dataInicioContrato) : null,
+               grupoEconomico: e.grupoEconomico ? String(e.grupoEconomico) : null,
+               receitaMensalEstimada: e.receitaMensalEstimada !== undefined ? Number(e.receitaMensalEstimada) : null,
+               comprasMensalEstimada: e.comprasMensalEstimada !== undefined ? Number(e.comprasMensalEstimada) : null,
+               logoData: e.logoData ? String(e.logoData) : null,
+               bancoBoleto: String(e.bancoBoleto || 'nenhum'),
+               allowedRoutes: Array.isArray(e.allowedRoutes) ? e.allowedRoutes.map(String) : [],
+             },
+             create: {
+               id: String(e.id),
+               razaoSocial: String(e.razaoSocial || ''),
+               nomeFantasia: String(e.nomeFantasia || ''),
+               cnpj: String(e.cnpj || ''),
+               responsavel: String(e.responsavel || ''),
+               email: String(e.email || ''),
+               telefone: String(e.telefone || ''),
+               atividade: e.atividade ? String(e.atividade) : null,
+               tipo: String(e.tipo || 'empresa'),
+               taxaMensalPadrao: e.taxaMensalPadrao !== undefined ? Number(e.taxaMensalPadrao) : null,
+               fundoReservaPct: e.fundoReservaPct !== undefined ? Number(e.fundoReservaPct) : null,
+               dataInicioContrato: e.dataInicioContrato ? String(e.dataInicioContrato) : null,
+               grupoEconomico: e.grupoEconomico ? String(e.grupoEconomico) : null,
+               receitaMensalEstimada: e.receitaMensalEstimada !== undefined ? Number(e.receitaMensalEstimada) : null,
+               comprasMensalEstimada: e.comprasMensalEstimada !== undefined ? Number(e.comprasMensalEstimada) : null,
+               logoData: e.logoData ? String(e.logoData) : null,
+               bancoBoleto: String(e.bancoBoleto || 'nenhum'),
+               allowedRoutes: Array.isArray(e.allowedRoutes) ? e.allowedRoutes.map(String) : [],
+             }
+           });
         } catch (err) {
           console.error('Erro na Empresa:', e, err);
           return NextResponse.json({ error: `Erro na Empresa (ID: ${e.id}): ${(err as Error).message}` }, { status: 500 });
@@ -69,29 +162,31 @@ export async function POST(request: Request) {
       for (const u of data.cf_users) {
         if (!u.email) continue;
         try {
-          await db.user.upsert({
-            where: { email: String(u.email) },
-            update: {
-              name: String(u.name || ''),
-              password: String(u.password || ''),
-              role: String(u.role || 'cliente'),
-              empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
-              avatarData: u.avatarData ? String(u.avatarData) : null,
-              receberEmailDiario: Boolean(u.receberEmailDiario),
-              allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
-            },
-            create: {
-              id: String(u.id || crypto.randomUUID()),
-              name: String(u.name || ''),
-              email: String(u.email),
-              password: String(u.password || ''),
-              role: String(u.role || 'cliente'),
-              empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
-              avatarData: u.avatarData ? String(u.avatarData) : null,
-              receberEmailDiario: Boolean(u.receberEmailDiario),
-              allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
-            }
-          });
+           await db.user.upsert({
+             where: { email: String(u.email) },
+             update: {
+               name: String(u.name || ''),
+               password: String(u.password || ''),
+               role: String(u.role || 'cliente'),
+               empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
+               avatarData: u.avatarData ? String(u.avatarData) : null,
+               receberEmailDiario: Boolean(u.receberEmailDiario),
+               phone: u.phone ? String(u.phone) : null,
+               allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
+             },
+             create: {
+               id: String(u.id || crypto.randomUUID()),
+               name: String(u.name || ''),
+               email: String(u.email),
+               password: String(u.password || ''),
+               role: String(u.role || 'cliente'),
+               empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
+               avatarData: u.avatarData ? String(u.avatarData) : null,
+               receberEmailDiario: Boolean(u.receberEmailDiario),
+               phone: u.phone ? String(u.phone) : null,
+               allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
+             }
+           });
         } catch (err) {
           console.error('Erro no Usuário:', u, err);
           return NextResponse.json({ error: `Erro no Usuário (Email: ${u.email}): ${(err as Error).message}` }, { status: 500 });
@@ -106,7 +201,6 @@ export async function POST(request: Request) {
         if (!uni.id) continue;
         try {
           const condominioId = String(uni.condominioId || 'condo_default');
-          // Garantir que a empresa condominio existe
           await db.empresa.upsert({
             where: { id: condominioId },
             update: {},
@@ -166,7 +260,6 @@ export async function POST(request: Request) {
         if (!pc.id) continue;
         try {
           const empresaId = String(pc.empresaId || 'empresa_default');
-          // Garantir que a empresa associada existe
           await db.empresa.upsert({
             where: { id: empresaId },
             update: {},
@@ -188,7 +281,7 @@ export async function POST(request: Request) {
               descricao: String(pc.descricao || ''),
               tipo: String(pc.tipo || 'receita'),
               nivel: Math.round(Number(pc.nivel)) || 1,
-              parentId: null, // Ignora parentId provisoriamente
+              parentId: null,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
               empresaId: empresaId,
               dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
@@ -221,7 +314,6 @@ export async function POST(request: Request) {
             });
           } catch (err) {
             console.error('Erro no PlanoConta (Passo 2 - parentId):', pc, err);
-            // Ignoramos erro de parentId para evitar que quebre toda a migração se houver inconsistência no parentId
           }
         }
       }
@@ -359,7 +451,6 @@ export async function POST(request: Request) {
           const planoContaId = String(l.planoContaId || 'plano_default');
           const portadorId = String(l.portadorId || 'portador_default');
 
-          // Garantir que a empresa, planoConta e portador existem no banco
           await db.empresa.upsert({
             where: { id: empresaId },
             update: {},
@@ -401,14 +492,13 @@ export async function POST(request: Request) {
             }
           });
 
-          // Tratar relacionamentos opcionais se existirem
           if (l.unidadeId) {
             await db.unidade.upsert({
               where: { id: String(l.unidadeId) },
               update: {},
               create: {
                 id: String(l.unidadeId),
-                condominioId: empresaId, // Assumindo que a empresa é o condomínio nesse caso
+                condominioId: empresaId,
                 identificacao: 'Unidade Auto-Criada',
                 proprietario: 'Proprietário',
                 email: 'contato@unidade.com',
@@ -501,7 +591,7 @@ export async function POST(request: Request) {
             }
           });
 
-          await db.endividamento.upsert({
+          const currentEnd = await db.endividamento.upsert({
             where: { id: String(end.id) },
             update: {
               empresaId: empresaId,
@@ -539,6 +629,26 @@ export async function POST(request: Request) {
               pagamentoMes: Math.round(Number(end.pagamentoMes)) || 0,
             }
           });
+
+          // Tratar pagamentos do endividamento
+          if (Array.isArray(end.pagamentos)) {
+            // Exclui pagamentos antigos para reinserir os atuais
+            await db.pagamentoEndividamento.deleteMany({
+              where: { endividamentoId: currentEnd.id }
+            });
+            for (const pag of end.pagamentos) {
+              await db.pagamentoEndividamento.create({
+                data: {
+                  id: String(pag.id || crypto.randomUUID()),
+                  endividamentoId: currentEnd.id,
+                  data: String(pag.data || ''),
+                  valorTotal: Number(pag.valorTotal || 0),
+                  valorJuros: Number(pag.valorJuros || 0),
+                  valorAmortizacao: Number(pag.valorAmortizacao || 0),
+                }
+              });
+            }
+          }
         } catch (err) {
           console.error('Erro no Endividamento:', end, err);
           return NextResponse.json({ error: `Erro no Endividamento (ID: ${end.id}): ${(err as Error).message}` }, { status: 500 });
@@ -640,7 +750,79 @@ export async function POST(request: Request) {
       }
     }
 
-    // 11. Migrar NFS-e
+    // 11. Migrar Orçamentos
+    if (Array.isArray(data.cf_orcamentos)) {
+      console.log(`Migrando ${data.cf_orcamentos.length} orçamentos mensais...`);
+      for (const orc of data.cf_orcamentos) {
+        if (!orc.id) continue;
+        try {
+          const empresaId = String(orc.empresaId || 'empresa_default');
+          await db.empresa.upsert({
+            where: { id: empresaId },
+            update: {},
+            create: {
+              id: empresaId,
+              razaoSocial: 'Empresa Auto-Criada',
+              nomeFantasia: 'Empresa Auto-Criada',
+              cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+              responsavel: 'Responsável',
+              email: 'contato@empresa.com',
+              telefone: '0000000000',
+            }
+          });
+
+          const currentOrc = await db.orcamentoMensal.upsert({
+            where: { id: String(orc.id) },
+            update: {
+              empresaId: empresaId,
+              mes: String(orc.mes || ''),
+            },
+            create: {
+              id: String(orc.id),
+              empresaId: empresaId,
+              mes: String(orc.mes || ''),
+            }
+          });
+
+          // Tratar categorias e valores
+          if (orc.categorias && typeof orc.categorias === 'object') {
+            await db.orcamentoValor.deleteMany({
+              where: { orcamentoId: currentOrc.id }
+            });
+            for (const [planoContaId, valor] of Object.entries(orc.categorias)) {
+              // Garante que o planoConta existe
+              await db.planoConta.upsert({
+                where: { id: planoContaId },
+                update: {},
+                create: {
+                  id: planoContaId,
+                  codigo: '999',
+                  descricao: 'Plano de Conta Auto-Criado',
+                  tipo: 'despesa',
+                  nivel: 1,
+                  empresaId: empresaId,
+                  ativo: true
+                }
+              });
+
+              await db.orcamentoValor.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  orcamentoId: currentOrc.id,
+                  planoContaId: planoContaId,
+                  valor: Number(valor || 0)
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Erro no Orçamento:', orc, err);
+          return NextResponse.json({ error: `Erro no Orçamento (ID: ${orc.id}): ${(err as Error).message}` }, { status: 500 });
+        }
+      }
+    }
+
+    // 12. Migrar NFS-e
     if (Array.isArray(data.cf_nfse)) {
       console.log(`Migrando ${data.cf_nfse.length} notas fiscais (NFS-e)...`);
       for (const n of data.cf_nfse) {
@@ -754,6 +936,108 @@ export async function POST(request: Request) {
         } catch (err) {
           console.error('Erro na NFS-e:', n, err);
           return NextResponse.json({ error: `Erro na NFS-e (ID: ${n.id}): ${(err as Error).message}` }, { status: 500 });
+        }
+      }
+    }
+
+    // 13. Migrar Situação Fiscal
+    if (Array.isArray(data.cf_situacao_fiscal)) {
+      console.log(`Migrando ${data.cf_situacao_fiscal.length} situações fiscais...`);
+      for (const sf of data.cf_situacao_fiscal) {
+        if (!sf.id) continue;
+        try {
+          const empresaId = String(sf.empresaId || 'empresa_default');
+          await db.empresa.upsert({
+            where: { id: empresaId },
+            update: {},
+            create: {
+              id: empresaId,
+              razaoSocial: 'Empresa Auto-Criada',
+              nomeFantasia: 'Empresa Auto-Criada',
+              cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+              responsavel: 'Responsável',
+              email: 'contato@empresa.com',
+              telefone: '0000000000',
+            }
+          });
+
+          await db.situacaoFiscal.upsert({
+            where: { id: String(sf.id) },
+            update: {
+              empresaId: empresaId,
+              dataVerificacao: String(sf.dataVerificacao || ''),
+              status: String(sf.status || 'regular'),
+              observacoes: String(sf.observacoes || ''),
+            },
+            create: {
+              id: String(sf.id),
+              empresaId: empresaId,
+              dataVerificacao: String(sf.dataVerificacao || ''),
+              status: String(sf.status || 'regular'),
+              observacoes: String(sf.observacoes || ''),
+            }
+          });
+        } catch (err) {
+          console.error('Erro na Situação Fiscal:', sf, err);
+          return NextResponse.json({ error: `Erro na Situação Fiscal (ID: ${sf.id}): ${(err as Error).message}` }, { status: 500 });
+        }
+      }
+    }
+
+    // 14. Migrar Transaction Patterns
+    if (Array.isArray(data.cf_transaction_patterns)) {
+      console.log(`Migrando ${data.cf_transaction_patterns.length} padrões de transação...`);
+      for (const tp of data.cf_transaction_patterns) {
+        if (!tp.id) continue;
+        try {
+          const empresaId = String(tp.empresaId || 'empresa_default');
+          const categoryId = String(tp.categoryId || 'plano_default');
+
+          await db.empresa.upsert({
+            where: { id: empresaId },
+            update: {},
+            create: {
+              id: empresaId,
+              razaoSocial: 'Empresa Auto-Criada',
+              nomeFantasia: 'Empresa Auto-Criada',
+              cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+              responsavel: 'Responsável',
+              email: 'contato@empresa.com',
+              telefone: '0000000000',
+            }
+          });
+
+          await db.planoConta.upsert({
+            where: { id: categoryId },
+            update: {},
+            create: {
+              id: categoryId,
+              codigo: '999',
+              descricao: 'Plano de Conta Auto-Criado',
+              tipo: 'despesa',
+              nivel: 1,
+              empresaId: empresaId,
+              ativo: true
+            }
+          });
+
+          await db.transactionPattern.upsert({
+            where: { id: String(tp.id) },
+            update: {
+              empresaId: empresaId,
+              pattern: String(tp.pattern || ''),
+              categoryId: categoryId,
+            },
+            create: {
+              id: String(tp.id),
+              empresaId: empresaId,
+              pattern: String(tp.pattern || ''),
+              categoryId: categoryId,
+            }
+          });
+        } catch (err) {
+          console.error('Erro no Padrão de Transação:', tp, err);
+          return NextResponse.json({ error: `Erro no Padrão de Transação (ID: ${tp.id}): ${(err as Error).message}` }, { status: 500 });
         }
       }
     }

@@ -15,6 +15,7 @@ model User {
   empresaIds         String[] // Array de IDs de empresas autorizadas
   avatarData         String?  // Base64 ou URL da foto
   receberEmailDiario Boolean  @default(false)
+  phone              String?
   allowedRoutes      String[] // Array de caminhos autorizados para consultores
   createdAt          DateTime @default(now())
 }
@@ -37,6 +38,7 @@ model Empresa {
   comprasMensalEstimada Float?
   logoData              String?           // Base64 da logo
   bancoBoleto           String            @default("nenhum") // "nenhum" | "c6"
+  allowedRoutes         String[]
   createdAt             DateTime          @default(now())
   unidades              Unidade[]
   planoContas           PlanoConta[]
