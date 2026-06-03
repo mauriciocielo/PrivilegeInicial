@@ -21,7 +21,7 @@ interface TipItem {
 export default function GeminiTips({ empresaId, dataIni, dataFim, status = 'realizado', portadorId = '', contextKey = '' }: GeminiTipsProps) {
   const [tips, setTips] = useState<TipItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+  const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
   const generateTips = useCallback(async () => {
     setLoading(true);
@@ -58,12 +58,32 @@ export default function GeminiTips({ empresaId, dataIni, dataFim, status = 'real
       .map(([nome, valor]) => `${nome}: R$ ${valor.toLocaleString('pt-BR')}`)
       .join(', ');
 
+    const intelDocs = store.getInteligenciaDocs() || [];
+    const txtDocs = intelDocs.filter(d => d.type.startsWith('text/') || d.name.endsWith('.txt') || d.name.endsWith('.json') || d.name.endsWith('.csv') || d.name.endsWith('.md'));
+    const docsContext = txtDocs.length > 0
+      ? `\nDIRETRIZES DA BASE DE CONHECIMENTO COMPARTILHADA:\n` + txtDocs.map(d => `- ${d.name}: ${d.content.slice(0, 1000)}`).join('\n')
+      : '';
+
+    const activeEmp = store.getEmpresas().find(x => x.id === empresaId);
+    const policiesContext = activeEmp 
+      ? `\nPOLÍTICAS FINANCEIRAS DA EMPRESA:\n` +
+        [
+          activeEmp.politicaReceberTexto ? `- Política de Receber: ${activeEmp.politicaReceberTexto.slice(0, 500)}` : '',
+          activeEmp.politicaCobrancaTexto ? `- Política de Cobrança: ${activeEmp.politicaCobrancaTexto.slice(0, 500)}` : '',
+          activeEmp.politicaComprasTexto ? `- Política de Compras: ${activeEmp.politicaComprasTexto.slice(0, 500)}` : '',
+          activeEmp.politicaPagamentosTexto ? `- Política de Pagamentos: ${activeEmp.politicaPagamentosTexto.slice(0, 500)}` : '',
+          activeEmp.politicaCreditoTexto ? `- Política de Crédito: ${activeEmp.politicaCreditoTexto.slice(0, 500)}` : ''
+        ].filter(Boolean).join('\n')
+      : '';
+
     const prompt = `Você é o robô Privilege AI, assistente contábil e de inteligência financeira de elite do escritório Privilege Consultoria.
 Analise a saúde de fluxo de caixa da empresa "${e?.razaoSocial || 'Cliente'}" no período "${periodLabel}", considerando os filtros atuais da tela:
 - Faturamento (Receitas): R$ ${rec.toLocaleString('pt-BR')}
 - Custos/Despesas Totais: R$ ${desp.toLocaleString('pt-BR')}
 - Margem Líquida Realizada: R$ ${saldo.toLocaleString('pt-BR')}
 - Top Categorias de Saídas: ${topDespesas || 'Nenhum débito importante'}
+${policiesContext}
+${docsContext}
 
 Forneça 3 insights ou dicas contábeis/financeiras extremamente estratégicas, objetivas e acionáveis para melhorar a saúde financeira desta empresa de forma direcionada aos números apresentados.
 

@@ -15,7 +15,7 @@ interface Attachment {
 }
 
 // Recomenda-se mover a API_KEY para um arquivo .env como NEXT_PUBLIC_GEMINI_API_KEY
-const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
 const SpeechRecognition = typeof window !== 'undefined'
   ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)

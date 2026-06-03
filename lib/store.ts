@@ -38,6 +38,26 @@ export interface Empresa {
   allowedRoutes?: string[];
   fechamentoData?: string;
   createdAt: string;
+  politicaReceberName?: string;
+  politicaReceberData?: string;
+  politicaComprasName?: string;
+  politicaComprasData?: string;
+  politicaCobrancaName?: string;
+  politicaCobrancaData?: string;
+  politicaReceberTexto?: string;
+  politicaCobrancaTexto?: string;
+  politicaComprasTexto?: string;
+  politicaPagamentosTexto?: string;
+  politicaCreditoTexto?: string;
+}
+
+export interface InteligenciaDoc {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  content: string;
+  createdAt: string;
 }
 
 export interface AuditLog {
@@ -1141,6 +1161,25 @@ class DataStore {
     this.set('cf_situacao_fiscal', all);
   }
 
+  getInteligenciaDocs(): InteligenciaDoc[] {
+    this.init();
+    return this.get<InteligenciaDoc[]>('cf_inteligencia_docs', []);
+  }
+
+  saveInteligenciaDoc(doc: InteligenciaDoc) {
+    const list = this.getInteligenciaDocs();
+    const idx = list.findIndex(d => d.id === doc.id);
+    if (idx >= 0) list[idx] = doc; else list.push(doc);
+    this.set('cf_inteligencia_docs', list);
+    window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_inteligencia_docs' } }));
+  }
+
+  deleteInteligenciaDoc(id: string) {
+    const list = this.getInteligenciaDocs().filter(d => d.id !== id);
+    this.set('cf_inteligencia_docs', list);
+    window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_inteligencia_docs' } }));
+  }
+
   // Indicadores Mensais
   getIndicadores(empresaId?: string): IndicadorMensal[] {
     this.init();
@@ -1267,7 +1306,8 @@ class DataStore {
       'cf_situacao_fiscal',
       'cf_transaction_patterns',
       'cf_clientes',
-      'cf_nfse'
+      'cf_nfse',
+      'cf_inteligencia_docs'
     ];
     const data: Record<string, unknown> = {};
     if (typeof window !== 'undefined') {

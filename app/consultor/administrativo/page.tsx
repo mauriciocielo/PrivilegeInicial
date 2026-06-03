@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { store, Empresa, Lancamento, User, AuditLog } from '../../../lib/store';
+import { store, Empresa, Lancamento, User, AuditLog, InteligenciaDoc } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { syncBackupInChunks } from '../../../lib/sync-helper';
 
@@ -23,6 +23,7 @@ export default function AdministrativoPage() {
   const [autoBackup, setAutoBackup] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [intelDocs, setIntelDocs] = useState<InteligenciaDoc[]>([]);
 
   // Estados do Google Calendar
   const [gcalToken, setGcalToken] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function AdministrativoPage() {
     setEmpresas(list);
     setUsers(store.getUsers());
     setLancamentos(store.getLancamentos());
+    setIntelDocs(store.getInteligenciaDocs());
 
     let targetEmpId = selectedAuditEmpresaId;
     if (!targetEmpId && list.length > 0) {
@@ -147,6 +149,53 @@ export default function AdministrativoPage() {
       } catch (e) {}
     };
   }, []);
+
+  const handleIntelDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    const isText = file.type.startsWith('text/') || 
+                   file.name.endsWith('.txt') || 
+                   file.name.endsWith('.json') || 
+                   file.name.endsWith('.csv') || 
+                   file.name.endsWith('.md');
+
+    reader.onload = (event) => {
+      let content = '';
+      if (isText) {
+        content = event.target?.result as string;
+      } else {
+        content = (event.target?.result as string).split(',')[1];
+      }
+
+      const newDoc: InteligenciaDoc = {
+        id: 'doc_' + Math.random().toString(36).slice(2, 9),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        content,
+        createdAt: new Date().toISOString()
+      };
+
+      store.saveInteligenciaDoc(newDoc);
+      alert('Documento de inteligência financeira enviado com sucesso!');
+      load();
+    };
+
+    if (isText) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleIntelDocDelete = (id: string) => {
+    if (!confirm('Deseja excluir este documento da base de inteligência financeira?')) return;
+    store.deleteInteligenciaDoc(id);
+    load();
+  };
 
   const handleExportBackup = () => {
     try {
@@ -804,6 +853,84 @@ export default function AdministrativoPage() {
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Endividamento global em aberto</div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: '#b45309', marginTop: 4 }}>{fmt.currency(data.dividaTotal)}</div>
               </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>🧠 Base de Conhecimento Copilot</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
+                Suba documentos contábeis, estratégias ou planilhas (TXT, PDF, JSON). Eles serão analisados pelo robô Privilege AI Copilot para inteligência avançada.
+              </p>
+
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <input 
+                  type="file" 
+                  accept=".txt,.pdf,.json,.csv,.md"
+                  onChange={handleIntelDocUpload} 
+                  id="intel-upload-file" 
+                  style={{ display: 'none' }} 
+                />
+                <label 
+                  htmlFor="intel-upload-file" 
+                  className="btn btn-primary" 
+                  style={{ 
+                    width: '100%', 
+                    justifyContent: 'center', 
+                    gap: 8, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: 13
+                  }}
+                >
+                  ＋ Subir Arquivo de Inteligência
+                </label>
+              </div>
+
+              {intelDocs.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '12px 0', border: '1px dashed var(--border-light)', borderRadius: 8 }}>
+                  Nenhum documento carregado na base de conhecimento.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
+                  {intelDocs.map(doc => {
+                    const sizeKB = (doc.size / 1024).toFixed(1);
+                    const isTxt = doc.type.startsWith('text/') || doc.name.endsWith('.txt') || doc.name.endsWith('.json') || doc.name.endsWith('.csv') || doc.name.endsWith('.md');
+                    const downloadUrl = isTxt 
+                      ? `data:text/plain;charset=utf-8,${encodeURIComponent(doc.content)}`
+                      : `data:${doc.type};base64,${doc.content}`;
+
+                    return (
+                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                        <div style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }} title={doc.name}>
+                            📄 {doc.name}
+                          </div>
+                          <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                            {sizeKB} KB • {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a 
+                            href={downloadUrl} 
+                            download={doc.name}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 10, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            ⬇️
+                          </a>
+                          <button 
+                            onClick={() => handleIntelDocDelete(doc.id)}
+                            className="btn btn-danger btn-sm"
+                            style={{ fontSize: 10, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="card">

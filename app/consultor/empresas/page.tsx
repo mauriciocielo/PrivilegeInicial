@@ -134,6 +134,12 @@ export default function EmpresasPage() {
       bancoBoleto: form.bancoBoleto || 'nenhum',
       allowedRoutes: form.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route),
       createdAt: edit?.createdAt || new Date().toISOString(),
+      politicaReceberName: form.politicaReceberName,
+      politicaReceberData: form.politicaReceberData,
+      politicaComprasName: form.politicaComprasName,
+      politicaComprasData: form.politicaComprasData,
+      politicaCobrancaName: form.politicaCobrancaName,
+      politicaCobrancaData: form.politicaCobrancaData,
     };
     store.saveEmpresa(emp);
     const updated = store.getEmpresas();
@@ -317,6 +323,140 @@ export default function EmpresasPage() {
                   <option value="nenhum">Nenhuma integração (Padrão)</option>
                   <option value="c6">C6 Bank (Emissão de Boletos)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Políticas e Diretrizes Estratégicas (PDFs) */}
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--border-light)', paddingTop: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas e Diretrizes Estratégicas (PDF)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                
+                {/* Política Contas a Receber */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11.5 }}>Contas a Receber</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      style={{ fontSize: 11 }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64 = (reader.result as string).split(',')[1];
+                          setForm(f => ({ ...f, politicaReceberName: file.name, politicaReceberData: base64 }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {form.politicaReceberName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                        <a 
+                          href={`data:application/pdf;base64,${form.politicaReceberData}`} 
+                          download={form.politicaReceberName}
+                          style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
+                          title={form.politicaReceberName}
+                        >
+                          📄 {form.politicaReceberName}
+                        </a>
+                        <button 
+                          type="button" 
+                          onClick={() => setForm(f => ({ ...f, politicaReceberName: undefined, politicaReceberData: undefined }))}
+                          style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontWeight: 'bold', padding: '0 2px' }}
+                          title="Excluir política"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Política Compras */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11.5 }}>Compras / Suprimentos</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      style={{ fontSize: 11 }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64 = (reader.result as string).split(',')[1];
+                          setForm(f => ({ ...f, politicaComprasName: file.name, politicaComprasData: base64 }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {form.politicaComprasName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                        <a 
+                          href={`data:application/pdf;base64,${form.politicaComprasData}`} 
+                          download={form.politicaComprasName}
+                          style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
+                          title={form.politicaComprasName}
+                        >
+                          📄 {form.politicaComprasName}
+                        </a>
+                        <button 
+                          type="button" 
+                          onClick={() => setForm(f => ({ ...f, politicaComprasName: undefined, politicaComprasData: undefined }))}
+                          style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontWeight: 'bold', padding: '0 2px' }}
+                          title="Excluir política"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Política Cobrança */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11.5 }}>Cobrança / Crédito</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      style={{ fontSize: 11 }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64 = (reader.result as string).split(',')[1];
+                          setForm(f => ({ ...f, politicaCobrancaName: file.name, politicaCobrancaData: base64 }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {form.politicaCobrancaName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                        <a 
+                          href={`data:application/pdf;base64,${form.politicaCobrancaData}`} 
+                          download={form.politicaCobrancaName}
+                          style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
+                          title={form.politicaCobrancaName}
+                        >
+                          📄 {form.politicaCobrancaName}
+                        </a>
+                        <button 
+                          type="button" 
+                          onClick={() => setForm(f => ({ ...f, politicaCobrancaName: undefined, politicaCobrancaData: undefined }))}
+                          style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontWeight: 'bold', padding: '0 2px' }}
+                          title="Excluir política"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
 

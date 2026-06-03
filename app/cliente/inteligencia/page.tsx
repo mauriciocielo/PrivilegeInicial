@@ -77,7 +77,7 @@ export default function InteligenciaFinanceiraPage() {
     setAiLoading(true);
     const e = empresas.find(x => x.id === empresaId);
     const activeCompanyName = e?.razaoSocial || 'Cliente';
-    const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
     const prompt = `Você é o robô Privilege AI, consultor financeiro de elite do escritório Privilege Consultoria.
 O consultor financeiro realizou uma simulação de cenários de fluxo de caixa para a empresa "${activeCompanyName}".
@@ -210,6 +210,24 @@ Responda em Português do Brasil.`;
     const activeCompany = empresas.find(x => x.id === empresaId);
     const companyName = activeCompany?.razaoSocial || (empresaId.startsWith('grupo:') ? `Grupo Consolidado ${empresaId.split(':')[1]}` : 'Cliente');
 
+    const intelDocs = store.getInteligenciaDocs() || [];
+    const txtDocs = intelDocs.filter(d => d.type.startsWith('text/') || d.name.endsWith('.txt') || d.name.endsWith('.json') || d.name.endsWith('.csv') || d.name.endsWith('.md'));
+    const docsContext = txtDocs.length > 0
+      ? `\nDIRETRIZES DA BASE DE CONHECIMENTO COMPARTILHADA (GLOBAL):\n` + txtDocs.map(d => `- ${d.name}: ${d.content.slice(0, 1000)}`).join('\n')
+      : '';
+
+    const activeEmp = activeCompany;
+    const policiesContext = activeEmp 
+      ? `\nPOLÍTICAS FINANCEIRAS HOMOLOGADAS DA EMPRESA:\n` +
+        [
+          activeEmp.politicaReceberTexto ? `- Política de Receber: ${activeEmp.politicaReceberTexto.slice(0, 500)}` : '',
+          activeEmp.politicaCobrancaTexto ? `- Política de Cobrança: ${activeEmp.politicaCobrancaTexto.slice(0, 500)}` : '',
+          activeEmp.politicaComprasTexto ? `- Política de Compras: ${activeEmp.politicaComprasTexto.slice(0, 500)}` : '',
+          activeEmp.politicaPagamentosTexto ? `- Política de Pagamentos: ${activeEmp.politicaPagamentosTexto.slice(0, 500)}` : '',
+          activeEmp.politicaCreditoTexto ? `- Política de Crédito: ${activeEmp.politicaCreditoTexto.slice(0, 500)}` : ''
+        ].filter(Boolean).join('\n')
+      : '';
+
     // Build the monthly history string
     const dreHistoryStr = dreMeses.map(m =>
       `- Mês ${m.mes}: Receita ROB R$ ${m.receita.toLocaleString('pt-BR')}, Custos Variáveis R$ ${m.custo.toLocaleString('pt-BR')}, Despesas Fixas R$ ${m.despesa.toLocaleString('pt-BR')}, EBITDA R$ ${m.ebitda.toLocaleString('pt-BR')}, Result. Líquido R$ ${m.resultadoLiquido.toLocaleString('pt-BR')}`
@@ -239,6 +257,8 @@ CONTEXTO DA EMPRESA:
 - Prazo Médio de Pagamento (PMP): ${prazosOriginais.pmp} dias
 - Ciclo Financeiro (de Caixa): ${prazosOriginais.pmr - prazosOriginais.pmp} dias
 - Necessidade de Capital de Giro (NCG) de Partida: R$ ${prazosOriginais.ncg.toLocaleString('pt-BR')}
+${policiesContext}
+${docsContext}
 
 HISTÓRICO RECENTE DO DRE (ÚLTIMOS MESES):
 ${dreHistoryStr || 'Nenhum lançamento DRE histórico registrado.'}
@@ -261,9 +281,13 @@ INSTRUÇÕES DE COMPORTAMENTO:
 4. Mantenha as respostas bem estruturadas em português, usando listas, tópicos em negrito e formatação markdown profissional. Evite termos genéricos, seja direto aos números.
 5. Nunca invente dados que contradigam o contexto real fornecido.`;
 
-    const API_KEY = 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
-    const contents = updatedMessages.slice(-10).map(m => ({
+    // A API do Gemini exige que o primeiro turno de conversa comece com uma mensagem do usuário ('user').
+    const firstUserMsgIndex = updatedMessages.findIndex(m => m.sender === 'user');
+    const conversationHistory = firstUserMsgIndex !== -1 ? updatedMessages.slice(firstUserMsgIndex) : updatedMessages;
+
+    const contents = conversationHistory.slice(-10).map(m => ({
       role: m.sender === 'user' ? 'user' : 'model',
       parts: [{ text: m.text }]
     }));

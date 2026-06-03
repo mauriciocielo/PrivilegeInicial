@@ -46,6 +46,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: '💵' },
       { label: 'NFS-e', href: '/consultor/nfse', icon: '🧾' },
       { label: 'Integração C6 Bank', href: '/consultor/integracao-c6', icon: '🏦' },
+      { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: '📋' },
     ],
   },
   {
@@ -74,6 +75,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: '🧠' },
       { label: 'Extrato', href: '/cliente/extrato', icon: '📋' },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: '📝' },
+      { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: '📋' },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: '📈' },
     ],
   },

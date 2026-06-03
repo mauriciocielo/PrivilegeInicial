@@ -285,6 +285,72 @@ export default function ClienteDashboard() {
                 </div>
               );
             })}
+
+            {/* Políticas e Diretrizes Estratégicas */}
+            {(empresa?.politicaReceberName || empresa?.politicaComprasName || empresa?.politicaCobrancaName) && (
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px dashed var(--border-light)' }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas Estratégicas</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {empresa.politicaReceberName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span style={{ fontSize: 16 }}>💵</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>Contas a Receber</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaReceberName}</div>
+                        </div>
+                      </div>
+                      <a 
+                        href={`data:application/pdf;base64,${empresa.politicaReceberData}`} 
+                        download={empresa.politicaReceberName}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: 10, padding: '2px 8px' }}
+                      >
+                        Baixar
+                      </a>
+                    </div>
+                  )}
+                  {empresa.politicaComprasName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span style={{ fontSize: 16 }}>🛒</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>Compras / Suprimentos</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaComprasName}</div>
+                        </div>
+                      </div>
+                      <a 
+                        href={`data:application/pdf;base64,${empresa.politicaComprasData}`} 
+                        download={empresa.politicaComprasName}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: 10, padding: '2px 8px' }}
+                      >
+                        Baixar
+                      </a>
+                    </div>
+                  )}
+                  {empresa.politicaCobrancaName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span style={{ fontSize: 16 }}>⚖️</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>Cobrança / Crédito</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaCobrancaName}</div>
+                        </div>
+                      </div>
+                      <a 
+                        href={`data:application/pdf;base64,${empresa.politicaCobrancaData}`} 
+                        download={empresa.politicaCobrancaName}
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: 10, padding: '2px 8px' }}
+                      >
+                        Baixar
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
