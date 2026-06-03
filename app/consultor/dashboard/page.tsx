@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { store, Empresa } from '../../../lib/store';
+import { store, Empresa, Lancamento, Portador, PlanoConta } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import {
@@ -27,41 +27,71 @@ export default function ConsultorDashboard() {
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
   const load = useCallback((eId: string) => {
-    const e = store.getEmpresas().find(x => x.id === eId) || null;
-    setEmpresa(e);
+    const isGroup = eId.startsWith('grupo:');
+    const grupoName = isGroup ? eId.split(':')[1] : '';
+
+    let activeEmp: Empresa | null = null;
+    let targetLancs: Lancamento[] = [];
+    let targetPorts: Portador[] = [];
+    let targetPlano: PlanoConta[] = [];
+
+    if (isGroup) {
+      const empsInGroup = store.getEmpresas().filter(e => e.grupoEconomico === grupoName);
+      activeEmp = {
+        id: eId,
+        razaoSocial: `Grupo Consolidado - ${grupoName}`,
+        nomeFantasia: `Grupo ${grupoName}`,
+        cnpj: '',
+        responsavel: '',
+        email: '',
+        telefone: '',
+        createdAt: new Date().toISOString()
+      };
+      empsInGroup.forEach(emp => {
+        targetLancs.push(...store.getLancamentos(emp.id));
+        targetPorts.push(...store.getPortadores(emp.id));
+        targetPlano.push(...store.getPlanoContas(emp.id));
+      });
+    } else {
+      activeEmp = store.getEmpresas().find(x => x.id === eId) || null;
+      targetLancs = store.getLancamentos(eId);
+      targetPorts = store.getPortadores(eId);
+      targetPlano = store.getPlanoContas(eId);
+    }
+
+    setEmpresa(activeEmp);
     setEmpresaId(eId);
 
-    const r = store.getResumoMensal(eId, 6);
+    const r = isGroup
+      ? store.getResumoMensalGrupoEconomico(grupoName, 6)
+      : store.getResumoMensal(eId, 6);
     setResumo(r);
 
-    const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
-    
-    // Filter by mesSelecionado
+    const lancs = targetLancs.filter(l => l.status === 'realizado');
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSelecionado));
 
-    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => {
-      const pc = plano.find(p => p.id === l.planoContaId);
+    const rec = lancsMs.filter(l => l.tipo === 'receita' && l.planoContaId !== 'transf').reduce((a, l) => {
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
       const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
       return a + (isRedutora ? -l.valor : l.valor);
     }, 0);
-    const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
+    const desp = lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').reduce((a, l) => a + l.valor, 0);
 
     const [anoPeriodo, mesPeriodo] = mesSelecionado.split('-');
-    const dataFimPeriodo = `${mesSelecionado}-${new Date(Number(anoPeriodo), Number(mesPeriodo), 0).getDate()}`;
-    const ports = store.getPortadores(eId);
-    const totalPort = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eId, dataFimPeriodo), 0);
+    const lastDay = new Date(Number(anoPeriodo), Number(mesPeriodo), 0).getDate();
+    const dataFimPeriodo = `${mesSelecionado}-${String(lastDay).padStart(2, '0')}`;
+    
+    const totalPort = targetPorts.reduce((a, p) => a + store.getSaldoPortador(p.id, p.empresaId, dataFimPeriodo), 0);
 
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
-    setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
+    setPortadoresList(targetPorts.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, p.empresaId, dataFimPeriodo), tipo: p.tipo })));
 
     const sorted = [...lancs].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
     setLancRecentes(sorted);
 
-    // Categoria pie
-    const plano = store.getPlanoContas(eId);
     const despCats: Record<string, number> = {};
-    lancsMs.filter(l => l.tipo === 'despesa').forEach(l => {
-      const pc = plano.find(p => p.id === l.planoContaId);
+    lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').forEach(l => {
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
       const nome = pc?.descricao || 'Outros';
       despCats[nome] = (despCats[nome] || 0) + l.valor;
     });
@@ -72,11 +102,21 @@ export default function ConsultorDashboard() {
         .map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }))
     );
 
-    const endivs = store.getEndividamentos(eId);
+    let endivs: any[] = [];
+    let inds: any[] = [];
+    if (isGroup) {
+      const empsInGroup = store.getEmpresas().filter(e => e.grupoEconomico === grupoName);
+      empsInGroup.forEach(emp => {
+        endivs.push(...store.getEndividamentos(emp.id));
+        inds.push(...store.getIndicadores(emp.id));
+      });
+    } else {
+      endivs = store.getEndividamentos(eId);
+      inds = store.getIndicadores(eId);
+    }
+
     setEndividamentos(endivs);
     setTotalDivida(endivs.reduce((acc, e) => acc + Math.max(0, e.valorAPagar - e.pagamentoMes), 0));
-
-    const inds = store.getIndicadores(eId);
     setIndicador(inds.find(i => i.mes === mesSelecionado) || null);
   }, [mesSelecionado]);
 

@@ -36,12 +36,12 @@ export default function ClienteDashboard() {
       return d.getMonth() === mesAtual.getMonth() && d.getFullYear() === mesAtual.getFullYear();
     });
     const plano = store.getPlanoContas(eId);
-    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => {
+    const rec = lancsMs.filter(l => l.tipo === 'receita' && l.planoContaId !== 'transf').reduce((a, l) => {
       const pc = plano.find(p => p.id === l.planoContaId);
       const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
       return a + (isRedutora ? -l.valor : l.valor);
     }, 0);
-    const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
+    const desp = lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').reduce((a, l) => a + l.valor, 0);
 
     const dataFimPeriodo = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0];
     const ports = store.getPortadores(eId);

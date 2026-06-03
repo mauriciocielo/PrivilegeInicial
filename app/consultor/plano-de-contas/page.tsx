@@ -18,6 +18,15 @@ export default function PlanoContasPage() {
   const [showRegraModal, setShowRegraModal] = useState(false);
   const [regraForm, setRegraForm] = useState<Partial<TransactionPattern>>({});
 
+  // Estado de Árvore Retrátil
+  const [collapsedKeys, setCollapsedKeys] = useState<Record<string, boolean>>({});
+  const toggleCollapse = (id: string) => {
+    setCollapsedKeys(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
     setPlano(store.getPlanoContas(eId));
@@ -177,38 +186,84 @@ export default function PlanoContasPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map(pc => (
-                      <tr key={pc.id} style={{ opacity: pc.ativo ? 1 : 0.5 }}>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
-                        <td style={getNivelStyle(pc.nivel)}>
-                          {pc.nivel > 1 && <span style={{ color: 'var(--border-light)', marginRight: 4 }}>{'└─'.padStart(pc.nivel * 2 - 2, '  ')}</span>}
-                          {pc.descricao}
-                        </td>
-                        <td>
-                          <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
-                            {pc.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
-                        <td>
-                          <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
-                            {pc.ativo ? 'Ativo' : 'Inativo'}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {pc.nivel < 3 && (
-                              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
-                            )}
-                            <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
-                            <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
-                              {pc.ativo ? '⏸️' : '▶️'}
-                            </button>
-                            <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      // We need collapsible state. Let's use a React state or local state. Since page.tsx is a client component, let's inject a state hook at the top, or track it in a state.
+                      // Let's look at the top of the file to see how we define states.
+                      // We will use standard React state defined at the top. Let's add expandedState tracker.
+                      // We can check if any parent is collapsed to hide a child row.
+                      return filtered.map(pc => {
+                        // Check if parent is collapsed
+                        const parentCollapsed = plano.some(p => {
+                          if (p.nivel < pc.nivel && pc.codigo.startsWith(p.codigo + '.')) {
+                            // If this parent exists and is collapsed
+                            const isCollapsed = collapsedKeys[p.id];
+                            if (isCollapsed) return true;
+                          }
+                          return false;
+                        });
+
+                        if (parentCollapsed) return null;
+
+                        const hasChildren = plano.some(p => p.parentId === pc.id);
+                        const isExpanded = !collapsedKeys[pc.id];
+
+                        return (
+                          <tr key={pc.id} style={{ opacity: pc.ativo ? 1 : 0.5 }}>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
+                            <td 
+                              style={{ ...getNivelStyle(pc.nivel), cursor: 'pointer' }}
+                              onClick={() => openEdit(pc)}
+                              title="Clique para editar"
+                            >
+                              {pc.nivel > 1 && <span style={{ color: 'var(--border-light)', marginRight: 4 }}>{'└─'.padStart(pc.nivel * 2 - 2, '  ')}</span>}
+                              {hasChildren && (
+                                <button 
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    padding: '0 4px',
+                                    marginRight: 4,
+                                    fontSize: 10
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCollapse(pc.id);
+                                  }}
+                                >
+                                  {isExpanded ? '▼' : '▶'}
+                                </button>
+                              )}
+                              {pc.descricao}
+                            </td>
+                            <td>
+                              <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                                {pc.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
+                            <td>
+                              <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
+                                {pc.ativo ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {pc.nivel < 3 && (
+                                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
+                                )}
+                                <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
+                                <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
+                                  {pc.ativo ? '⏸️' : '▶️'}
+                                </button>
+                                <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>

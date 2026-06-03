@@ -1329,6 +1329,12 @@ class DataStore {
       return { success: false, error: 'Falha ao processar o JSON: ' + (e as Error).message };
     }
   }
+
+  getOfxPendingTransactions(portadorId: string, empresaId: string): any[] {
+    const list = this.getLancamentos(empresaId);
+    // Find anticipated/predicted transactions that are not reconciled yet
+    return list.filter(l => l.portadorId === portadorId && l.status === 'previsto');
+  }
 }
 
 export const store = new DataStore();

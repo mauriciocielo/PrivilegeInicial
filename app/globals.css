@@ -277,6 +277,11 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar.compact ~ .main-content {
+  margin-left: 70px;
 }
 
 .page-header {
@@ -730,10 +735,12 @@ tbody tr:last-child {
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 999;
   animation: fadeIn 0.15s ease;
+  padding-top: 50px;
+  overflow-y: auto;
 }
 
 .modal {

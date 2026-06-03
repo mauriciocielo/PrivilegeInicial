@@ -82,7 +82,6 @@ const condominioNav: { section: string; items: NavItem[] }[] = [
     ]
   }
 ];
-
 export default function Sidebar({ role }: { role: 'administrador' | 'consultor' | 'cliente' }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -119,7 +118,59 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     document.documentElement.setAttribute('data-theme', next);
   };
 
-  const activeEmpresa = empresas.find(e => e.id === selectedEmpresa);
+  // Estados customizados para Premium UI
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [showProfilePopover, setShowProfilePopover] = useState(false);
+  const [isSidebarCompact, setIsSidebarCompact] = useState(false);
+  const [pendenciasReconciliacao, setPendenciasReconciliacao] = useState(0);
+
+  // Carregar contagem de pendências de conciliação
+  useEffect(() => {
+    const updatePendencias = () => {
+      if (selectedEmpresa) {
+        const isGroup = selectedEmpresa.startsWith('grupo:');
+        let totalPending = 0;
+        if (isGroup) {
+          const gName = selectedEmpresa.split(':')[1];
+          const emps = store.getEmpresas().filter(e => e.grupoEconomico === gName);
+          emps.forEach(emp => {
+            const ports = store.getPortadores(emp.id);
+            ports.forEach(port => {
+              totalPending += store.getOfxPendingTransactions(port.id, emp.id).length;
+            });
+          });
+        } else {
+          const ports = store.getPortadores(selectedEmpresa);
+          ports.forEach(port => {
+            totalPending += store.getOfxPendingTransactions(port.id, selectedEmpresa).length;
+          });
+        }
+        setPendenciasReconciliacao(totalPending);
+      }
+    };
+
+    updatePendencias();
+    window.addEventListener('lancamentoChange', updatePendencias);
+    window.addEventListener('empresaChange', updatePendencias);
+    return () => {
+      window.removeEventListener('lancamentoChange', updatePendencias);
+      window.removeEventListener('empresaChange', updatePendencias);
+    };
+  }, [selectedEmpresa]);
+
+  const activeEmpresa = selectedEmpresa.startsWith('grupo:')
+    ? {
+        id: selectedEmpresa,
+        razaoSocial: `Grupo Consolidado - ${selectedEmpresa.split(':')[1]}`,
+        nomeFantasia: `Grupo ${selectedEmpresa.split(':')[1]}`,
+        cnpj: '',
+        responsavel: '',
+        email: '',
+        telefone: '',
+        createdAt: '',
+        logoData: undefined
+      }
+    : empresas.find(e => e.id === selectedEmpresa);
 
   const isConsultorOrAdmin = role === 'consultor' || role === 'administrador';
 
@@ -127,6 +178,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     if (!isConsultorOrAdmin) return true;
     return appMode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio';
   });
+
+  // Obter grupos econômicos únicos
+  const gruposEconomicos = Array.from(new Set(
+    selectableEmpresas
+      .map(e => e.grupoEconomico)
+      .filter((g): g is string => !!g && g.trim() !== '')
+  ));
 
   useEffect(() => {
     const u = store.getCurrentUser();
@@ -141,7 +199,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
       const filtered = allowed.filter(e => savedMode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio');
       const saved = sessionStorage.getItem('cf_empresa_sel');
-      if (saved && filtered.find(e => e.id === saved)) {
+      if (saved && (saved.startsWith('grupo:') || filtered.find(e => e.id === saved))) {
         setSelectedEmpresa(saved);
       } else if (filtered.length > 0) {
         setSelectedEmpresa(filtered[0].id);
@@ -178,6 +236,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setSelectedEmpresa(id);
     sessionStorage.setItem('cf_empresa_sel', id);
     window.dispatchEvent(new CustomEvent('empresaChange', { detail: id }));
+    setShowCompanyDropdown(false);
   };
 
   const handleLogout = () => {
@@ -190,7 +249,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const baseNav = appMode === 'condominio' ? condominioNav : consultorNav;
 
     // Filtra rotas com base na configuração da empresa ativa
-    const companyAllowed = activeEmpresa?.allowedRoutes || [];
+    const companyAllowed = (!selectedEmpresa.startsWith('grupo:') && activeEmpresa?.allowedRoutes) || [];
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard') return true;
       if (companyAllowed.length > 0) {
@@ -224,12 +283,42 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const initials = user?.name?.split(' ').map(w => w[0]).slice(0, 2).join('') || 'U';
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <BrandLogo size={36} subtitle={isConsultorOrAdmin ? 'Portal do Consultor' : 'Portal do Cliente'} />
+    <aside className={`sidebar ${isSidebarCompact ? 'compact' : ''}`} style={{ width: isSidebarCompact ? '70px' : 'var(--sidebar-w)' }}>
+      <div 
+        className="sidebar-logo" 
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          cursor: 'pointer',
+          justifyContent: isSidebarCompact ? 'center' : 'space-between'
+        }}
+      >
+        {!isSidebarCompact && (
+          <div onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}>
+            <BrandLogo size={36} subtitle={isConsultorOrAdmin ? 'Portal do Consultor' : 'Portal do Cliente'} />
+          </div>
+        )}
+        {isSidebarCompact && (
+          <div style={{ fontSize: 20 }} onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}>🛸</div>
+        )}
+        <button 
+          onClick={() => setIsSidebarCompact(!isSidebarCompact)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            padding: '4px'
+          }}
+          title={isSidebarCompact ? "Expandir Menu" : "Recolher Menu"}
+        >
+          {isSidebarCompact ? '⏩' : '⏪'}
+        </button>
       </div>
 
-      {isConsultorOrAdmin && (
+      {isConsultorOrAdmin && !isSidebarCompact && (
         <div style={{ display: 'flex', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', padding: 4, margin: '8px 16px 16px 16px', border: '1px solid var(--border-light)' }}>
           <button 
             onClick={() => handleModeChange('empresarial')}
@@ -268,50 +357,136 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         </div>
       )}
 
-      {selectableEmpresas.length > 0 && (
-        <div className="sidebar-empresa">
-          {activeEmpresa?.logoData && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, padding: '6px', background: '#fff', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+      {/* Switcher customizado Premium e Grupo Econômico */}
+      {selectableEmpresas.length > 0 && !isSidebarCompact && (
+        <div className="sidebar-empresa" style={{ position: 'relative', border: '1px solid var(--border)', background: 'var(--bg-card2)', padding: '10px 12px', borderRadius: '8px', margin: '0 16px 16px 16px' }}>
+          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+            {appMode === 'condominio' ? 'Condomínio / Grupo Ativo' : 'Empresa / Grupo Ativo'}
+          </label>
+          <div 
+            onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '6px 8px', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-light)', minHeight: '36px' }}
+          >
+            {activeEmpresa?.logoData ? (
               <img 
                 src={activeEmpresa.logoData} 
-                alt="Logo da Empresa" 
-                style={{ maxHeight: 36, maxWidth: '100%', objectFit: 'contain' }} 
+                alt="Logo" 
+                style={{ height: '20px', width: '20px', objectFit: 'contain', borderRadius: '4px' }} 
               />
+            ) : (
+              <span style={{ fontSize: '14px' }}>🏢</span>
+            )}
+            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
+              {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial}
+            </span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>▼</span>
+          </div>
+
+          {showCompanyDropdown && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', zIndex: 1000, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)', marginTop: '4px', maxHeight: '250px', overflowY: 'auto', padding: '6px' }}>
+              {gruposEconomicos.length > 0 && (
+                <>
+                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupos Econômicos</div>
+                  {gruposEconomicos.map(g => (
+                    <div 
+                      key={`grupo:${g}`}
+                      onClick={() => handleEmpresaChange(`grupo:${g}`)}
+                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}
+                      className="company-select-item"
+                    >
+                      <span>🌐</span>
+                      <span>Grupo {g} (Consolidado)</span>
+                    </div>
+                  ))}
+                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                </>
+              )}
+              
+              <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unidades Individuais</div>
+              {selectableEmpresas.map(e => (
+                <div 
+                  key={e.id}
+                  onClick={() => handleEmpresaChange(e.id)}
+                  style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                  className="company-select-item"
+                >
+                  {e.logoData ? (
+                    <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                  ) : (
+                    <span>🏢</span>
+                  )}
+                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                </div>
+              ))}
             </div>
           )}
-          <label>{appMode === 'condominio' ? 'Condomínio Ativo' : 'Empresa Ativa'}</label>
-          <select value={selectedEmpresa} onChange={e => handleEmpresaChange(e.target.value)}>
-            {selectableEmpresas.map(e => (
-              <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
-            ))}
-          </select>
         </div>
       )}
 
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" style={{ flex: 1, padding: isSidebarCompact ? '0 10px' : '0 16px' }}>
         {nav.map(section => (
           <div key={section.section}>
-            <div className="nav-section">
-              <span className="nav-section-label">{section.section}</span>
-            </div>
-            {section.items.map(item => (
-              <a
-                key={item.href}
-                href={item.href}
-                className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-                onClick={e => { e.preventDefault(); router.push(item.href); }}
-              >
-                <span style={{ fontSize: 15 }}>{item.icon}</span>
-                {item.label}
-              </a>
-            ))}
+            {!isSidebarCompact && (
+              <div className="nav-section">
+                <span className="nav-section-label">{section.section}</span>
+              </div>
+            )}
+            {section.items.map(item => {
+              const isActive = pathname === item.href;
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  onClick={e => { e.preventDefault(); router.push(item.href); }}
+                  title={isSidebarCompact ? item.label : ''}
+                  style={{
+                    justifyContent: isSidebarCompact ? 'center' : 'flex-start',
+                    padding: isSidebarCompact ? '10px 0' : '8px 12px',
+                    borderRadius: '8px',
+                    margin: '2px 0'
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  {!isSidebarCompact && item.label}
+                </a>
+              );
+            })}
           </div>
         ))}
       </nav>
 
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" style={{ padding: isSidebarCompact ? '12px' : '16px' }}>
+        {/* Central de Notificações com ícone de Alertas (sino 🔔) */}
+        {pendenciasReconciliacao > 0 && (
+          <div 
+            onClick={() => router.push(role === 'cliente' ? '/cliente/extrato' : '/consultor/importar-ofx')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSidebarCompact ? 'center' : 'flex-start',
+              gap: 8,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: 'var(--yellow)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
+              marginBottom: 12,
+              cursor: 'pointer'
+            }}
+            title={`${pendenciasReconciliacao} conciliações pendentes!`}
+          >
+            <span className="pulse-glow" style={{ fontSize: 14 }}>🔔</span>
+            {!isSidebarCompact && (
+              <span style={{ flex: 1 }}>{pendenciasReconciliacao} Pendentes</span>
+            )}
+          </div>
+        )}
+
         {/* Glow Sync status indicator */}
-        {syncStatus !== 'idle' && (
+        {syncStatus !== 'idle' && !isSidebarCompact && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -341,38 +516,71 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
 
-        <div className="user-card" style={{ cursor: 'default' }}>
-          <div className="user-avatar" style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {user?.avatarData ? (
-              <img 
-                src={user.avatarData} 
-                alt={user.name} 
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
-              />
-            ) : (
-              initials
+        {/* Popover de Perfil */}
+        <div style={{ position: 'relative' }}>
+          <div 
+            className="user-card" 
+            onClick={() => setShowProfilePopover(!showProfilePopover)}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: isSidebarCompact ? '4px' : '8px', justifyContent: isSidebarCompact ? 'center' : 'flex-start' }}
+          >
+            <div className="user-avatar" style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', minWidth: '32px' }}>
+              {user?.avatarData ? (
+                <img 
+                  src={user.avatarData} 
+                  alt={user.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                />
+              ) : (
+                initials
+              )}
+            </div>
+            {!isSidebarCompact && (
+              <div className="user-info" style={{ flex: 1, overflow: 'hidden' }}>
+                <div className="user-name" style={{ fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
+                <div className="user-role" style={{ fontSize: '10px' }}>
+                  {role === 'administrador' ? '💎 Admin' : role === 'consultor' ? '👔 Consultor' : '🏢 Cliente'}
+                </div>
+              </div>
             )}
           </div>
-          <div className="user-info">
-            <div className="user-name">{user?.name}</div>
-            <div className="user-role">
-              {role === 'administrador' ? '💎 Administrador' : role === 'consultor' ? '👔 Consultor BPO' : '🏢 Cliente'}
+
+          {showProfilePopover && (
+            <div 
+              style={{ 
+                position: 'absolute', 
+                bottom: '100%', 
+                left: isSidebarCompact ? '50px' : '0', 
+                width: '220px', 
+                background: 'var(--bg-card)', 
+                border: '1px solid var(--border)', 
+                borderRadius: '8px', 
+                boxShadow: '0 -10px 15px -3px rgba(0, 0, 0, 0.3)', 
+                padding: '12px', 
+                zIndex: 1001,
+                marginBottom: '8px'
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{user?.name}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{user?.email}</div>
+              <div style={{ height: '1px', background: 'var(--border-light)', margin: '8px 0' }} />
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Tema</span>
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                    onClick={toggleTheme}
+                  >
+                    {theme === 'dark' ? '☀️ Claro' : '🌙 Escuro'}
+                  </button>
+                </div>
+                <button className="btn btn-secondary btn-sm" style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={handleLogout}>
+                  🚪 Sair da Conta
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-        
-        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-          <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={handleLogout}>
-            🚪 Sair
-          </button>
-          <button 
-            className="btn btn-secondary btn-sm" 
-            style={{ width: 36, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, minWidth: 36 }}
-            onClick={toggleTheme}
-            title="Alternar Tema Claro/Escuro"
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+          )}
         </div>
       </div>
     </aside>
