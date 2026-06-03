@@ -78,12 +78,22 @@ export default function ConsultorDashboard() {
     const lancs = targetLancs.filter(l => l.status === 'realizado');
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSelecionado));
 
-    const rec = lancsMs.filter(l => l.tipo === 'receita' && l.planoContaId !== 'transf').reduce((a, l) => {
+    const rec = lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'receita';
+    }).reduce((a, l) => {
       const pc = targetPlano.find(p => p.id === l.planoContaId);
       const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
       return a + (isRedutora ? -l.valor : l.valor);
     }, 0);
-    const desp = lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').reduce((a, l) => a + l.valor, 0);
+    const desp = lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).reduce((a, l) => a + l.valor, 0);
 
     const [anoPeriodo, mesPeriodo] = mesSelecionado.split('-');
     const lastDay = new Date(Number(anoPeriodo), Number(mesPeriodo), 0).getDate();
@@ -98,7 +108,12 @@ export default function ConsultorDashboard() {
     setLancRecentes(sorted);
 
     const despCats: Record<string, number> = {};
-    lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').forEach(l => {
+    lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).forEach(l => {
       const pc = targetPlano.find(p => p.id === l.planoContaId);
       const nome = pc?.descricao || 'Outros';
       despCats[nome] = (despCats[nome] || 0) + l.valor;

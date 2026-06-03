@@ -582,7 +582,7 @@ export default function ImportarOFXPage() {
                             <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{r.pattern}</td>
                             <td>
                               {pc ? (
-                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : pc.tipo === 'transferencia' ? 'badge-purple' : 'badge-red'}`}>
                                   {pc.codigo} - {pc.descricao}
                                 </span>
                               ) : (
@@ -650,7 +650,7 @@ export default function ImportarOFXPage() {
               >
                 <option value="">-- Selecione a Categoria --</option>
                 {planoContas.map(p => (
-                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : 'Despesa'})</option>
+                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : p.tipo === 'transferencia' ? 'Transferência' : 'Despesa'})</option>
                 ))}
               </select>
             </div>

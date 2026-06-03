@@ -9,7 +9,7 @@ export default function PlanoContasPage() {
   const [showModal, setShowModal] = useState(false);
   const [edit, setEdit] = useState<PlanoConta | null>(null);
   const [form, setForm] = useState<Partial<PlanoConta>>({});
-  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'receita' | 'despesa'>('todos');
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>('todos');
   const [search, setSearch] = useState('');
 
   // Estados de Regras de IA
@@ -91,7 +91,7 @@ export default function PlanoContasPage() {
       id: edit?.id || uid(),
       codigo: form.codigo!,
       descricao: form.descricao!,
-      tipo: form.tipo as 'receita' | 'despesa',
+      tipo: form.tipo as 'receita' | 'despesa' | 'transferencia',
       nivel: form.nivel || 1,
       parentId: form.parentId,
       ativo: form.ativo !== false,
@@ -159,9 +159,9 @@ export default function PlanoContasPage() {
             <div className="card card-sm" style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div className="tabs" style={{ margin: 0, border: 'none' }}>
-                  {(['todos','receita','despesa'] as const).map(t => (
+                  {(['todos','receita','despesa','transferencia'] as const).map(t => (
                     <button key={t} className={`tab ${filtroTipo === t ? 'active' : ''}`} onClick={() => setFiltroTipo(t)} style={{ padding: '6px 14px' }}>
-                      {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : '↓ Despesas'}
+                      {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : t === 'despesa' ? '↓ Despesas' : '🔄 Transferências'}
                     </button>
                   ))}
                 </div>
@@ -238,8 +238,8 @@ export default function PlanoContasPage() {
                               {pc.descricao}
                             </td>
                             <td>
-                              <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
-                                {pc.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
+                              <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : pc.tipo === 'transferencia' ? 'badge-purple' : 'badge-red'}`}>
+                                {pc.tipo === 'receita' ? '↑ Receita' : pc.tipo === 'transferencia' ? '🔄 Transferência' : '↓ Despesa'}
                               </span>
                             </td>
                             <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
@@ -311,7 +311,7 @@ export default function PlanoContasPage() {
                             <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{r.pattern}</td>
                             <td>
                               {pc ? (
-                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
+                                <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : pc.tipo === 'transferencia' ? 'badge-purple' : 'badge-red'}`}>
                                   {pc.codigo} - {pc.descricao}
                                 </span>
                               ) : (
@@ -349,9 +349,10 @@ export default function PlanoContasPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Tipo</label>
-                <select className="form-control" value={form.tipo||'receita'} onChange={e=>setForm(f=>({...f,tipo:e.target.value as 'receita'|'despesa'}))}>
+                <select className="form-control" value={form.tipo||'receita'} onChange={e=>setForm(f=>({...f,tipo:e.target.value as 'receita'|'despesa'|'transferencia'}))}>
                   <option value="receita">Receita</option>
                   <option value="despesa">Despesa</option>
+                  <option value="transferencia">Transferência</option>
                 </select>
               </div>
             </div>
@@ -431,7 +432,7 @@ export default function PlanoContasPage() {
               >
                 <option value="">Selecione...</option>
                 {plano.filter(p => p.nivel === 3 && p.ativo).map(p => (
-                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : 'Despesa'})</option>
+                  <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} ({p.tipo === 'receita' ? 'Receita' : p.tipo === 'transferencia' ? 'Transferência' : 'Despesa'})</option>
                 ))}
               </select>
             </div>

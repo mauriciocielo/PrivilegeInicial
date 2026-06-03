@@ -88,7 +88,7 @@ export interface PlanoConta {
   id: string;
   codigo: string;
   descricao: string;
-  tipo: 'receita' | 'despesa';
+  tipo: 'receita' | 'despesa' | 'transferencia';
   nivel: number;
   parentId?: string;
   ativo: boolean;
@@ -477,8 +477,13 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   { id: 'pc5_1_4', codigo: '5.1.1.004', descricao: 'Consorcio', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_5', codigo: '5.1.1.005', descricao: 'Imobilizado', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_6', codigo: '5.1.1.006', descricao: 'Pagamento da Franquia', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc5_1_7', codigo: '5.1.1.007', descricao: 'Pagamento de Coligadas', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_8', codigo: '5.1.1.008', descricao: 'Quota Capital', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
+  
+  // 6. TRANSFERÊNCIAS
+  { id: 'pc6', codigo: '6', descricao: 'Transferências', tipo: 'transferencia', nivel: 1, ativo: true, empresaId: 'e1' },
+  { id: 'pc6_1', codigo: '6.1', descricao: 'Transferências entre Portadores', tipo: 'transferencia', nivel: 2, parentId: 'pc6', ativo: true, empresaId: 'e1' },
+  { id: 'pc6_1_1', codigo: '6.1.1', descricao: 'Transferência Entrada', tipo: 'transferencia', nivel: 3, parentId: 'pc6_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc6_1_2', codigo: '6.1.2', descricao: 'Transferência Saída (Conta redutora no fluxo de caixa)', tipo: 'transferencia', nivel: 3, parentId: 'pc6_1', ativo: true, empresaId: 'e1' },
 ];
 
 const DEFAULT_PORTADORES: Portador[] = [
@@ -675,6 +680,37 @@ class DataStore {
     if (!localStorage.getItem('cf_clientes')) this.set('cf_clientes', []);
     if (!localStorage.getItem('cf_nfse')) this.set('cf_nfse', []);
     if (!localStorage.getItem('cf_audit_logs')) this.set('cf_audit_logs', []);
+
+    // Retrofitting das contas de transferências (Código 6)
+    try {
+      const currentPcs = this.get<PlanoConta[]>('cf_plano_contas', []);
+      const empresas = this.get<any[]>('cf_empresas', []);
+      let modified = false;
+
+      empresas.forEach(emp => {
+        const hasCode6 = currentPcs.some(p => p.empresaId === emp.id && p.codigo === '6');
+        if (!hasCode6) {
+          const pc6Id = `pc_${emp.id}_pc6`;
+          const pc6_1Id = `pc_${emp.id}_pc6_1`;
+          const pc6_1_1Id = `pc_${emp.id}_pc6_1_1`;
+          const pc6_1_2Id = `pc_${emp.id}_pc6_1_2`;
+
+          currentPcs.push(
+            { id: pc6Id, codigo: '6', descricao: 'Transferências', tipo: 'transferencia', nivel: 1, ativo: true, empresaId: emp.id },
+            { id: pc6_1Id, codigo: '6.1', descricao: 'Transferências entre Portadores', tipo: 'transferencia', nivel: 2, parentId: pc6Id, ativo: true, empresaId: emp.id },
+            { id: pc6_1_1Id, codigo: '6.1.1', descricao: 'Transferência Entrada', tipo: 'transferencia', nivel: 3, parentId: pc6_1Id, ativo: true, empresaId: emp.id },
+            { id: pc6_1_2Id, codigo: '6.1.2', descricao: 'Transferência Saída (Conta redutora no fluxo de caixa)', tipo: 'transferencia', nivel: 3, parentId: pc6_1Id, ativo: true, empresaId: emp.id }
+          );
+          modified = true;
+        }
+      });
+
+      if (modified) {
+        this.set('cf_plano_contas', currentPcs, true);
+      }
+    } catch (err) {
+      console.error('Erro ao retrofitar plano de contas:', err);
+    }
   }
 
   private mergeDefaults<T extends StoredRecord>(current: T[], defaults: T[]): T[] {
@@ -1241,9 +1277,12 @@ class DataStore {
     return Array.from({ length: meses }, (_, i) => {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
       const mesStr = mes.toISOString().substring(0, 7); // formato YYYY-MM
-      const lancamentos = this.getLancamentos(empresaId).filter(l => 
-        l.data.startsWith(mesStr) && l.status === 'realizado'
-      );
+      const lancamentos = this.getLancamentos(empresaId).filter(l => {
+        if (!l.data.startsWith(mesStr) || l.status !== 'realizado' || l.planoContaId === 'transf') return false;
+        const pc = plano.find(p => p.id === l.planoContaId);
+        if (pc?.tipo === 'transferencia') return false;
+        return true;
+      });
       const receitas = lancamentos.filter(l => l.tipo === 'receita').reduce((a, l) => {
         const pc = plano.find(p => p.id === l.planoContaId);
         const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
@@ -1273,9 +1312,12 @@ class DataStore {
     return Array.from({ length: meses }, (_, i) => {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1 - i), 1);
       const mesStr = mes.toISOString().substring(0, 7);
-      const lancamentosDoMes = todosLancamentosDoGrupo.filter(l => 
-        l.data.startsWith(mesStr) && l.status === 'realizado'
-      );
+      const lancamentosDoMes = todosLancamentosDoGrupo.filter(l => {
+        if (!l.data.startsWith(mesStr) || l.status !== 'realizado' || l.planoContaId === 'transf') return false;
+        const pc = planoMap.get(l.planoContaId);
+        if (pc?.tipo === 'transferencia') return false;
+        return true;
+      });
       const receitas = lancamentosDoMes.filter(l => l.tipo === 'receita').reduce((a, l) => {
         const pc = planoMap.get(l.planoContaId);
         const isRedutora = pc && pc.descricao.trim().startsWith('( - )');

@@ -174,6 +174,15 @@ export default function RelatoriosPage() {
     let lancs = store.getLancamentos(empresaId).filter(l => l.data >= dataIni && l.data <= dataFim);
     if (portadorFiltro) lancs = lancs.filter(l => l.portadorId === portadorFiltro);
     if (statusFiltro) lancs = lancs.filter(l => l.status === statusFiltro);
+    
+    const plano = store.getPlanoContas(empresaId);
+    lancs = lancs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return true;
+    });
+    
     return lancs;
   };
 

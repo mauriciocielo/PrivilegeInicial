@@ -62,12 +62,22 @@ export default function ClienteDashboard() {
     const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSel));
     const plano = store.getPlanoContas(eId);
-    const rec = lancsMs.filter(l => l.tipo === 'receita' && l.planoContaId !== 'transf').reduce((a, l) => {
+    const rec = lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'receita';
+    }).reduce((a, l) => {
       const pc = plano.find(p => p.id === l.planoContaId);
       const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
       return a + (isRedutora ? -l.valor : l.valor);
     }, 0);
-    const desp = lancsMs.filter(l => l.tipo === 'despesa' && l.planoContaId !== 'transf').reduce((a, l) => a + l.valor, 0);
+    const desp = lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).reduce((a, l) => a + l.valor, 0);
 
     const [ano, mes] = mesSel.split('-').map(Number);
     const dataFimPeriodo = new Date(ano, mes, 0).toISOString().split('T')[0];
@@ -77,7 +87,12 @@ export default function ClienteDashboard() {
     setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
 
     const despCats: Record<string, number> = {};
-    lancsMs.filter(l => l.tipo === 'despesa').forEach(l => {
+    lancsMs.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).forEach(l => {
       const pc = plano.find(p => p.id === l.planoContaId);
       const nome = pc?.descricao || 'Outros';
       despCats[nome] = (despCats[nome] || 0) + l.valor;

@@ -925,6 +925,123 @@ export default function Home() {
           from { opacity: 0; transform: scale(0.95) translateY(10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
+
+        .hero-section {
+          position: relative;
+          height: 80vh;
+          min-height: 550px;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+          background: #faf9f6;
+        }
+        .hero-container {
+          position: relative;
+          z-index: 5;
+          padding: 0 8%;
+          max-width: 1280px;
+          width: 100%;
+          margin: 0 auto;
+        }
+        .hero-title {
+          font-size: clamp(38px, 5.8vw, 76px);
+          font-weight: 900;
+          margin-top: 24px;
+          margin-bottom: 24px;
+          line-height: 1.08;
+          color: #150608;
+          letter-spacing: -2px;
+        }
+        .about-image-wrap {
+          position: relative;
+          height: 480px;
+          border-radius: 28px;
+          overflow: hidden;
+          box-shadow: 0 20px 50px rgba(107, 16, 22, 0.06);
+          border: 1px solid rgba(199, 167, 92, 0.2);
+        }
+        .finance-banner-wrap {
+          max-width: 1200px;
+          margin: 0 auto;
+          border-radius: 32px;
+          overflow: hidden;
+          position: relative;
+          height: 380px;
+          box-shadow: 0 20px 40px rgba(107, 16, 22, 0.05);
+          border: 1px solid rgba(199, 167, 92, 0.25);
+        }
+        .finance-banner-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(250, 249, 246, 0.96) 0%, rgba(250, 243, 244, 0.85) 100%);
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          padding: 60px 8%;
+        }
+        .contact-form-card {
+          padding: 50px 44px;
+          border-radius: 28px;
+          background-color: #ffffff;
+          box-shadow: 0 20px 45px rgba(107, 16, 22, 0.03);
+          border: 1px solid rgba(199, 167, 92, 0.18);
+        }
+        .modal-wrap {
+          background: #ffffff;
+          max-width: 680px;
+          width: 100%;
+          max-height: 85vh;
+          border-radius: 28px;
+          border: 1px solid rgba(199, 167, 92, 0.3);
+          box-shadow: 0 25px 60px rgba(15, 6, 8, 0.18);
+          overflow-y: auto;
+          position: relative;
+          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-body {
+          padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+          .hero-section {
+            height: auto !important;
+            min-height: auto !important;
+            padding-top: 130px !important;
+            padding-bottom: 60px !important;
+          }
+          .hero-container {
+            padding: 0 6% !important;
+          }
+          .hero-title {
+            font-size: 32px !important;
+            line-height: 1.2 !important;
+            letter-spacing: -1px !important;
+          }
+          .about-image-wrap {
+            height: 260px !important;
+          }
+          .finance-banner-wrap {
+            height: auto !important;
+            min-height: 380px !important;
+          }
+          .finance-banner-overlay {
+            position: relative !important;
+            padding: 40px 24px !important;
+            background: linear-gradient(135deg, rgba(250, 249, 246, 0.98) 0%, rgba(250, 243, 244, 0.95) 100%) !important;
+          }
+          .contact-form-card {
+            padding: 30px 20px !important;
+          }
+          .modal-wrap {
+            max-width: 95% !important;
+            max-height: 90vh !important;
+            border-radius: 20px !important;
+          }
+          .modal-body {
+            padding: 24px 20px !important;
+          }
+        }
       `}</style>
 
       {/* ── FLOATING HEADER ── */}

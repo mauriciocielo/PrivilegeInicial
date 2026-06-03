@@ -191,8 +191,19 @@ export default function LancamentosPage() {
     }).sort((a, b) => b.data.localeCompare(a.data));
   }, [lancamentos, filtros, planoContas]);
 
-  const totRec = useMemo(() => filtered.filter(l => l.tipo === 'receita' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0), [filtered]);
-  const totDesp = useMemo(() => filtered.filter(l => l.tipo === 'despesa' && l.status === 'realizado').reduce((a, l) => a + l.valor, 0), [filtered]);
+  const totRec = useMemo(() => filtered.filter(l => {
+    if (l.planoContaId === 'transf') return false;
+    const pc = planoContas.find(p => p.id === l.planoContaId);
+    if (pc?.tipo === 'transferencia') return false;
+    return l.tipo === 'receita' && l.status === 'realizado';
+  }).reduce((a, l) => a + l.valor, 0), [filtered, planoContas]);
+
+  const totDesp = useMemo(() => filtered.filter(l => {
+    if (l.planoContaId === 'transf') return false;
+    const pc = planoContas.find(p => p.id === l.planoContaId);
+    if (pc?.tipo === 'transferencia') return false;
+    return l.tipo === 'despesa' && l.status === 'realizado';
+  }).reduce((a, l) => a + l.valor, 0), [filtered, planoContas]);
 
   const openNew = () => {
     setEditItem(null);
@@ -211,8 +222,15 @@ export default function LancamentosPage() {
   const openEdit = (l: Lancamento) => {
     setEditItem(l);
     setContaSearch('');
-    if (l.planoContaId === 'transf') {
-      const other = lancamentos.find(x => x.id !== l.id && x.createdAt === l.createdAt && x.planoContaId === 'transf');
+    const isTransf = l.planoContaId === 'transf' || (() => {
+      const pc = planoContas.find(p => p.id === l.planoContaId);
+      return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+    })();
+    if (isTransf) {
+      const other = lancamentos.find(x => x.id !== l.id && x.createdAt === l.createdAt && (x.planoContaId === 'transf' || (() => {
+        const pc = planoContas.find(p => p.id === x.planoContaId);
+        return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+      })()));
       let portadorId = l.portadorId;
       let portadorDestinoId = other ? other.portadorId : '';
       
@@ -254,22 +272,34 @@ export default function LancamentosPage() {
       try {
         if (editItem) {
           store.deleteLancamento(editItem.id);
-          if (editItem.planoContaId === 'transf') {
-            const other = lancamentos.find(x => x.id !== editItem.id && x.createdAt === editItem.createdAt && x.planoContaId === 'transf');
+          const isEditTransf = editItem.planoContaId === 'transf' || (() => {
+            const pc = planoContas.find(p => p.id === editItem.planoContaId);
+            return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+          })();
+          if (isEditTransf) {
+            const other = lancamentos.find(x => x.id !== editItem.id && x.createdAt === editItem.createdAt && (x.planoContaId === 'transf' || (() => {
+              const pc = planoContas.find(p => p.id === x.planoContaId);
+              return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+            })()));
             if (other) {
               store.deleteLancamento(other.id);
             }
           }
         }
 
-        const ts = new Date().toISOString();
+        const pcEntrada = planoContas.find(p => p.codigo === '6.1.1');
+        const pcSaida = planoContas.find(p => p.codigo === '6.1.2');
+        const planoContaIdEntrada = pcEntrada ? pcEntrada.id : 'transf';
+        const planoContaIdSaida = pcSaida ? pcSaida.id : 'transf';
+
+        const ts = editItem?.createdAt || new Date().toISOString();
         store.saveLancamento({
           id: uid(), empresaId, data: form.data!, descricao: `[Transf. Saída] ${form.descricao}`, valor: parseMoney(form.valor),
-          tipo: 'despesa', planoContaId: 'transf', portadorId: form.portadorId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
+          tipo: 'despesa', planoContaId: planoContaIdSaida, portadorId: form.portadorId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
         });
         store.saveLancamento({
           id: uid(), empresaId, data: form.data!, descricao: `[Transf. Entrada] ${form.descricao}`, valor: parseMoney(form.valor),
-          tipo: 'receita', planoContaId: 'transf', portadorId: form.portadorDestinoId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
+          tipo: 'receita', planoContaId: planoContaIdEntrada, portadorId: form.portadorDestinoId!, status: (form.status || 'realizado') as 'previsto' | 'realizado', origem: 'manual', createdAt: ts
         });
 
         setLancamentos(store.getLancamentos(empresaId));
@@ -289,8 +319,15 @@ export default function LancamentosPage() {
       await new Promise(r => setTimeout(r, 300));
 
       try {
-        if (editItem && editItem.planoContaId === 'transf') {
-          const other = lancamentos.find(x => x.id !== editItem.id && x.createdAt === editItem.createdAt && x.planoContaId === 'transf');
+        const isEditTransf = editItem && (editItem.planoContaId === 'transf' || (() => {
+          const pc = planoContas.find(p => p.id === editItem.planoContaId);
+          return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+        })());
+        if (isEditTransf) {
+          const other = lancamentos.find(x => x.id !== editItem!.id && x.createdAt === editItem!.createdAt && (x.planoContaId === 'transf' || (() => {
+            const pc = planoContas.find(p => p.id === x.planoContaId);
+            return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+          })()));
           if (other) {
             store.deleteLancamento(other.id);
           }
@@ -840,7 +877,10 @@ export default function LancamentosPage() {
 
                       {/* Plano de Contas - Single Click to Edit */}
                       <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: 0 }}>
-                        {l.planoContaId === 'transf' ? (
+                        {l.planoContaId === 'transf' || (() => {
+                          const pc = planoContas.find(p => p.id === l.planoContaId);
+                          return pc?.tipo === 'transferencia' || pc?.codigo.startsWith('6');
+                        })() ? (
                           <div style={{ padding: '8px 14px' }}>-</div>
                         ) : inlineEditRowId === l.id && inlineEditField === 'planoContaId' ? (
                           <div style={{ padding: '4px' }}>

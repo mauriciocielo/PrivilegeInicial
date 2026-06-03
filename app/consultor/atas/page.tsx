@@ -16,7 +16,7 @@ export default function AtasConsultorPage() {
     setEmpresaId(id);
     setEmpresa(store.getEmpresas().find(e => e.id === id) || null);
     setAtas(store.getAtas(id));
-    setConsultores(store.getUsers().filter(u => u.role === 'consultor'));
+    setConsultores(store.getUsers().filter(u => u.role === 'consultor' || u.role === 'administrador'));
   }, []);
 
   useEffect(() => {

@@ -16,7 +16,7 @@ export default function AtasClientePage() {
     const emp = store.getEmpresas().find(e => e.id === empId);
     setEmpresa(emp || null);
     setAtas(store.getAtas(empId));
-    setConsultores(store.getUsers().filter(u => u.role === 'consultor'));
+    setConsultores(store.getUsers().filter(u => u.role === 'consultor' || u.role === 'administrador'));
   }, []);
 
   useEffect(() => {

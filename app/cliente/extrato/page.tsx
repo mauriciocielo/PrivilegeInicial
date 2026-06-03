@@ -37,6 +37,12 @@ export default function ClienteExtrato() {
     .filter(l => !filtroTipo || l.tipo === filtroTipo)
     .filter(l => !filtroPortador || l.portadorId === filtroPortador)
     .filter(l => !search || l.descricao.toLowerCase().includes(search.toLowerCase()))
+    .filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = planoContas.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return true;
+    })
     .sort((a, b) => b.data.localeCompare(a.data));
 
   const totRec = filtered.filter(l=>l.tipo==='receita'&&l.status==='realizado').reduce((a,l)=>a+l.valor,0);

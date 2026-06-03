@@ -978,7 +978,8 @@ tbody tr:last-child {
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: var(--radius-lg);
   padding: 40px;
-  width: 420px;
+  width: 100%;
+  max-width: 420px;
   box-shadow: var(--shadow);
   animation: slideUp 0.3s ease;
 }
@@ -1239,16 +1240,19 @@ tbody tr:last-child {
   }
 
   .page-header {
-    padding: 0 16px;
+    padding: 12px 16px 12px 64px !important;
     height: auto;
     min-height: 56px;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
     gap: 8px;
-    padding-top: 12px;
-    padding-bottom: 12px;
     background: var(--bg-card);
+  }
+
+  .login-card {
+    padding: 24px;
+    border-radius: var(--radius);
   }
 
   .header-actions {
@@ -1461,4 +1465,215 @@ thead th {
 [data-theme="dark"] .editable-cell:hover {
   background: rgba(255, 255, 255, 0.03) !important;
   border-color: var(--border) !important;
+}
+
+/* =============================================
+   RESPONSIVIDADE — SISTEMA INTERNO
+   ============================================= */
+
+/* Botão hambúrguer — oculto em desktop, visível em mobile */
+.mobile-menu-toggle {
+  display: none !important;
+}
+
+/* Overlay de fundo mobile — oculto em desktop */
+.mobile-sidebar-overlay {
+  display: none !important;
+}
+
+/* Sidebar com classe 'open' via sidebarOpen no layout */
+.app-layout.sidebar-open .sidebar {
+  transform: translateX(0) !important;
+}
+
+/* --- Tablet (≤ 1024px) --- */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-w: 220px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .page-body {
+    padding: 20px;
+  }
+}
+
+/* --- Mobile (≤ 768px) --- */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 260px;
+  }
+
+  /* Botão hambúrguer visível no mobile */
+  .mobile-menu-toggle {
+    display: flex !important;
+  }
+
+  /* Overlay visível quando sidebar está aberta */
+  .app-layout.sidebar-open .mobile-sidebar-overlay {
+    display: block !important;
+  }
+
+  /* Sidebar: desliza por cima do conteúdo */
+  .app-layout {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 199;
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  .main-content {
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .page-header {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 16px 10px 60px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-title {
+    font-size: 16px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .header-actions .btn {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+
+  /* Conteúdo */
+  .page-body {
+    padding: 14px 12px;
+  }
+
+  /* Cards */
+  .card {
+    padding: 16px;
+  }
+
+  /* Stat grid */
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Tabelas — scroll horizontal */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 560px;
+  }
+
+  /* Modais */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal,
+  .modal-lg {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Form rows */
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Login card */
+  .login-card {
+    width: 100% !important;
+    max-width: 380px;
+    padding: 24px 20px !important;
+    margin: 16px;
+  }
+
+  /* Botões compactos na sidebar */
+  .sidebar-compact-btn {
+    display: none;
+  }
+}
+
+/* --- Smartphone pequeno (≤ 480px) --- */
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    padding: 8px 12px;
+  }
+
+  .page-body {
+    padding: 10px 8px;
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .page-title {
+    font-size: 15px;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal,
+  .modal-lg {
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 95vh;
+  }
 }
