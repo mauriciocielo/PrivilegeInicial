@@ -62,7 +62,18 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard'];
       const userOk = pathname === '/consultor/dashboard' || allowed.some(route => pathname.startsWith(route));
-      setAuthorized(userOk && companyOk);
+      
+      const isGroup = selectedEmpresaId.startsWith('grupo:');
+      let hasCompanyAccess = false;
+      if (isGroup) {
+        const groupName = selectedEmpresaId.split(':')[1];
+        const companiesInGroup = store.getEmpresas().filter(e => e.grupoEconomico === groupName);
+        hasCompanyAccess = companiesInGroup.some(e => user.empresaIds && user.empresaIds.includes(e.id));
+      } else {
+        hasCompanyAccess = !selectedEmpresaId || (user.empresaIds && user.empresaIds.includes(selectedEmpresaId));
+      }
+      
+      setAuthorized(userOk && companyOk && hasCompanyAccess);
     }
   }, [router, pathname, selectedEmpresaId]);
 

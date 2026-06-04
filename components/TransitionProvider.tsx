@@ -1,6 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
 
 import { store } from '../lib/store';
 import { syncBackupInChunks } from '../lib/sync-helper';
@@ -101,7 +102,91 @@ export default function TransitionProvider({ children }: { children: React.React
     };
   }, [pathname]);
 
-  // Polling em tempo real (a cada 1.5 segundos) para sincronização multi-usuário de lançamentos
+  // Sincronização em tempo real via WebSockets (Socket.io)
+  useEffect(() => {
+    if (pathname !== '/consultor/lancamentos') return;
+
+    console.log('🔌 Inicializando conexão WebSocket para lançamentos...');
+    const socket = io();
+
+    socket.on('connect', () => {
+      console.log('🔌 Conectado ao servidor WebSocket:', socket.id);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('🔌 Desconectado do servidor WebSocket');
+    });
+
+    socket.on('lancamento_criado', (novo: any) => {
+      if (!novo || !novo.id) return;
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
+      try {
+        const list = store.getLancamentos();
+        const idx = list.findIndex(l => l.id === novo.id);
+        if (idx >= 0) {
+          const old = list[idx];
+          if (JSON.stringify(old) === JSON.stringify(novo)) return;
+        }
+
+        console.log('🔌 WebSocket: Lançamento criado:', novo.descricao, novo.valor);
+        sessionStorage.setItem('cf_sync_in_progress', 'true');
+        store.importSingleLancamento(novo);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      } catch (err) {
+        console.error('Erro ao processar lancamento_criado do WebSocket:', err);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      }
+    });
+
+    socket.on('lancamento_atualizado', (atualizado: any) => {
+      if (!atualizado || !atualizado.id) return;
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
+      try {
+        const list = store.getLancamentos();
+        const idx = list.findIndex(l => l.id === atualizado.id);
+        if (idx >= 0) {
+          const old = list[idx];
+          if (JSON.stringify(old) === JSON.stringify(atualizado)) return;
+        }
+
+        console.log('🔌 WebSocket: Lançamento atualizado:', atualizado.descricao, atualizado.valor);
+        sessionStorage.setItem('cf_sync_in_progress', 'true');
+        store.importSingleLancamento(atualizado);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      } catch (err) {
+        console.error('Erro ao processar lancamento_atualizado do WebSocket:', err);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      }
+    });
+
+    socket.on('lancamento_excluido', (id: string) => {
+      if (!id) return;
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
+      try {
+        const list = store.getLancamentos();
+        const exists = list.some(l => l.id === id);
+        if (!exists) return;
+
+        console.log('🔌 WebSocket: Lançamento excluído:', id);
+        sessionStorage.setItem('cf_sync_in_progress', 'true');
+        store.importDeleteLancamento(id);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      } catch (err) {
+        console.error('Erro ao processar lancamento_excluido do WebSocket:', err);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      }
+    });
+
+    return () => {
+      console.log('🔌 Desconectando e limpando socket...');
+      socket.disconnect();
+    };
+  }, [pathname]);
+
+  // Polling de fallback em tempo real (a cada 15 segundos) para sincronização multi-usuário
   useEffect(() => {
     if (pathname !== '/consultor/lancamentos') return;
 
@@ -126,7 +211,7 @@ export default function TransitionProvider({ children }: { children: React.React
           const localStr = JSON.stringify(localParsed.data.cf_lancamentos || []);
           
           if (remoteStr !== localStr) {
-            console.log('☁️ Sincronizando lançamentos remotos do PostgreSQL em tempo real...');
+            console.log('☁️ Sincronizando lançamentos remotos do PostgreSQL em tempo real (fallback)...');
             sessionStorage.setItem('cf_sync_in_progress', 'true');
             store.importBackup(JSON.stringify(backup));
             sessionStorage.setItem('cf_sync_in_progress', 'false');
@@ -135,7 +220,7 @@ export default function TransitionProvider({ children }: { children: React.React
       } catch (err) {
         console.error('Erro no polling de tempo real:', err);
       }
-    }, 1500);
+    }, 15000);
 
     return () => clearInterval(pollInterval);
   }, [pathname]);

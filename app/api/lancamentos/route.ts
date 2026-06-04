@@ -69,6 +69,10 @@ export async function POST(request: Request) {
                 }
             });
 
+            const existing = await db.lancamento.findUnique({
+                where: { id: l.id }
+            });
+
             // Upsert do Lançamento
             await db.lancamento.upsert({
                 where: { id: l.id },
@@ -106,6 +110,14 @@ export async function POST(request: Request) {
                     attachmentData: l.attachmentData || null,
                 }
             });
+
+            if ((global as any).io) {
+                if (!existing) {
+                    (global as any).io.emit('lancamento_criado', l);
+                } else {
+                    (global as any).io.emit('lancamento_atualizado', l);
+                }
+            }
         }
 
         return NextResponse.json({ success: true });
@@ -123,6 +135,9 @@ export async function DELETE(request: Request) {
         await db.lancamento.delete({
             where: { id }
         });
+        if ((global as any).io) {
+            (global as any).io.emit('lancamento_excluido', id);
+        }
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('DB Error:', error);

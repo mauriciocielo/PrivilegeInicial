@@ -1078,6 +1078,32 @@ class DataStore {
       }
       this.logAction(l.empresaId, 'Exclusão', `Excluiu lançamento "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} (Data: ${l.data})`);
       this.set('cf_lancamentos', list.filter(item => item.id !== id));
+
+      // Sincroniza a exclusão com o banco de dados remoto
+      if (typeof window !== 'undefined') {
+        fetch(`/api/lancamentos?id=${id}`, { method: 'DELETE' }).catch(err => {
+          console.error('Erro ao deletar lançamento no servidor:', err);
+        });
+      }
+    }
+  }
+
+  importSingleLancamento(lancamento: Lancamento) {
+    const list = this.getLancamentos();
+    const idx = list.findIndex(l => l.id === lancamento.id);
+    if (idx >= 0) {
+      list[idx] = lancamento;
+    } else {
+      list.push(lancamento);
+    }
+    this.set('cf_lancamentos', list);
+  }
+
+  importDeleteLancamento(id: string) {
+    const list = this.getLancamentos();
+    const newList = list.filter(item => item.id !== id);
+    if (list.length !== newList.length) {
+      this.set('cf_lancamentos', newList);
     }
   }
 

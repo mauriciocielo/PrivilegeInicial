@@ -225,7 +225,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setUser(u);
     if (u) {
       const all = store.getEmpresas();
-      const allowed = isConsultorOrAdmin ? all : all.filter(e => u.empresaIds.includes(e.id));
+      const allowed = role === 'administrador' ? all : all.filter(e => u.empresaIds?.includes(e.id));
       setEmpresas(allowed);
 
       const saved = sessionStorage.getItem('cf_empresa_sel');

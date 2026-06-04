@@ -544,6 +544,10 @@ async function migrateLancamentos(lancamentos: any[]) {
         clienteIdsSet.add(l.clienteId);
       }
 
+      const existing = await db.lancamento.findUnique({
+        where: { id: String(l.id) }
+      });
+
       await db.lancamento.upsert({
         where: { id: String(l.id) },
         update: {
@@ -584,6 +588,45 @@ async function migrateLancamentos(lancamentos: any[]) {
           attachmentData: l.attachmentData ? String(l.attachmentData) : null,
         }
       });
+
+      if ((global as any).io) {
+        const itemPayload = {
+          id: String(l.id),
+          empresaId: empresaId,
+          data: String(l.data || ''),
+          descricao: String(l.descricao || ''),
+          valor: Number(l.valor || 0),
+          tipo: String(l.tipo || 'despesa'),
+          planoContaId: planoContaId,
+          portadorId: portadorId,
+          status: String(l.status || 'previsto'),
+          numeroDocumento: l.numeroDocumento ? String(l.numeroDocumento) : null,
+          observacao: l.observacao ? String(l.observacao) : null,
+          origem: String(l.origem || 'manual'),
+          ofxId: l.ofxId ? String(l.ofxId) : null,
+          unidadeId: l.unidadeId ? String(l.unidadeId) : null,
+          clienteId: l.clienteId ? String(l.clienteId) : null,
+          attachmentName: l.attachmentName ? String(l.attachmentName) : null,
+          attachmentData: l.attachmentData ? String(l.attachmentData) : null,
+          createdAt: existing ? existing.createdAt.toISOString() : new Date().toISOString(),
+        };
+
+        if (!existing) {
+          (global as any).io.emit('lancamento_criado', itemPayload);
+        } else {
+          const isUpdated = 
+            existing.valor !== Number(l.valor) ||
+            existing.descricao !== String(l.descricao) ||
+            existing.data !== String(l.data) ||
+            existing.planoContaId !== String(l.planoContaId) ||
+            existing.portadorId !== String(l.portadorId) ||
+            existing.status !== String(l.status);
+          
+          if (isUpdated) {
+            (global as any).io.emit('lancamento_atualizado', itemPayload);
+          }
+        }
+      }
     } catch (err) {
       console.error('Erro no Lançamento:', l, err);
       throw new Error(`Erro no Lançamento (ID: ${l.id}): ${(err as Error).message}`);

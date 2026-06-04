@@ -87,7 +87,7 @@ export default function UsuariosPage() {
       email: form.email!,
       password: form.newPassword || edit?.password || '123456',
       role: (form.role || 'cliente') as any,
-      empresaIds: form.role === 'cliente' ? (form.empresaIds || []) : [],
+      empresaIds: form.role === 'administrador' ? [] : (form.empresaIds || []),
       receberEmailDiario: !!form.receberEmailDiario,
       phone: form.phone || '',
       avatarData: form.avatarData,
@@ -182,7 +182,7 @@ export default function UsuariosPage() {
                         {u.role === 'consultor' && (
                           <div>
                             <strong style={{ display: 'block', marginBottom: 2 }}>Telas permitidas ({u.allowedRoutes?.length || 0}):</strong>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 6 }}>
                               {(u.allowedRoutes || ['/consultor/dashboard']).map(r => {
                                 const screen = AVAILABLE_SCREENS.find(s => s.route === r);
                                 return (
@@ -192,6 +192,10 @@ export default function UsuariosPage() {
                                 );
                               })}
                             </div>
+                            <strong style={{ display: 'block', marginBottom: 2 }}>Empresas:</strong>
+                            {emps.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Nenhuma (Sem acesso)</span> : emps.map(e => (
+                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4, fontSize: 10 }}>{e.nomeFantasia}</span>
+                            ))}
                           </div>
                         )}
                         {u.role === 'cliente' && (
@@ -345,7 +349,7 @@ export default function UsuariosPage() {
               </div>
             )}
 
-            {form.role === 'cliente' && (
+            {(form.role === 'cliente' || form.role === 'consultor') && (
               <div className="form-group" style={{ marginTop: 16 }}>
                 <label className="form-label" style={{ fontWeight: 600 }}>Empresas Vinculadas</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
