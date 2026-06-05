@@ -507,9 +507,6 @@ class DataStore {
     // Se a Promise já foi iniciada, aguardamos ela terminar.
     if (this._lancamentosReady) return this._lancamentosReady;
 
-    // Se já estiver populado de vez, não fazemos nada.
-    if (this._lancamentosCache !== null && this._lancamentosCache.length > 0) return;
-
     this._lancamentosReady = (async () => {
       try {
         await migrateFromLocalStorage();
