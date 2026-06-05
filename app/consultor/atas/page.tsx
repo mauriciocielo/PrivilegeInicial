@@ -21,7 +21,7 @@ export default function AtasConsultorPage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     loadData(saved);
 
     const handleEmpresaChange = (event: Event) => loadData((event as CustomEvent<string>).detail);

@@ -105,7 +105,7 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     const user = store.getCurrentUser();
-    const eId = user?.empresaIds?.[0] || sessionStorage.getItem('cf_empresa_sel') || 'e1';
+    const eId = user?.empresaIds?.[0] || sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     load(eId, mesSelecionado);
     const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
     window.addEventListener('empresaChange', handler);

@@ -50,7 +50,7 @@ export default function OrcamentoPage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     load(saved, mesSelecionado);
     const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
     window.addEventListener('empresaChange', handler);

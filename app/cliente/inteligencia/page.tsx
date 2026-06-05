@@ -341,7 +341,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || 'e1';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);
