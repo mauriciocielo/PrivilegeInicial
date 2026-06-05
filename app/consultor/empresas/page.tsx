@@ -35,6 +35,8 @@ export default function EmpresasPage() {
   const [search, setSearch] = useState('');
   const [fetchingCnpj, setFetchingCnpj] = useState(false);
   const [rawImageData, setRawImageData] = useState<string | null>(null);
+  // IDs das empresas que já possuem plano de contas
+  const [planosMap, setPlanosMap] = useState<Record<string, boolean>>({});
 
   const inferAtividade = (descricao?: string): Empresa['atividade'] => {
     const text = (descricao || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -82,7 +84,14 @@ export default function EmpresasPage() {
   };
 
   useEffect(() => {
-    setList(store.getEmpresas());
+    const empresas = store.getEmpresas();
+    setList(empresas);
+    // Mapeia quais empresas já possuem plano de contas
+    const mapa: Record<string, boolean> = {};
+    empresas.forEach(e => {
+      mapa[e.id] = store.getPlanoContas(e.id).length > 0;
+    });
+    setPlanosMap(mapa);
   }, []);
 
   const openNew = () => { 
@@ -153,6 +162,21 @@ export default function EmpresasPage() {
   const handleDelete = (id: string) => {
     if (!confirm('Excluir esta empresa? Todos os dados relacionados serão afetados.')) return;
     store.deleteEmpresa(id);
+    const updated = store.getEmpresas();
+    setList(updated);
+  };
+
+  const handleImportarPlano = (e: Empresa) => {
+    const jaTemPlano = store.getPlanoContas(e.id).length > 0;
+    if (jaTemPlano) {
+      if (!confirm(`A empresa "${e.nomeFantasia || e.razaoSocial}" já possui ${store.getPlanoContas(e.id).length} contas. Deseja ADICIONAR o plano padrão mesmo assim? Isso pode criar duplicatas.`)) return;
+    }
+    const result = store.seedPlanoContasForEmpresa(e.id);
+    alert(`✅ Plano de contas importado com sucesso!
+${result.planosAdded} contas adicionadas
+${result.portadoresAdded} portadores criados`);
+    // Atualiza estado
+    setPlanosMap(prev => ({ ...prev, [e.id]: true }));
     const updated = store.getEmpresas();
     setList(updated);
   };
@@ -231,7 +255,28 @@ export default function EmpresasPage() {
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{e.email}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {!planosMap[e.id] && (
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => handleImportarPlano(e)}
+                            title="Esta empresa não possui plano de contas. Clique para importar o padrão."
+                            style={{
+                              background: 'rgba(245,158,11,0.15)',
+                              color: '#f59e0b',
+                              border: '1px solid rgba(245,158,11,0.4)',
+                              fontSize: 10,
+                              padding: '3px 7px',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            ⚠️ Importar Plano
+                          </button>
+                        )}
                         <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(e)}>✏️</button>
                         <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(e.id)}>🗑️</button>
                       </div>

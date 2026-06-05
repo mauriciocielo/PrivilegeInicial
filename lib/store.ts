@@ -1003,6 +1003,74 @@ class DataStore {
     this.set('cf_plano_contas', this.getPlanoContas().filter(p => p.id !== id));
   }
 
+  /**
+   * Gera o plano de contas padrão (e portadores padrão) para uma empresa que ainda não possui.
+   * Pode ser chamado a qualquer momento — não duplica se já existir.
+   */
+  seedPlanoContasForEmpresa(empresaId: string): { planosAdded: number; portadoresAdded: number } {
+    const empresa = this.getEmpresas().find(e => e.id === empresaId);
+    if (!empresa) return { planosAdded: 0, portadoresAdded: 0 };
+
+    const idMap: Record<string, string> = {};
+    const newPcs = DEFAULT_PLANO_CONTAS.map(p => {
+      const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      idMap[p.id] = newId;
+
+      let descricao = p.descricao;
+      if (empresa.tipo === 'condominio') {
+        if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
+        else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
+        else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
+        else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
+        else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
+        else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
+        else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
+        else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
+      } else if (empresa.tipo === 'cooperativa') {
+        if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
+        else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
+        else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
+        else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
+        else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
+        else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
+      }
+
+      return { ...p, id: newId, descricao, empresaId };
+    });
+
+    newPcs.forEach(p => {
+      if (p.parentId && idMap[p.parentId]) p.parentId = idMap[p.parentId];
+    });
+
+    const currentPcs = this.getPlanoContas();
+    currentPcs.push(...newPcs);
+    this.set('cf_plano_contas', currentPcs);
+
+    // Portadores padrão (somente os que ainda não existem para essa empresa)
+    const currentPorts = this.getPortadores();
+    const existingPorts = currentPorts.filter(p => p.empresaId === empresaId);
+    let portadoresAdded = 0;
+    const hoje = new Date().toISOString().split('T')[0];
+    const addPort = (p: typeof currentPorts[0]) => {
+      if (!existingPorts.find(ep => ep.id === p.id)) {
+        currentPorts.push(p);
+        portadoresAdded++;
+      }
+    };
+
+    addPort({ id: `port_${empresaId}_cc`,  nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    addPort({ id: `port_${empresaId}_cx`,  nome: 'Fundo Caixa / Caixinha',   tipo: 'caixa',          saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    if (empresa.tipo === 'condominio') {
+      addPort({ id: `port_${empresaId}_res`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    }
+    if (empresa.tipo === 'cooperativa') {
+      addPort({ id: `port_${empresaId}_capital`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    }
+    if (portadoresAdded > 0) this.set('cf_portadores', currentPorts);
+
+    return { planosAdded: newPcs.length, portadoresAdded };
+  }
+
   // Portadores
   getPortadores(empresaId?: string): Portador[] {
     this.init();
