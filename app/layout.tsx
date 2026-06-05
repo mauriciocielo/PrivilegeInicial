@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Montserrat } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'sonner';
 import TransitionProvider from '../components/TransitionProvider';
 
 const montserrat = Montserrat({
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className={montserrat.className}>
+        <Toaster position="top-right" richColors />
         <TransitionProvider>{children}</TransitionProvider>
       </body>
     </html>

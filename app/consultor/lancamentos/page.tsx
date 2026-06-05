@@ -686,6 +686,44 @@ export default function LancamentosPage() {
     setShowReclassModal(false);
   };
 
+  const handleBulkMarkAsPaid = () => {
+    if (selectedIds.length === 0) return;
+    const updatedItems = lancamentos
+      .filter(l => selectedIds.includes(l.id))
+      .map(l => ({ ...l, status: 'realizado' as const }));
+    
+    updatedItems.forEach(item => store.saveLancamento(item));
+    setLancamentos(store.getLancamentos(empresaId));
+    setSelectedIds([]);
+  };
+
+  const handleExportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const dataToExport = filtered.map(l => {
+        const pc = planoContas.find(p => p.id === l.planoContaId);
+        const port = portadores.find(p => p.id === l.portadorId);
+        return {
+          'Data': fmt.date(l.data),
+          'Descrição': l.descricao,
+          'Categoria': pc ? `${pc.codigo} - ${pc.descricao}` : 'Sem Plano',
+          'Portador': port ? port.nome : '-',
+          'Valor': Number(l.valor.toFixed(2)),
+          'Tipo': l.tipo === 'receita' ? 'Receita' : 'Despesa',
+          'Status': l.status === 'realizado' ? 'Realizado' : 'Previsto',
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Lançamentos');
+      XLSX.writeFile(workbook, `Lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Erro ao exportar para Excel:', error);
+      alert('Erro ao exportar para Excel. Certifique-se que a biblioteca xlsx foi instalada.');
+    }
+  };
+
   const meses = useMemo(() => {
     const list: string[] = [];
     const hoje = new Date();
@@ -730,6 +768,9 @@ export default function LancamentosPage() {
               <button className="btn btn-primary" onClick={() => { setBulkMode('transferir'); setReclassContaId(''); setReclassContaSearch(''); setReclassPortadorId(''); setTransferDate(new Date().toISOString().split('T')[0]); setShowReclassModal(true); }}>
                 ⇄ Transferir em Lote
               </button>
+              <button className="btn btn-secondary" onClick={handleBulkMarkAsPaid}>
+                ✅ Marcar como Pago ({selectedIds.length})
+              </button>
               <button className="btn btn-danger" onClick={handleBulkDelete}>
                 🗑️ Excluir ({selectedIds.length})
               </button>
@@ -737,7 +778,7 @@ export default function LancamentosPage() {
           )}
           <div style={{ position: 'relative' }}>
             <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
-              ❓ Exportar Duvidosos ▾
+              📊 Exportar ▾
             </button>
             {showExportMenu && (
               <div 
@@ -761,16 +802,24 @@ export default function LancamentosPage() {
                 <button 
                   className="btn btn-ghost btn-sm" 
                   style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                  onClick={() => { handleExportToExcel(); setShowExportMenu(false); }}
+                >
+                  🟢 Baixar Excel (.xlsx)
+                </button>
+                <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
                   onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
                 >
-                  📊 Baixar Planilha (CSV)
+                  ⚠️ Exportar Duvidosos (CSV)
                 </button>
                 <button 
                   className="btn btn-ghost btn-sm" 
                   style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
                   onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
                 >
-                  🖨️ Imprimir PDF (Conferência)
+                  🖨️ Imprimir Duvidosos (PDF)
                 </button>
               </div>
             )}

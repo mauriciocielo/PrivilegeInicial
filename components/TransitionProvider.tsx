@@ -5,6 +5,13 @@ import { io } from 'socket.io-client';
 
 import { store } from '../lib/store';
 import { syncBackupInChunks } from '../lib/sync-helper';
+import { toast } from 'sonner';
+
+if (typeof window !== 'undefined') {
+  window.alert = (msg: string) => {
+    toast(msg);
+  };
+}
 
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
