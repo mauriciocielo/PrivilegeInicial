@@ -60,19 +60,32 @@ export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
       const tx = db.transaction(STORE_LANCAMENTOS, 'readwrite');
       const store = tx.objectStore(STORE_LANCAMENTOS);
       
-      // Limpa e regrava tudo
-      const clearReq = store.clear();
-      clearReq.onsuccess = () => {
-        let pending = lancamentos.length;
-        if (pending === 0) { resolve(); return; }
-        for (const l of lancamentos) {
+      // Limpa e regrava tudo na mesma tick do event loop para evitar TransactionInactiveError
+      store.clear();
+      
+      let pending = lancamentos.length;
+      if (pending === 0) { 
+        resolve(); 
+        return; 
+      }
+      
+      let hasError = false;
+      for (const l of lancamentos) {
+        try {
           const putReq = store.put(l);
-          putReq.onsuccess = () => { if (--pending === 0) resolve(); };
-          putReq.onerror = () => reject(putReq.error);
+          putReq.onsuccess = () => { 
+            if (!hasError && --pending === 0) resolve(); 
+          };
+          putReq.onerror = () => {
+            hasError = true;
+            reject(putReq.error);
+          };
+        } catch (e) {
+          hasError = true;
+          reject(e);
+          break;
         }
-      };
-      clearReq.onerror = () => reject(clearReq.error);
-      tx.onerror = () => reject(tx.error);
+      }
     });
   } catch (err) {
     // Fallback para localStorage com aviso
