@@ -504,8 +504,12 @@ class DataStore {
 
   /** Garante que o cache de lançamentos está carregado */
   private async ensureLancamentosCache(): Promise<void> {
-    if (this._lancamentosCache !== null) return;
+    // Se a Promise já foi iniciada, aguardamos ela terminar.
     if (this._lancamentosReady) return this._lancamentosReady;
+
+    // Se já estiver populado de vez, não fazemos nada.
+    if (this._lancamentosCache !== null && this._lancamentosCache.length > 0) return;
+
     this._lancamentosReady = (async () => {
       try {
         await migrateFromLocalStorage();
@@ -515,6 +519,9 @@ class DataStore {
         const raw = localStorage.getItem('cf_lancamentos');
         this._lancamentosCache = raw ? JSON.parse(raw) : [];
       }
+      
+      // Sempre que termina a carga do banco real (IDB), notifica a UI
+      window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
     })();
     return this._lancamentosReady;
   }
@@ -1034,9 +1041,7 @@ class DataStore {
         this._lancamentosCache = [];
       }
       // Kick off async load to upgrade cache from IDB
-      this.ensureLancamentosCache().then(() => {
-        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
-      }).catch(() => { });
+      this.ensureLancamentosCache().catch(() => { });
     }
     const all = this._lancamentosCache as Lancamento[];
     return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
