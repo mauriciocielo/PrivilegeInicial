@@ -504,20 +504,29 @@ class DataStore {
 
   /** Garante que o cache de lançamentos está carregado */
   private async ensureLancamentosCache(): Promise<void> {
+    console.log('[DEBUG_STORE] Calling ensureLancamentosCache');
     // Se a Promise já foi iniciada, aguardamos ela terminar.
-    if (this._lancamentosReady) return this._lancamentosReady;
+    if (this._lancamentosReady) {
+      console.log('[DEBUG_STORE] ensureLancamentosCache returning existing promise');
+      return this._lancamentosReady;
+    }
 
     this._lancamentosReady = (async () => {
+      console.log('[DEBUG_STORE] ensureLancamentosCache starting async block');
       try {
         await migrateFromLocalStorage();
         const all = await idbGetAllLancamentos();
+        console.log('[DEBUG_STORE] ensureLancamentosCache loaded', all.length, 'from IDB');
         this._lancamentosCache = all as Lancamento[];
-      } catch {
+      } catch (err) {
+        console.warn('[DEBUG_STORE] ensureLancamentosCache IDB error:', err);
         const raw = localStorage.getItem('cf_lancamentos');
         this._lancamentosCache = raw ? JSON.parse(raw) : [];
+        console.log('[DEBUG_STORE] ensureLancamentosCache fallback loaded', this._lancamentosCache?.length, 'from localStorage');
       }
       
       // Sempre que termina a carga do banco real (IDB), notifica a UI
+      console.log('[DEBUG_STORE] ensureLancamentosCache finished, dispatching cfDataChange');
       window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
     })();
     return this._lancamentosReady;
@@ -1031,16 +1040,20 @@ class DataStore {
     this.init();
     // Se o cache ainda não foi carregado, tenta ler do localStorage como fallback síncrono
     if (this._lancamentosCache === null) {
+      console.log('[DEBUG_STORE] getLancamentos: cache is null, reading fallback');
       try {
         const raw = localStorage.getItem('cf_lancamentos');
         this._lancamentosCache = raw ? JSON.parse(raw) : [];
-      } catch {
+        console.log('[DEBUG_STORE] getLancamentos: fallback returned', this._lancamentosCache?.length, 'items');
+      } catch (err) {
+        console.warn('[DEBUG_STORE] getLancamentos: fallback error', err);
         this._lancamentosCache = [];
       }
       // Kick off async load to upgrade cache from IDB
       this.ensureLancamentosCache().catch(() => { });
     }
     const all = this._lancamentosCache as Lancamento[];
+    console.log(`[DEBUG_STORE] getLancamentos(${empresaId || 'all'}) returning ${empresaId ? all.filter(l => l.empresaId === empresaId).length : all.length} items`);
     return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
   }
 

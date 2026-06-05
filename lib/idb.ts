@@ -54,33 +54,43 @@ export async function idbGetAllLancamentos(): Promise<any[]> {
 }
 
 export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
+  console.log('[DEBUG_IDB] Starting idbSaveAllLancamentos with', lancamentos.length, 'items.');
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_LANCAMENTOS, 'readwrite');
       const store = tx.objectStore(STORE_LANCAMENTOS);
       
+      console.log('[DEBUG_IDB] Transaction created. Clearing store...');
       // Limpa e regrava tudo na mesma tick do event loop para evitar TransactionInactiveError
       store.clear();
       
       let pending = lancamentos.length;
       if (pending === 0) { 
+        console.log('[DEBUG_IDB] No items to save. Resolving immediately.');
         resolve(); 
         return; 
       }
       
       let hasError = false;
+      let count = 0;
       for (const l of lancamentos) {
         try {
           const putReq = store.put(l);
           putReq.onsuccess = () => { 
-            if (!hasError && --pending === 0) resolve(); 
+            count++;
+            if (!hasError && --pending === 0) {
+              console.log('[DEBUG_IDB] All', count, 'items saved successfully. Resolving.');
+              resolve(); 
+            }
           };
           putReq.onerror = () => {
+            console.error('[DEBUG_IDB] Error saving item:', l, putReq.error);
             hasError = true;
             reject(putReq.error);
           };
         } catch (e) {
+          console.error('[DEBUG_IDB] Synchronous error on store.put:', e);
           hasError = true;
           reject(e);
           break;
@@ -88,12 +98,12 @@ export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
       }
     });
   } catch (err) {
-    // Fallback para localStorage com aviso
-    console.warn('[IDB] Fallback to localStorage for lancamentos:', err);
+    console.warn('[DEBUG_IDB] Fatal error in IDB save, falling back to localStorage:', err);
     try {
       localStorage.setItem('cf_lancamentos', JSON.stringify(lancamentos));
+      console.log('[DEBUG_IDB] Fallback to localStorage SUCCESSFUL.');
     } catch (lsErr) {
-      console.error('[IDB] localStorage also failed:', lsErr);
+      console.error('[DEBUG_IDB] localStorage fallback ALSO FAILED:', lsErr);
       throw lsErr;
     }
   }
