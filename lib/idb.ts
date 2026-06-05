@@ -131,8 +131,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
     });
 
     if (countReq > 0) {
-      // IDB já tem dados — limpa localStorage para liberar espaço
-      localStorage.removeItem('cf_lancamentos');
+      // IDB já tem dados. Mantemos o localStorage como backup sem apagar.
       return;
     }
 
