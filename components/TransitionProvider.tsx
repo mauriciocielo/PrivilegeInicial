@@ -73,8 +73,8 @@ export default function TransitionProvider({ children }: { children: React.React
       // Ignora se a sincronização inicial não terminou
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       
-      // Ignora se for alteração disparada por outra sincronização/importação em andamento
-      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+      // Ignora se for alteração disparada por importação/WebSocket
+      if (event?.detail?.source === 'import') return;
 
       // Ignora chaves temporárias ou não relevantes
       const key = event?.detail?.key;
@@ -104,7 +104,13 @@ export default function TransitionProvider({ children }: { children: React.React
 
       clearTimeout(timeoutId);
 
-      timeoutId = setTimeout(async () => {
+      const runSync = async () => {
+        // Se um sync já está rodando, agenda para tentar novamente em breve
+        if (sessionStorage.getItem('cf_sync_in_progress') === 'true') {
+          timeoutId = setTimeout(runSync, 500);
+          return;
+        }
+
         try {
           console.log(`☁️ Auto-salvando ${key} no PostgreSQL...`);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
@@ -128,8 +134,11 @@ export default function TransitionProvider({ children }: { children: React.React
         } catch (err) {
           console.error(`Erro ao auto-salvar ${key} no banco:`, err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+          sessionStorage.setItem('cf_sync_in_progress', 'false');
         }
-      }, 300);
+      };
+
+      timeoutId = setTimeout(runSync, 300);
     };
 
     window.addEventListener('cfDataChange', handleDataChange as any);

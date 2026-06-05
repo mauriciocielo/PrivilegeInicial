@@ -1364,6 +1364,9 @@ class DataStore {
       list.push(lancamento);
     }
     this.persistLancamentos(list, true);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos', source: 'import' } }));
+    }
   }
 
   importDeleteLancamento(id: string) {
@@ -1371,6 +1374,9 @@ class DataStore {
     const newList = list.filter(item => item.id !== id);
     if (list.length !== newList.length) {
       this.persistLancamentos(newList, true);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos', source: 'import' } }));
+      }
     }
   }
 
@@ -1744,7 +1750,7 @@ class DataStore {
         localStorage.setItem(STORAGE_VERSION_KEY, parsed.version || STORAGE_VERSION);
 
         // Notifica todos os listeners de que a base mudou
-        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all' } }));
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all', source: 'import' } }));
       }
 
       return { success: true };
