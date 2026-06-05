@@ -12,12 +12,39 @@ const TIPO_LABELS: Record<string, string> = {
   outro: '📦 Outro',
 };
 
+const BANCOS_COMPE = [
+  { code: '001', name: 'Banco do Brasil S.A.' },
+  { code: '033', name: 'Banco Santander (Brasil) S.A.' },
+  { code: '104', name: 'Caixa Econômica Federal' },
+  { code: '237', name: 'Banco Bradesco S.A.' },
+  { code: '341', name: 'Itaú Unibanco S.A.' },
+  { code: '077', name: 'Banco Inter S.A.' },
+  { code: '260', name: 'Nu Pagamentos S.A. (Nubank)' },
+  { code: '336', name: 'Banco C6 S.A. (C6 Bank)' },
+  { code: '290', name: 'Pagseguro Internet Instituição de Pagamento S.A. (PagBank)' },
+  { code: '041', name: 'Banco do Estado do Rio Grande do Sul S.A. (Banrisul)' },
+  { code: '748', name: 'Banco Cooperativo Sicredi S.A.' },
+  { code: '756', name: 'Banco Cooperativo Sicoob S.A. (Sicoob)' },
+  { code: '004', name: 'Banco do Nordeste do Brasil S.A.' },
+  { code: '021', name: 'BANESTES S.A. Banco do Estado do Espírito Santo' },
+  { code: '389', name: 'Banco Mercantil do Brasil S.A.' },
+  { code: '422', name: 'Banco Safra S.A.' },
+  { code: '623', name: 'Banco Pan S.A.' },
+  { code: '655', name: 'Banco Votorantim S.A. (BV)' },
+  { code: '136', name: 'Unicred Cooperativa' },
+  { code: '318', name: 'Banco BMG S.A.' },
+  { code: '212', name: 'Banco Original S.A.' },
+  { code: '735', name: 'Banco Neon' },
+  { code: '085', name: 'Cooperativa Central de Crédito Ailos (Ailos)' }
+];
+
 export default function PortadoresPage() {
   const [empresaId, setEmpresaId] = useState('e1');
   const [portadores, setPortadores] = useState<Portador[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [edit, setEdit] = useState<Portador | null>(null);
   const [form, setForm] = useState<Partial<Portador>>({});
+  const [bankDropdownOpen, setBankDropdownOpen] = useState(false);
 
   const load = useCallback((eId: string) => {
     setEmpresaId(eId);
@@ -176,9 +203,65 @@ export default function PortadoresPage() {
             </div>
             {(form.tipo === 'conta_corrente' || form.tipo === 'poupanca' || form.tipo === 'aplicacao') && (
               <div className="form-row">
-                <div className="form-group">
+                <div className="form-group" style={{ position: 'relative' }}>
+                  <style>{`
+                    .bank-item-hover:hover {
+                      background-color: var(--border-light, #f1f5f9) !important;
+                    }
+                  `}</style>
                   <label className="form-label">Banco</label>
-                  <input className="form-control" placeholder="Ex: Banco do Brasil" value={form.banco || ''} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} />
+                  <input 
+                    className="form-control" 
+                    placeholder="COMPE ou Nome (Ex: 001)" 
+                    value={form.banco || ''} 
+                    onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} 
+                    onFocus={() => setBankDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setBankDropdownOpen(false), 200)}
+                  />
+                  {bankDropdownOpen && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        backgroundColor: 'var(--card-bg, #ffffff)',
+                        border: '1px solid var(--border-light, #e2e8f0)',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                        maxHeight: '180px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}
+                    >
+                      {BANCOS_COMPE.filter(b => 
+                        b.code.includes(form.banco || '') || 
+                        b.name.toLowerCase().includes((form.banco || '').toLowerCase())
+                      ).map(b => (
+                        <div 
+                          key={b.code}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            fontSize: '12.5px',
+                            borderBottom: '1px solid var(--border-light, #e2e8f0)',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'center'
+                          }}
+                          onMouseDown={() => {
+                            setForm(f => ({ ...f, banco: `${b.code} - ${b.name}` }));
+                            setBankDropdownOpen(false);
+                          }}
+                          className="bank-item-hover"
+                        >
+                          <span style={{ fontWeight: 700, color: 'var(--accent, #3182ce)', minWidth: '30px' }}>{b.code}</span>
+                          <span style={{ color: 'var(--text-primary, #2d3748)' }}>{b.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Agência</label>

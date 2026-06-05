@@ -960,7 +960,6 @@ class DataStore {
     }
     this.set('cf_lancamentos', list);
   }
-
   // Helper para limpar descrições bancárias (remove datas, números isolados e símbolos)
   private normalizeText(text: string): string {
     return text
@@ -973,17 +972,90 @@ class DataStore {
       .trim();
   }
 
-  // Lógica de Inteligência: Classificação por Padrão
+  // Lógica de Inteligência: Classificação por Padrão com busca estendida para empresas com mesmo banco/grupo econômico
   classifyDescription(empresaId: string, description: string): string | null {
-    const patterns = this.getTransactionPatterns(empresaId);
     const cleanDesc = this.normalizeText(description);
 
-    const match = patterns.find(p => {
+    // 1. Busca primeiro nos padrões da própria empresa
+    const ownPatterns = this.getTransactionPatterns(empresaId);
+    const ownMatch = ownPatterns.find(p => {
       const cleanPattern = this.normalizeText(p.pattern);
       return cleanDesc.includes(cleanPattern) || cleanPattern.includes(cleanDesc);
     });
+    if (ownMatch) return ownMatch.categoryId;
 
-    return match ? match.categoryId : null;
+    // 2. Identifica empresas relacionadas (mesmo banco ou mesmo grupo econômico)
+    const empresas = this.getEmpresas();
+    const targetCompany = empresas.find(e => e.id === empresaId);
+    if (!targetCompany) return null;
+
+    const targetPortadores = this.getPortadores(empresaId);
+
+    // Função auxiliar para extrair o código de banco (primeiros 3 dígitos) se estiver no padrão COMPE
+    const getBankCodeOrName = (bancoStr: string): string => {
+      const match = bancoStr.match(/^(\d{3})/);
+      return match ? match[1] : bancoStr.trim().toLowerCase();
+    };
+
+    const targetBancos = targetPortadores
+      .map(p => p.banco ? getBankCodeOrName(p.banco) : '')
+      .filter(Boolean) as string[];
+
+    // Encontra outras empresas relacionadas
+    const relatedCompanies = empresas.filter(e => {
+      if (e.id === empresaId) return false;
+
+      // Verifica se é do mesmo grupo econômico
+      const mesmoGrupo = targetCompany.grupoEconomico && 
+                         e.grupoEconomico && 
+                         targetCompany.grupoEconomico.trim().toLowerCase() === e.grupoEconomico.trim().toLowerCase();
+
+      // Verifica se utilizam o mesmo banco
+      const ePortadores = this.getPortadores(e.id);
+      const eBancos = ePortadores
+        .map(p => p.banco ? getBankCodeOrName(p.banco) : '')
+        .filter(Boolean) as string[];
+      const mesmoBanco = targetBancos.some(b => eBancos.includes(b));
+
+      return mesmoGrupo || mesmoBanco;
+    });
+
+    if (relatedCompanies.length === 0) return null;
+
+    // Ordena as empresas relacionadas (mesmo grupo E mesmo banco primeiro)
+    relatedCompanies.sort((a, b) => {
+      const aMesmoGrupo = targetCompany.grupoEconomico && a.grupoEconomico && targetCompany.grupoEconomico.trim().toLowerCase() === a.grupoEconomico.trim().toLowerCase() ? 1 : 0;
+      const bMesmoGrupo = targetCompany.grupoEconomico && b.grupoEconomico && targetCompany.grupoEconomico.trim().toLowerCase() === b.grupoEconomico.trim().toLowerCase() ? 1 : 0;
+      return bMesmoGrupo - aMesmoGrupo;
+    });
+
+    const targetPlano = this.getPlanoContas(empresaId);
+
+    // 3. Busca nos padrões das empresas relacionadas
+    for (const relComp of relatedCompanies) {
+      const relPatterns = this.getTransactionPatterns(relComp.id);
+      const relMatch = relPatterns.find(p => {
+        const cleanPattern = this.normalizeText(p.pattern);
+        return cleanDesc.includes(cleanPattern) || cleanPattern.includes(cleanDesc);
+      });
+
+      if (relMatch) {
+        // Encontra o planoConta do padrão correspondente na empresa relacionada
+        const relPlano = this.getPlanoContas(relComp.id);
+        const relCategory = relPlano.find(pc => pc.id === relMatch.categoryId);
+        if (relCategory) {
+          // Procura a categoria correspondente no plano de contas da empresa atual (por código)
+          const targetCategory = targetPlano.find(pc => pc.codigo === relCategory.codigo) ||
+                                 targetPlano.find(pc => pc.descricao.trim().toLowerCase() === relCategory.descricao.trim().toLowerCase());
+          if (targetCategory) {
+            console.log(`🧠 Inteligência: Classificação sugerida de empresa relacionada (${relComp.nomeFantasia}) para ${description} -> ${targetCategory.codigo} - ${targetCategory.descricao}`);
+            return targetCategory.id;
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   learnPattern(empresaId: string, description: string, categoryId: string) {
