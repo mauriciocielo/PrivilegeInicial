@@ -1143,23 +1143,28 @@ class DataStore {
     this.set('cf_lancamentos', list);
   }
 
-  saveLancamentos(lancamentos: Lancamento[]) {
-    if (lancamentos.length === 0) return;
+  saveLancamentos(lancamentos: Lancamento[]): { imported: number; skipped: number } {
+    if (lancamentos.length === 0) return { imported: 0, skipped: 0 };
     const list = this.getLancamentos();
     const ids = new Set(lancamentos.map(l => l.id));
 
-    // Validar se alguma importação cai em período bloqueado
-    const lockedEmpresas = new Set<string>();
+    // Filtrar lançamentos que caem em período bloqueado, ao invés de lançar erro para o lote todo
+    const openLancamentos: Lancamento[] = [];
+    let skippedCount = 0;
+    
     lancamentos.forEach(l => {
       if (this.isPeriodLocked(l.empresaId, l.data)) {
-        lockedEmpresas.add(l.empresaId);
+        skippedCount++;
+      } else {
+        openLancamentos.push(l);
       }
     });
-    if (lockedEmpresas.size > 0) {
-      throw new Error(`Não é possível importar lançamentos pois algumas transações pertencem a um período fechado.`);
+
+    if (openLancamentos.length === 0) {
+      throw new Error(`Não é possível importar lançamentos pois todas as transações selecionadas pertencem a um período fechado.`);
     }
 
-    const processed = lancamentos.map(l => {
+    const processed = openLancamentos.map(l => {
       if (!l.planoContaId || l.planoContaId === '') {
         const autoId = this.classifyDescription(l.empresaId, l.descricao);
         if (autoId) return { ...l, planoContaId: autoId };
@@ -1179,7 +1184,9 @@ class DataStore {
     });
     
     const empId = lancamentos[0].empresaId;
-    this.logAction(empId, 'Importação', `Importou lote de ${lancamentos.length} transações.`);
+    this.logAction(empId, 'Importação', `Importou lote de ${processed.length} transações (${skippedCount} ignoradas por período fechado).`);
+
+    return { imported: processed.length, skipped: skippedCount };
   }
 
   deleteLancamento(id: string) {

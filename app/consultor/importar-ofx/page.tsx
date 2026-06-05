@@ -16,6 +16,7 @@ export default function ImportarOFXPage() {
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
   const [ofxInfo, setOfxInfo] = useState<{ bankId?: string; acctId?: string; dtStart?: string; dtEnd?: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -60,6 +61,7 @@ export default function ImportarOFXPage() {
       setTransactions(newTrns);
       setSelected(new Set(newTrns.map(t => t.id)));
       setDone(false);
+      setSuccessMsg('');
       setSyncStatusText('Extrato importado com sucesso!');
       setTimeout(() => setSyncStatusText(''), 2000);
     } catch (e) {
@@ -153,6 +155,7 @@ export default function ImportarOFXPage() {
       setTransactions(newTrns);
       setSelected(new Set(newTrns.map(t => t.id)));
       setDone(false);
+      setSuccessMsg('');
     };
     reader.readAsText(file, 'latin1');
   };
@@ -187,6 +190,7 @@ export default function ImportarOFXPage() {
     setTransactions(newTrns);
     setSelected(new Set(newTrns.map(t => t.id)));
     setDone(false);
+    setSuccessMsg('');
   };
 
   const toggleAll = () => {
@@ -248,7 +252,15 @@ export default function ImportarOFXPage() {
         createdAt: new Date().toISOString(),
       }));
 
-      store.saveLancamentos(lancsArray);
+      const res = store.saveLancamentos(lancsArray);
+      let msg = `Transações importadas com sucesso!`;
+      if (res) {
+        msg = `Lançamentos importados com sucesso: ${res.imported} transações importadas.`;
+        if (res.skipped > 0) {
+          msg += ` (${res.skipped} transações foram ignoradas pois pertencem a um período fechado).`;
+        }
+      }
+      setSuccessMsg(msg);
       setDone(true);
       setTransactions(prev => prev.filter(t => !selected.has(t.id)));
       setSelected(new Set());
@@ -289,7 +301,7 @@ export default function ImportarOFXPage() {
           <>
             {done && (
               <div className="alert alert-success" style={{ marginBottom: 20 }}>
-                ✅ Transações importadas com sucesso! Acesse os lançamentos para verificar.
+                ✅ {successMsg || 'Transações importadas com sucesso! Acesse os lançamentos para verificar.'}
               </div>
             )}
 
