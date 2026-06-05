@@ -842,7 +842,11 @@ class DataStore {
   }
 
   // Empresas
-  getEmpresas(): Empresa[] { this.init(); return this.get<Empresa[]>('cf_empresas', DEFAULT_EMPRESAS); }
+  getEmpresas(): Empresa[] {
+    this.init();
+    const list = this.get<Empresa[]>('cf_empresas', DEFAULT_EMPRESAS);
+    return Array.from(new Map(list.map(e => [e.id, e])).values());
+  }
   saveEmpresa(empresa: Empresa) {
     const list = this.getEmpresas();
     const idx = list.findIndex(e => e.id === empresa.id);

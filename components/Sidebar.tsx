@@ -211,7 +211,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const isConsultorOrAdmin = role === 'consultor' || role === 'administrador';
 
-  const selectableEmpresas = empresas;
+  const selectableEmpresas = Array.from(new Map(empresas.map(e => [e.id, e])).values());
 
   // Obter grupos econômicos únicos
   const gruposEconomicos = Array.from(new Set(
