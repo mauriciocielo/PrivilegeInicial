@@ -1311,6 +1311,14 @@ class DataStore {
 
     const filtered = list.filter(l => !ids.has(l.id));
     const newList = [...filtered, ...processed];
+    
+    // Debug: quais empresaId estamos salvando?
+    const empresaStats = newList.reduce((acc, l) => {
+      acc[l.empresaId] = (acc[l.empresaId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('[DEBUG_STORE] saveLancamentos creating newList with empresaIds:', empresaStats);
+    
     this.persistLancamentos(newList);
 
     // Salva/aprende as regras para todos os lançamentos que possuem categoria associada
@@ -1674,12 +1682,16 @@ class DataStore {
     const data: Record<string, unknown> = {};
     if (typeof window !== 'undefined') {
       keys.forEach(key => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            data[key] = JSON.parse(raw);
-          } catch {
-            data[key] = null;
+        if (key === 'cf_lancamentos') {
+          data[key] = this.getLancamentos();
+        } else {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              data[key] = JSON.parse(raw);
+            } catch {
+              data[key] = null;
+            }
           }
         }
       });
