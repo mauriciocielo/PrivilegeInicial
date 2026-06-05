@@ -995,10 +995,29 @@ class DataStore {
 
     const targetPortadores = this.getPortadores(empresaId);
 
-    // Função auxiliar para extrair o código de banco (primeiros 3 dígitos) se estiver no padrão COMPE
+    // Função auxiliar para extrair o código de banco (primeiros 3 dígitos) se estiver no padrão COMPE ou normalizar nomes
     const getBankCodeOrName = (bancoStr: string): string => {
-      const match = bancoStr.match(/^(\d{3})/);
-      return match ? match[1] : bancoStr.trim().toLowerCase();
+      const trimmed = bancoStr.trim().toLowerCase();
+      const match = trimmed.match(/^(\d{3})/);
+      if (match) return match[1];
+
+      // Mapeia nomes comuns para o código COMPE correspondente para facilitar o compartilhamento cruzado
+      if (trimmed.includes('brasil')) return '001';
+      if (trimmed.includes('santander')) return '033';
+      if (trimmed.includes('caixa')) return '104';
+      if (trimmed.includes('bradesco')) return '237';
+      if (trimmed.includes('itau') || trimmed.includes('itaú')) return '341';
+      if (trimmed.includes('inter')) return '077';
+      if (trimmed.includes('nubank') || trimmed.includes('nu pag')) return '260';
+      if (trimmed.includes('c6')) return '336';
+      if (trimmed.includes('pagseguro') || trimmed.includes('pagbank')) return '290';
+      if (trimmed.includes('banrisul')) return '041';
+      if (trimmed.includes('sicredi')) return '748';
+      if (trimmed.includes('sicoob')) return '756';
+      if (trimmed.includes('safra')) return '422';
+      if (trimmed.includes('cresol')) return '133';
+
+      return trimmed;
     };
 
     const targetBancos = targetPortadores
@@ -1140,6 +1159,13 @@ class DataStore {
     const filtered = list.filter(l => !ids.has(l.id));
     const newList = [...filtered, ...processed];
     this.set('cf_lancamentos', newList);
+
+    // Salva/aprende as regras para todos os lançamentos que possuem categoria associada
+    processed.forEach(l => {
+      if (l.planoContaId) {
+        this.learnPattern(l.empresaId, l.descricao, l.planoContaId);
+      }
+    });
     
     const empId = lancamentos[0].empresaId;
     this.logAction(empId, 'Importação', `Importou lote de ${lancamentos.length} transações.`);
