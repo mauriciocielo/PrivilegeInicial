@@ -577,23 +577,6 @@ class DataStore {
         if (empresas.length !== filteredEmpresas.length) {
           localStorage.setItem('cf_empresas', JSON.stringify(filteredEmpresas));
 
-          const cleanCollection = (key: string, filterFn: (item: any) => boolean) => {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              try {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) {
-                  localStorage.setItem(key, JSON.stringify(parsed.filter(filterFn)));
-                }
-              } catch { }
-            }
-          };
-
-          cleanCollection('cf_lancamentos', l => l.empresaId !== 'e1' && l.empresaId !== 'e2');
-          cleanCollection('cf_portadores', p => p.empresaId !== 'e1' && p.empresaId !== 'e2');
-          cleanCollection('cf_plano_contas', pc => pc.empresaId !== 'e1' && pc.empresaId !== 'e2');
-          cleanCollection('cf_endividamentos', e => e.empresaId !== 'e1' && e.empresaId !== 'e2');
-
           const saved = sessionStorage.getItem('cf_empresa_sel');
           if (saved === 'e1' || saved === 'e2') {
             sessionStorage.removeItem('cf_empresa_sel');
