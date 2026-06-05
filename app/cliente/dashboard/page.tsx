@@ -105,11 +105,23 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     const user = store.getCurrentUser();
-    const eId = user?.empresaIds?.[0] || sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(eId, mesSelecionado);
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
+    load(saved, mesSelecionado);
+    
     const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
+    const dataHandler = () => {
+      const u = store.getCurrentUser();
+      const current = sessionStorage.getItem('cf_empresa_sel') || u?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+      load(current, mesSelecionado);
+    };
+
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataHandler);
+    };
   }, [load, mesSelecionado]);
 
   const margem = totais.receitas > 0 ? ((totais.saldo / totais.receitas) * 100) : 0;

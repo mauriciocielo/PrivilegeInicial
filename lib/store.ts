@@ -826,8 +826,13 @@ class DataStore {
 
   setCurrentUser(user: User | null) {
     if (typeof window === 'undefined') return;
-    if (user) sessionStorage.setItem('cf_current_user', JSON.stringify(user));
-    else sessionStorage.removeItem('cf_current_user');
+    if (user) {
+      sessionStorage.setItem('cf_current_user', JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem('cf_current_user');
+      sessionStorage.removeItem('cf_empresa_sel');
+      sessionStorage.removeItem('cf_app_mode');
+    }
   }
 
   // Users
