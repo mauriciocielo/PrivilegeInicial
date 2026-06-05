@@ -9,6 +9,25 @@ export async function GET(request: Request) {
     try {
         const lancamentos = await db.lancamento.findMany({
             where: empresaId ? { empresaId } : {},
+            select: {
+                id: true,
+                empresaId: true,
+                data: true,
+                descricao: true,
+                valor: true,
+                tipo: true,
+                planoContaId: true,
+                portadorId: true,
+                status: true,
+                numeroDocumento: true,
+                observacao: true,
+                origem: true,
+                ofxId: true,
+                unidadeId: true,
+                clienteId: true,
+                attachmentName: true,
+                createdAt: true,
+            },
             orderBy: [
                 { data: 'desc' },
                 { createdAt: 'desc' }

@@ -38,6 +38,12 @@ model Empresa {
   comprasMensalEstimada Float?
   logoData              String?
   bancoBoleto           String               @default("nenhum")
+  politicaReceberName   String?
+  politicaReceberData   String?
+  politicaComprasName   String?
+  politicaComprasData   String?
+  politicaCobrancaName   String?
+  politicaCobrancaData   String?
   createdAt             DateTime             @default(now())
   allowedRoutes         String[]
   atas                  AtaAtendimento[]

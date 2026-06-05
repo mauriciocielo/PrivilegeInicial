@@ -984,9 +984,9 @@ export default function LancamentosPage() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               {l.descricao}
-                              {l.attachmentData && (
+                              {l.attachmentName && (
                                 <a
-                                  href={`data:application/octet-stream;base64,${l.attachmentData}`}
+                                  href={`/api/lancamentos/attachment?id=${l.id}`}
                                   download={l.attachmentName}
                                   title={`Anexo: ${l.attachmentName}`}
                                   style={{ textDecoration: 'none', fontSize: 14 }}

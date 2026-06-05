@@ -353,7 +353,7 @@ export default function EmpresasPage() {
                     {form.politicaReceberName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={`data:application/pdf;base64,${form.politicaReceberData}`} 
+                          href={form.politicaReceberData ? `data:application/pdf;base64,${form.politicaReceberData}` : `/api/empresas/policy?id=${form.id}&type=receber`} 
                           download={form.politicaReceberName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaReceberName}
@@ -395,7 +395,7 @@ export default function EmpresasPage() {
                     {form.politicaComprasName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={`data:application/pdf;base64,${form.politicaComprasData}`} 
+                          href={form.politicaComprasData ? `data:application/pdf;base64,${form.politicaComprasData}` : `/api/empresas/policy?id=${form.id}&type=compras`} 
                           download={form.politicaComprasName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaComprasName}
@@ -437,7 +437,7 @@ export default function EmpresasPage() {
                     {form.politicaCobrancaName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={`data:application/pdf;base64,${form.politicaCobrancaData}`} 
+                          href={form.politicaCobrancaData ? `data:application/pdf;base64,${form.politicaCobrancaData}` : `/api/empresas/policy?id=${form.id}&type=cobranca`} 
                           download={form.politicaCobrancaName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaCobrancaName}

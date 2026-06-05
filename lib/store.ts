@@ -913,6 +913,45 @@ class DataStore {
     this.set('cf_portadores', this.getPortadores().filter(p => p.id !== id));
   }
 
+  pruneLancamentosAttachmentData() {
+    this.init();
+    const list = this.getLancamentos();
+    let changed = false;
+    const prunedList = list.map(l => {
+      if (l.attachmentData) {
+        changed = true;
+        const { attachmentData, ...rest } = l;
+        return rest;
+      }
+      return l;
+    });
+    if (changed) {
+      this.set('cf_lancamentos', prunedList, true);
+    }
+  }
+
+  pruneEmpresasPolicyData() {
+    this.init();
+    const list = this.getEmpresas();
+    let changed = false;
+    const prunedList = list.map(e => {
+      if (e.politicaReceberData || e.politicaComprasData || e.politicaCobrancaData) {
+        changed = true;
+        const {
+          politicaReceberData,
+          politicaComprasData,
+          politicaCobrancaData,
+          ...rest
+        } = e;
+        return rest;
+      }
+      return e;
+    });
+    if (changed) {
+      this.set('cf_empresas', prunedList, true);
+    }
+  }
+
   // Lançamentos
   getLancamentos(empresaId?: string): Lancamento[] {
     this.init();

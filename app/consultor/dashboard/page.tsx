@@ -384,7 +384,7 @@ export default function ConsultorDashboard() {
                         </div>
                       </div>
                       <a 
-                        href={`data:application/pdf;base64,${empresa.politicaReceberData}`} 
+                        href={`/api/empresas/policy?id=${empresa.id}&type=receber`} 
                         download={empresa.politicaReceberName}
                         className="btn btn-secondary btn-sm"
                         style={{ fontSize: 10, padding: '2px 8px' }}
@@ -403,7 +403,7 @@ export default function ConsultorDashboard() {
                         </div>
                       </div>
                       <a 
-                        href={`data:application/pdf;base64,${empresa.politicaComprasData}`} 
+                        href={`/api/empresas/policy?id=${empresa.id}&type=compras`} 
                         download={empresa.politicaComprasName}
                         className="btn btn-secondary btn-sm"
                         style={{ fontSize: 10, padding: '2px 8px' }}
@@ -422,7 +422,7 @@ export default function ConsultorDashboard() {
                         </div>
                       </div>
                       <a 
-                        href={`data:application/pdf;base64,${empresa.politicaCobrancaData}`} 
+                        href={`/api/empresas/policy?id=${empresa.id}&type=cobranca`} 
                         download={empresa.politicaCobrancaName}
                         className="btn btn-secondary btn-sm"
                         style={{ fontSize: 10, padding: '2px 8px' }}

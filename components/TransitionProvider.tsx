@@ -32,6 +32,8 @@ export default function TransitionProvider({ children }: { children: React.React
         const backup = await res.json();
         if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
           store.importBackup(JSON.stringify(backup));
+          store.pruneLancamentosAttachmentData();
+          store.pruneEmpresasPolicyData();
         } else {
           console.log('☁️ Banco de dados remoto vazio. Inicializando com dados locais...');
           const backupData = store.exportBackup();
@@ -42,6 +44,8 @@ export default function TransitionProvider({ children }: { children: React.React
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
             return;
           }
+          store.pruneLancamentosAttachmentData();
+          store.pruneEmpresasPolicyData();
         }
         sessionStorage.setItem('cf_postgres_synced', 'true');
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
@@ -102,6 +106,12 @@ export default function TransitionProvider({ children }: { children: React.React
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
+            
+            if (key === 'cf_lancamentos') {
+              store.pruneLancamentosAttachmentData();
+            } else if (key === 'cf_empresas') {
+              store.pruneEmpresasPolicyData();
+            }
           } else {
             console.error(`Erro ao auto-salvar ${key} no banco:`, syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));

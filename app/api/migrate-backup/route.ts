@@ -55,6 +55,12 @@ async function migrateEmpresas(empresas: any[]) {
           logoData: e.logoData ? String(e.logoData) : null,
           bancoBoleto: String(e.bancoBoleto || 'nenhum'),
           allowedRoutes: Array.isArray(e.allowedRoutes) ? e.allowedRoutes.map(String) : [],
+          politicaReceberName: e.politicaReceberName ? String(e.politicaReceberName) : null,
+          politicaReceberData: e.politicaReceberData ? String(e.politicaReceberData) : null,
+          politicaComprasName: e.politicaComprasName ? String(e.politicaComprasName) : null,
+          politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : null,
+          politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : null,
+          politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : null,
         },
         create: {
           id: String(e.id),
@@ -75,6 +81,12 @@ async function migrateEmpresas(empresas: any[]) {
           logoData: e.logoData ? String(e.logoData) : null,
           bancoBoleto: String(e.bancoBoleto || 'nenhum'),
           allowedRoutes: Array.isArray(e.allowedRoutes) ? e.allowedRoutes.map(String) : [],
+          politicaReceberName: e.politicaReceberName ? String(e.politicaReceberName) : null,
+          politicaReceberData: e.politicaReceberData ? String(e.politicaReceberData) : null,
+          politicaComprasName: e.politicaComprasName ? String(e.politicaComprasName) : null,
+          politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : null,
+          politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : null,
+          politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : null,
         }
       });
     } catch (err) {
@@ -607,7 +619,6 @@ async function migrateLancamentos(lancamentos: any[]) {
           unidadeId: l.unidadeId ? String(l.unidadeId) : null,
           clienteId: l.clienteId ? String(l.clienteId) : null,
           attachmentName: l.attachmentName ? String(l.attachmentName) : null,
-          attachmentData: l.attachmentData ? String(l.attachmentData) : null,
           createdAt: existing ? existing.createdAt.toISOString() : new Date().toISOString(),
         };
 
@@ -1170,7 +1181,31 @@ export async function GET(request: Request) {
     const requestedCollection = searchParams.get('collection');
 
     if (requestedCollection === 'cf_lancamentos') {
-      const cf_lancamentos = await db.lancamento.findMany();
+      const cf_lancamentos = await db.lancamento.findMany({
+        select: {
+          id: true,
+          empresaId: true,
+          data: true,
+          descricao: true,
+          valor: true,
+          tipo: true,
+          planoContaId: true,
+          portadorId: true,
+          status: true,
+          numeroDocumento: true,
+          observacao: true,
+          origem: true,
+          ofxId: true,
+          unidadeId: true,
+          clienteId: true,
+          attachmentName: true,
+          createdAt: true,
+        },
+        orderBy: [
+          { data: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      });
       return NextResponse.json({
         version: '7',
         isPartial: true,
@@ -1181,13 +1216,58 @@ export async function GET(request: Request) {
       });
     }
 
-    const cf_empresas = await db.empresa.findMany();
+    const cf_empresas = await db.empresa.findMany({
+      select: {
+        id: true,
+        razaoSocial: true,
+        nomeFantasia: true,
+        cnpj: true,
+        responsavel: true,
+        email: true,
+        telefone: true,
+        atividade: true,
+        tipo: true,
+        taxaMensalPadrao: true,
+        fundoReservaPct: true,
+        dataInicioContrato: true,
+        grupoEconomico: true,
+        receitaMensalEstimada: true,
+        comprasMensalEstimada: true,
+        logoData: true,
+        bancoBoleto: true,
+        createdAt: true,
+        allowedRoutes: true,
+        politicaReceberName: true,
+        politicaComprasName: true,
+        politicaCobrancaName: true,
+      }
+    });
     const cf_users = await db.user.findMany();
     const cf_unidades = await db.unidade.findMany();
     const cf_plano_contas = await db.planoConta.findMany();
     const cf_portadores = await db.portador.findMany();
     const cf_clientes = await db.cliente.findMany();
-    const cf_lancamentos = await db.lancamento.findMany();
+    const cf_lancamentos = await db.lancamento.findMany({
+      select: {
+        id: true,
+        empresaId: true,
+        data: true,
+        descricao: true,
+        valor: true,
+        tipo: true,
+        planoContaId: true,
+        portadorId: true,
+        status: true,
+        numeroDocumento: true,
+        observacao: true,
+        origem: true,
+        ofxId: true,
+        unidadeId: true,
+        clienteId: true,
+        attachmentName: true,
+        createdAt: true,
+      }
+    });
     const cf_endividamentosRaw = await db.endividamento.findMany({
       include: { pagamentos: true }
     });
@@ -1335,7 +1415,32 @@ export async function POST(request: Request) {
           let broadcastData: any = null;
           switch (collection) {
             case 'cf_empresas':
-              broadcastData = await db.empresa.findMany();
+              broadcastData = await db.empresa.findMany({
+                select: {
+                  id: true,
+                  razaoSocial: true,
+                  nomeFantasia: true,
+                  cnpj: true,
+                  responsavel: true,
+                  email: true,
+                  telefone: true,
+                  atividade: true,
+                  tipo: true,
+                  taxaMensalPadrao: true,
+                  fundoReservaPct: true,
+                  dataInicioContrato: true,
+                  grupoEconomico: true,
+                  receitaMensalEstimada: true,
+                  comprasMensalEstimada: true,
+                  logoData: true,
+                  bancoBoleto: true,
+                  createdAt: true,
+                  allowedRoutes: true,
+                  politicaReceberName: true,
+                  politicaComprasName: true,
+                  politicaCobrancaName: true,
+                }
+              });
               break;
             case 'cf_users':
               broadcastData = await db.user.findMany();
@@ -1353,7 +1458,27 @@ export async function POST(request: Request) {
               broadcastData = await db.cliente.findMany();
               break;
             case 'cf_lancamentos':
-              broadcastData = await db.lancamento.findMany();
+              broadcastData = await db.lancamento.findMany({
+                select: {
+                  id: true,
+                  empresaId: true,
+                  data: true,
+                  descricao: true,
+                  valor: true,
+                  tipo: true,
+                  planoContaId: true,
+                  portadorId: true,
+                  status: true,
+                  numeroDocumento: true,
+                  observacao: true,
+                  origem: true,
+                  ofxId: true,
+                  unidadeId: true,
+                  clienteId: true,
+                  attachmentName: true,
+                  createdAt: true,
+                }
+              });
               break;
             case 'cf_endividamentos':
               const rawEnd = await db.endividamento.findMany({
