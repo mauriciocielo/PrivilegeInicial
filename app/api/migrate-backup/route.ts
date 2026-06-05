@@ -1328,6 +1328,109 @@ export async function POST(request: Request) {
       }
 
       console.log(`[Chunked Migration] ✅ Sincronização da coleção ${collection} concluída com sucesso.`);
+
+      // Propaga a atualização da coleção via WebSocket para todos os clientes conectados
+      if ((global as any).io) {
+        try {
+          let broadcastData: any = null;
+          switch (collection) {
+            case 'cf_empresas':
+              broadcastData = await db.empresa.findMany();
+              break;
+            case 'cf_users':
+              broadcastData = await db.user.findMany();
+              break;
+            case 'cf_unidades':
+              broadcastData = await db.unidade.findMany();
+              break;
+            case 'cf_plano_contas':
+              broadcastData = await db.planoConta.findMany();
+              break;
+            case 'cf_portadores':
+              broadcastData = await db.portador.findMany();
+              break;
+            case 'cf_clientes':
+              broadcastData = await db.cliente.findMany();
+              break;
+            case 'cf_lancamentos':
+              broadcastData = await db.lancamento.findMany();
+              break;
+            case 'cf_endividamentos':
+              const rawEnd = await db.endividamento.findMany({
+                include: { pagamentos: true }
+              });
+              broadcastData = rawEnd.map(e => ({
+                id: e.id,
+                empresaId: e.empresaId,
+                tipo: e.tipo,
+                banco: e.banco,
+                conta: e.conta,
+                contrato: e.contrato,
+                descricaoContrato: e.descricaoContrato,
+                taxa: e.taxa,
+                taxaTipo: e.taxaTipo,
+                indexador: e.indexador,
+                parcela: e.parcela,
+                parcelasFaltantes: e.parcelasFaltantes,
+                valorQuitacao: e.valorQuitacao,
+                valorAPagar: e.valorAPagar,
+                garantia: e.garantia,
+                pagamentoMes: e.pagamentoMes,
+                pagamentos: e.pagamentos.map(p => ({
+                  id: p.id,
+                  data: p.data,
+                  valorTotal: p.valorTotal,
+                  valorJuros: p.valorJuros,
+                  valorAmortizacao: p.valorAmortizacao
+                }))
+              }));
+              break;
+            case 'cf_atas':
+              broadcastData = await db.ataAtendimento.findMany();
+              break;
+            case 'cf_indicadores':
+              broadcastData = await db.indicadorMensal.findMany();
+              break;
+            case 'cf_orcamentos':
+              const rawOrc = await db.orcamentoMensal.findMany({
+                include: { valores: true }
+              });
+              broadcastData = rawOrc.map(orc => {
+                const categorias: Record<string, number> = {};
+                orc.valores.forEach(v => {
+                  categorias[v.planoContaId] = v.valor;
+                });
+                return {
+                  id: orc.id,
+                  empresaId: orc.empresaId,
+                  mes: orc.mes,
+                  categorias
+                };
+              });
+              break;
+            case 'cf_nfse':
+              broadcastData = await db.nfsE.findMany();
+              break;
+            case 'cf_situacao_fiscal':
+              broadcastData = await db.situacaoFiscal.findMany();
+              break;
+            case 'cf_transaction_patterns':
+              broadcastData = await db.transactionPattern.findMany();
+              break;
+          }
+
+          if (broadcastData !== null) {
+            console.log(`🔌 WebSocket: Transmitindo evento 'colecao_atualizada' para a coleção ${collection}`);
+            (global as any).io.emit('colecao_atualizada', {
+              collection,
+              data: broadcastData
+            });
+          }
+        } catch (wsErr) {
+          console.error(`Erro ao buscar ou transmitir atualização de ${collection} via WebSocket:`, wsErr);
+        }
+      }
+
       return NextResponse.json({ success: true });
     } else {
       console.log('Iniciando migração de backup (monolítico) para o PostgreSQL...');

@@ -22,7 +22,9 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     };
 
     const handleDataChange = () => {
-      setSelectedEmpresaId(sessionStorage.getItem('cf_empresa_sel') || '');
+      const current = sessionStorage.getItem('cf_empresa_sel') || '';
+      setSelectedEmpresaId(current);
+      window.dispatchEvent(new CustomEvent('empresaChange', { detail: current }));
     };
 
     window.addEventListener('empresaChange', handleEmpresaChange);

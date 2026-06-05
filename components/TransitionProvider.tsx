@@ -51,23 +51,39 @@ export default function TransitionProvider({ children }: { children: React.React
     syncDb();
   }, []);
 
-  // Auto-salvamento automático no PostgreSQL ao fazer alterações no sistema (Debounced em 3s)
+  // Auto-salvamento automático no PostgreSQL ao fazer alterações no sistema (Debounced em 300ms)
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
     const handleDataChange = (event: any) => {
-      // Sincroniza apenas na tela de lançamentos
-      if (pathname !== '/consultor/lancamentos') return;
-
-      // Ignora se for a sincronização inicial
+      // Ignora se a sincronização inicial não terminou
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       
-      // Ignora se for alteração disparada pelo próprio polling de sincronização
+      // Ignora se for alteração disparada por outra sincronização/importação em andamento
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       // Ignora chaves temporárias ou não relevantes
       const key = event?.detail?.key;
-      if (key === 'cf_current_user' || key === 'cf_postgres_synced') return;
+      if (!key || key === 'cf_current_user' || key === 'cf_postgres_synced' || key === 'cf_sync_in_progress' || key === 'cf_audit_logs') return;
+
+      // Lista de coleções válidas para sincronização automática
+      const validCollections = [
+        'cf_empresas',
+        'cf_users',
+        'cf_unidades',
+        'cf_plano_contas',
+        'cf_portadores',
+        'cf_clientes',
+        'cf_lancamentos',
+        'cf_endividamentos',
+        'cf_atas',
+        'cf_indicadores',
+        'cf_orcamentos',
+        'cf_nfse',
+        'cf_situacao_fiscal',
+        'cf_transaction_patterns'
+      ];
+      if (!validCollections.includes(key)) return;
 
       // Sinaliza que há modificações locais aguardando envio
       hasPendingChangesRef.current = true;
@@ -76,19 +92,19 @@ export default function TransitionProvider({ children }: { children: React.React
 
       timeoutId = setTimeout(async () => {
         try {
-          console.log('☁️ Auto-salvando lançamentos no PostgreSQL...');
+          console.log(`☁️ Auto-salvando ${key} no PostgreSQL...`);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           const backupData = store.exportBackup();
-          const syncResult = await syncBackupInChunks(backupData, undefined, ['cf_lancamentos']);
+          const syncResult = await syncBackupInChunks(backupData, undefined, [key]);
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
           } else {
-            console.error('Erro ao auto-salvar lançamentos no banco:', syncResult.error);
+            console.error(`Erro ao auto-salvar ${key} no banco:`, syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           }
         } catch (err) {
-          console.error('Erro ao auto-salvar lançamentos no banco:', err);
+          console.error(`Erro ao auto-salvar ${key} no banco:`, err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
         }
       }, 300);
@@ -100,13 +116,13 @@ export default function TransitionProvider({ children }: { children: React.React
       clearTimeout(timeoutId);
       window.removeEventListener('cfDataChange', handleDataChange as any);
     };
-  }, [pathname]);
+  }, []);
 
   // Sincronização em tempo real via WebSockets (Socket.io)
   useEffect(() => {
-    if (pathname !== '/consultor/lancamentos') return;
+    if (pathname === '/login') return;
 
-    console.log('🔌 Inicializando conexão WebSocket para lançamentos...');
+    console.log('🔌 Inicializando conexão WebSocket global...');
     const socket = io();
 
     socket.on('connect', () => {
@@ -115,6 +131,30 @@ export default function TransitionProvider({ children }: { children: React.React
 
     socket.on('disconnect', () => {
       console.log('🔌 Desconectado do servidor WebSocket');
+    });
+
+    // Ouvinte para qualquer atualização de coleção em tempo real
+    socket.on('colecao_atualizada', (payload: any) => {
+      if (!payload || !payload.collection) return;
+      if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+
+      try {
+        console.log(`🔌 WebSocket: Coleção ${payload.collection} atualizada via WS.`);
+        sessionStorage.setItem('cf_sync_in_progress', 'true');
+        
+        store.importBackup(JSON.stringify({
+          version: '7',
+          isPartial: true,
+          data: {
+            [payload.collection]: payload.data
+          }
+        }));
+
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      } catch (err) {
+        console.error(`Erro ao processar colecao_atualizada do WebSocket para ${payload.collection}:`, err);
+        sessionStorage.setItem('cf_sync_in_progress', 'false');
+      }
     });
 
     socket.on('lancamento_criado', (novo: any) => {
@@ -184,34 +224,51 @@ export default function TransitionProvider({ children }: { children: React.React
       console.log('🔌 Desconectando e limpando socket...');
       socket.disconnect();
     };
-  }, [pathname]);
+  }, [pathname === '/login']);
 
-  // Polling de fallback em tempo real (a cada 15 segundos) para sincronização multi-usuário
+  // Função auxiliar para mapear o caminho atual para a coleção correspondente
+  const getCollectionFromPath = (path: string): string | null => {
+    if (path.startsWith('/consultor/lancamentos')) return 'cf_lancamentos';
+    if (path.startsWith('/consultor/plano-de-contas')) return 'cf_plano_contas';
+    if (path.startsWith('/consultor/portadores')) return 'cf_portadores';
+    if (path.startsWith('/consultor/clientes')) return 'cf_clientes';
+    if (path.startsWith('/consultor/endividamento')) return 'cf_endividamentos';
+    if (path.startsWith('/consultor/atas')) return 'cf_atas';
+    if (path.startsWith('/consultor/indicadores')) return 'cf_indicadores';
+    if (path.startsWith('/consultor/orcamento')) return 'cf_orcamentos';
+    if (path.startsWith('/consultor/empresas')) return 'cf_empresas';
+    if (path.startsWith('/consultor/usuarios')) return 'cf_users';
+    return null;
+  };
+
+  // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa da página
   useEffect(() => {
-    if (pathname !== '/consultor/lancamentos') return;
+    if (pathname === '/login') return;
+
+    const collection = getCollectionFromPath(pathname);
+    if (!collection) return;
 
     const pollInterval = setInterval(async () => {
       // Se a sincronização inicial não terminou, ignora
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
-      // Se há modificações locais pendentes de envio, ignora para não sobrescrever o que o usuário está digitando
+      // Se há modificações locais pendentes de envio, ignora para não sobrescrever
       if (hasPendingChangesRef.current) return;
       // Se outra sincronização/importação já está em andamento, ignora
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
-        const res = await fetch('/api/migrate-backup?collection=cf_lancamentos');
+        const res = await fetch(`/api/migrate-backup?collection=${collection}`);
         if (!res.ok) return;
         const backup = await res.json();
         if (backup && backup.data) {
           const localString = store.exportBackup();
           const localParsed = JSON.parse(localString);
           
-          // Compara apenas a coleção de lançamentos para ver se há novidades
-          const remoteStr = JSON.stringify(backup.data.cf_lancamentos || []);
-          const localStr = JSON.stringify(localParsed.data.cf_lancamentos || []);
+          const remoteStr = JSON.stringify(backup.data[collection] || []);
+          const localStr = JSON.stringify(localParsed.data[collection] || []);
           
           if (remoteStr !== localStr) {
-            console.log('☁️ Sincronizando lançamentos remotos do PostgreSQL em tempo real (fallback)...');
+            console.log(`☁️ Polling: Sincronizando ${collection} remotos em tempo real (fallback)...`);
             sessionStorage.setItem('cf_sync_in_progress', 'true');
             store.importBackup(JSON.stringify(backup));
             sessionStorage.setItem('cf_sync_in_progress', 'false');

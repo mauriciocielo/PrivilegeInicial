@@ -39,6 +39,10 @@ app.prepare().then(() => {
       socket.broadcast.emit('lancamento_excluido', id);
     });
 
+    socket.on('colecao_atualizada', (data) => {
+      socket.broadcast.emit('colecao_atualizada', data);
+    });
+
     socket.on('disconnect', () => {
       console.log('🔌 Cliente WebSocket desconectado:', socket.id);
     });
