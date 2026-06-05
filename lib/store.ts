@@ -1067,9 +1067,20 @@ class DataStore {
         const relPlano = this.getPlanoContas(relComp.id);
         const relCategory = relPlano.find(pc => pc.id === relMatch.categoryId);
         if (relCategory) {
-          // Procura a categoria correspondente no plano de contas da empresa atual (por código)
-          const targetCategory = targetPlano.find(pc => pc.codigo === relCategory.codigo) ||
-                                 targetPlano.find(pc => pc.descricao.trim().toLowerCase() === relCategory.descricao.trim().toLowerCase());
+          // Procura a categoria correspondente no plano de contas da empresa atual
+          // Prioriza categorias de nível 3 (folhas) que são ativas
+          const targetCategory = targetPlano.find(pc => pc.codigo === relCategory.codigo && pc.nivel === 3 && pc.ativo) ||
+                                 targetPlano.find(pc => pc.descricao.trim().toLowerCase() === relCategory.descricao.trim().toLowerCase() && pc.nivel === 3 && pc.ativo) ||
+                                 targetPlano.find(pc => {
+                                   if (!pc.ativo || pc.nivel !== 3) return false;
+                                   const cleanPc = pc.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
+                                   const cleanRel = relCategory.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
+                                   return cleanPc.includes(cleanRel) || cleanRel.includes(cleanPc);
+                                 }) ||
+                                 // Fallback para qualquer nível se não encontrar folha ativa
+                                 targetPlano.find(pc => pc.codigo === relCategory.codigo && pc.ativo) ||
+                                 targetPlano.find(pc => pc.codigo === relCategory.codigo);
+
           if (targetCategory) {
             console.log(`🧠 Inteligência: Classificação sugerida de empresa relacionada (${relComp.nomeFantasia}) para ${description} -> ${targetCategory.codigo} - ${targetCategory.descricao}`);
             return targetCategory.id;
