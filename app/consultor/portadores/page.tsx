@@ -32,6 +32,7 @@ const BANCOS_COMPE = [
   { code: '623', name: 'Banco Pan S.A.' },
   { code: '655', name: 'Banco Votorantim S.A. (BV)' },
   { code: '136', name: 'Unicred Cooperativa' },
+  { code: '133', name: 'Cresol' },
   { code: '318', name: 'Banco BMG S.A.' },
   { code: '212', name: 'Banco Original S.A.' },
   { code: '735', name: 'Banco Neon' },

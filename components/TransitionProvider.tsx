@@ -24,6 +24,8 @@ export default function TransitionProvider({ children }: { children: React.React
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
         const res = await fetch('/api/migrate-backup');
         if (!res.ok) {
+          console.error('Erro ao buscar backup inicial: resposta HTTP não-OK');
+          sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           return;
         }
@@ -36,6 +38,7 @@ export default function TransitionProvider({ children }: { children: React.React
           const syncResult = await syncBackupInChunks(backupData);
           if (!syncResult.success) {
             console.error('Erro ao inicializar banco remoto:', syncResult.error);
+            sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
             return;
           }
