@@ -133,6 +133,10 @@ export default function ClienteDashboard() {
   const entradasSemana = lancsSemana.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
   const saidasSemana = lancsSemana.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
   
+  const [ySel, moSel] = mesSelecionado.split('-');
+  const dSel = new Date(Number(ySel), Number(moSel) - 1, 1);
+  const mesAtualLabel = dSel.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+
   return (
     <>
       <div className="page-header glass-header">

@@ -1668,8 +1668,7 @@ class DataStore {
   }
 
   exportBackup(): string {
-    this.init();
-    const keys = [
+    return this.exportPartialBackup([
       'cf_users',
       'cf_empresas',
       'cf_plano_contas',
@@ -1684,7 +1683,11 @@ class DataStore {
       'cf_clientes',
       'cf_nfse',
       'cf_inteligencia_docs'
-    ];
+    ]);
+  }
+
+  exportPartialBackup(keys: string[]): string {
+    this.init();
     const data: Record<string, unknown> = {};
     if (typeof window !== 'undefined') {
       keys.forEach(key => {
@@ -1705,8 +1708,9 @@ class DataStore {
     return JSON.stringify({
       version: STORAGE_VERSION,
       timestamp: new Date().toISOString(),
+      isPartial: true,
       data
-    }, null, 2);
+    });
   }
 
   importBackup(jsonString: string): { success: boolean; error?: string } {

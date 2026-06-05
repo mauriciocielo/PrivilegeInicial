@@ -115,7 +115,7 @@ export default function TransitionProvider({ children }: { children: React.React
           console.log(`☁️ Auto-salvando ${key} no PostgreSQL...`);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           sessionStorage.setItem('cf_sync_in_progress', 'true');
-          const backupData = store.exportBackup();
+          const backupData = store.exportPartialBackup([key]);
           const syncResult = await syncBackupInChunks(backupData, undefined, [key]);
           sessionStorage.setItem('cf_sync_in_progress', 'false');
           if (syncResult.success) {
@@ -312,6 +312,25 @@ export default function TransitionProvider({ children }: { children: React.React
 
     return () => clearInterval(pollInterval);
   }, [pathname]);
+
+  useEffect(() => {
+    // Backup completo de segurança a cada 1 hora
+    const hourlyInterval = setInterval(() => {
+      console.log('⏰ Executando backup completo de segurança (1 hora)...');
+      try {
+        const backupStr = store.exportBackup();
+        const backupObj = JSON.parse(backupStr);
+        fetch('/api/migrate-backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(backupObj)
+        }).catch(err => console.error('Erro na rede durante o backup completo (1 hora):', err));
+      } catch (err) {
+        console.error('Erro ao gerar o backup completo (1 hora):', err);
+      }
+    }, 60 * 60 * 1000); // 1 hora
+    return () => clearInterval(hourlyInterval);
+  }, []);
 
   useEffect(() => {
     if (pathname !== prevPathnameRef.current) {

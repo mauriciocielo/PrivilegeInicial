@@ -221,11 +221,14 @@ export default function LancamentosPage() {
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+    const user = store.getCurrentUser();
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
     load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+      const user = store.getCurrentUser();
+      const current = sessionStorage.getItem('cf_empresa_sel') || user?.empresaIds?.[0] || (store.getEmpresas()[0]?.id ?? '');
       setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
       setLancamentos(store.getLancamentos(current));
     };

@@ -53,15 +53,18 @@ export default function RelatoriosPage() {
   }, []);
 
   useEffect(() => {
-    setCurrentUser(store.getCurrentUser());
-    const saved = sessionStorage.getItem('cf_empresa_sel') || '';
+    const user = store.getCurrentUser();
+    setCurrentUser(user);
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
     load(saved);
 
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);
 
     const dataHandler = () => {
-      const currentSaved = sessionStorage.getItem('cf_empresa_sel') || '';
+      const user = store.getCurrentUser();
+      const currentSaved = sessionStorage.getItem('cf_empresa_sel') || user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
       load(currentSaved);
     };
     window.addEventListener('cfDataChange', dataHandler);

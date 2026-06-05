@@ -60,21 +60,10 @@ export default function ClientePoliticasPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || '';
-    if (saved) {
-      load(saved);
-    } else {
-      const all = store.getEmpresas();
-      const u = store.getCurrentUser();
-      if (u && u.empresaIds.length > 0) {
-        const firstAllowed = all.find(e => u.empresaIds.includes(e.id));
-        if (firstAllowed) {
-          load(firstAllowed.id);
-        }
-      } else if (all.length > 0) {
-        load(all[0].id);
-      }
-    }
+    const user = store.getCurrentUser();
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
+    load(saved);
 
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);

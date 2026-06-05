@@ -28,12 +28,16 @@ export default function AtasClientePage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const user = store.getCurrentUser();
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
     if (saved) loadData(saved);
 
     const handleEmpresaChange = (event: Event) => loadData((event as CustomEvent<string>).detail);
     const handleDataChange = () => {
-      const currentEmp = sessionStorage.getItem('cf_empresa_sel');
+      const user = store.getCurrentUser();
+      const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+      const currentEmp = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
       if (currentEmp) loadData(currentEmp);
     };
 

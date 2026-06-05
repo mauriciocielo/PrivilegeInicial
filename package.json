@@ -16,7 +16,7 @@
     "dotenv": "^17.4.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.17.0",
     "mysql2": "^3.22.4",
     "next": "16.2.6",
     "nodemailer": "^8.0.10",
