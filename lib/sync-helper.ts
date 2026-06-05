@@ -28,14 +28,14 @@ export async function syncBackupInChunks(
       { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 150 }, // Single chunk is safer due to parentId updates
       { key: 'cf_portadores', label: 'Portadores', chunkSize: 150 },
       { key: 'cf_clientes', label: 'Clientes', chunkSize: 150 },
-      { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 150 }, // Chunked
-      { key: 'cf_endividamentos', label: 'Endividamentos', chunkSize: 100 },
-      { key: 'cf_atas', label: 'Atas de Atendimento', chunkSize: 100 },
-      { key: 'cf_indicadores', label: 'Indicadores', chunkSize: 150 },
-      { key: 'cf_orcamentos', label: 'Orçamentos', chunkSize: 100 },
-      { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 100 }, // Chunked
-      { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 150 },
-      { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 150 }
+      { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 50 }, // Chunked
+      { key: 'cf_endividamentos', label: 'Endividamentos', chunkSize: 50 },
+      { key: 'cf_atas', label: 'Atas de Atendimento', chunkSize: 50 },
+      { key: 'cf_indicadores', label: 'Indicadores', chunkSize: 100 },
+      { key: 'cf_orcamentos', label: 'Orçamentos', chunkSize: 50 },
+      { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 50 }, // Chunked
+      { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 100 },
+      { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 100 }
     ];
 
     for (const col of collectionsOrder) {
