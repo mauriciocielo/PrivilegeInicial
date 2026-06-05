@@ -126,6 +126,9 @@ export default function EmpresasPage() {
       email: form.email || '',
       telefone: form.telefone || '',
       atividade: form.atividade,
+      tipo: form.tipo || 'empresa',
+      taxaMensalPadrao: form.taxaMensalPadrao,
+      fundoReservaPct: form.fundoReservaPct,
       dataInicioContrato: form.dataInicioContrato,
       grupoEconomico: form.grupoEconomico,
       receitaMensalEstimada: Number(form.receitaMensalEstimada) || 0,
@@ -190,6 +193,7 @@ export default function EmpresasPage() {
                   <th>CNPJ</th>
                   <th>Responsável</th>
                   <th>Atividade</th>
+                  <th>Tipo</th>
                   <th>Contato</th>
                   <th>Ações</th>
                 </tr>
@@ -216,6 +220,15 @@ export default function EmpresasPage() {
                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.cnpj}</td>
                     <td>{e.responsavel || '-'}</td>
                     <td>{e.atividade ? <span className="badge badge-blue">{e.atividade}</span> : '-'}</td>
+                    <td>
+                      {e.tipo === 'cooperativa' ? (
+                        <span className="badge" style={{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)', fontSize: 10 }}>🤝 Cooperativa</span>
+                      ) : e.tipo === 'condominio' ? (
+                        <span className="badge badge-gray" style={{ fontSize: 10 }}>🏘️ Condomínio</span>
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', fontSize: 10 }}>🏢 Empresa</span>
+                      )}
+                    </td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{e.email}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -226,7 +239,7 @@ export default function EmpresasPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">🏢</div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">🏢</div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
                 )}
               </tbody>
             </table>
@@ -280,6 +293,20 @@ export default function EmpresasPage() {
             </div>
             <div className="form-row">
               <div className="form-group">
+                <label className="form-label">E-mail</label>
+                <input type="email" className="form-control" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tipo de Gestão</label>
+                <select className="form-control" value={form.tipo || 'empresa'} onChange={e => setForm(f => ({ ...f, tipo: e.target.value as Empresa['tipo'] }))}>
+                  <option value="empresa">🏢 Empresa Tradicional</option>
+                  <option value="condominio">🏘️ Condomínio</option>
+                  <option value="cooperativa">🤝 Cooperativa</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
                 <label className="form-label">Atividade da Empresa</label>
                 <select className="form-control" value={form.atividade || ''} onChange={e => setForm(f => ({ ...f, atividade: e.target.value as Empresa['atividade'] }))}>
                   <option value="">Selecione...</option>
@@ -289,21 +316,8 @@ export default function EmpresasPage() {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">E-mail</label>
-                <input type="email" className="form-control" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
                 <label className="form-label">Telefone</label>
                 <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone || ''} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Logotipo da Empresa</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="file" accept="image/*" onChange={handleLogoChange} style={{ fontSize: 12 }} />
-                  {form.logoData && <img src={form.logoData} alt="Miniatura" style={{ maxHeight: 28, maxWidth: 60, objectFit: 'contain', border: '1px solid var(--border-light)', borderRadius: 4 }} />}
-                </div>
               </div>
             </div>
             <div className="form-row">

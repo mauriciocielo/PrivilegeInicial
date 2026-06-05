@@ -246,6 +246,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           if (emp && emp.tipo === 'condominio') {
             initialMode = 'condominio';
           }
+          // cooperativa uses empresarial nav
         }
         setAppMode(initialMode);
         sessionStorage.setItem('cf_app_mode', initialMode);
@@ -264,7 +265,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const u = store.getCurrentUser();
     if (u) {
       const allowed = isConsultorOrAdmin ? all : all.filter(e => u.empresaIds.includes(e.id));
-      const filtered = allowed.filter(e => mode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio');
+      const filtered = allowed.filter(e => mode === 'condominio' ? e.tipo === 'condominio' : e.tipo !== 'condominio'); // cooperativa falls into empresarial
       
       if (filtered.length > 0) {
         setSelectedEmpresa(filtered[0].id);
@@ -290,6 +291,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (emp && emp.tipo === 'condominio') {
         nextMode = 'condominio';
       }
+      // emp.tipo === 'cooperativa' stays as 'empresarial'
     }
     setAppMode(nextMode);
     sessionStorage.setItem('cf_app_mode', nextMode);
@@ -426,10 +428,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
               
               {/* Empresas Group */}
-              {selectableEmpresas.some(e => e.tipo !== 'condominio') && (
+              {selectableEmpresas.some(e => e.tipo !== 'condominio' && e.tipo !== 'cooperativa') && (
                 <>
                   <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</div>
-                  {selectableEmpresas.filter(e => e.tipo !== 'condominio').map(e => (
+                  {selectableEmpresas.filter(e => e.tipo !== 'condominio' && e.tipo !== 'cooperativa').map(e => (
                     <div 
                       key={e.id}
                       onClick={() => handleEmpresaChange(e.id)}
@@ -440,6 +442,29 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                         <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
                       ) : (
                         <span>🏢</span>
+                      )}
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Cooperativas Group */}
+              {selectableEmpresas.some(e => e.tipo === 'cooperativa') && (
+                <>
+                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Cooperativas</div>
+                  {selectableEmpresas.filter(e => e.tipo === 'cooperativa').map(e => (
+                    <div 
+                      key={e.id}
+                      onClick={() => handleEmpresaChange(e.id)}
+                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                      className="company-select-item"
+                    >
+                      {e.logoData ? (
+                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                      ) : (
+                        <span>🤝</span>
                       )}
                       <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
                     </div>

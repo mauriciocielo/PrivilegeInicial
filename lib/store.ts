@@ -2,6 +2,8 @@
 // STORE — Gerenciamento de dados via localStorage
 // ============================================================
 
+import { idbGetAllLancamentos, idbSaveAllLancamentos, idbPutLancamento, idbDeleteLancamento, migrateFromLocalStorage } from './idb';
+
 export interface User {
   id: string;
   name: string;
@@ -26,7 +28,7 @@ export interface Empresa {
   email: string;
   telefone: string;
   atividade?: 'Comércio' | 'Serviço' | 'Indústria';
-  tipo?: 'empresa' | 'condominio';
+  tipo?: 'empresa' | 'condominio' | 'cooperativa';
   taxaMensalPadrao?: number;
   fundoReservaPct?: number;
   dataInicioContrato?: string;
@@ -503,6 +505,36 @@ class DataStore {
   private initialized = false;
   private cache: Record<string, unknown> = {};
 
+  // ---- In-memory cache for lancamentos (IndexedDB backend) ----
+  private _lancamentosCache: Lancamento[] | null = null;
+  private _lancamentosReady: Promise<void> | null = null;
+
+  /** Garante que o cache de lançamentos está carregado */
+  private async ensureLancamentosCache(): Promise<void> {
+    if (this._lancamentosCache !== null) return;
+    if (this._lancamentosReady) return this._lancamentosReady;
+    this._lancamentosReady = (async () => {
+      try {
+        await migrateFromLocalStorage();
+        const all = await idbGetAllLancamentos();
+        this._lancamentosCache = all as Lancamento[];
+      } catch {
+        const raw = localStorage.getItem('cf_lancamentos');
+        this._lancamentosCache = raw ? JSON.parse(raw) : [];
+      }
+    })();
+    return this._lancamentosReady;
+  }
+
+  /** Persiste o cache de lançamentos no IDB (async, fire-and-forget) */
+  private persistLancamentos(list: Lancamento[], silent = false) {
+    this._lancamentosCache = list;
+    idbSaveAllLancamentos(list).catch(err =>
+      console.error('[IDB] Failed to persist lancamentos:', err)
+    );
+    if (!silent) window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
+  }
+
   private get<T>(key: string, fallback: T): T {
     if (typeof window === 'undefined') return fallback;
     if (key in this.cache) {
@@ -533,6 +565,9 @@ class DataStore {
   private init() {
     if (typeof window === 'undefined' || this.initialized) return;
     this.initialized = true;
+
+    // Inicia o carregamento assíncrono do cache de lançamentos
+    this.ensureLancamentosCache().catch(() => {});
 
     // Remove legacy seeded default companies (e1/TechSol, e2/ComBrasil) if they exist
     const empresasRaw = localStorage.getItem('cf_empresas');
@@ -915,18 +950,18 @@ class DataStore {
 
   pruneLancamentosAttachmentData() {
     this.init();
-    const list = this.getLancamentos();
+    if (!this._lancamentosCache) return;
     let changed = false;
-    const prunedList = list.map(l => {
+    const prunedList = this._lancamentosCache.map(l => {
       if (l.attachmentData) {
         changed = true;
         const { attachmentData, ...rest } = l;
-        return rest;
+        return rest as Lancamento;
       }
       return l;
     });
     if (changed) {
-      this.set('cf_lancamentos', prunedList, true);
+      this.persistLancamentos(prunedList, true);
     }
   }
 
@@ -952,11 +987,24 @@ class DataStore {
     }
   }
 
-  // Lançamentos
+  // Lançamentos — usa IndexedDB via cache em memória
   getLancamentos(empresaId?: string): Lancamento[] {
     this.init();
-    const all = this.get<Lancamento[]>('cf_lancamentos', []);
-    return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
+    // Se o cache ainda não foi carregado, tenta ler do localStorage como fallback síncrono
+    if (this._lancamentosCache === null) {
+      try {
+        const raw = localStorage.getItem('cf_lancamentos');
+        this._lancamentosCache = raw ? JSON.parse(raw) : [];
+      } catch {
+        this._lancamentosCache = [];
+      }
+      // Kick off async load to upgrade cache from IDB
+      this.ensureLancamentosCache().then(() => {
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
+      }).catch(() => {});
+    }
+    const all = this._lancamentosCache as Lancamento[];
+    return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
   }
 
   getPotentialMatches(ofx: Partial<Lancamento>): Lancamento[] {
@@ -1001,7 +1049,7 @@ class DataStore {
       this.learnPattern(ofxData.empresaId, ofxData.descricao, ofxData.planoContaId);
       this.logAction(ofxData.empresaId, 'Conciliação', `Importou e conciliou a transação "${ofxData.descricao}" de R$ ${ofxData.valor.toFixed(2)}`);
     }
-    this.set('cf_lancamentos', list);
+    this.persistLancamentos(list);
   }
   // Helper para limpar descrições bancárias (remove datas, números isolados e símbolos)
   private normalizeText(text: string): string {
@@ -1179,7 +1227,7 @@ class DataStore {
       list.push(lancamento);
       this.logAction(lancamento.empresaId, 'Criação', `Criou lançamento "${lancamento.descricao}" no valor de R$ ${lancamento.valor.toFixed(2)} (Data: ${lancamento.data})`);
     }
-    this.set('cf_lancamentos', list);
+    this.persistLancamentos(list);
   }
 
   saveLancamentos(lancamentos: Lancamento[]): { imported: number; skipped: number } {
@@ -1213,7 +1261,7 @@ class DataStore {
 
     const filtered = list.filter(l => !ids.has(l.id));
     const newList = [...filtered, ...processed];
-    this.set('cf_lancamentos', newList);
+    this.persistLancamentos(newList);
 
     // Salva/aprende as regras para todos os lançamentos que possuem categoria associada
     processed.forEach(l => {
@@ -1236,7 +1284,9 @@ class DataStore {
         throw new Error(`Este período está fechado e conciliado. Não é possível excluir o lançamento.`);
       }
       this.logAction(l.empresaId, 'Exclusão', `Excluiu lançamento "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} (Data: ${l.data})`);
-      this.set('cf_lancamentos', list.filter(item => item.id !== id));
+      const newList = list.filter(item => item.id !== id);
+      this.persistLancamentos(newList, true);
+      idbDeleteLancamento(id).catch(() => {});
 
       // Sincroniza a exclusão com o banco de dados remoto
       if (typeof window !== 'undefined') {
@@ -1255,14 +1305,14 @@ class DataStore {
     } else {
       list.push(lancamento);
     }
-    this.set('cf_lancamentos', list);
+    this.persistLancamentos(list, true);
   }
 
   importDeleteLancamento(id: string) {
     const list = this.getLancamentos();
     const newList = list.filter(item => item.id !== id);
     if (list.length !== newList.length) {
-      this.set('cf_lancamentos', newList);
+      this.persistLancamentos(newList, true);
     }
   }
 
@@ -1614,9 +1664,16 @@ class DataStore {
       }
 
       if (typeof window !== 'undefined') {
-        // Grava as coleções que vieram no backup
+        // Grava as coleções que vieram no backup (exceto lancamentos que vai pelo IDB)
         Object.entries(data).forEach(([key, value]) => {
-          if (key.startsWith('cf_') && value !== null) {
+          if (key === 'cf_lancamentos' && Array.isArray(value)) {
+            // Importa lançamentos via IDB
+            this._lancamentosCache = value as Lancamento[];
+            idbSaveAllLancamentos(value).catch(err =>
+              console.error('[IDB] Failed to import lancamentos backup:', err)
+            );
+            localStorage.removeItem('cf_lancamentos');
+          } else if (key.startsWith('cf_') && value !== null) {
             localStorage.setItem(key, JSON.stringify(value));
           }
         });
