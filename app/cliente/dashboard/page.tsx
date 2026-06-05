@@ -114,25 +114,38 @@ export default function ClienteDashboard() {
 
   const margem = totais.receitas > 0 ? ((totais.saldo / totais.receitas) * 100) : 0;
   
-  const mesAtualLabel = useMemo(() => {
-    const [y, mo] = mesSelecionado.split('-');
-    const d = new Date(Number(y), Number(mo) - 1, 1);
-    return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-  }, [mesSelecionado]);
+  const hojeData = new Date();
+  const diaDaSemana = hojeData.getDay(); // 0 (Dom) a 6 (Sáb)
+  
+  const inicioSemana = new Date(hojeData);
+  inicioSemana.setDate(hojeData.getDate() - diaDaSemana);
+  const inicioSemanaStr = inicioSemana.toISOString().split('T')[0];
 
+  const fimSemana = new Date(hojeData);
+  fimSemana.setDate(hojeData.getDate() + (6 - diaDaSemana));
+  const fimSemanaStr = fimSemana.toISOString().split('T')[0];
+
+  // Cálculos da semana atual
+  const lancsSemana = store.getLancamentos(empresaId).filter(l => 
+    l.data >= inicioSemanaStr && l.data <= fimSemanaStr && l.planoContaId !== 'transf'
+  );
+
+  const entradasSemana = lancsSemana.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+  const saidasSemana = lancsSemana.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
+  
   return (
     <>
-      <div className="page-header">
+      <div className="page-header glass-header">
         <div>
-          <div className="page-title">Visão Geral — {empresa?.nomeFantasia}</div>
-          <div className="page-subtitle">{mesAtualLabel} • Dados financeiros em tempo real</div>
+          <div className="page-title text-gradient">Painel Executivo — {empresa?.nomeFantasia}</div>
+          <div className="page-subtitle">{mesAtualLabel} • Resumo direto ao ponto</div>
         </div>
         <div className="header-actions">
           <select 
             className="form-control" 
             value={mesSelecionado} 
             onChange={e => setMesSelecionado(e.target.value)}
-            style={{ width: '200px' }}
+            style={{ width: '200px', background: 'var(--bg-card)', borderRadius: '20px' }}
           >
             {meses.map(m => {
               const [y, mo] = m.split('-');
@@ -149,27 +162,24 @@ export default function ClienteDashboard() {
 
       <div className="page-body">
         {/* Welcome Banner */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(124,58,237,0.15))',
-          border: '1px solid rgba(59,130,246,0.25)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '20px 24px',
-          marginBottom: 24,
+        <div className="glass-card" style={{
+          padding: '28px 32px',
+          marginBottom: 32,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Olá, {userName}! Bem-vindo ao seu painel financeiro 👋
+            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
+              Olá, <span className="text-gradient">{userName}</span>! 👋
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-              {empresa?.razaoSocial} • CNPJ: {empresa?.cnpj}
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
+              Aqui está o pulso financeiro da <strong>{empresa?.razaoSocial}</strong>.
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saldo em Caixa no Periodo</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)' }}>
+          <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.5)', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Saldo Atual em Caixa</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
               {fmt.currency(totais.portadores)}
             </div>
           </div>
@@ -182,28 +192,43 @@ export default function ClienteDashboard() {
           contextKey={mesSelecionado} 
         />
 
-        {/* KPIs */}
-        <div className="stat-grid" style={{ marginBottom: 24 }}>
-          <div className="stat-card green">
+        {/* Foco na Semana */}
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Esta Semana (Sobrevivência)</h3>
+        <div className="grid-2" style={{ marginBottom: 32 }}>
+           <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--green)' }}>
+             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Entradas da Semana</div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}>{fmt.currency(entradasSemana)}</div>
+             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que está previsto para entrar até sábado.</div>
+           </div>
+           <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--red)' }}>
+             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Saídas da Semana</div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}>{fmt.currency(saidasSemana)}</div>
+             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que precisa ser pago até sábado.</div>
+           </div>
+        </div>
+
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Resumo do Mês ({mesAtualLabel})</h3>
+        <div className="stat-grid" style={{ marginBottom: 32 }}>
+          <div className="glass-card" style={{ padding: '20px' }}>
             <div className="stat-icon green">↑</div>
-            <div className="stat-label">Receitas do Mês</div>
+            <div className="stat-label">Entradas no Mês</div>
             <div className="stat-value">{fmt.currency(totais.receitas)}</div>
           </div>
-          <div className="stat-card red">
+          <div className="glass-card" style={{ padding: '20px' }}>
             <div className="stat-icon red">↓</div>
-            <div className="stat-label">Despesas do Mês</div>
+            <div className="stat-label">Saídas no Mês</div>
             <div className="stat-value">{fmt.currency(totais.despesas)}</div>
           </div>
-          <div className={`stat-card ${totais.saldo >= 0 ? 'blue' : 'red'}`}>
+          <div className="glass-card" style={{ padding: '20px' }}>
             <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}>≈</div>
-            <div className="stat-label">Resultado do Mês</div>
+            <div className="stat-label">O que Sobrou (Fôlego)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {fmt.currency(totais.saldo)}
             </div>
           </div>
-          <div className="stat-card purple">
+          <div className="glass-card" style={{ padding: '20px' }}>
             <div className="stat-icon purple">%</div>
-            <div className="stat-label">Margem do Período</div>
+            <div className="stat-label">Margem Limpa</div>
             <div className="stat-value" style={{ color: margem >= 20 ? 'var(--green)' : margem >= 0 ? 'var(--yellow)' : 'var(--red)' }}>
               {margem.toFixed(1)}%
             </div>

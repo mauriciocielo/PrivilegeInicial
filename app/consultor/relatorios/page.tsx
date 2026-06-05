@@ -472,14 +472,18 @@ export default function RelatoriosPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {months.map(m => {
               const val = group.monthlyTotals[m.toISOString().slice(0, 7)];
+              const recVal = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)];
+              const pct = recVal ? (Math.abs(val) / recVal) * 100 : 0;
               return (
-                <span key={m.getTime()} style={{ color: val === 0 ? 'var(--text-muted)' : valueColor, fontWeight: 700, minWidth: 100, textAlign: 'right' }}>
-                  {group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}
+                <span key={m.getTime()} style={{ color: val === 0 ? 'var(--text-muted)' : valueColor, fontWeight: 700, minWidth: 100, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <span>{group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}</span>
+                  {val !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
                 </span>
               );
             })}
-            <span style={{ color: valueColor, fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
-              {group.isDespesa && group.total !== 0 ? '-' : ''}{fmt.currency(group.total)}
+            <span style={{ color: valueColor, fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+              <span>{group.isDespesa && group.total !== 0 ? '-' : ''}{fmt.currency(group.total)}</span>
+              {group.total !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (Math.abs(group.total) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
             </span>
           </div>
         </div>
@@ -516,14 +520,18 @@ export default function RelatoriosPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                       {months.map(m => {
                         const val = sub.monthlyTotals[m.toISOString().slice(0, 7)];
+                        const recVal = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)];
+                        const pct = recVal ? (Math.abs(val) / recVal) * 100 : 0;
                         return (
-                          <span key={m.getTime()} style={{ fontWeight: 600, color: val === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right' }}>
-                            {group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}
+                          <span key={m.getTime()} style={{ fontWeight: 600, color: val === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            <span>{group.isDespesa && val !== 0 ? '-' : ''}{fmt.currency(val)}</span>
+                            {val !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
                           </span>
                         );
                       })}
-                      <span style={{ fontWeight: 700, color: sub.total === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
-                        {group.isDespesa && sub.total !== 0 ? '-' : ''}{fmt.currency(sub.total)}
+                      <span style={{ fontWeight: 700, color: sub.total === 0 ? 'var(--text-muted)' : (group.isDespesa ? 'var(--red)' : 'var(--green)'), minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <span>{group.isDespesa && sub.total !== 0 ? '-' : ''}{fmt.currency(sub.total)}</span>
+                        {sub.total !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (Math.abs(sub.total) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
                       </span>
                     </div>
                   </div>
@@ -699,13 +707,19 @@ export default function RelatoriosPage() {
               }}>
                 <span>(=) Receita Operacional Bruta (Receita - Custos - Despesas)</span>
                 <div style={{ display: 'flex', gap: 16 }}>
-                  {drilldownData.monthlySummary.map(s => (
-                    <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.recOp >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmt.currency(s.recOp)}
-                    </span>
-                  ))}
-                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                    {fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0))}
+                  {drilldownData.monthlySummary.map(s => {
+                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                    const pct = recVal ? (s.recOp / recVal) * 100 : 0;
+                    return (
+                      <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.recOp >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <span>{fmt.currency(s.recOp)}</span>
+                        {s.recOp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                      </span>
+                    );
+                  })}
+                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0))}</span>
+                    {drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
                   </span>
                 </div>
               </div>
@@ -728,13 +742,19 @@ export default function RelatoriosPage() {
               }}>
                 <span>(=) Resultado Mensal Líquido</span>
                 <div style={{ display: 'flex', gap: 16 }}>
-                  {drilldownData.monthlySummary.map(s => (
-                    <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resLiq >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmt.currency(s.resLiq)}
-                    </span>
-                  ))}
-                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                    {fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0))}
+                  {drilldownData.monthlySummary.map(s => {
+                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                    const pct = recVal ? (s.resLiq / recVal) * 100 : 0;
+                    return (
+                      <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resLiq >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <span>{fmt.currency(s.resLiq)}</span>
+                        {s.resLiq !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                      </span>
+                    );
+                  })}
+                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0))}</span>
+                    {drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.resLiq, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
                   </span>
                 </div>
               </div>
