@@ -37,6 +37,9 @@ export default function EmpresasPage() {
   const [rawImageData, setRawImageData] = useState<string | null>(null);
   // IDs das empresas que já possuem plano de contas
   const [planosMap, setPlanosMap] = useState<Record<string, boolean>>({});
+  // Modal Criar Plano Padrão
+  const [showPlanoModal, setShowPlanoModal] = useState(false);
+  const [planoEmpresaId, setPlanoEmpresaId] = useState('');
 
   const inferAtividade = (descricao?: string): Empresa['atividade'] => {
     const text = (descricao || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -181,6 +184,19 @@ ${result.portadoresAdded} portadores criados`);
     setList(updated);
   };
 
+  const handleGerarPlanoModal = () => {
+    if (!planoEmpresaId) {
+      alert('Selecione uma empresa.');
+      return;
+    }
+    const e = list.find(x => x.id === planoEmpresaId);
+    if (!e) return;
+    
+    handleImportarPlano(e);
+    setShowPlanoModal(false);
+    setPlanoEmpresaId('');
+  };
+
   const filtered = list.filter(e =>
     !search || e.razaoSocial.toLowerCase().includes(search.toLowerCase()) ||
     e.nomeFantasia.toLowerCase().includes(search.toLowerCase()) ||
@@ -195,6 +211,7 @@ ${result.portadoresAdded} portadores criados`);
           <div className="page-subtitle">{list.length} empresas cadastradas</div>
         </div>
         <div className="header-actions">
+          <button className="btn btn-secondary" onClick={() => setShowPlanoModal(true)}>📋 Criar Plano Padrão</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Empresa</button>
         </div>
       </div>
@@ -561,6 +578,32 @@ ${result.portadoresAdded} portadores criados`);
           </div>
         </div>
       )}
+
+      {/* Modal Criar Plano Padrão */}
+      {showPlanoModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPlanoModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Criar Plano Padrão</h2>
+              <button className="modal-close" onClick={() => setShowPlanoModal(false)}>✕</button>
+            </div>
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label">Selecione a Empresa *</label>
+              <select className="form-control" value={planoEmpresaId} onChange={e => setPlanoEmpresaId(e.target.value)}>
+                <option value="">Selecione...</option>
+                {list.map(p => (
+                  <option key={p.id} value={p.id}>{p.razaoSocial} {p.nomeFantasia && p.nomeFantasia !== p.razaoSocial ? `(${p.nomeFantasia})` : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowPlanoModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleGerarPlanoModal}>✓ Gerar Plano</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {rawImageData && (
         <ImageCropper
           src={rawImageData}

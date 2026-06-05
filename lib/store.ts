@@ -492,7 +492,7 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   { id: 'pc5_1_5', codigo: '5.1.1.005', descricao: 'Imobilizado', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_6', codigo: '5.1.1.006', descricao: 'Pagamento da Franquia', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_8', codigo: '5.1.1.008', descricao: 'Quota Capital', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
-  
+
   // 6. TRANSFERÊNCIAS
   { id: 'pc6', codigo: '6', descricao: 'Transferências', tipo: 'transferencia', nivel: 1, ativo: true, empresaId: 'e1' },
   { id: 'pc6_1', codigo: '6.1', descricao: 'Transferências entre Portadores', tipo: 'transferencia', nivel: 2, parentId: 'pc6', ativo: true, empresaId: 'e1' },
@@ -506,6 +506,26 @@ const DEFAULT_PORTADORES: Portador[] = [
   { id: 'p3', nome: 'Itaú Poupança', tipo: 'poupanca', banco: 'Itaú', agencia: '5678-9', conta: '00002-3', saldoInicial: 20000, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
   { id: 'p4', nome: 'Cartão Corporativo', tipo: 'cartao', saldoInicial: 0, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
 ];
+
+function adaptPlanoContaDescricao(pcId: string, descricao: string, tipo?: 'empresa' | 'condominio' | 'cooperativa'): string {
+  if (tipo === 'condominio') {
+    if (pcId === 'pc1_1_1') return 'Taxas Condominiais Ordinárias';
+    if (pcId === 'pc1_1_2') return 'Taxas Extraordinárias';
+    if (pcId === 'pc1_1_3') return 'Multas e Juros';
+    if (pcId === 'pc1_1_4') return 'Fundo de Reserva Entradas';
+    if (pcId === 'pc3_1_1') return 'Zeladoria e Limpeza';
+    if (pcId === 'pc3_1_2') return 'Água da Área Comum';
+    if (pcId === 'pc3_1_11') return 'Energia de Área Comum';
+    if (pcId === 'pc3_1_17') return 'Manutenção Elevadores';
+  } else if (tipo === 'cooperativa') {
+    if (pcId === 'pc1_1_1') return 'Ingressos Operacionais';
+    if (pcId === 'pc1_1_2') return 'Ingressos de Cooperados';
+    if (pcId === 'pc1_1_3') return 'Taxas e Contribuições';
+    if (pcId === 'pc3_1_1') return 'Despesas com Cooperados';
+    if (pcId === 'pc3_1_2') return 'Rateio de Despesas';
+  }
+  return descricao;
+}
 
 function gerarLancamentos(): Lancamento[] {
   return [];
@@ -579,7 +599,7 @@ class DataStore {
     this.initialized = true;
 
     // Inicia o carregamento assíncrono do cache de lançamentos
-    this.ensureLancamentosCache().catch(() => {});
+    this.ensureLancamentosCache().catch(() => { });
 
     // Remove legacy seeded default companies (e1/TechSol, e2/ComBrasil) if they exist
     const empresasRaw = localStorage.getItem('cf_empresas');
@@ -598,7 +618,7 @@ class DataStore {
                 if (Array.isArray(parsed)) {
                   localStorage.setItem(key, JSON.stringify(parsed.filter(filterFn)));
                 }
-              } catch {}
+              } catch { }
             }
           };
 
@@ -612,7 +632,7 @@ class DataStore {
             sessionStorage.removeItem('cf_empresa_sel');
           }
         }
-      } catch {}
+      } catch { }
     }
 
     const hasAnyData = [
@@ -637,40 +657,21 @@ class DataStore {
 
   private seedDatabase() {
     const defaultEmpresas = DEFAULT_EMPRESAS;
-    
+
     // Gera plano contas para as empresas padrão
     const seededPlanoContas: PlanoConta[] = [];
     const seededPortadores: Portador[] = [];
-    
+
     defaultEmpresas.forEach(emp => {
       const idMap: Record<string, string> = {};
       const newPcs = DEFAULT_PLANO_CONTAS.map(p => {
         const newId = 'pc_' + emp.id + '_' + p.id;
         idMap[p.id] = newId;
-        
-        let descricao = p.descricao;
-        if (emp.tipo === 'condominio') {
-          if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
-          else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
-          else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
-          else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
-          else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
-          else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
-          else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
-          else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
-        } else if (emp.tipo === 'cooperativa') {
-          if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
-          else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
-          else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
-          else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
-          else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
-          else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
-        }
-        
+
         return {
           ...p,
           id: newId,
-          descricao,
+          descricao: adaptPlanoContaDescricao(p.id, p.descricao, emp.tipo),
           empresaId: emp.id
         };
       });
@@ -680,22 +681,18 @@ class DataStore {
         }
       });
       seededPlanoContas.push(...newPcs);
-      
+
       seededPortadores.push(
         { id: `port_${emp.id}_1`, nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 15000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id },
         { id: `port_${emp.id}_2`, nome: 'Fundo Caixa / Caixinha', tipo: 'caixa', saldoInicial: 500, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
       );
-      
+
       if (emp.tipo === 'condominio') {
-        seededPortadores.push(
-          { id: `port_${emp.id}_reserva`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
-        );
+        seededPortadores.push({ id: `port_${emp.id}_reserva`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id });
+      } else if (emp.tipo === 'cooperativa') {
+        seededPortadores.push({ id: `port_${emp.id}_capital`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id });
       }
-      if (emp.tipo === 'cooperativa') {
-        seededPortadores.push(
-          { id: `port_${emp.id}_capital`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
-        );
-      }
+
     });
 
     const seededUnits: Unidade[] = [
@@ -741,11 +738,11 @@ class DataStore {
     if (!localStorage.getItem('cf_audit_logs')) this.set('cf_audit_logs', []);
     if (!localStorage.getItem('cf_politicas_globais')) {
       const empresas = this.get<Empresa[]>('cf_empresas', []);
-      const empWithPolicies = empresas.find(e => 
-        e.politicaReceberTexto || 
-        e.politicaCobrancaTexto || 
-        e.politicaComprasTexto || 
-        e.politicaPagamentosTexto || 
+      const empWithPolicies = empresas.find(e =>
+        e.politicaReceberTexto ||
+        e.politicaCobrancaTexto ||
+        e.politicaComprasTexto ||
+        e.politicaPagamentosTexto ||
         e.politicaCreditoTexto
       );
       this.set('cf_politicas_globais', {
@@ -843,7 +840,7 @@ class DataStore {
   private withMauricioPassword(users: User[]): User[] {
     let changed = false;
     const updatedUsers = users.map(user => {
-      const userText = `${ user.name } ${ user.email }`
+      const userText = `${user.name} ${user.email}`
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
@@ -934,27 +931,7 @@ class DataStore {
         const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
         idMap[p.id] = newId;
 
-        // Adapta descrições conforme o tipo de gestão
-        let descricao = p.descricao;
-        if (empresa.tipo === 'condominio') {
-          if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
-          else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
-          else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
-          else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
-          else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
-          else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
-          else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
-          else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
-        } else if (empresa.tipo === 'cooperativa') {
-          if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
-          else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
-          else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
-          else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
-          else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
-          else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
-        }
-
-        return { ...p, id: newId, descricao, empresaId: empresa.id };
+        return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo), empresaId: empresa.id };
       });
 
       // Corrige parentId para os novos IDs
@@ -972,13 +949,13 @@ class DataStore {
       const currentPorts = this.getPortadores();
       const hoje = new Date().toISOString().split('T')[0];
       currentPorts.push(
-        { id: `port_${empresa.id}_cc`,  nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id },
-        { id: `port_${empresa.id}_cx`,  nome: 'Fundo Caixa / Caixinha',   tipo: 'caixa',          saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id }
+        { id: `port_${empresa.id}_cc`, nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id },
+        { id: `port_${empresa.id}_cx`, nome: 'Fundo Caixa / Caixinha', tipo: 'caixa', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id }
       );
       if (empresa.tipo === 'condominio') {
-        currentPorts.push(
-          { id: `port_${empresa.id}_res`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id }
-        );
+        currentPorts.push({ id: `port_${empresa.id}_res`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id });
+      } else if (empresa.tipo === 'cooperativa') {
+        currentPorts.push({ id: `port_${empresa.id}_cap`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id });
       }
       this.set('cf_portadores', currentPorts);
     }
@@ -1016,26 +993,7 @@ class DataStore {
       const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       idMap[p.id] = newId;
 
-      let descricao = p.descricao;
-      if (empresa.tipo === 'condominio') {
-        if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
-        else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
-        else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
-        else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
-        else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
-        else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
-        else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
-        else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
-      } else if (empresa.tipo === 'cooperativa') {
-        if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
-        else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
-        else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
-        else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
-        else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
-        else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
-      }
-
-      return { ...p, id: newId, descricao, empresaId };
+      return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo), empresaId };
     });
 
     newPcs.forEach(p => {
@@ -1058,13 +1016,12 @@ class DataStore {
       }
     };
 
-    addPort({ id: `port_${empresaId}_cc`,  nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
-    addPort({ id: `port_${empresaId}_cx`,  nome: 'Fundo Caixa / Caixinha',   tipo: 'caixa',          saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    addPort({ id: `port_${empresaId}_cc`, nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    addPort({ id: `port_${empresaId}_cx`, nome: 'Fundo Caixa / Caixinha', tipo: 'caixa', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
     if (empresa.tipo === 'condominio') {
       addPort({ id: `port_${empresaId}_res`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
-    }
-    if (empresa.tipo === 'cooperativa') {
-      addPort({ id: `port_${empresaId}_capital`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
+    } else if (empresa.tipo === 'cooperativa') {
+      addPort({ id: `port_${empresaId}_cap`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId });
     }
     if (portadoresAdded > 0) this.set('cf_portadores', currentPorts);
 
@@ -1140,7 +1097,7 @@ class DataStore {
       // Kick off async load to upgrade cache from IDB
       this.ensureLancamentosCache().then(() => {
         window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
-      }).catch(() => {});
+      }).catch(() => { });
     }
     const all = this._lancamentosCache as Lancamento[];
     return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
@@ -1255,9 +1212,9 @@ class DataStore {
       if (e.id === empresaId) return false;
 
       // Verifica se é do mesmo grupo econômico
-      const mesmoGrupo = targetCompany.grupoEconomico && 
-                         e.grupoEconomico && 
-                         targetCompany.grupoEconomico.trim().toLowerCase() === e.grupoEconomico.trim().toLowerCase();
+      const mesmoGrupo = targetCompany.grupoEconomico &&
+        e.grupoEconomico &&
+        targetCompany.grupoEconomico.trim().toLowerCase() === e.grupoEconomico.trim().toLowerCase();
 
       // Verifica se utilizam o mesmo banco
       const ePortadores = this.getPortadores(e.id);
@@ -1296,16 +1253,16 @@ class DataStore {
           // Procura a categoria correspondente no plano de contas da empresa atual
           // Prioriza categorias de nível 3 (folhas) que são ativas
           const targetCategory = targetPlano.find(pc => pc.codigo === relCategory.codigo && pc.nivel === 3 && pc.ativo) ||
-                                 targetPlano.find(pc => pc.descricao.trim().toLowerCase() === relCategory.descricao.trim().toLowerCase() && pc.nivel === 3 && pc.ativo) ||
-                                 targetPlano.find(pc => {
-                                   if (!pc.ativo || pc.nivel !== 3) return false;
-                                   const cleanPc = pc.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
-                                   const cleanRel = relCategory.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
-                                   return cleanPc.includes(cleanRel) || cleanRel.includes(cleanPc);
-                                 }) ||
-                                 // Fallback para qualquer nível se não encontrar folha ativa
-                                 targetPlano.find(pc => pc.codigo === relCategory.codigo && pc.ativo) ||
-                                 targetPlano.find(pc => pc.codigo === relCategory.codigo);
+            targetPlano.find(pc => pc.descricao.trim().toLowerCase() === relCategory.descricao.trim().toLowerCase() && pc.nivel === 3 && pc.ativo) ||
+            targetPlano.find(pc => {
+              if (!pc.ativo || pc.nivel !== 3) return false;
+              const cleanPc = pc.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
+              const cleanRel = relCategory.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/s\b/g, '').trim();
+              return cleanPc.includes(cleanRel) || cleanRel.includes(cleanPc);
+            }) ||
+            // Fallback para qualquer nível se não encontrar folha ativa
+            targetPlano.find(pc => pc.codigo === relCategory.codigo && pc.ativo) ||
+            targetPlano.find(pc => pc.codigo === relCategory.codigo);
 
           if (targetCategory) {
             console.log(`🧠 Inteligência: Classificação sugerida de empresa relacionada (${relComp.nomeFantasia}) para ${description} -> ${targetCategory.codigo} - ${targetCategory.descricao}`);
@@ -1377,7 +1334,7 @@ class DataStore {
     // Filtrar lançamentos que caem em período bloqueado, ao invés de lançar erro para o lote todo
     const openLancamentos: Lancamento[] = [];
     let skippedCount = 0;
-    
+
     lancamentos.forEach(l => {
       if (this.isPeriodLocked(l.empresaId, l.data)) {
         skippedCount++;
@@ -1408,7 +1365,7 @@ class DataStore {
         this.learnPattern(l.empresaId, l.descricao, l.planoContaId);
       }
     });
-    
+
     const empId = lancamentos[0].empresaId;
     this.logAction(empId, 'Importação', `Importou lote de ${processed.length} transações (${skippedCount} ignoradas por período fechado).`);
 
@@ -1425,7 +1382,7 @@ class DataStore {
       this.logAction(l.empresaId, 'Exclusão', `Excluiu lançamento "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} (Data: ${l.data})`);
       const newList = list.filter(item => item.id !== id);
       this.persistLancamentos(newList, true);
-      idbDeleteLancamento(id).catch(() => {});
+      idbDeleteLancamento(id).catch(() => { });
 
       // Sincroniza a exclusão com o banco de dados remoto
       if (typeof window !== 'undefined') {
@@ -1791,7 +1748,7 @@ class DataStore {
       }
 
       const data = parsed.data as Record<string, unknown>;
-      
+
       // Validação de sanidade básica dos dados (ignora se for importação parcial)
       if (!parsed.isPartial) {
         const requiredKeys = ['cf_empresas', 'cf_plano_contas'];
@@ -1823,7 +1780,7 @@ class DataStore {
         // Notifica todos os listeners de que a base mudou
         window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all' } }));
       }
-      
+
       return { success: true };
     } catch (e) {
       return { success: false, error: 'Falha ao processar o JSON: ' + (e as Error).message };
