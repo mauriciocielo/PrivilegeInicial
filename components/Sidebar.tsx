@@ -74,6 +74,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Dashboard', href: '/cliente/dashboard', icon: '📊' },
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: '🧠' },
       { label: 'Extrato', href: '/cliente/extrato', icon: '📋' },
+      { label: 'Lançamentos', href: '/cliente/lancamentos', icon: '📝' },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: '📝' },
       { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: '📋' },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: '📈' },
