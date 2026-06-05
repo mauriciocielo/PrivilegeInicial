@@ -108,8 +108,10 @@ export default function TransitionProvider({ children }: { children: React.React
         try {
           console.log(`☁️ Auto-salvando ${key} no PostgreSQL...`);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
+          sessionStorage.setItem('cf_sync_in_progress', 'true');
           const backupData = store.exportBackup();
           const syncResult = await syncBackupInChunks(backupData, undefined, [key]);
+          sessionStorage.setItem('cf_sync_in_progress', 'false');
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
