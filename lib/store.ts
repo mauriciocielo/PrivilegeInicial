@@ -283,7 +283,7 @@ export interface SituacaoFiscal {
 
 // ---- Defaults ----
 const STORAGE_VERSION_KEY = 'cf_storage_version';
-const STORAGE_VERSION = '7';
+const STORAGE_VERSION = '8';
 
 const DEFAULT_USERS: User[] = [
   {
@@ -341,7 +341,19 @@ const DEFAULT_EMPRESAS: Empresa[] = [
     taxaMensalPadrao: 350.00,
     fundoReservaPct: 10,
     createdAt: new Date().toISOString(),
-  }
+  },
+  {
+    id: 'coopercab_demo',
+    razaoSocial: 'COOPERCAB COOPERATIVA DE TRANSPORTES',
+    nomeFantasia: 'Coopercab',
+    cnpj: '00.000.001/0001-00',
+    responsavel: 'Diretoria Coopercab',
+    email: 'contato@coopercab.coop.br',
+    telefone: '(54) 99000-0001',
+    atividade: 'Serviço',
+    tipo: 'cooperativa',
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
@@ -646,6 +658,13 @@ class DataStore {
           else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
           else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
           else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
+        } else if (emp.tipo === 'cooperativa') {
+          if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
+          else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
+          else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
+          else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
+          else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
+          else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
         }
         
         return {
@@ -670,6 +689,11 @@ class DataStore {
       if (emp.tipo === 'condominio') {
         seededPortadores.push(
           { id: `port_${emp.id}_reserva`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 5000, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
+        );
+      }
+      if (emp.tipo === 'cooperativa') {
+        seededPortadores.push(
+          { id: `port_${emp.id}_capital`, nome: 'Fundo Capital Social', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: '2023-01-01', ativo: true, empresaId: emp.id }
         );
       }
     });
@@ -798,6 +822,20 @@ class DataStore {
 
     const users = this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
     this.set('cf_users', users);
+
+    // v8: Garante que a Coopercab existe com plano de contas e portadores
+    const prevVersion = localStorage.getItem(STORAGE_VERSION_KEY) || '0';
+    if (parseInt(prevVersion) < 8) {
+      const empresas = this.getEmpresas();
+      const hasCoopercab = empresas.some(e => e.id === 'coopercab_demo');
+      if (!hasCoopercab) {
+        const coopercab = DEFAULT_EMPRESAS.find(e => e.id === 'coopercab_demo');
+        if (coopercab) {
+          this.saveEmpresa(coopercab);
+        }
+      }
+    }
+
     this.set('cf_initialized_v3', true);
     this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
   }
@@ -890,17 +928,36 @@ class DataStore {
     this.set('cf_empresas', list);
 
     if (isNew) {
+      // ---- Plano de Contas padrão ----
       const idMap: Record<string, string> = {};
       const newPcs = DEFAULT_PLANO_CONTAS.map(p => {
-        const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
         idMap[p.id] = newId;
-        return {
-          ...p,
-          id: newId,
-          empresaId: empresa.id
-        };
+
+        // Adapta descrições conforme o tipo de gestão
+        let descricao = p.descricao;
+        if (empresa.tipo === 'condominio') {
+          if (p.id === 'pc1_1_1') descricao = 'Taxas Condominiais Ordinárias';
+          else if (p.id === 'pc1_1_2') descricao = 'Taxas Extraordinárias';
+          else if (p.id === 'pc1_1_3') descricao = 'Multas e Juros';
+          else if (p.id === 'pc1_1_4') descricao = 'Fundo de Reserva Entradas';
+          else if (p.id === 'pc3_1_1') descricao = 'Zeladoria e Limpeza';
+          else if (p.id === 'pc3_1_2') descricao = 'Água da Área Comum';
+          else if (p.id === 'pc3_1_11') descricao = 'Energia de Área Comum';
+          else if (p.id === 'pc3_1_17') descricao = 'Manutenção Elevadores';
+        } else if (empresa.tipo === 'cooperativa') {
+          if (p.id === 'pc1')     descricao = 'INGRESSOS OPERACIONAIS';
+          else if (p.id === 'pc1_1')   descricao = 'INGRESSOS';
+          else if (p.id === 'pc1_1_1') descricao = 'Ingressos de Cooperados';
+          else if (p.id === 'pc1_1_2') descricao = 'Outros Ingressos';
+          else if (p.id === 'pc2')     descricao = 'CUSTOS OPERACIONAIS (VARIÁVEIS)';
+          else if (p.id === 'pc2_1')   descricao = 'CUSTOS DE ATIVIDADE / SERVIÇOS';
+        }
+
+        return { ...p, id: newId, descricao, empresaId: empresa.id };
       });
 
+      // Corrige parentId para os novos IDs
       newPcs.forEach(p => {
         if (p.parentId && idMap[p.parentId]) {
           p.parentId = idMap[p.parentId];
@@ -910,6 +967,20 @@ class DataStore {
       const currentPcs = this.getPlanoContas();
       currentPcs.push(...newPcs);
       this.set('cf_plano_contas', currentPcs);
+
+      // ---- Portadores padrão ----
+      const currentPorts = this.getPortadores();
+      const hoje = new Date().toISOString().split('T')[0];
+      currentPorts.push(
+        { id: `port_${empresa.id}_cc`,  nome: 'Conta Corrente Principal', tipo: 'conta_corrente', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id },
+        { id: `port_${empresa.id}_cx`,  nome: 'Fundo Caixa / Caixinha',   tipo: 'caixa',          saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id }
+      );
+      if (empresa.tipo === 'condominio') {
+        currentPorts.push(
+          { id: `port_${empresa.id}_res`, nome: 'Conta Fundo de Reserva', tipo: 'poupanca', saldoInicial: 0, saldoInicialData: hoje, ativo: true, empresaId: empresa.id }
+        );
+      }
+      this.set('cf_portadores', currentPorts);
     }
   }
   deleteEmpresa(id: string) {
