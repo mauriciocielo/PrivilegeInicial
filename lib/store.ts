@@ -315,46 +315,7 @@ const DEFAULT_USERS: User[] = [
   },
 ];
 
-const DEFAULT_EMPRESAS: Empresa[] = [
-  {
-    id: 'emp_demo',
-    razaoSocial: 'PRIVILEGE BPO & SERVICOS FINANCEIROS LTDA',
-    nomeFantasia: 'Privilege BPO',
-    cnpj: '12.345.678/0001-90',
-    responsavel: 'Maurício Cielo',
-    email: 'bpo@privilege.com',
-    telefone: '(54) 99999-9999',
-    atividade: 'Serviço',
-    tipo: 'empresa',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'condo_demo',
-    razaoSocial: 'CONDOMINIO RESIDENCIAL PRIVILEGE',
-    nomeFantasia: 'Residencial Privilege',
-    cnpj: '98.765.432/0001-10',
-    responsavel: 'Síndico João Silva',
-    email: 'condominio@privilege.com',
-    telefone: '(54) 88888-8888',
-    atividade: 'Serviço',
-    tipo: 'condominio',
-    taxaMensalPadrao: 350.00,
-    fundoReservaPct: 10,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'coopercab_demo',
-    razaoSocial: 'COOPERCAB COOPERATIVA DE TRANSPORTES',
-    nomeFantasia: 'Coopercab',
-    cnpj: '00.000.001/0001-00',
-    responsavel: 'Diretoria Coopercab',
-    email: 'contato@coopercab.coop.br',
-    telefone: '(54) 99000-0001',
-    atividade: 'Serviço',
-    tipo: 'cooperativa',
-    createdAt: new Date().toISOString(),
-  },
-];
+const DEFAULT_EMPRESAS: Empresa[] = [];
 
 const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   // 1. RECEITAS OPERACIONAIS
@@ -606,7 +567,13 @@ class DataStore {
     if (empresasRaw) {
       try {
         const empresas = JSON.parse(empresasRaw) as Empresa[];
-        const filteredEmpresas = empresas.filter(e => e.id !== 'e1' && e.id !== 'e2');
+        const idsToRemove = ['e1', 'e2', 'emp_demo', 'condo_demo', 'coopercab_demo'];
+        const namesToRemove = ['Empresa Auto-Criada', 'PRIVILEGE BPO & SERVICOS FINANCEIROS LTDA', 'CONDOMINIO RESIDENCIAL PRIVILEGE', 'COOPERCAB COOPERATIVA DE TRANSPORTES'];
+        
+        const filteredEmpresas = empresas.filter(e => 
+          !idsToRemove.includes(e.id) && 
+          !namesToRemove.some(name => e.razaoSocial.includes(name) || (e.nomeFantasia && e.nomeFantasia.includes(name)))
+        );
         if (empresas.length !== filteredEmpresas.length) {
           localStorage.setItem('cf_empresas', JSON.stringify(filteredEmpresas));
 
@@ -820,18 +787,7 @@ class DataStore {
     const users = this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
     this.set('cf_users', users);
 
-    // v8: Garante que a Coopercab existe com plano de contas e portadores
-    const prevVersion = localStorage.getItem(STORAGE_VERSION_KEY) || '0';
-    if (parseInt(prevVersion) < 8) {
-      const empresas = this.getEmpresas();
-      const hasCoopercab = empresas.some(e => e.id === 'coopercab_demo');
-      if (!hasCoopercab) {
-        const coopercab = DEFAULT_EMPRESAS.find(e => e.id === 'coopercab_demo');
-        if (coopercab) {
-          this.saveEmpresa(coopercab);
-        }
-      }
-    }
+    // Migrações removidas (Coopercab e afins já não são padrão)
 
     this.set('cf_initialized_v3', true);
     this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
