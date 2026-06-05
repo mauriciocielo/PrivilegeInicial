@@ -140,6 +140,17 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const [isSidebarCompact, setIsSidebarCompact] = useState(false);
+  const [searchEmpresa, setSearchEmpresa] = useState('');
+  const [recentEmpresas, setRecentEmpresas] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedRecents = localStorage.getItem('cf_recent_empresas');
+    if (savedRecents) {
+      try {
+        setRecentEmpresas(JSON.parse(savedRecents));
+      } catch (e) {}
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -283,6 +294,12 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setSelectedEmpresa(id);
     sessionStorage.setItem('cf_empresa_sel', id);
 
+    setRecentEmpresas(prev => {
+      const newRecents = [id, ...prev.filter(x => x !== id)].slice(0, 3);
+      localStorage.setItem('cf_recent_empresas', JSON.stringify(newRecents));
+      return newRecents;
+    });
+
     // Auto-detect mode based on selected company type
     const isGroup = id.startsWith('grupo:');
     let nextMode: 'empresarial' | 'condominio' = 'empresarial';
@@ -298,6 +315,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
     window.dispatchEvent(new CustomEvent('empresaChange', { detail: id }));
     setShowCompanyDropdown(false);
+    setSearchEmpresa('');
   };
 
   const handleLogout = () => {
@@ -408,92 +426,159 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
 
           {showCompanyDropdown && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', zIndex: 1000, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)', marginTop: '4px', maxHeight: '250px', overflowY: 'auto', padding: '6px' }}>
-              {gruposEconomicos.length > 0 && (
-                <>
-                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupos Econômicos</div>
-                  {gruposEconomicos.map(g => (
-                    <div 
-                      key={`grupo:${g}`}
-                      onClick={() => handleEmpresaChange(`grupo:${g}`)}
-                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}
-                      className="company-select-item"
-                    >
-                      <span>🌐</span>
-                      <span>Grupo {g} (Consolidado)</span>
-                    </div>
-                  ))}
-                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                </>
-              )}
-              
-              {/* Empresas Group */}
-              {selectableEmpresas.some(e => e.tipo !== 'condominio' && e.tipo !== 'cooperativa') && (
-                <>
-                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</div>
-                  {selectableEmpresas.filter(e => e.tipo !== 'condominio' && e.tipo !== 'cooperativa').map(e => (
-                    <div 
-                      key={e.id}
-                      onClick={() => handleEmpresaChange(e.id)}
-                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
-                      className="company-select-item"
-                    >
-                      {e.logoData ? (
-                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                      ) : (
-                        <span>🏢</span>
-                      )}
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                    </div>
-                  ))}
-                </>
-              )}
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', zIndex: 1000, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)', marginTop: '4px', maxHeight: '350px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-light)' }}>
+                <input 
+                  type="text" 
+                  placeholder="🔍 Buscar..." 
+                  value={searchEmpresa}
+                  onChange={e => setSearchEmpresa(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: '100%', padding: '6px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-body)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div style={{ overflowY: 'auto', padding: '6px', flex: 1 }}>
+              {(() => {
+                const searchLower = searchEmpresa.toLowerCase();
+                const filteredGrupos = gruposEconomicos.filter(g => g.toLowerCase().includes(searchLower));
+                const filteredEmpresas = selectableEmpresas.filter(e => 
+                  e.tipo !== 'condominio' && e.tipo !== 'cooperativa' &&
+                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
+                );
+                const filteredCondominios = selectableEmpresas.filter(e => 
+                  e.tipo === 'condominio' &&
+                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
+                );
+                const filteredCooperativas = selectableEmpresas.filter(e => 
+                  e.tipo === 'cooperativa' &&
+                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
+                );
 
-              {/* Cooperativas Group */}
-              {selectableEmpresas.some(e => e.tipo === 'cooperativa') && (
-                <>
-                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Cooperativas</div>
-                  {selectableEmpresas.filter(e => e.tipo === 'cooperativa').map(e => (
-                    <div 
-                      key={e.id}
-                      onClick={() => handleEmpresaChange(e.id)}
-                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
-                      className="company-select-item"
-                    >
-                      {e.logoData ? (
-                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                      ) : (
-                        <span>🤝</span>
-                      )}
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                    </div>
-                  ))}
-                </>
-              )}
+                const recentsObjs = searchEmpresa === '' ? recentEmpresas
+                  .map(id => id.startsWith('grupo:') ? { id, razaoSocial: `Grupo Consolidado - ${id.split(':')[1]}`, nomeFantasia: `Grupo ${id.split(':')[1]}`, isGroup: true } : selectableEmpresas.find(e => e.id === id))
+                  .filter(Boolean) as any[] : [];
 
-              {/* Condomínios Group */}
-              {selectableEmpresas.some(e => e.tipo === 'condominio') && (
-                <>
-                  <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                  <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Condomínios</div>
-                  {selectableEmpresas.filter(e => e.tipo === 'condominio').map(e => (
-                    <div 
-                      key={e.id}
-                      onClick={() => handleEmpresaChange(e.id)}
-                      style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
-                      className="company-select-item"
-                    >
-                      {e.logoData ? (
-                        <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                      ) : (
-                        <span>🏘️</span>
-                      )}
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                    </div>
-                  ))}
-                </>
-              )}
+                return (
+                  <>
+                    {searchEmpresa === '' && recentsObjs.length > 0 && (
+                      <>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🕒 Recentes</div>
+                        {recentsObjs.map((e, idx) => (
+                          <div 
+                            key={`recent:${e.id}:${idx}`}
+                            onClick={() => handleEmpresaChange(e.id)}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            className="company-select-item"
+                          >
+                            {e.isGroup ? <span>🌐</span> : e.logoData ? (
+                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                            ) : (
+                              <span>{e.tipo === 'condominio' ? '🏘️' : e.tipo === 'cooperativa' ? '🤝' : '🏢'}</span>
+                            )}
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: e.isGroup ? 600 : 400 }}>
+                              {e.nomeFantasia || e.razaoSocial}
+                            </span>
+                          </div>
+                        ))}
+                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                      </>
+                    )}
+
+                    {filteredGrupos.length > 0 && (
+                      <>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupos Econômicos</div>
+                        {filteredGrupos.map(g => (
+                          <div 
+                            key={`grupo:${g}`}
+                            onClick={() => handleEmpresaChange(`grupo:${g}`)}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}
+                            className="company-select-item"
+                          >
+                            <span>🌐</span>
+                            <span>Grupo {g} (Consolidado)</span>
+                          </div>
+                        ))}
+                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                      </>
+                    )}
+                    
+                    {/* Empresas Group */}
+                    {filteredEmpresas.length > 0 && (
+                      <>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</div>
+                        {filteredEmpresas.map(e => (
+                          <div 
+                            key={e.id}
+                            onClick={() => handleEmpresaChange(e.id)}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            className="company-select-item"
+                          >
+                            {e.logoData ? (
+                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                            ) : (
+                              <span>🏢</span>
+                            )}
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Cooperativas Group */}
+                    {filteredCooperativas.length > 0 && (
+                      <>
+                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Cooperativas</div>
+                        {filteredCooperativas.map(e => (
+                          <div 
+                            key={e.id}
+                            onClick={() => handleEmpresaChange(e.id)}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            className="company-select-item"
+                          >
+                            {e.logoData ? (
+                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                            ) : (
+                              <span>🤝</span>
+                            )}
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Condomínios Group */}
+                    {filteredCondominios.length > 0 && (
+                      <>
+                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏘️ Condomínios</div>
+                        {filteredCondominios.map(e => (
+                          <div 
+                            key={e.id}
+                            onClick={() => handleEmpresaChange(e.id)}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            className="company-select-item"
+                          >
+                            {e.logoData ? (
+                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
+                            ) : (
+                              <span>🏘️</span>
+                            )}
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {filteredGrupos.length === 0 && filteredEmpresas.length === 0 && filteredCondominios.length === 0 && filteredCooperativas.length === 0 && (
+                      <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '11px' }}>
+                        Nenhum resultado encontrado.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+              </div>
             </div>
           )}
         </div>
