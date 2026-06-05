@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function runInBatches<T>(
   items: T[],
   batchSize: number,

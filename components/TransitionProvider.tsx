@@ -270,7 +270,7 @@ export default function TransitionProvider({ children }: { children: React.React
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
-        const res = await fetch(`/api/migrate-backup?collection=${collection}`);
+        const res = await fetch(`/api/migrate-backup?collection=${collection}&t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
         const backup = await res.json();
         if (backup && backup.data) {
