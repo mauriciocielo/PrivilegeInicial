@@ -97,7 +97,13 @@ export default function RelatoriosPage() {
     const catGroups = {
       receitas: initGroup('receitas', 'Receitas', false),
       custos: initGroup('custos', 'Custos de Mercadoria', true),
-      despesas: initGroup('despesas', 'Despesas', true),
+      despesas_impostos: initGroup('despesas_impostos', 'Despesas com Impostos', true),
+      despesas_fixas: initGroup('despesas_fixas', 'Despesas Fixas', true),
+      despesas_variaveis: initGroup('despesas_variaveis', 'Despesas Variáveis', true),
+      despesas_pessoal: initGroup('despesas_pessoal', 'Despesas com Pessoal', true),
+      despesas_bancarias: initGroup('despesas_bancarias', 'Despesas Bancárias', true),
+      despesas_terceiros: initGroup('despesas_terceiros', 'Despesas com Terceiros', true),
+      outras_despesas: initGroup('outras_despesas', 'Outras Despesas', true),
       liberacoes: initGroup('liberacoes', 'Liberações Bancárias', false),
       emprestimos: initGroup('emprestimos', 'Empréstimos', true),
       investimentos: initGroup('investimentos', 'Investimentos', true),
@@ -115,7 +121,16 @@ export default function RelatoriosPage() {
       let groupKey: keyof typeof catGroups | null = null;
       if (cod.startsWith('1')) groupKey = 'receitas';
       else if (cod.startsWith('2')) groupKey = 'custos';
-      else if (cod.startsWith('3')) groupKey = 'despesas';
+      else if (cod.startsWith('3')) {
+        const cat = pc.dreCategoria;
+        if (cat === 'impostos') groupKey = 'despesas_impostos';
+        else if (cat === 'despesas_fixas') groupKey = 'despesas_fixas';
+        else if (cat === 'despesas_variaveis') groupKey = 'despesas_variaveis';
+        else if (cat === 'despesas_pessoal') groupKey = 'despesas_pessoal';
+        else if (cat === 'despesas_bancarias') groupKey = 'despesas_bancarias';
+        else if (cat === 'despesas_terceiros') groupKey = 'despesas_terceiros';
+        else groupKey = 'outras_despesas';
+      }
       else if (cod.startsWith('4.1')) groupKey = 'liberacoes';
       else if (cod.startsWith('4.2')) groupKey = 'emprestimos';
       else if (cod.startsWith('5')) groupKey = 'investimentos';
@@ -152,7 +167,13 @@ export default function RelatoriosPage() {
       const k = m.toISOString().slice(0, 7);
       const receitas = catGroups.receitas.monthlyTotals[k];
       const custos = catGroups.custos.monthlyTotals[k];
-      const despesas = catGroups.despesas.monthlyTotals[k];
+      const despesas = catGroups.despesas_impostos.monthlyTotals[k] +
+                       catGroups.despesas_fixas.monthlyTotals[k] +
+                       catGroups.despesas_variaveis.monthlyTotals[k] +
+                       catGroups.despesas_pessoal.monthlyTotals[k] +
+                       catGroups.despesas_bancarias.monthlyTotals[k] +
+                       catGroups.despesas_terceiros.monthlyTotals[k] +
+                       catGroups.outras_despesas.monthlyTotals[k];
       const liberacoes = catGroups.liberacoes.monthlyTotals[k];
       const emprestimos = catGroups.emprestimos.monthlyTotals[k];
       const investimentos = catGroups.investimentos.monthlyTotals[k];
@@ -197,6 +218,7 @@ export default function RelatoriosPage() {
     let receitas = 0;
     let custos = 0;
     let despesas = 0;
+    let desp = { impostos: 0, fixas: 0, variaveis: 0, pessoal: 0, bancarias: 0, terceiros: 0, outras: 0 };
     let liberacoes = 0;
     let emprestimos = 0;
     let investimentos = 0;
@@ -213,6 +235,14 @@ export default function RelatoriosPage() {
         custos += valorGerencial;
       } else if (cod.startsWith('3')) {
         despesas += valorGerencial;
+        const cat = pc.dreCategoria;
+        if (cat === 'impostos') desp.impostos += valorGerencial;
+        else if (cat === 'despesas_fixas') desp.fixas += valorGerencial;
+        else if (cat === 'despesas_variaveis') desp.variaveis += valorGerencial;
+        else if (cat === 'despesas_pessoal') desp.pessoal += valorGerencial;
+        else if (cat === 'despesas_bancarias') desp.bancarias += valorGerencial;
+        else if (cat === 'despesas_terceiros') desp.terceiros += valorGerencial;
+        else desp.outras += valorGerencial;
       } else if (cod.startsWith('4.1')) {
         liberacoes += valorGerencial;
       } else if (cod.startsWith('4.2')) {
@@ -284,7 +314,14 @@ export default function RelatoriosPage() {
       const rows: (string | number)[][] = [
         ['Receitas', fmt.currency(receitas)],
         ['Custos de Mercadoria', fmt.currency(custos)],
-        ['Despesas', fmt.currency(despesas)],
+        ['Despesas Totais', fmt.currency(despesas)],
+        ['  - Despesas com Impostos', fmt.currency(desp.impostos)],
+        ['  - Despesas Fixas', fmt.currency(desp.fixas)],
+        ['  - Despesas Variáveis', fmt.currency(desp.variaveis)],
+        ['  - Despesas com Pessoal', fmt.currency(desp.pessoal)],
+        ['  - Despesas Bancárias', fmt.currency(desp.bancarias)],
+        ['  - Despesas com Terceiros', fmt.currency(desp.terceiros)],
+        ['  - Outras Despesas', fmt.currency(desp.outras)],
         ['(=) Receita Operacional Bruta (Receita - Custos - Despesas)', fmt.currency(recOperacionalBruta)],
         ['Liberações Bancárias', fmt.currency(liberacoes)],
         ['Empréstimos', fmt.currency(emprestimos)],
@@ -690,7 +727,53 @@ export default function RelatoriosPage() {
               {renderGroupRow('custos', drilldownData.groups.custos, drilldownData.months)}
 
               {/* 3. Despesas */}
-              {renderGroupRow('despesas', drilldownData.groups.despesas, drilldownData.months)}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '14px 18px', background: 'rgba(0,0,0,0.02)',
+                fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(0,0,0,0.06)'
+              }}>
+                <span>Despesas Totais</span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {drilldownData.monthlySummary.map(s => {
+                    const val = drilldownData.groups.despesas_impostos.monthlyTotals[s.key] +
+                                drilldownData.groups.despesas_fixas.monthlyTotals[s.key] +
+                                drilldownData.groups.despesas_variaveis.monthlyTotals[s.key] +
+                                drilldownData.groups.despesas_pessoal.monthlyTotals[s.key] +
+                                drilldownData.groups.despesas_bancarias.monthlyTotals[s.key] +
+                                drilldownData.groups.despesas_terceiros.monthlyTotals[s.key] +
+                                drilldownData.groups.outras_despesas.monthlyTotals[s.key];
+                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                    const pct = recVal ? (Math.abs(val) / recVal) * 100 : 0;
+                    return (
+                      <span key={s.key} style={{ color: val === 0 ? 'var(--text-muted)' : 'var(--red)', fontWeight: 700, minWidth: 100, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <span>{val !== 0 ? '-' : ''}{fmt.currency(val)}</span>
+                        {val !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                      </span>
+                    );
+                  })}
+                  <span style={{ color: 'var(--red)', fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    {(() => {
+                      const totalDesp = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                      const recTotal = drilldownData.groups.receitas.total;
+                      const pct = recTotal ? (Math.abs(totalDesp) / recTotal) * 100 : 0;
+                      return (
+                        <>
+                          <span>{totalDesp !== 0 ? '-' : ''}{fmt.currency(totalDesp)}</span>
+                          {totalDesp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                        </>
+                      );
+                    })()}
+                  </span>
+                </div>
+              </div>
+              
+              {renderGroupRow('despesas_fixas', drilldownData.groups.despesas_fixas, drilldownData.months)}
+              {renderGroupRow('despesas_variaveis', drilldownData.groups.despesas_variaveis, drilldownData.months)}
+              {renderGroupRow('despesas_impostos', drilldownData.groups.despesas_impostos, drilldownData.months)}
+              {renderGroupRow('despesas_pessoal', drilldownData.groups.despesas_pessoal, drilldownData.months)}
+              {renderGroupRow('despesas_bancarias', drilldownData.groups.despesas_bancarias, drilldownData.months)}
+              {renderGroupRow('despesas_terceiros', drilldownData.groups.despesas_terceiros, drilldownData.months)}
+              {renderGroupRow('outras_despesas', drilldownData.groups.outras_despesas, drilldownData.months)}
 
               {/* 4. Receita Operacional Bruta */}
               <div style={{
@@ -755,20 +838,38 @@ export default function RelatoriosPage() {
 
               {/* Saldos dos Portadores */}
               <div style={{ marginTop: 20, borderTop: '2px dashed var(--border)', paddingTop: 16 }}>
-                <div style={{ padding: '0 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>
-                  Saldos Finais dos Portadores no Período
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>
+                  <span>Saldos Finais dos Portadores (Fim de cada Mês)</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => (
+                      <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)' }}>{m.toLocaleString('pt-BR', { month: 'short', year: '2-digit' })}</span>
+                    ))}
+                    <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, fontSize: 11, color: 'var(--text-muted)' }}>Final Período</span>
+                  </div>
                 </div>
                 {store.getPortadores(empresaId).filter(p => p.ativo).map(p => {
-                  const saldo = store.getSaldoPortador(p.id, empresaId, dataFim);
+                  const finalSaldo = store.getSaldoPortador(p.id, empresaId, dataFim);
                   return (
                     <div key={p.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '8px 18px', fontSize: 12, color: 'var(--text-secondary)'
                     }}>
                       <span>🏦 {p.nome}</span>
-                      <span style={{ fontWeight: 600, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                        {fmt.currency(saldo)}
-                      </span>
+                      <div style={{ display: 'flex', gap: 16 }}>
+                        {drilldownData.months.map(m => {
+                          const eom = new Date(m.getFullYear(), m.getMonth() + 1, 0).toISOString().split('T')[0];
+                          const limitDate = eom > dataFim ? dataFim : eom;
+                          const saldoMes = store.getSaldoPortador(p.id, empresaId, limitDate);
+                          return (
+                            <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', fontWeight: 600, color: saldoMes >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                              {fmt.currency(saldoMes)}
+                            </span>
+                          );
+                        })}
+                        <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 700, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: finalSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {fmt.currency(finalSaldo)}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

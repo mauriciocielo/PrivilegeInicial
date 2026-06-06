@@ -111,6 +111,12 @@ export default function PlanoContasPage() {
     setPlano(store.getPlanoContas(empresaId));
   };
 
+  const handleDeleteAll = () => {
+    if (!confirm('ATENÇÃO: Você está prestes a excluir TODO o plano de contas desta empresa. Esta ação não pode ser desfeita e pode causar inconsistências se houver lançamentos vinculados. Deseja realmente excluir tudo?')) return;
+    store.deleteAllPlanoContas(empresaId);
+    setPlano(store.getPlanoContas(empresaId));
+  };
+
   const toggleAtivo = (pc: PlanoConta) => {
     store.savePlanoConta({ ...pc, ativo: !pc.ativo });
     setPlano(store.getPlanoContas(empresaId));
@@ -139,6 +145,7 @@ export default function PlanoContasPage() {
           <div className="page-subtitle">{plano.filter(p => p.ativo).length} contas ativas</div>
         </div>
         <div className="header-actions">
+          <button className="btn btn-danger" style={{ marginRight: '8px' }} onClick={handleDeleteAll}>🗑️ Excluir Todo o Plano</button>
           <button className="btn btn-primary" onClick={() => openNew()}>＋ Nova Conta</button>
         </div>
       </div>

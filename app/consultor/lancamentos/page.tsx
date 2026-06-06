@@ -68,7 +68,7 @@ export default function LancamentosPage() {
   const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false });
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
-  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string }>({});
+  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string, _valorDisplay?: string }>({});
   const [contaSearch, setContaSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -1199,7 +1199,21 @@ export default function LancamentosPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Valor *</label>
-                <input type="number" step="0.01" className="form-control" value={form.valor ?? ''} onChange={e => setForm(f => ({ ...f, valor: e.target.value as any }))} />
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={form._valorDisplay ?? (form.valor !== undefined && form.valor !== null ? form.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '')} 
+                  onChange={e => {
+                    let val = e.target.value;
+                    let clean = val.replace(/[^0-9.,]/g, '');
+                    let numStr = clean.replace(/\./g, '').replace(',', '.');
+                    let parsed = parseFloat(numStr);
+                    setForm(f => ({ ...f, _valorDisplay: val, valor: isNaN(parsed) ? 0 : parsed }));
+                  }}
+                  onBlur={() => {
+                    setForm(f => ({ ...f, _valorDisplay: undefined }));
+                  }}
+                />
               </div>
             </div>
 

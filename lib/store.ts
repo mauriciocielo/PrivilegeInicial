@@ -936,6 +936,9 @@ class DataStore {
   deletePlanoConta(id: string) {
     this.set('cf_plano_contas', this.getPlanoContas().filter(p => p.id !== id));
   }
+  deleteAllPlanoContas(empresaId: string) {
+    this.set('cf_plano_contas', this.getPlanoContas().filter(p => p.empresaId !== empresaId));
+  }
 
   /**
    * Gera o plano de contas padrão (e portadores padrão) para uma empresa que ainda não possui.
