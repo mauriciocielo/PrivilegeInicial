@@ -122,7 +122,16 @@ export default function RelatoriosPage() {
       if (cod.startsWith('1')) groupKey = 'receitas';
       else if (cod.startsWith('2')) groupKey = 'custos';
       else if (cod.startsWith('3')) {
-        const cat = pc.dreCategoria;
+        let cat = pc.dreCategoria;
+        if (!cat) {
+          if (cod.startsWith('3.1')) cat = 'despesas_fixas';
+          else if (cod.startsWith('3.2')) cat = 'despesas_variaveis';
+          else if (cod.startsWith('3.3')) cat = 'impostos';
+          else if (cod.startsWith('3.4')) cat = 'despesas_terceiros';
+          else if (cod.startsWith('3.5')) cat = 'despesas_pessoal';
+          else if (cod.startsWith('3.6')) cat = 'despesas_bancarias';
+        }
+        
         if (cat === 'impostos') groupKey = 'despesas_impostos';
         else if (cat === 'despesas_fixas') groupKey = 'despesas_fixas';
         else if (cat === 'despesas_variaveis') groupKey = 'despesas_variaveis';
@@ -235,7 +244,16 @@ export default function RelatoriosPage() {
         custos += valorGerencial;
       } else if (cod.startsWith('3')) {
         despesas += valorGerencial;
-        const cat = pc.dreCategoria;
+        let cat = pc.dreCategoria;
+        if (!cat) {
+          if (cod.startsWith('3.1')) cat = 'despesas_fixas';
+          else if (cod.startsWith('3.2')) cat = 'despesas_variaveis';
+          else if (cod.startsWith('3.3')) cat = 'impostos';
+          else if (cod.startsWith('3.4')) cat = 'despesas_terceiros';
+          else if (cod.startsWith('3.5')) cat = 'despesas_pessoal';
+          else if (cod.startsWith('3.6')) cat = 'despesas_bancarias';
+        }
+        
         if (cat === 'impostos') desp.impostos += valorGerencial;
         else if (cat === 'despesas_fixas') desp.fixas += valorGerencial;
         else if (cat === 'despesas_variaveis') desp.variaveis += valorGerencial;
@@ -272,7 +290,20 @@ export default function RelatoriosPage() {
       lancs.forEach(l => {
         const pc = plano.find(p => p.id === l.planoContaId);
         if (!pc) return;
-        const cat = pc.dreCategoria;
+        const cod = pc.codigo;
+        
+        let cat = pc.dreCategoria;
+        if (!cat) {
+          if (cod.startsWith('1')) cat = 'receita_vendas';
+          else if (cod.startsWith('2')) cat = 'cmv';
+          else if (cod.startsWith('3.1')) cat = 'despesas_fixas';
+          else if (cod.startsWith('3.2')) cat = 'despesas_variaveis';
+          else if (cod.startsWith('3.3')) cat = 'impostos';
+          else if (cod.startsWith('3.4')) cat = 'despesas_terceiros';
+          else if (cod.startsWith('3.5')) cat = 'despesas_pessoal';
+          else if (cod.startsWith('3.6')) cat = 'despesas_bancarias';
+        }
+
         if (cat && cat in vals) {
           vals[cat as keyof typeof vals] += l.valor;
         } else {
