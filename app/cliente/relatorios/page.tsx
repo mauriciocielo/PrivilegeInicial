@@ -370,10 +370,13 @@ export default function RelatoriosPage() {
         ['  - Despesas com Terceiros', fmt.currency(desp.terceiros)],
         ['  - Outras Despesas', fmt.currency(desp.outras)],
         ['(=) Receita Operacional Bruta (Receita - Custos - Despesas)', fmt.currency(recOperacionalBruta)],
-        ['Liberações Bancárias', fmt.currency(liberacoes)],
-        ['Empréstimos', fmt.currency(emprestimos)],
-        ['Investimentos', fmt.currency(investimentos)],
-        ['(=) Resultado Mensal Líquido (Operacional + Liberações - Empréstimos - Investimentos)', fmt.currency(resultadoLiquido)],
+        ['(+) Liberações Bancárias', fmt.currency(liberacoes)],
+        ['(-) Empréstimos', fmt.currency(emprestimos)],
+        ['(-) Investimentos', fmt.currency(investimentos)],
+        ['(=) Resultado Bruto Mensal', fmt.currency(recOperacionalBruta + liberacoes - emprestimos - investimentos)],
+        ['(+/-) Transferências', fmt.currency(drilldownData.groups.transferencias.total)],
+        ['(+/-) Lançamentos Inconsistentes', fmt.currency(drilldownData.groups.nao_categorizados.total)],
+        ['(=) Resultado Mensal Líquido', fmt.currency(recOperacionalBruta + liberacoes - emprestimos - investimentos + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total)],
         ['', ''],
         [`Saldos Finais dos Portadores ate ${fmt.date(dataFim)}`, ''],
         ...saldosPortadores.map(p => [p.nome, fmt.currency(p.saldo)]),
@@ -381,7 +384,7 @@ export default function RelatoriosPage() {
       setPreview({
         rows, totais: [
           { label: 'Rec. Operacional Bruta', value: fmt.currency(recOperacionalBruta), color: recOperacionalBruta >= 0 ? 'green' : 'red' },
-          { label: 'Resultado Mensal Líquido', value: fmt.currency(resultadoLiquido), color: resultadoLiquido >= 0 ? 'green' : 'red' },
+          { label: 'Resultado Mensal Líquido', value: fmt.currency((recOperacionalBruta + liberacoes - emprestimos - investimentos + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total)), color: (recOperacionalBruta + liberacoes - emprestimos - investimentos + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total) >= 0 ? 'green' : 'red' },
           { label: 'Saldo Caixa Final', value: fmt.currency(saldoFinalCaixa), color: saldoFinalCaixa >= 0 ? 'green' : 'red' },
           { label: 'Registros no Período', value: String(lancs.length) }
         ]
@@ -857,12 +860,48 @@ export default function RelatoriosPage() {
               {/* 7. Investimentos */}
               {renderGroupRow('investimentos', drilldownData.groups.investimentos, drilldownData.months)}
 
-              {/* 8. Resultado Mensal Líquido */}
+              {/* 8. Resultado Bruto Mensal */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '14px 18px', background: 'rgba(96,0,0,0.06)',
                 fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(96,0,0,0.15)',
                 borderBottom: '1px solid rgba(96,0,0,0.08)'
+              }}>
+                <span>(=) Resultado Bruto Mensal</span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {drilldownData.monthlySummary.map(s => {
+                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                    const pct = recVal ? (s.resBruto / recVal) * 100 : 0;
+                    return (
+                      <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resBruto >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <span>{fmt.currency(s.resBruto)}</span>
+                        {s.resBruto !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                      </span>
+                    );
+                  })}
+                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0))}</span>
+                    {drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
+                  </span>
+                </div>
+              </div>
+
+              {/* Transferências */}
+              {renderGroupRow('transferencias', drilldownData.groups.transferencias, drilldownData.months)}
+
+              {/* Não Categorizados (Diagnóstico) */}
+              {drilldownData.groups.nao_categorizados.total !== 0 && (
+                <div style={{ border: '2px solid var(--red)', margin: '10px 0', borderRadius: 4 }}>
+                  {renderGroupRow('nao_categorizados', drilldownData.groups.nao_categorizados, drilldownData.months)}
+                </div>
+              )}
+
+              {/* 9. Resultado Mensal Líquido */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '14px 18px', background: 'rgba(34,197,94,0.15)',
+                fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(34,197,94,0.3)',
+                borderBottom: '1px solid rgba(34,197,94,0.15)'
               }}>
                 <span>(=) Resultado Mensal Líquido</span>
                 <div style={{ display: 'flex', gap: 16 }}>
@@ -986,62 +1025,7 @@ export default function RelatoriosPage() {
                   </div>
                 </div>
 
-                {/* Resultado Bruto Mensal */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', background: 'var(--bg-body)' }}>
-                  <span>(=) Resultado Bruto Mensal</span>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    {drilldownData.months.map(m => {
-                      const k = m.toISOString().slice(0, 7);
-                      const rec = drilldownData.groups.receitas.monthlyTotals[k];
-                      const cus = drilldownData.groups.custos.monthlyTotals[k];
-                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[k] + drilldownData.groups.despesas_fixas.monthlyTotals[k] + drilldownData.groups.despesas_variaveis.monthlyTotals[k] + drilldownData.groups.despesas_pessoal.monthlyTotals[k] + drilldownData.groups.despesas_bancarias.monthlyTotals[k] + drilldownData.groups.despesas_terceiros.monthlyTotals[k] + drilldownData.groups.outras_despesas.monthlyTotals[k];
-                      const recOp = rec - cus - desp;
-                      const resBruto = recOp + drilldownData.groups.liberacoes.monthlyTotals[k] - drilldownData.groups.emprestimos.monthlyTotals[k] - drilldownData.groups.investimentos.monthlyTotals[k];
-                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(resBruto)}</span>;
-                    })}
-                    {(() => {
-                      const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
-                      const recOpTotal = drilldownData.groups.receitas.total - drilldownData.groups.custos.total - despTotal;
-                      const resBrutoTotal = recOpTotal + drilldownData.groups.liberacoes.total - drilldownData.groups.emprestimos.total - drilldownData.groups.investimentos.total;
-                      return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(resBrutoTotal)}</span>;
-                    })()}
-                  </div>
-                </div>
-
-                {/* Transferencias */}
-                {renderGroupRow('transferencias', drilldownData.groups.transferencias, drilldownData.months)}
-
-                {/* Nao Categorizados (Diagnostico) */}
-                {drilldownData.groups.nao_categorizados.total !== 0 && (
-                   <div style={{ border: '2px solid var(--red)', margin: '10px 0', borderRadius: 4 }}>
-                     {renderGroupRow('nao_categorizados', drilldownData.groups.nao_categorizados, drilldownData.months)}
-                   </div>
-                )}
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', background: 'rgba(34,197,94,0.1)' }}>
-                  <span>(=) Resultado Mensal Líquido</span>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    {drilldownData.months.map(m => {
-                      const k = m.toISOString().slice(0, 7);
-                      const rec = drilldownData.groups.receitas.monthlyTotals[k];
-                      const cus = drilldownData.groups.custos.monthlyTotals[k];
-                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[k] + drilldownData.groups.despesas_fixas.monthlyTotals[k] + drilldownData.groups.despesas_variaveis.monthlyTotals[k] + drilldownData.groups.despesas_pessoal.monthlyTotals[k] + drilldownData.groups.despesas_bancarias.monthlyTotals[k] + drilldownData.groups.despesas_terceiros.monthlyTotals[k] + drilldownData.groups.outras_despesas.monthlyTotals[k];
-                      const recOp = rec - cus - desp;
-                      const resBruto = recOp + drilldownData.groups.liberacoes.monthlyTotals[k] - drilldownData.groups.emprestimos.monthlyTotals[k] - drilldownData.groups.investimentos.monthlyTotals[k];
-                      const resLiq = resBruto + drilldownData.groups.transferencias.monthlyTotals[k] + drilldownData.groups.nao_categorizados.monthlyTotals[k];
-                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(resLiq)}</span>;
-                    })}
-                    {(() => {
-                      const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
-                      const recOpTotal = drilldownData.groups.receitas.total - drilldownData.groups.custos.total - despTotal;
-                      const resBrutoTotal = recOpTotal + drilldownData.groups.liberacoes.total - drilldownData.groups.emprestimos.total - drilldownData.groups.investimentos.total;
-                      const resLiqTotal = resBrutoTotal + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total;
-                      return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(resLiqTotal)}</span>;
-                    })()}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-body)', marginTop: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-body)' }}>
                   <span>(=) Saldo Final Calculado</span>
                   <div style={{ display: 'flex', gap: 16 }}>
                     {drilldownData.months.map(m => {
