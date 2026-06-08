@@ -905,6 +905,142 @@ export default function RelatoriosPage() {
                   );
                 })}
               </div>
+
+              {/* Auditoria de Fluxo de Caixa */}
+              <div style={{ marginTop: 24, borderTop: '2px solid var(--border)', paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 }}>
+                  <span>Auditoria do Fluxo de Caixa (Prova Real)</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => (
+                      <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)' }}>{m.toLocaleString('pt-BR', { month: 'short', year: '2-digit' })}</span>
+                    ))}
+                    <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, fontSize: 11, color: 'var(--text-muted)' }}>Acumulado</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span>Saldo Inicial (Início do Mês)</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const limitDatePrev = new Date(m.getFullYear(), m.getMonth(), 0).toISOString().split('T')[0];
+                      const sInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrev), 0);
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(sInicial)}</span>;
+                    })}
+                    {(() => {
+                       const mFirst = drilldownData.months[0];
+                       const limitDatePrevGlobal = mFirst ? new Date(mFirst.getFullYear(), mFirst.getMonth(), 0).toISOString().split('T')[0] : dataIni;
+                       const globalInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrevGlobal), 0);
+                       return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(globalInicial)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span>(+) Entradas no Período</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const val = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.liberacoes.monthlyTotals[m.toISOString().slice(0, 7)];
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', color: 'var(--green)' }}>{fmt.currency(val)}</span>;
+                    })}
+                    <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, color: 'var(--green)' }}>
+                      {fmt.currency(drilldownData.groups.receitas.total + drilldownData.groups.liberacoes.total)}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span>(-) Saídas no Período</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.despesas_fixas.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.despesas_variaveis.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.despesas_pessoal.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.despesas_bancarias.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.despesas_terceiros.monthlyTotals[m.toISOString().slice(0, 7)] +
+                                   drilldownData.groups.outras_despesas.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const val = drilldownData.groups.custos.monthlyTotals[m.toISOString().slice(0, 7)] + desp + drilldownData.groups.investimentos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.emprestimos.monthlyTotals[m.toISOString().slice(0, 7)];
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', color: 'var(--red)' }}>{fmt.currency(val)}</span>;
+                    })}
+                    {(() => {
+                      const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                      const globalSaidas = drilldownData.groups.custos.total + despTotal + drilldownData.groups.investimentos.total + drilldownData.groups.emprestimos.total;
+                      return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, color: 'var(--red)' }}>{fmt.currency(globalSaidas)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-body)' }}>
+                  <span>(=) Saldo Final Calculado</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const limitDatePrev = new Date(m.getFullYear(), m.getMonth(), 0).toISOString().split('T')[0];
+                      const sInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrev), 0);
+                      const entradas = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.liberacoes.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_fixas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_variaveis.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_pessoal.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_bancarias.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_terceiros.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.outras_despesas.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const saidas = drilldownData.groups.custos.monthlyTotals[m.toISOString().slice(0, 7)] + desp + drilldownData.groups.investimentos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.emprestimos.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const calc = sInicial + entradas - saidas;
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(calc)}</span>;
+                    })}
+                    {(() => {
+                       const mFirst = drilldownData.months[0];
+                       const limitDatePrevGlobal = mFirst ? new Date(mFirst.getFullYear(), mFirst.getMonth(), 0).toISOString().split('T')[0] : dataIni;
+                       const globalInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrevGlobal), 0);
+                       const entradas = drilldownData.groups.receitas.total + drilldownData.groups.liberacoes.total;
+                       const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                       const saidas = drilldownData.groups.custos.total + despTotal + drilldownData.groups.investimentos.total + drilldownData.groups.emprestimos.total;
+                       const calcGlobal = globalInicial + entradas - saidas;
+                       return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(calcGlobal)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 700, color: 'var(--text-main)', borderTop: '1px solid var(--border)' }}>
+                  <span>Status da Auditoria (Diferença)</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const limitDatePrev = new Date(m.getFullYear(), m.getMonth(), 0).toISOString().split('T')[0];
+                      const sInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrev), 0);
+                      const entradas = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.liberacoes.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_fixas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_variaveis.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_pessoal.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_bancarias.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_terceiros.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.outras_despesas.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const saidas = drilldownData.groups.custos.monthlyTotals[m.toISOString().slice(0, 7)] + desp + drilldownData.groups.investimentos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.emprestimos.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const calc = sInicial + entradas - saidas;
+                      
+                      const eom = new Date(m.getFullYear(), m.getMonth() + 1, 0).toISOString().split('T')[0];
+                      const limitDateEnd = eom > dataFim ? dataFim : eom;
+                      const real = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDateEnd), 0);
+                      
+                      const diff = real - calc;
+                      const isOk = Math.abs(diff) < 0.05;
+                      
+                      return (
+                        <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right', color: isOk ? 'var(--green)' : 'var(--red)', background: isOk ? 'var(--green-bg)' : 'var(--red-bg)', padding: '2px 4px', borderRadius: 4 }}>
+                          {isOk ? '✓ OK' : fmt.currency(diff)}
+                        </span>
+                      );
+                    })}
+                    {(() => {
+                       const mFirst = drilldownData.months[0];
+                       const limitDatePrevGlobal = mFirst ? new Date(mFirst.getFullYear(), mFirst.getMonth(), 0).toISOString().split('T')[0] : dataIni;
+                       const globalInicial = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, limitDatePrevGlobal), 0);
+                       const entradas = drilldownData.groups.receitas.total + drilldownData.groups.liberacoes.total;
+                       const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                       const saidas = drilldownData.groups.custos.total + despTotal + drilldownData.groups.investimentos.total + drilldownData.groups.emprestimos.total;
+                       const calcGlobal = globalInicial + entradas - saidas;
+                       
+                       const realGlobal = store.getPortadores(empresaId).filter(p => p.ativo).reduce((acc, p) => acc + store.getSaldoPortador(p.id, empresaId, dataFim), 0);
+                       const diff = realGlobal - calcGlobal;
+                       const isOk = Math.abs(diff) < 0.05;
+                       
+                       return (
+                         <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, color: isOk ? 'var(--green)' : 'var(--red)' }}>
+                           {isOk ? '✓ OK' : fmt.currency(diff)}
+                         </span>
+                       );
+                    })()}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="table-wrap">
@@ -978,3 +1114,11 @@ export default function RelatoriosPage() {
     </>
   );
 }
+
+// force refresh
+
+// force refresh 2
+
+// force refresh 3
+
+// force refresh 4

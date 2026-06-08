@@ -65,6 +65,15 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Relatórios', href: '/consultor/relatorios', icon: '📈' },
     ],
   },
+  {
+    section: 'Logística',
+    items: [
+      { label: 'Dashboard Frota', href: '/consultor/logistica/dashboard', icon: '🚚' },
+      { label: 'Veículos e Motoristas', href: '/consultor/logistica/veiculos', icon: '🚗' },
+      { label: 'Controle de Gastos', href: '/consultor/logistica/despesas', icon: '⛽' },
+      { label: 'Orçamentos', href: '/consultor/logistica/orcamentos', icon: '🎯' },
+    ],
+  },
 ];
 
 const clienteNav: { section: string; items: NavItem[] }[] = [
@@ -78,6 +87,15 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: '📝' },
       { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: '📋' },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: '📈' },
+    ],
+  },
+  {
+    section: 'Logística',
+    items: [
+      { label: 'Dashboard Frota', href: '/cliente/logistica/dashboard', icon: '🚚' },
+      { label: 'Veículos e Motoristas', href: '/cliente/logistica/veiculos', icon: '🚗' },
+      { label: 'Controle de Gastos', href: '/cliente/logistica/despesas', icon: '⛽' },
+      { label: 'Orçamentos', href: '/cliente/logistica/orcamentos', icon: '🎯' },
     ],
   },
 ];
@@ -332,7 +350,8 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const companyAllowed = (!selectedEmpresa.startsWith('grupo:') && activeEmpresa?.allowedRoutes) || [];
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard') return true;
-      if (item.href === '/consultor/administrativo') return true; // ALWAYS allow administrative screen!
+      if (item.href === '/consultor/administrativo') return true;
+      if (item.href.includes('/logistica')) return true; // Bypass for V2 beta
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -352,6 +371,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     return baseNav.map(section => {
       const items = section.items.filter(item => {
         if (item.href === '/consultor/dashboard') return true;
+        if (item.href.includes('/logistica')) return true; // Bypass for V2 beta
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
         return userOk && companyOk;
