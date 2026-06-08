@@ -106,7 +106,7 @@ export default function LogisticaDashboardPage() {
                   <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(gastosMes)} / {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(orc.limiteGasto)}</span>
                 </div>
                 <div style={{ width: '100%', height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: \`\${Math.min(pct, 100)}%\`, background: isWarning ? 'var(--red)' : 'var(--green)', borderRadius: 4 }}></div>
+                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: isWarning ? 'var(--red)' : 'var(--green)', borderRadius: 4 }}></div>
                 </div>
               </div>
             );
