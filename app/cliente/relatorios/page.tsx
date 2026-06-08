@@ -107,22 +107,24 @@ export default function RelatoriosPage() {
       liberacoes: initGroup('liberacoes', 'Liberações Bancárias', false),
       emprestimos: initGroup('emprestimos', 'Empréstimos', true),
       investimentos: initGroup('investimentos', 'Investimentos', true),
+      transferencias: initGroup('transferencias', 'Transferências', false),
+      nao_categorizados: initGroup('nao_categorizados', '⚠️ Lançamentos Inconsistentes / Não Categorizados', false),
     };
 
     const subaccountMap: Record<string, any> = {};
 
     filteredLancs.forEach(l => {
       const pc = plano.find(p => p.id === l.planoContaId);
-      if (!pc) return;
-      const cod = pc.codigo;
-      const valorGerencial = cod.startsWith('1') && isContaRedutoraReceita(pc.descricao) ? -l.valor : l.valor;
+      const cod = pc ? pc.codigo : '';
+      const isRedutora = pc && cod.startsWith('1') && isContaRedutoraReceita(pc.descricao);
+      
       const mesKey = l.data.slice(0, 7);
 
       let groupKey: keyof typeof catGroups | null = null;
       if (cod.startsWith('1')) groupKey = 'receitas';
       else if (cod.startsWith('2')) groupKey = 'custos';
       else if (cod.startsWith('3')) {
-        let cat = pc.dreCategoria;
+        let cat = pc?.dreCategoria;
         if (!cat) {
           if (cod.startsWith('3.1')) cat = 'despesas_fixas';
           else if (cod.startsWith('3.2')) cat = 'despesas_variaveis';
@@ -143,15 +145,26 @@ export default function RelatoriosPage() {
       else if (cod.startsWith('4.1')) groupKey = 'liberacoes';
       else if (cod.startsWith('4.2')) groupKey = 'emprestimos';
       else if (cod.startsWith('5')) groupKey = 'investimentos';
+      else if (cod.startsWith('6') || (pc && pc.descricao.toLowerCase().includes('transfer'))) groupKey = 'transferencias';
+
+      if (!groupKey) groupKey = 'nao_categorizados';
+
+      let valorGerencial = l.valor;
+      if (isRedutora) {
+        valorGerencial = -l.valor;
+      } else if (groupKey === 'nao_categorizados' || groupKey === 'transferencias') {
+        valorGerencial = l.tipo === 'despesa' ? -l.valor : l.valor;
+      }
 
       if (groupKey) {
         catGroups[groupKey].total += valorGerencial;
         catGroups[groupKey].monthlyTotals[mesKey] += valorGerencial;
 
-        if (!subaccountMap[l.planoContaId]) {
-          subaccountMap[l.planoContaId] = {
-            id: l.planoContaId,
-            desc: `${pc.codigo} - ${pc.descricao}`,
+        const fallbackId = l.planoContaId || 'sem-plano-' + l.descricao;
+        if (!subaccountMap[fallbackId]) {
+          subaccountMap[fallbackId] = {
+            id: fallbackId,
+            desc: pc ? `${pc.codigo} - ${pc.descricao}` : (l.descricao || 'Sem Plano de Contas'),
             total: 0,
             monthlyTotals: months.reduce((acc, m) => {
               acc[m.toISOString().slice(0, 7)] = 0;
@@ -159,11 +172,11 @@ export default function RelatoriosPage() {
             }, {} as Record<string, number>),
             lancs: []
           };
-          catGroups[groupKey].subaccounts.push(subaccountMap[l.planoContaId]);
+          catGroups[groupKey].subaccounts.push(subaccountMap[fallbackId]);
         }
-        subaccountMap[l.planoContaId].total += valorGerencial;
-        subaccountMap[l.planoContaId].monthlyTotals[mesKey] += valorGerencial;
-        subaccountMap[l.planoContaId].lancs.push({ ...l, valorLinha: valorGerencial });
+        subaccountMap[fallbackId].total += valorGerencial;
+        subaccountMap[fallbackId].monthlyTotals[mesKey] += valorGerencial;
+        subaccountMap[fallbackId].lancs.push({ ...l, valorLinha: valorGerencial });
       }
     });
 
@@ -188,9 +201,12 @@ export default function RelatoriosPage() {
       const investimentos = catGroups.investimentos.monthlyTotals[k];
 
       const recOp = receitas - custos - despesas;
-      const resLiq = recOp + liberacoes - emprestimos - investimentos;
+      const resBruto = recOp + liberacoes - emprestimos - investimentos;
+      const transferencias = catGroups.transferencias.monthlyTotals[k];
+      const naoCat = catGroups.nao_categorizados.monthlyTotals[k];
+      const resLiq = resBruto + transferencias + naoCat;
 
-      return { key: k, recOp, resLiq };
+      return { key: k, recOp, resBruto, resLiq };
     });
 
     return {
@@ -970,7 +986,62 @@ export default function RelatoriosPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-body)' }}>
+                {/* Resultado Bruto Mensal */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', background: 'var(--bg-body)' }}>
+                  <span>(=) Resultado Bruto Mensal</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const k = m.toISOString().slice(0, 7);
+                      const rec = drilldownData.groups.receitas.monthlyTotals[k];
+                      const cus = drilldownData.groups.custos.monthlyTotals[k];
+                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[k] + drilldownData.groups.despesas_fixas.monthlyTotals[k] + drilldownData.groups.despesas_variaveis.monthlyTotals[k] + drilldownData.groups.despesas_pessoal.monthlyTotals[k] + drilldownData.groups.despesas_bancarias.monthlyTotals[k] + drilldownData.groups.despesas_terceiros.monthlyTotals[k] + drilldownData.groups.outras_despesas.monthlyTotals[k];
+                      const recOp = rec - cus - desp;
+                      const resBruto = recOp + drilldownData.groups.liberacoes.monthlyTotals[k] - drilldownData.groups.emprestimos.monthlyTotals[k] - drilldownData.groups.investimentos.monthlyTotals[k];
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(resBruto)}</span>;
+                    })}
+                    {(() => {
+                      const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                      const recOpTotal = drilldownData.groups.receitas.total - drilldownData.groups.custos.total - despTotal;
+                      const resBrutoTotal = recOpTotal + drilldownData.groups.liberacoes.total - drilldownData.groups.emprestimos.total - drilldownData.groups.investimentos.total;
+                      return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(resBrutoTotal)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                {/* Transferencias */}
+                {renderGroupRow('transferencias', drilldownData.groups.transferencias, drilldownData.months)}
+
+                {/* Nao Categorizados (Diagnostico) */}
+                {drilldownData.groups.nao_categorizados.total !== 0 && (
+                   <div style={{ border: '2px solid var(--red)', margin: '10px 0', borderRadius: 4 }}>
+                     {renderGroupRow('nao_categorizados', drilldownData.groups.nao_categorizados, drilldownData.months)}
+                   </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', background: 'rgba(34,197,94,0.1)' }}>
+                  <span>(=) Resultado Mensal Líquido</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {drilldownData.months.map(m => {
+                      const k = m.toISOString().slice(0, 7);
+                      const rec = drilldownData.groups.receitas.monthlyTotals[k];
+                      const cus = drilldownData.groups.custos.monthlyTotals[k];
+                      const desp = drilldownData.groups.despesas_impostos.monthlyTotals[k] + drilldownData.groups.despesas_fixas.monthlyTotals[k] + drilldownData.groups.despesas_variaveis.monthlyTotals[k] + drilldownData.groups.despesas_pessoal.monthlyTotals[k] + drilldownData.groups.despesas_bancarias.monthlyTotals[k] + drilldownData.groups.despesas_terceiros.monthlyTotals[k] + drilldownData.groups.outras_despesas.monthlyTotals[k];
+                      const recOp = rec - cus - desp;
+                      const resBruto = recOp + drilldownData.groups.liberacoes.monthlyTotals[k] - drilldownData.groups.emprestimos.monthlyTotals[k] - drilldownData.groups.investimentos.monthlyTotals[k];
+                      const resLiq = resBruto + drilldownData.groups.transferencias.monthlyTotals[k] + drilldownData.groups.nao_categorizados.monthlyTotals[k];
+                      return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(resLiq)}</span>;
+                    })}
+                    {(() => {
+                      const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                      const recOpTotal = drilldownData.groups.receitas.total - drilldownData.groups.custos.total - despTotal;
+                      const resBrutoTotal = recOpTotal + drilldownData.groups.liberacoes.total - drilldownData.groups.emprestimos.total - drilldownData.groups.investimentos.total;
+                      const resLiqTotal = resBrutoTotal + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total;
+                      return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(resLiqTotal)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 18px', fontSize: 12, fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-body)', marginTop: 24 }}>
                   <span>(=) Saldo Final Calculado</span>
                   <div style={{ display: 'flex', gap: 16 }}>
                     {drilldownData.months.map(m => {
@@ -979,7 +1050,9 @@ export default function RelatoriosPage() {
                       const entradas = drilldownData.groups.receitas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.liberacoes.monthlyTotals[m.toISOString().slice(0, 7)];
                       const desp = drilldownData.groups.despesas_impostos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_fixas.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_variaveis.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_pessoal.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_bancarias.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.despesas_terceiros.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.outras_despesas.monthlyTotals[m.toISOString().slice(0, 7)];
                       const saidas = drilldownData.groups.custos.monthlyTotals[m.toISOString().slice(0, 7)] + desp + drilldownData.groups.investimentos.monthlyTotals[m.toISOString().slice(0, 7)] + drilldownData.groups.emprestimos.monthlyTotals[m.toISOString().slice(0, 7)];
-                      const calc = sInicial + entradas - saidas;
+                      const transferencias = drilldownData.groups.transferencias.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const naoCat = drilldownData.groups.nao_categorizados.monthlyTotals[m.toISOString().slice(0, 7)];
+                      const calc = sInicial + entradas - saidas + transferencias + naoCat;
                       return <span key={m.getTime()} style={{ minWidth: 100, textAlign: 'right' }}>{fmt.currency(calc)}</span>;
                     })}
                     {(() => {
@@ -989,7 +1062,7 @@ export default function RelatoriosPage() {
                        const entradas = drilldownData.groups.receitas.total + drilldownData.groups.liberacoes.total;
                        const despTotal = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
                        const saidas = drilldownData.groups.custos.total + despTotal + drilldownData.groups.investimentos.total + drilldownData.groups.emprestimos.total;
-                       const calcGlobal = globalInicial + entradas - saidas;
+                       const calcGlobal = globalInicial + entradas - saidas + drilldownData.groups.transferencias.total + drilldownData.groups.nao_categorizados.total;
                        return <span style={{ minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>{fmt.currency(calcGlobal)}</span>;
                     })()}
                   </div>
