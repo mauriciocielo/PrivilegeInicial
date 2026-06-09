@@ -159,7 +159,7 @@ export default function TransitionProvider({ children }: { children: React.React
         }
       };
 
-      timeoutId = setTimeout(runSync, 300);
+      timeoutId = setTimeout(runSync, 1000); // increased debounce for performance
     };
 
     window.addEventListener('cfDataChange', handleDataChange as any);
@@ -321,7 +321,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
             // Busca TODOS os lançamentos sem filtro de empresa
             // O store filtra por empresa ao renderizar — o cache deve estar completo
-            const res = await fetch('/api/lancamentos', { cache: 'no-store' });
+            const res = await fetch(`/api/lancamentos?since=${encodeURIComponent(lastSyncTime)}`, { cache: 'no-store' });
             if (!res.ok) return;
             const lancamentos = await res.json();
             if (Array.isArray(lancamentos) && lancamentos.length > 0) {

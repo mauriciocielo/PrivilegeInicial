@@ -5,10 +5,15 @@ import { Lancamento } from '../../../lib/store';
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const empresaId = searchParams.get('empresaId');
+    const since = searchParams.get('since'); // ISO timestamp (optional)
 
     try {
+        const whereClause: any = {};
+        if (empresaId) whereClause.empresaId = empresaId;
+        if (since) whereClause.updatedAt = { gte: new Date(since) };
+
         const lancamentos = await db.lancamento.findMany({
-            where: empresaId ? { empresaId } : {},
+            where: whereClause,
             select: {
                 id: true,
                 empresaId: true,
