@@ -1219,69 +1219,82 @@ export async function GET(request: Request) {
       });
     }
 
-    const cf_empresas = await db.empresa.findMany({
-      select: {
-        id: true,
-        razaoSocial: true,
-        nomeFantasia: true,
-        cnpj: true,
-        responsavel: true,
-        email: true,
-        telefone: true,
-        atividade: true,
-        tipo: true,
-        taxaMensalPadrao: true,
-        fundoReservaPct: true,
-        dataInicioContrato: true,
-        grupoEconomico: true,
-        receitaMensalEstimada: true,
-        comprasMensalEstimada: true,
-        logoData: true,
-        bancoBoleto: true,
-        createdAt: true,
-        allowedRoutes: true,
-        politicaReceberName: true,
-        politicaComprasName: true,
-        politicaCobrancaName: true,
-      }
-    });
-    const cf_users = await db.user.findMany();
-    const cf_unidades = await db.unidade.findMany();
-    const cf_plano_contas = await db.planoConta.findMany();
-    const cf_portadores = await db.portador.findMany();
-    const cf_clientes = await db.cliente.findMany();
-    const cf_lancamentos = await db.lancamento.findMany({
-      select: {
-        id: true,
-        empresaId: true,
-        data: true,
-        descricao: true,
-        valor: true,
-        tipo: true,
-        planoContaId: true,
-        portadorId: true,
-        status: true,
-        numeroDocumento: true,
-        observacao: true,
-        origem: true,
-        ofxId: true,
-        unidadeId: true,
-        clienteId: true,
-        attachmentName: true,
-        createdAt: true,
-      }
-    });
-    const cf_endividamentosRaw = await db.endividamento.findMany({
-      include: { pagamentos: true }
-    });
-    const cf_atas = await db.ataAtendimento.findMany();
-    const cf_indicadores = await db.indicadorMensal.findMany();
-    const cf_orcamentosRaw = await db.orcamentoMensal.findMany({
-      include: { valores: true }
-    });
-    const cf_situacao_fiscal = await db.situacaoFiscal.findMany();
-    const cf_transaction_patterns = await db.transactionPattern.findMany();
-    const cf_nfse = await db.nfsE.findMany();
+    const [
+      cf_empresas,
+      cf_users,
+      cf_unidades,
+      cf_plano_contas,
+      cf_portadores,
+      cf_clientes,
+      cf_lancamentos,
+      cf_endividamentosRaw,
+      cf_atas,
+      cf_indicadores,
+      cf_orcamentosRaw,
+      cf_situacao_fiscal,
+      cf_transaction_patterns,
+      cf_nfse
+    ] = await Promise.all([
+      db.empresa.findMany({
+        select: {
+          id: true,
+          razaoSocial: true,
+          nomeFantasia: true,
+          cnpj: true,
+          responsavel: true,
+          email: true,
+          telefone: true,
+          atividade: true,
+          tipo: true,
+          taxaMensalPadrao: true,
+          fundoReservaPct: true,
+          dataInicioContrato: true,
+          grupoEconomico: true,
+          receitaMensalEstimada: true,
+          comprasMensalEstimada: true,
+          logoData: true,
+          bancoBoleto: true,
+          createdAt: true,
+          allowedRoutes: true,
+          politicaReceberName: true,
+          politicaComprasName: true,
+          politicaCobrancaName: true,
+        }
+      }),
+      db.user.findMany(),
+      db.unidade.findMany(),
+      db.planoConta.findMany(),
+      db.portador.findMany(),
+      db.cliente.findMany(),
+      db.lancamento.findMany({
+        select: {
+          id: true,
+          empresaId: true,
+          data: true,
+          descricao: true,
+          valor: true,
+          tipo: true,
+          planoContaId: true,
+          portadorId: true,
+          status: true,
+          numeroDocumento: true,
+          observacao: true,
+          origem: true,
+          ofxId: true,
+          unidadeId: true,
+          clienteId: true,
+          attachmentName: true,
+          createdAt: true,
+        }
+      }),
+      db.endividamento.findMany({ include: { pagamentos: true } }),
+      db.ataAtendimento.findMany(),
+      db.indicadorMensal.findMany(),
+      db.orcamentoMensal.findMany({ include: { valores: true } }),
+      db.situacaoFiscal.findMany(),
+      db.transactionPattern.findMany(),
+      db.nfsE.findMany(),
+    ]);
 
     const cf_endividamentos = cf_endividamentosRaw.map(e => ({
       id: e.id,

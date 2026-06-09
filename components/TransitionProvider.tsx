@@ -27,38 +27,60 @@ export default function TransitionProvider({ children }: { children: React.React
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
         return;
       }
+
       try {
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
-        const res = await fetch('/api/migrate-backup');
-        if (!res.ok) {
-          console.error('Erro ao buscar backup inicial: resposta HTTP não-OK');
-          sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
-          window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
-          return;
-        }
-        const backup = await res.json();
+
+        // Timeout de 12s: se o banco demorar mais que isso, libera o sistema com dados locais
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
+        const fetchPromise = fetch('/api/migrate-backup').then(res => res.ok ? res.json() : null).catch(() => null);
+
+        const backup = await Promise.race([fetchPromise, timeoutPromise]);
+
         if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
           store.importBackup(JSON.stringify(backup));
           store.pruneLancamentosAttachmentData();
           store.pruneEmpresasPolicyData();
+          console.log('☁️ Sync inicial concluído com dados do banco.');
+        } else if (backup === null) {
+          // Timeout ou erro — libera o sistema com dados locais e tenta re-sync em background
+          console.warn('⚠️ Sync inicial ignorado (timeout ou banco vazio). Usando dados locais.');
+          sessionStorage.setItem('cf_postgres_synced', 'true');
+          window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
+
+          // Re-tenta em background após 5s sem bloquear a UI
+          setTimeout(async () => {
+            try {
+              const res = await fetch('/api/migrate-backup');
+              if (!res.ok) return;
+              const retryBackup = await res.json();
+              if (retryBackup?.data?.cf_empresas?.length > 0) {
+                store.importBackup(JSON.stringify(retryBackup));
+                store.pruneLancamentosAttachmentData();
+                store.pruneEmpresasPolicyData();
+                console.log('☁️ Sync de re-tentativa concluído em background.');
+                window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all', source: 'import' } }));
+              }
+            } catch { /* silencioso */ }
+          }, 5000);
+          return;
         } else {
+          // Banco vazio — inicializa com dados locais
           console.log('☁️ Banco de dados remoto vazio. Inicializando com dados locais...');
           const backupData = store.exportBackup();
           const syncResult = await syncBackupInChunks(backupData);
           if (!syncResult.success) {
             console.error('Erro ao inicializar banco remoto:', syncResult.error);
-            sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
-            window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
-            return;
           }
           store.pruneLancamentosAttachmentData();
           store.pruneEmpresasPolicyData();
         }
+
         sessionStorage.setItem('cf_postgres_synced', 'true');
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
       } catch (e) {
         console.error('Erro na auto-sincronização do banco de dados:', e);
-        sessionStorage.setItem('cf_postgres_synced', 'true'); // Evita travar futuras escritas
+        sessionStorage.setItem('cf_postgres_synced', 'true'); // Libera sempre para não travar
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
       }
     };
