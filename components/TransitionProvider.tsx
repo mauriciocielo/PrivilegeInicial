@@ -297,20 +297,16 @@ export default function TransitionProvider({ children }: { children: React.React
             lastSyncTime = statusData.lastUpdate;
             sessionStorage.setItem('cf_last_sync_time', lastSyncTime);
 
-            // Busca apenas os lançamentos (API leve)
-            const empresaId = sessionStorage.getItem('cf_empresa_sel') || '';
-            const url = empresaId
-              ? `/api/lancamentos?empresaId=${empresaId}`
-              : `/api/lancamentos`;
-            const res = await fetch(url, { cache: 'no-store' });
+            // Busca TODOS os lançamentos sem filtro de empresa
+            // O store filtra por empresa ao renderizar — o cache deve estar completo
+            const res = await fetch('/api/lancamentos', { cache: 'no-store' });
             if (!res.ok) return;
             const lancamentos = await res.json();
             if (Array.isArray(lancamentos) && lancamentos.length > 0) {
               sessionStorage.setItem('cf_sync_in_progress', 'true');
-              // Atualiza cada lançamento individualmente no store (não importa backup completo)
               lancamentos.forEach((l: any) => store.importSingleLancamento(l));
               sessionStorage.setItem('cf_sync_in_progress', 'false');
-              console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem.`);
+              console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem (sem filtro de empresa).`);
             }
           }
         } else {
