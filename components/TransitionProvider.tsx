@@ -258,16 +258,16 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Função auxiliar para mapear o caminho atual para a coleção correspondente
   const getCollectionFromPath = (path: string): string | null => {
-    if (path.startsWith('/consultor/lancamentos')) return 'cf_lancamentos';
-    if (path.startsWith('/consultor/plano-de-contas')) return 'cf_plano_contas';
-    if (path.startsWith('/consultor/portadores')) return 'cf_portadores';
-    if (path.startsWith('/consultor/clientes')) return 'cf_clientes';
-    if (path.startsWith('/consultor/endividamento')) return 'cf_endividamentos';
-    if (path.startsWith('/consultor/atas')) return 'cf_atas';
-    if (path.startsWith('/consultor/indicadores')) return 'cf_indicadores';
-    if (path.startsWith('/consultor/orcamento')) return 'cf_orcamentos';
-    if (path.startsWith('/consultor/empresas')) return 'cf_empresas';
-    if (path.startsWith('/consultor/usuarios')) return 'cf_users';
+    if (path.includes('/lancamentos')) return 'cf_lancamentos';
+    if (path.includes('/plano-de-contas')) return 'cf_plano_contas';
+    if (path.includes('/portadores')) return 'cf_portadores';
+    if (path.includes('/clientes')) return 'cf_clientes';
+    if (path.includes('/endividamento')) return 'cf_endividamentos';
+    if (path.includes('/atas')) return 'cf_atas';
+    if (path.includes('/indicadores')) return 'cf_indicadores';
+    if (path.includes('/orcamento')) return 'cf_orcamentos';
+    if (path.includes('/empresas')) return 'cf_empresas';
+    if (path.includes('/usuarios')) return 'cf_users';
     return null;
   };
 
