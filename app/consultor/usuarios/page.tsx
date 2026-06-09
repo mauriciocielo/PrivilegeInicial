@@ -27,6 +27,17 @@ const AVAILABLE_SCREENS = [
   { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
 ];
 
+const AVAILABLE_CLIENT_SCREENS = [
+  { label: '📊 Dashboard', route: '/cliente/dashboard' },
+  { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },
+  { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
+  { label: '📝 Lançamentos', route: '/cliente/lancamentos' },
+  { label: '📈 Relatórios', route: '/cliente/relatorios' },
+  { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
+  { label: '📋 Políticas da Empresa', route: '/cliente/politicas' },
+  { label: '📝 Atas de Atendimento', route: '/cliente/atas' },
+];
+
 export default function UsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -43,13 +54,13 @@ export default function UsuariosPage() {
 
   const openNew = () => { 
     setEdit(null); 
-    setForm({ role: 'cliente', empresaIds: [], allowedRoutes: ['/consultor/dashboard'] }); 
+    setForm({ role: 'cliente', empresaIds: [], allowedRoutes: [] }); 
     setShowModal(true); 
   };
   
   const openEdit = (u: User) => { 
     setEdit(u); 
-    setForm({ ...u, newPassword: '', allowedRoutes: u.allowedRoutes || ['/consultor/dashboard'] }); 
+    setForm({ ...u, newPassword: '', allowedRoutes: u.allowedRoutes || [] }); 
     setShowModal(true); 
   };
 
@@ -91,7 +102,7 @@ export default function UsuariosPage() {
       receberEmailDiario: !!form.receberEmailDiario,
       phone: form.phone || '',
       avatarData: form.avatarData,
-      allowedRoutes: form.role === 'consultor' ? (form.allowedRoutes || ['/consultor/dashboard']) : undefined,
+      allowedRoutes: form.role === 'administrador' ? undefined : (form.allowedRoutes || []),
       createdAt: edit?.createdAt || new Date().toISOString(),
     };
     store.saveUser(u);
@@ -200,6 +211,19 @@ export default function UsuariosPage() {
                         )}
                         {u.role === 'cliente' && (
                           <div>
+                            <strong style={{ display: 'block', marginBottom: 2 }}>Telas permitidas ({u.allowedRoutes?.length || 0}):</strong>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 6 }}>
+                              {(!u.allowedRoutes || u.allowedRoutes.length === 0) ? (
+                                <span className="badge badge-gray" style={{ fontSize: 10 }}>Acesso Total (Antigo)</span>
+                              ) : u.allowedRoutes.map(r => {
+                                const screen = AVAILABLE_CLIENT_SCREENS.find(s => s.route === r);
+                                return (
+                                  <span key={r} className="badge badge-gray" style={{ fontSize: 10 }}>
+                                    {screen?.label.split(' ')[1] || r.split('/').pop()}
+                                  </span>
+                                );
+                              })}
+                            </div>
                             <strong style={{ display: 'block', marginBottom: 2 }}>Empresas:</strong>
                             {emps.length === 0 ? <span style={{ color: 'var(--text-muted)' }}>Nenhuma</span> : emps.map(e => (
                               <span key={e.id} className="badge badge-gray" style={{ marginRight: 4 }}>{e.nomeFantasia}</span>
@@ -311,13 +335,13 @@ export default function UsuariosPage() {
               </div>
             )}
 
-            {form.role === 'consultor' && (
+            {(form.role === 'consultor' || form.role === 'cliente') && (
               <div className="form-group" style={{ marginTop: 16 }}>
-                <label className="form-label" style={{ fontWeight: 600 }}>Telas e Rotas Autorizadas (Selecione quais telas o consultor poderá acessar)</label>
+                <label className="form-label" style={{ fontWeight: 600 }}>Telas e Rotas Autorizadas (Selecione quais módulos o {form.role} poderá acessar)</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                  {AVAILABLE_SCREENS.map(screen => {
+                  {(form.role === 'consultor' ? AVAILABLE_SCREENS : AVAILABLE_CLIENT_SCREENS).map(screen => {
                     const checked = (form.allowedRoutes || []).includes(screen.route);
-                    const isDashboard = screen.route === '/consultor/dashboard';
+                    const isDashboard = screen.route.includes('/dashboard');
                     return (
                       <label 
                         key={screen.route} 

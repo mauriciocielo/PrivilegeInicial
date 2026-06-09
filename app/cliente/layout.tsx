@@ -8,12 +8,22 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     const user = store.getCurrentUser();
     if (!user) { router.replace('/login'); return; }
-    if (user.role !== 'cliente') { router.replace('/consultor/dashboard'); }
-  }, [router]);
+    if (user.role !== 'cliente') { router.replace('/consultor/dashboard'); return; }
+    
+    const allowed = user.allowedRoutes || [];
+    if (allowed.length === 0) {
+      // Compatibility
+      setAuthorized(true);
+    } else {
+      const isOk = pathname === '/cliente/dashboard' || allowed.some(route => pathname.startsWith(route));
+      setAuthorized(isOk);
+    }
+  }, [router, pathname]);
 
   // Fecha o menu lateral automaticamente ao mudar de rota no mobile
   useEffect(() => {
@@ -79,7 +89,22 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       )}
 
       <Sidebar role="cliente" />
-      <main className="main-content">{children}</main>
+      <main className="main-content">
+        {authorized ? (
+          children
+        ) : (
+          <div className="page-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', textAlign: 'center' }}>
+            <div style={{ fontSize: 64, marginBottom: 20 }}>🚫</div>
+            <h1 className="page-title" style={{ color: 'var(--red)', marginBottom: 12 }}>Acesso Restrito</h1>
+            <p style={{ color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 24px auto', fontSize: 15 }}>
+              Desculpe, o seu usuário não possui permissão para acessar este módulo. Entre em contato com a equipe.
+            </p>
+            <button className="btn btn-primary" onClick={() => router.push('/cliente/dashboard')}>
+              Voltar ao Dashboard
+            </button>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

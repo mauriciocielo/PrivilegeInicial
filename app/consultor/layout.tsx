@@ -59,8 +59,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
 
     // Permissão final
     if (user.role === 'administrador') {
-      const isAdminBypass = pathname.startsWith('/consultor/administrativo');
-      setAuthorized(isAdminBypass || companyOk);
+      setAuthorized(true);
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard'];
       const userOk = pathname === '/consultor/dashboard' || allowed.some(route => pathname.startsWith(route));

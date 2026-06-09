@@ -343,7 +343,17 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   };
 
   const getFilteredNav = () => {
-    if (role === 'cliente') return clienteNav;
+    if (role === 'cliente') {
+      const allowedClient = user?.allowedRoutes || [];
+      if (allowedClient.length === 0) return clienteNav; // backward compatibility for clients that have no allowedRoutes configured yet
+      return clienteNav.map(section => {
+        const items = section.items.filter(item => {
+          if (item.href === '/cliente/dashboard') return true;
+          return allowedClient.some(route => item.href.startsWith(route));
+        });
+        return { ...section, items };
+      }).filter(section => section.items.length > 0);
+    }
     const baseNav = appMode === 'condominio' ? condominioNav : consultorNav;
 
     // Filtra rotas com base na configuração da empresa ativa
@@ -359,10 +369,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     };
 
     if (role === 'administrador') {
-      return baseNav.map(section => {
-        const items = section.items.filter(filterByCompany);
-        return { ...section, items };
-      }).filter(section => section.items.length > 0);
+      return baseNav;
     }
 
     // Se consultor, filtra itens do consultor + empresa
