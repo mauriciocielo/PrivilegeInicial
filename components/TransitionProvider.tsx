@@ -278,7 +278,7 @@ export default function TransitionProvider({ children }: { children: React.React
     const collection = getCollectionFromPath(pathname);
     if (!collection) return;
 
-    let lastSyncTime = sessionStorage.getItem('cf_last_sync_time') || '';
+    let lastSyncTime = '';
     
     const pollInterval = setInterval(async () => {
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
@@ -287,32 +287,34 @@ export default function TransitionProvider({ children }: { children: React.React
 
       try {
         if (collection === 'cf_lancamentos') {
-          // Polling Super Rápido (3s) focado apenas na data de atualização
+          // Polling de lançamentos via /api/sync-status (muito leve — busca apenas o timestamp)
           const statusRes = await fetch('/api/sync-status?collection=cf_lancamentos', { cache: 'no-store' });
           if (!statusRes.ok) return;
           const statusData = await statusRes.json();
           
           if (statusData.lastUpdate && statusData.lastUpdate !== lastSyncTime) {
-             console.log('☁️ Polling [TEMPO REAL]: Detectada alteração remota em lançamentos!');
-             // Faz fetch apenas dos lançamentos agora
-             const res = await fetch('/api/migrate-backup?collection=cf_lancamentos', { cache: 'no-store' });
-             if (!res.ok) return;
-             const backup = await res.json();
-             if (backup && backup.data) {
-                sessionStorage.setItem('cf_sync_in_progress', 'true');
-                store.importBackup(JSON.stringify(backup));
-                sessionStorage.setItem('cf_sync_in_progress', 'false');
-                lastSyncTime = statusData.lastUpdate;
-                sessionStorage.setItem('cf_last_sync_time', lastSyncTime);
-             }
+            console.log('☁️ Polling [TEMPO REAL]: Detectada alteração remota em lançamentos! Buscando...');
+            lastSyncTime = statusData.lastUpdate;
+            sessionStorage.setItem('cf_last_sync_time', lastSyncTime);
+
+            // Busca apenas os lançamentos (API leve)
+            const empresaId = sessionStorage.getItem('cf_empresa_sel') || '';
+            const url = empresaId
+              ? `/api/lancamentos?empresaId=${empresaId}`
+              : `/api/lancamentos`;
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) return;
+            const lancamentos = await res.json();
+            if (Array.isArray(lancamentos) && lancamentos.length > 0) {
+              sessionStorage.setItem('cf_sync_in_progress', 'true');
+              // Atualiza cada lançamento individualmente no store (não importa backup completo)
+              lancamentos.forEach((l: any) => store.importSingleLancamento(l));
+              sessionStorage.setItem('cf_sync_in_progress', 'false');
+              console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem.`);
+            }
           }
         } else {
-          // Polling padrão para as outras tabelas leves (a cada 15s - aqui rodará a cada 3s mas tudo bem, 
-          // ou podemos manter o de 15s)
-          // Mas para não sobrecarregar, vamos ignorar as outras por enquanto, pois elas
-          // não têm a urgência do lancamentos, ou podemos fazer a validação
-          // Para simplificar, faremos o pull direto se não for lancamentos, mas com chance reduzida.
-          if (Math.random() > 0.2) return; // Roda 1 a cada 5 vezes (aprox 15s)
+          if (Math.random() > 0.2) return; // ~1 a cada 5 ciclos (~15s)
           
           const res = await fetch(`/api/migrate-backup?collection=${collection}&t=${Date.now()}`, { cache: 'no-store' });
           if (!res.ok) return;

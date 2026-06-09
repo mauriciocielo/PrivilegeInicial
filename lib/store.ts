@@ -1108,6 +1108,23 @@ class DataStore {
       this.logAction(ofxData.empresaId, 'Conciliação', `Importou e conciliou a transação "${ofxData.descricao}" de R$ ${ofxData.valor.toFixed(2)}`);
     }
     this.persistLancamentos(list);
+    // Sincroniza a conciliação com o banco de dados remoto
+    if (typeof window !== 'undefined') {
+      const lancamentoAtualizado = manualId
+        ? list.find(l => l.id === manualId)
+        : list.find(l => l.ofxId === (ofxData.ofxId || ofxData.id));
+      if (lancamentoAtualizado) {
+        console.log('☁️ [STORE] Sincronizando conciliação no servidor:', lancamentoAtualizado.id);
+        fetch('/api/lancamentos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lancamentoAtualizado)
+        }).then(res => {
+          if (!res.ok) res.json().then(e => console.error('Erro HTTP ao salvar reconciliação:', e));
+          else console.log('☁️ [STORE] Conciliação salva com sucesso no servidor.');
+        }).catch(err => console.error('Erro ao salvar reconciliação no servidor:', err));
+      }
+    }
   }
   // Helper para limpar descrições bancárias (remove datas, números isolados e símbolos)
   private normalizeText(text: string): string {
@@ -1286,15 +1303,18 @@ class DataStore {
       this.logAction(lancamento.empresaId, 'Criação', `Criou lançamento "${lancamento.descricao}" no valor de R$ ${lancamento.valor.toFixed(2)} (Data: ${lancamento.data})`);
     }
     this.persistLancamentos(list);
-    // Sincronização em tempo real (Escrita Direta)
+    // Sincronização direta e imediata com o banco de dados
     if (typeof window !== 'undefined') {
+      console.log('☁️ [STORE] Salvando lançamento direto no servidor:', lancamento.id);
       fetch('/api/lancamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lancamento)
+      }).then(res => {
+        if (!res.ok) res.json().then(e => console.error('Erro HTTP ao salvar lançamento:', e));
+        else console.log('☁️ [STORE] Lançamento salvo com sucesso no servidor:', lancamento.id);
       }).catch(err => console.error('Erro ao salvar lançamento direto no servidor:', err));
     }
-
   }
 
   saveLancamentos(lancamentos: Lancamento[]): { imported: number; skipped: number } {
@@ -1338,10 +1358,14 @@ class DataStore {
     
     
     if (typeof window !== 'undefined' && processed.length > 0) {
+      console.log(`☁️ [STORE] Salvando lote de ${processed.length} lançamentos no servidor...`);
       fetch('/api/lancamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(processed)
+      }).then(res => {
+        if (!res.ok) res.json().then(e => console.error('Erro HTTP ao salvar lote de lançamentos:', e));
+        else console.log(`☁️ [STORE] Lote de ${processed.length} lançamentos salvo com sucesso no servidor.`);
       }).catch(err => console.error('Erro ao salvar lote de lançamentos direto no servidor:', err));
     }
     this.persistLancamentos(newList);
@@ -1373,9 +1397,13 @@ class DataStore {
 
       // Sincroniza a exclusão com o banco de dados remoto
       if (typeof window !== 'undefined') {
-        fetch(`/api/lancamentos?id=${id}`, { method: 'DELETE' }).catch(err => {
-          console.error('Erro ao deletar lançamento no servidor:', err);
-        });
+        console.log('☁️ [STORE] Deletando lançamento no servidor:', id);
+        fetch(`/api/lancamentos?id=${id}`, { method: 'DELETE' })
+          .then(res => {
+            if (!res.ok) res.json().then(e => console.error('Erro HTTP ao deletar lançamento:', e));
+            else console.log('☁️ [STORE] Lançamento deletado com sucesso no servidor:', id);
+          })
+          .catch(err => console.error('Erro ao deletar lançamento no servidor:', err));
       }
     }
   }
