@@ -53,10 +53,12 @@ const detectCardImportColumns = (headers: string[]) => {
   const find = (terms: string[]) => normalized.findIndex(header => terms.some(term => header.includes(term)));
 
   return {
-    date: find(['data', 'dt compra', 'dt lancamento', 'lancamento']),
-    description: find(['descricao', 'descrição', 'historico', 'histórico', 'estabelecimento', 'local', 'detalhe']),
-    value: find(['valor', 'amount', 'total', 'debito', 'débito']),
-    document: find(['documento', 'doc', 'parcela', 'cartao', 'cartão']),
+    date: find(['data', 'dt compra', 'dt lancamento', 'lancamento', 'dia', 'vencimento']),
+    description: find(['descricao', 'descrição', 'historico', 'histórico', 'estabelecimento', 'local', 'detalhe', 'nome']),
+    value: find(['valor', 'amount', 'total', 'debito', 'débito', 'saida', 'entrada', 'pago', 'recebido', 'dinheiro', 'pix', 'cartao']),
+    valueEntrada: find(['entrada', 'credito', 'recebimento']),
+    valueSaida: find(['saida', 'debito', 'pagamento']),
+    document: find(['documento', 'doc', 'parcela', 'cartao', 'cartão', 'nf']),
   };
 };
 
@@ -487,22 +489,64 @@ export default function LancamentosPage() {
     setShowCardImportModal(true);
   };
 
-  const parseCardRows = (rows: unknown[][]): CardImportRow[] => {
+  const parseCardRows = (rows: unknown[][], defaultDateFromSheet?: string): CardImportRow[] => {
     if (rows.length === 0) return [];
-    const firstRow = rows[0].map(cell => String(cell || '').trim());
-    const hasHeader = firstRow.some(cell => /data|descri|historico|histórico|valor|amount|estabelecimento/i.test(cell));
-    const headers = hasHeader ? firstRow : ['data', 'descricao', 'valor', 'documento'];
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    const columns = detectCardImportColumns(headers);
-    const dateIndex = columns.date >= 0 ? columns.date : 0;
-    const descriptionIndex = columns.description >= 0 ? columns.description : 1;
-    const valueIndex = columns.value >= 0 ? columns.value : 2;
+    
+    // Procura o cabeçalho nas primeiras 15 linhas (para pular títulos)
+    let headerRowIndex = -1;
+    for (let i = 0; i < Math.min(15, rows.length); i++) {
+        const rowStrings = rows[i].map(cell => String(cell || '').trim());
+        const hasHeader = rowStrings.some(cell => /data|dia|descri|historico|histórico|valor|entrada|saida/i.test(cell));
+        if (hasHeader) {
+            headerRowIndex = i;
+            break;
+        }
+    }
+    
+    let headers: string[];
+    let dataRows: unknown[][];
+    
+    if (headerRowIndex >= 0) {
+        headers = rows[headerRowIndex].map(cell => String(cell || '').trim());
+        dataRows = rows.slice(headerRowIndex + 1);
+    } else {
+        headers = ['data', 'descricao', 'valor', 'documento'];
+        dataRows = rows;
+    }
 
+    const columns = detectCardImportColumns(headers);
+    
     return dataRows
       .map((row, index) => {
-        const data = parseCardDate(row[dateIndex]);
+        let data = '';
+        if (columns.date >= 0) {
+           data = parseCardDate(row[columns.date]);
+           // Se a coluna for apenas "dia" e retornar vazio, ou tentar usar defaultDateFromSheet
+           if (!data && defaultDateFromSheet) {
+               const cellStr = String(row[columns.date] || '').trim();
+               if (cellStr.length <= 2 && !isNaN(Number(cellStr))) {
+                   data = `${defaultDateFromSheet}-${cellStr.padStart(2, '0')}`;
+               }
+           }
+        }
+        if (!data && defaultDateFromSheet) {
+           // Fallback para a data extraída do nome da planilha
+           data = `${defaultDateFromSheet}-01`; // ou outra lógica
+        }
+
+        const descriptionIndex = columns.description >= 0 ? columns.description : 1;
         const descricao = String(row[descriptionIndex] || '').trim();
-        const valor = parseMoney(row[valueIndex]);
+        
+        let valor = 0;
+        if (columns.valueEntrada >= 0 || columns.valueSaida >= 0) {
+            const vEntrada = parseMoney(row[columns.valueEntrada]);
+            const vSaida = parseMoney(row[columns.valueSaida]);
+            valor = vEntrada > 0 ? vEntrada : vSaida; // Pega o que for maior que zero
+        } else {
+            const valueIndex = columns.value >= 0 ? columns.value : 2;
+            valor = parseMoney(row[valueIndex]);
+        }
+
         const numeroDocumento = columns.document >= 0 ? String(row[columns.document] || '').trim() : undefined;
 
         return {
@@ -513,7 +557,7 @@ export default function LancamentosPage() {
           numeroDocumento: numeroDocumento || undefined,
         };
       })
-      .filter(row => row.data && row.descricao && row.valor > 0);
+      .filter(row => row.descricao && row.valor > 0);
   };
 
   const parseDelimitedCardFile = (text: string): unknown[][] => {
