@@ -597,12 +597,29 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       }
     } else 
 
-    if (extension === 'xlsx' || extension === 'xls') {
+    if (extension === 'xlsx' || extension === 'xls' || extension === 'xlsm') {
       const XLSX = await import('xlsx');
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' }) as unknown[][];
+      
+      let allParsedRows: CardImportRow[] = [];
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const rawSheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
+        if (rawSheetRows.length > 0) {
+          const parsedSheetRows = parseCardRows(rawSheetRows);
+          allParsedRows = [...allParsedRows, ...parsedSheetRows];
+        }
+      }
+      
+      setCardImportRows(allParsedRows);
+      setCardSelectedIds(allParsedRows.map(row => row.id));
+      setCardCatMap(Object.fromEntries(
+        allParsedRows
+          .map(row => [row.id, store.classifyDescription(empresaId, row.descricao) || ''])
+          .filter(([, planoContaId]) => !!planoContaId)
+      ));
+      return; // Early return as Excel is fully parsed here
     } else {
       const text = await file.text();
       rawRows = parseDelimitedCardFile(text);
