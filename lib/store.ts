@@ -1286,6 +1286,15 @@ class DataStore {
       this.logAction(lancamento.empresaId, 'Criação', `Criou lançamento "${lancamento.descricao}" no valor de R$ ${lancamento.valor.toFixed(2)} (Data: ${lancamento.data})`);
     }
     this.persistLancamentos(list);
+    // Sincronização em tempo real (Escrita Direta)
+    if (typeof window !== 'undefined') {
+      fetch('/api/lancamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lancamento)
+      }).catch(err => console.error('Erro ao salvar lançamento direto no servidor:', err));
+    }
+
   }
 
   saveLancamentos(lancamentos: Lancamento[]): { imported: number; skipped: number } {
@@ -1327,6 +1336,14 @@ class DataStore {
     }, {} as Record<string, number>);
     console.log('[DEBUG_STORE] saveLancamentos creating newList with empresaIds:', empresaStats);
     
+    
+    if (typeof window !== 'undefined' && processed.length > 0) {
+      fetch('/api/lancamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(processed)
+      }).catch(err => console.error('Erro ao salvar lote de lançamentos direto no servidor:', err));
+    }
     this.persistLancamentos(newList);
 
     // Salva/aprende as regras para todos os lançamentos que possuem categoria associada

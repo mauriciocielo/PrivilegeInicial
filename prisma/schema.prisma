@@ -197,6 +197,7 @@ model Lancamento {
   attachmentName  String?
   attachmentData  String?
   createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt @default(now())
   cliente         Cliente?   @relation(fields: [clienteId], references: [id])
   empresa         Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   planoConta      PlanoConta @relation(fields: [planoContaId], references: [id])
