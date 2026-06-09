@@ -534,6 +534,69 @@ export default function LancamentosPage() {
     const extension = file.name.split('.').pop()?.toLowerCase();
     let rawRows: unknown[][] = [];
 
+    if (extension === 'pdf') {
+      setCardImporting(true);
+      try {
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+
+        const promptText = `Extraia todas as transações financeiras deste arquivo PDF (extrato bancário, caixa físico ou fatura de cartão). Retorne ESTRITAMENTE UM ARRAY JSON VÁLIDO no seguinte formato exato, sem formatação markdown:
+[
+  {
+    "data": "YYYY-MM-DD",
+    "descricao": "Nome do estabelecimento ou histórico",
+    "valor": 123.45,
+    "numeroDocumento": "12345"
+  }
+]
+Apenas retorne transações com valor maior que 0. Valores numéricos devem ser expressos como Number. Certifique-se que o JSON é válido.`;
+
+        const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: promptText },
+                  { inlineData: { mimeType: 'application/pdf', data: base64Data } }
+                ]
+              }],
+              generationConfig: { responseMimeType: "application/json" }
+            }),
+          }
+        );
+
+        if (!response.ok) throw new Error('Falha ao conectar com o Gemini.');
+        const data = await response.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const parsed = JSON.parse(rawText.trim());
+          if (Array.isArray(parsed)) {
+            rawRows = [
+              ['data', 'descricao', 'valor', 'documento'],
+              ...parsed.map((item: any) => [
+                item.data || '', 
+                item.descricao || '', 
+                item.valor || 0, 
+                item.numeroDocumento || ''
+              ])
+            ];
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao processar PDF com a IA. Verifique se o arquivo não é muito grande ou tente converter para Excel.');
+      } finally {
+        setCardImporting(false);
+      }
+    } else 
+
     if (extension === 'xlsx' || extension === 'xls') {
       const XLSX = await import('xlsx');
       const buffer = await file.arrayBuffer();
@@ -827,7 +890,7 @@ export default function LancamentosPage() {
               </div>
             )}
           </div>
-          <button className="btn btn-secondary" onClick={openCardImport}>💳 Importar Cartão</button>
+          <button className="btn btn-secondary" onClick={openCardImport}>📂 Importar Caixa/Fatura</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Lançamento</button>
         </div>
       </div>
