@@ -258,8 +258,8 @@ async function migratePlanoContas(planoContas: any[]) {
     }
   }
 
-  // 2. Upsert PlanoConta records in parallel batches of 30 to speed up database connection times on Serverless
-  await runInBatches(planoContas, 30, async (pc) => {
+  // 2. Upsert PlanoConta records in parallel batches of 5 to speed up database connection times on Serverless
+  await runInBatches(planoContas, 5, async (pc) => {
     if (!pc.id) return;
     const empresaId = String(pc.empresaId || 'empresa_default');
     try {
@@ -294,8 +294,8 @@ async function migratePlanoContas(planoContas: any[]) {
   });
 
   console.log('Atualizando relações hierárquicas do plano de contas (Passo 2)...');
-  // 3. Update parent relations in parallel batches of 30
-  await runInBatches(planoContas, 30, async (pc) => {
+  // 3. Update parent relations in parallel batches of 5
+  await runInBatches(planoContas, 5, async (pc) => {
     if (pc.id && pc.parentId) {
       try {
         await db.planoConta.update({
@@ -1426,149 +1426,13 @@ export async function POST(request: Request) {
       console.log(`[Chunked Migration] ✅ Sincronização da coleção ${collection} concluída com sucesso.`);
 
       // Propaga a atualização da coleção via WebSocket para todos os clientes conectados
+      // ATENÇÃO: Desabilitado durante importação/chunking para evitar sobrecarga de memória no banco de dados e OOM timeouts no Vercel (fetching completo da coleção após cada lote de 25 é muito pesado)
       if ((global as any).io) {
         try {
-          let broadcastData: any = null;
-          switch (collection) {
-            case 'cf_empresas':
-              broadcastData = await db.empresa.findMany({
-                select: {
-                  id: true,
-                  razaoSocial: true,
-                  nomeFantasia: true,
-                  cnpj: true,
-                  responsavel: true,
-                  email: true,
-                  telefone: true,
-                  atividade: true,
-                  tipo: true,
-                  taxaMensalPadrao: true,
-                  fundoReservaPct: true,
-                  dataInicioContrato: true,
-                  grupoEconomico: true,
-                  receitaMensalEstimada: true,
-                  comprasMensalEstimada: true,
-                  logoData: true,
-                  bancoBoleto: true,
-                  createdAt: true,
-                  allowedRoutes: true,
-                  politicaReceberName: true,
-                  politicaComprasName: true,
-                  politicaCobrancaName: true,
-                }
-              });
-              break;
-            case 'cf_users':
-              broadcastData = await db.user.findMany();
-              break;
-            case 'cf_unidades':
-              broadcastData = await db.unidade.findMany();
-              break;
-            case 'cf_plano_contas':
-              broadcastData = await db.planoConta.findMany();
-              break;
-            case 'cf_portadores':
-              broadcastData = await db.portador.findMany();
-              break;
-            case 'cf_clientes':
-              broadcastData = await db.cliente.findMany();
-              break;
-            case 'cf_lancamentos':
-              broadcastData = await db.lancamento.findMany({
-                select: {
-                  id: true,
-                  empresaId: true,
-                  data: true,
-                  descricao: true,
-                  valor: true,
-                  tipo: true,
-                  planoContaId: true,
-                  portadorId: true,
-                  status: true,
-                  numeroDocumento: true,
-                  observacao: true,
-                  origem: true,
-                  ofxId: true,
-                  unidadeId: true,
-                  clienteId: true,
-                  attachmentName: true,
-                  createdAt: true,
-                }
-              });
-              break;
-            case 'cf_endividamentos':
-              const rawEnd = await db.endividamento.findMany({
-                include: { pagamentos: true }
-              });
-              broadcastData = rawEnd.map(e => ({
-                id: e.id,
-                empresaId: e.empresaId,
-                tipo: e.tipo,
-                banco: e.banco,
-                conta: e.conta,
-                contrato: e.contrato,
-                descricaoContrato: e.descricaoContrato,
-                taxa: e.taxa,
-                taxaTipo: e.taxaTipo,
-                indexador: e.indexador,
-                parcela: e.parcela,
-                parcelasFaltantes: e.parcelasFaltantes,
-                valorQuitacao: e.valorQuitacao,
-                valorAPagar: e.valorAPagar,
-                garantia: e.garantia,
-                pagamentoMes: e.pagamentoMes,
-                pagamentos: e.pagamentos.map(p => ({
-                  id: p.id,
-                  data: p.data,
-                  valorTotal: p.valorTotal,
-                  valorJuros: p.valorJuros,
-                  valorAmortizacao: p.valorAmortizacao
-                }))
-              }));
-              break;
-            case 'cf_atas':
-              broadcastData = await db.ataAtendimento.findMany();
-              break;
-            case 'cf_indicadores':
-              broadcastData = await db.indicadorMensal.findMany();
-              break;
-            case 'cf_orcamentos':
-              const rawOrc = await db.orcamentoMensal.findMany({
-                include: { valores: true }
-              });
-              broadcastData = rawOrc.map(orc => {
-                const categorias: Record<string, number> = {};
-                orc.valores.forEach(v => {
-                  categorias[v.planoContaId] = v.valor;
-                });
-                return {
-                  id: orc.id,
-                  empresaId: orc.empresaId,
-                  mes: orc.mes,
-                  categorias
-                };
-              });
-              break;
-            case 'cf_nfse':
-              broadcastData = await db.nfsE.findMany();
-              break;
-            case 'cf_situacao_fiscal':
-              broadcastData = await db.situacaoFiscal.findMany();
-              break;
-            case 'cf_transaction_patterns':
-              broadcastData = await db.transactionPattern.findMany();
-              break;
-          }
-
-          if (broadcastData !== null) {
-            console.log(`🔌 WebSocket: Transmitindo evento 'colecao_atualizada' para a coleção ${collection}`);
-            (global as any).io.emit('colecao_atualizada', {
-              collection,
-              data: broadcastData
-            });
-          }
+            console.log(`🔌 WebSocket: Migração da coleção ${collection} efetuada de forma silenciosa e performática (sem broadcast massivo).`);
+            // Os clientes têm sistema próprio de Polling para verificar atualizações, então não necessita broadcast de toda a tabela.
         } catch (wsErr) {
-          console.error(`Erro ao buscar ou transmitir atualização de ${collection} via WebSocket:`, wsErr);
+          console.error(`Erro no processamento WebSocket silencioso de ${collection}:`, wsErr);
         }
       }
 
