@@ -25,7 +25,7 @@ export async function syncBackupInChunks(
       { key: 'cf_empresas', label: 'Empresas', chunkSize: 25 },
       { key: 'cf_users', label: 'Usuários', chunkSize: 25 },
       { key: 'cf_unidades', label: 'Unidades', chunkSize: 25 },
-      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 5 }, // ⚠️ Double-pass (upsert + hierarchy) = half the throughput, must be small
+      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 1 }, // ⚠️ 1 por vez: FK hierárquica + cold start serverless = timeout rápido
       { key: 'cf_portadores', label: 'Portadores', chunkSize: 25 },
       { key: 'cf_clientes', label: 'Clientes', chunkSize: 25 },
       { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 25 },
@@ -94,21 +94,30 @@ export async function syncBackupInChunks(
 
           console.log(`[Sync Helper] Enviando lote ${i + 1}/${chunksCount} de ${col.label} (${chunk.length} itens)...`);
 
-          const res = await fetch('/api/migrate-backup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              collection: col.key,
-              data: chunk
-            })
-          });
+          const MAX_RETRIES = 2;
+          let lastErr: string | undefined;
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            const res = await fetch('/api/migrate-backup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                collection: col.key,
+                data: chunk
+              })
+            });
 
-          if (!res.ok) {
+            if (res.ok) { lastErr = undefined; break; }
+
             const errText = await res.text();
             let parsedErr = errText;
             try { parsedErr = JSON.parse(errText).error || errText; } catch {}
-            return { success: false, error: `Falha ao sincronizar ${col.label} no lote ${i + 1}/${chunksCount}: ${parsedErr}` };
+            lastErr = `Falha ao sincronizar ${col.label} no lote ${i + 1}/${chunksCount}: ${parsedErr}`;
+            if (attempt < MAX_RETRIES) {
+              console.warn(`Tentativa ${attempt} falhou para ${col.label} lote ${i + 1}. Retentando em 1s...`);
+              await new Promise(r => setTimeout(r, 1000));
+            }
           }
+          if (lastErr) return { success: false, error: lastErr };
         }
       }
     }
