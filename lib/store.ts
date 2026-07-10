@@ -958,16 +958,8 @@ class DataStore {
     }
     if (lancUpdated) {
       this.persistLancamentos(lancamentos);
-      
-      // Sincronização Ágil em Lote (Background Sync) para evitar perda de dados
       if (typeof window !== 'undefined') {
-        const updatedList = lancamentos.filter(l => l.empresaId === empresaId && l.planoContaId === targetId);
-        console.log('☁️ [STORE] Sincronizando', updatedList.length, 'lançamentos atualizados pela mesclagem em lote...');
-        fetch('/api/migrate-backup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ collection: 'cf_lancamentos', data: updatedList })
-        }).catch(err => console.error('Erro na sincronização de lançamentos mesclados:', err));
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
       }
     }
 
@@ -982,15 +974,8 @@ class DataStore {
     }
     if (pcsUpdated) {
       this.set('cf_plano_contas', contas);
-      
       if (typeof window !== 'undefined') {
-        const updatedContas = contas.filter(p => p.empresaId === empresaId);
-        console.log('☁️ [STORE] Sincronizando árvore de Plano de Contas alterada...');
-        fetch('/api/migrate-backup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ collection: 'cf_plano_contas', data: updatedContas })
-        }).catch(err => console.error('Erro na sincronização das contas vinculadas:', err));
+        window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_plano_contas' } }));
       }
     }
 
