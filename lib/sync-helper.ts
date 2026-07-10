@@ -2,6 +2,9 @@
  * Utility to sync backup data to the PostgreSQL database on Railway
  * in small collection-specific chunks to avoid Netlify's 6MB request body limit
  * and 10-second serverless function execution timeout.
+ *
+ * cf_plano_contas usa uma rota dedicada e leve (/api/plano-contas/upsert) para evitar
+ * Inactivity Timeout no Vercel Free (cold start da rota de 1600 linhas era muito lento).
  */
 
 export async function syncBackupInChunks(
@@ -25,7 +28,7 @@ export async function syncBackupInChunks(
       { key: 'cf_empresas', label: 'Empresas', chunkSize: 25 },
       { key: 'cf_users', label: 'Usuários', chunkSize: 25 },
       { key: 'cf_unidades', label: 'Unidades', chunkSize: 25 },
-      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 1 }, // ⚠️ 1 por vez: FK hierárquica + cold start serverless = timeout rápido
+      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 1 }, // Rota dedicada: /api/plano-contas/upsert (1 por vez)
       { key: 'cf_portadores', label: 'Portadores', chunkSize: 25 },
       { key: 'cf_clientes', label: 'Clientes', chunkSize: 25 },
       { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 25 },
@@ -47,78 +50,91 @@ export async function syncBackupInChunks(
         continue;
       }
 
+      // ── Plano de Contas: rota dedicada, 1 item por vez ──────────────────────
       if (col.key === 'cf_plano_contas') {
-        // Ordena para garantir que contas pais (níveis menores)
-        // sejam processadas antes de contas filhas (níveis maiores),
-        // permitindo o uso seguro de loteamento (chunks).
+        // Ordena para garantir que pais (nível menor) sejam criados antes dos filhos
         items = [...items].sort((a: any, b: any) => {
           const nivelA = Number(a.nivel) || 1;
           const nivelB = Number(b.nivel) || 1;
           if (nivelA !== nivelB) return nivelA - nivelB;
           return String(a.codigo || '').localeCompare(String(b.codigo || ''));
         });
-      }
 
-      const totalItems = items.length;
-      const chunkSize = col.chunkSize;
+        const total = items.length;
+        for (let i = 0; i < total; i++) {
+          const item = items[i];
+          if (onProgress) onProgress(`Plano de Contas (${i + 1}/${total})...`);
 
-      console.log(`[Sync Helper] Sincronizando ${totalItems} itens de ${col.label}...`);
-
-      if (totalItems <= chunkSize) {
-        if (onProgress) onProgress(`Sincronizando ${col.label}...`);
-        const res = await fetch('/api/migrate-backup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            collection: col.key,
-            data: items
-          })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          let parsedErr = errText;
-          try { parsedErr = JSON.parse(errText).error || errText; } catch {}
-          return { success: false, error: `Falha ao sincronizar ${col.label}: ${parsedErr}` };
-        }
-      } else {
-        // Splitting into chunks
-        const chunksCount = Math.ceil(totalItems / chunkSize);
-        for (let i = 0; i < chunksCount; i++) {
-          const start = i * chunkSize;
-          const chunk = items.slice(start, start + chunkSize);
-          
-          if (onProgress) {
-            onProgress(`Sincronizando ${col.label} (Lote ${i + 1}/${chunksCount})...`);
-          }
-
-          console.log(`[Sync Helper] Enviando lote ${i + 1}/${chunksCount} de ${col.label} (${chunk.length} itens)...`);
-
-          const MAX_RETRIES = 2;
+          const MAX_RETRIES = 3;
           let lastErr: string | undefined;
           for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const res = await fetch('/api/migrate-backup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                collection: col.key,
-                data: chunk
-              })
-            });
-
-            if (res.ok) { lastErr = undefined; break; }
-
-            const errText = await res.text();
-            let parsedErr = errText;
-            try { parsedErr = JSON.parse(errText).error || errText; } catch {}
-            lastErr = `Falha ao sincronizar ${col.label} no lote ${i + 1}/${chunksCount}: ${parsedErr}`;
+            try {
+              const res = await fetch('/api/plano-contas/upsert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+              });
+              if (res.ok) { lastErr = undefined; break; }
+              const errText = await res.text();
+              let parsedErr = errText;
+              try { parsedErr = JSON.parse(errText).error || errText; } catch {}
+              lastErr = `Erro ao salvar conta ${item.codigo || item.id}: ${parsedErr}`;
+            } catch (fetchErr: any) {
+              lastErr = `Falha de rede (tentativa ${attempt}): ${fetchErr.message}`;
+            }
             if (attempt < MAX_RETRIES) {
-              console.warn(`Tentativa ${attempt} falhou para ${col.label} lote ${i + 1}. Retentando em 1s...`);
+              console.warn(`Tentativa ${attempt} falhou para PlanoConta ${item.id}. Retentando em 1s...`);
               await new Promise(r => setTimeout(r, 1000));
             }
           }
-          if (lastErr) return { success: false, error: lastErr };
+          if (lastErr) {
+            // Não interrompe toda a migração por um item — apenas loga e continua
+            console.error('Falha definitiva no PlanoConta (ignorando):', lastErr);
+          }
         }
+        continue; // passa para a próxima coleção
+      }
+
+      // ── Todas as outras coleções: /api/migrate-backup em chunks ─────────────
+      const totalItems = items.length;
+      const chunkSize = col.chunkSize;
+      console.log(`[Sync Helper] Sincronizando ${totalItems} itens de ${col.label}...`);
+
+      const chunksCount = Math.ceil(totalItems / chunkSize);
+      for (let i = 0; i < chunksCount; i++) {
+        const start = i * chunkSize;
+        const chunk = items.slice(start, start + chunkSize);
+
+        if (onProgress) {
+          onProgress(chunksCount === 1
+            ? `Sincronizando ${col.label}...`
+            : `Sincronizando ${col.label} (Lote ${i + 1}/${chunksCount})...`
+          );
+        }
+
+        console.log(`[Sync Helper] Enviando lote ${i + 1}/${chunksCount} de ${col.label} (${chunk.length} itens)...`);
+
+        const MAX_RETRIES = 2;
+        let lastErr: string | undefined;
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          const res = await fetch('/api/migrate-backup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collection: col.key, data: chunk })
+          });
+
+          if (res.ok) { lastErr = undefined; break; }
+
+          const errText = await res.text();
+          let parsedErr = errText;
+          try { parsedErr = JSON.parse(errText).error || errText; } catch {}
+          lastErr = `Falha ao sincronizar ${col.label} no lote ${i + 1}/${chunksCount}: ${parsedErr}`;
+          if (attempt < MAX_RETRIES) {
+            console.warn(`Tentativa ${attempt} falhou para ${col.label} lote ${i + 1}. Retentando em 1s...`);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        if (lastErr) return { success: false, error: lastErr };
       }
     }
 

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const maxDuration = 60; // segundos — necessário para migrations com muitos itens no Vercel/Next.js
+// Nota: maxDuration requer plano Pro da Vercel — removido para compatibilidade com plano gratuito.
 
 async function runInBatches<T>(
   items: T[],
