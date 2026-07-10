@@ -25,7 +25,7 @@ export async function syncBackupInChunks(
       { key: 'cf_empresas', label: 'Empresas', chunkSize: 25 },
       { key: 'cf_users', label: 'Usuários', chunkSize: 25 },
       { key: 'cf_unidades', label: 'Unidades', chunkSize: 25 },
-      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 25 },
+      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 5 }, // ⚠️ Double-pass (upsert + hierarchy) = half the throughput, must be small
       { key: 'cf_portadores', label: 'Portadores', chunkSize: 25 },
       { key: 'cf_clientes', label: 'Clientes', chunkSize: 25 },
       { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 25 },

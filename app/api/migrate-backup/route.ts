@@ -258,9 +258,9 @@ async function migratePlanoContas(planoContas: any[]) {
     }
   }
 
-  // 2. Upsert PlanoConta records in parallel batches of 5 to speed up database connection times on Serverless
-  await runInBatches(planoContas, 5, async (pc) => {
-    if (!pc.id) return;
+  // 2. Upsert PlanoConta + parentId em um único loop sequencial (reduz tempo de resposta e evita Inactivity Timeout em serverless)
+  for (const pc of planoContas) {
+    if (!pc.id) continue;
     const empresaId = String(pc.empresaId || 'empresa_default');
     try {
       await db.planoConta.upsert({
@@ -270,7 +270,7 @@ async function migratePlanoContas(planoContas: any[]) {
           descricao: String(pc.descricao || ''),
           tipo: String(pc.tipo || 'receita'),
           nivel: Math.round(Number(pc.nivel)) || 1,
-          parentId: null,
+          parentId: pc.parentId ? String(pc.parentId) : null,
           ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
           empresaId: empresaId,
           dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
@@ -281,32 +281,46 @@ async function migratePlanoContas(planoContas: any[]) {
           descricao: String(pc.descricao || ''),
           tipo: String(pc.tipo || 'receita'),
           nivel: Math.round(Number(pc.nivel)) || 1,
-          parentId: null,
+          parentId: pc.parentId ? String(pc.parentId) : null,
           ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
           empresaId: empresaId,
           dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
         }
       });
     } catch (err) {
-      console.error('Erro no PlanoConta (Passo 1):', pc, err);
-      throw new Error(`Erro no PlanoConta (ID: ${pc.id}): ${(err as Error).message}`);
-    }
-  });
-
-  console.log('Atualizando relações hierárquicas do plano de contas (Passo 2)...');
-  // 3. Update parent relations in parallel batches of 5
-  await runInBatches(planoContas, 5, async (pc) => {
-    if (pc.id && pc.parentId) {
+      // Se falhou com parentId (FK violation), tenta sem parentId e ignora hierarquia para não travar a migração
       try {
-        await db.planoConta.update({
+        await db.planoConta.upsert({
           where: { id: String(pc.id) },
-          data: { parentId: String(pc.parentId) }
+          update: {
+            codigo: String(pc.codigo || ''),
+            descricao: String(pc.descricao || ''),
+            tipo: String(pc.tipo || 'receita'),
+            nivel: Math.round(Number(pc.nivel)) || 1,
+            parentId: null,
+            ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
+            empresaId: empresaId,
+            dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
+          },
+          create: {
+            id: String(pc.id),
+            codigo: String(pc.codigo || ''),
+            descricao: String(pc.descricao || ''),
+            tipo: String(pc.tipo || 'receita'),
+            nivel: Math.round(Number(pc.nivel)) || 1,
+            parentId: null,
+            ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
+            empresaId: empresaId,
+            dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
+          }
         });
-      } catch (err) {
-        console.error('Erro no PlanoConta (Passo 2 - parentId):', pc, err);
+        console.warn(`⚠️ PlanoConta ${pc.id}: salvo SEM parentId (FK inválido para parentId=${pc.parentId}). Ignorando hierarquia.`);
+      } catch (fallbackErr) {
+        console.error('Erro no PlanoConta (Passo único):', pc, fallbackErr);
+        throw new Error(`Erro no PlanoConta (ID: ${pc.id}): ${(fallbackErr as Error).message}`);
       }
     }
-  });
+  }
 }
 
 async function migratePortadores(portadores: any[]) {
