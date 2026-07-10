@@ -12,6 +12,11 @@ export default function PlanoContasPage() {
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>('todos');
   const [search, setSearch] = useState('');
 
+  // Estados de Mesclagem
+  const [mergeSource, setMergeSource] = useState<PlanoConta | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState('');
+  const [showMergeModal, setShowMergeModal] = useState(false);
+
   // Estados de Regras de IA
   const [activePageTab, setActivePageTab] = useState<'contas' | 'regras'>('contas');
   const [regras, setRegras] = useState<TransactionPattern[]>([]);
@@ -106,9 +111,39 @@ export default function PlanoContasPage() {
   const handleDelete = (id: string) => {
     const children = plano.filter(p => p.parentId === id);
     if (children.length > 0) { alert('Não é possível excluir uma conta com subcategorias.'); return; }
-    if (!confirm('Excluir esta conta?')) return;
+    
+    // Check if there are transactions associated
+    const lancamentosDaConta = store.getLancamentos(empresaId).filter(l => l.planoContaId === id);
+    if (lancamentosDaConta.length > 0) {
+      if (!confirm(`Existem ${lancamentosDaConta.length} lançamentos vinculados a esta conta. Se você excluí-la sem mesclar, os lançamentos ficarão órfãos. Deseja realmente excluir assim mesmo? (É recomendável usar o botão 🔄 Mesclar em vez disso)`)) return;
+    } else {
+      if (!confirm('Excluir esta conta?')) return;
+    }
+
     store.deletePlanoConta(id);
     setPlano(store.getPlanoContas(empresaId));
+  };
+
+  const openMerge = (pc: PlanoConta) => {
+    setMergeSource(pc);
+    setMergeTargetId('');
+    setShowMergeModal(true);
+  };
+
+  const handleMerge = () => {
+    if (!mergeSource) return;
+    if (!mergeTargetId) { alert('Selecione para qual conta deseja transferir os lançamentos.'); return; }
+    if (mergeSource.id === mergeTargetId) { alert('A conta destino não pode ser a mesma que a conta de origem.'); return; }
+
+    const targetAccount = plano.find(p => p.id === mergeTargetId);
+    if (!targetAccount) return;
+
+    if (!confirm(`Você está prestes a transferir todos os lançamentos vinculados a "${mergeSource.codigo} - ${mergeSource.descricao}" para "${targetAccount.codigo} - ${targetAccount.descricao}".\n\nA conta original "${mergeSource.descricao}" será EXCLUÍDA permanentemente após a transferência.\n\nDeseja continuar?`)) return;
+
+    store.mergePlanoContas(empresaId, mergeSource.id, mergeTargetId);
+    setPlano(store.getPlanoContas(empresaId));
+    setShowMergeModal(false);
+    setMergeSource(null);
   };
 
   const handleDeleteAll = () => {
@@ -264,6 +299,7 @@ export default function PlanoContasPage() {
                                 <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
                                   {pc.ativo ? '⏸️' : '▶️'}
                                 </button>
+                                <button className="btn btn-ghost btn-sm btn-icon" title="Mesclar com Conta Base (Transferir Lançamentos)" onClick={() => openMerge(pc)}>🔄</button>
                                 <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
                               </div>
                             </td>
@@ -447,6 +483,50 @@ export default function PlanoContasPage() {
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowRegraModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSaveRegra}>✓ Salvar Regra</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showMergeModal && mergeSource && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowMergeModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Mesclar Contas (Transferir Lançamentos)</h2>
+              <button className="modal-close" onClick={() => setShowMergeModal(false)}>✕</button>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ color: 'var(--text-danger)' }}>Conta Duplicada (A ser excluída):</label>
+              <div style={{ padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 6, fontWeight: 500 }}>
+                {mergeSource.codigo} - {mergeSource.descricao}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
+                Os lançamentos desta conta e possíveis contas filhas associadas serão transferidos para a conta de destino, e em seguida esta conta original será apagada permanentemente.
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label" style={{ color: 'var(--text-primary)' }}>Transferir para (Conta Base):</label>
+              <select 
+                className="form-control" 
+                value={mergeTargetId} 
+                onChange={e => setMergeTargetId(e.target.value)}
+              >
+                <option value="">Selecione a conta correta...</option>
+                {plano
+                  .filter(p => p.id !== mergeSource.id && p.tipo === mergeSource.tipo)
+                  .sort((a,b) => a.codigo.localeCompare(b.codigo))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.codigo} - {p.descricao} (Nível {p.nivel})</option>
+                  ))
+                }
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setShowMergeModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleMerge}>🔄 Transferir e Mesclar</button>
             </div>
           </div>
         </div>

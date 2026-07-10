@@ -42,16 +42,25 @@ export async function syncBackupInChunks(
       if (collectionsToSync && !collectionsToSync.includes(col.key)) {
         continue;
       }
-      const items = data[col.key];
+      let items = data[col.key];
       if (!Array.isArray(items) || items.length === 0) {
         continue;
       }
 
+      if (col.key === 'cf_plano_contas') {
+        // Ordena para garantir que contas pais (níveis menores)
+        // sejam processadas antes de contas filhas (níveis maiores),
+        // permitindo o uso seguro de loteamento (chunks).
+        items = [...items].sort((a: any, b: any) => {
+          const nivelA = Number(a.nivel) || 1;
+          const nivelB = Number(b.nivel) || 1;
+          if (nivelA !== nivelB) return nivelA - nivelB;
+          return String(a.codigo || '').localeCompare(String(b.codigo || ''));
+        });
+      }
+
       const totalItems = items.length;
-      
-      // If collection is plano de contas, we don't chunk it to keep parentId self-references intact
-      const isPlano = col.key === 'cf_plano_contas';
-      const chunkSize = isPlano ? totalItems : col.chunkSize;
+      const chunkSize = col.chunkSize;
 
       console.log(`[Sync Helper] Sincronizando ${totalItems} itens de ${col.label}...`);
 
