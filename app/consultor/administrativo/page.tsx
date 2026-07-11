@@ -35,9 +35,10 @@ export default function AdministrativoPage() {
   const handleMigrateToPostgres = async () => {
     if (!confirm('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?')) return;
     setMigrating(true);
-    setMigrationProgress('Iniciando...');
+    setMigrationProgress('Preparando dados (removendo anexos pesados para sincronização)...');
     try {
-      const backupData = store.exportBackup();
+      const backupData = store.exportBackupForSync();
+      setMigrationProgress('Iniciando envio...');
       const result = await syncBackupInChunks(backupData, (msg) => {
         setMigrationProgress(msg);
       });

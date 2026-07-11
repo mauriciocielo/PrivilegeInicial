@@ -1782,6 +1782,41 @@ class DataStore {
     ]);
   }
 
+  exportBackupForSync(): string {
+    // Versão sem dados pesados (attachmentData) — usada para sincronização com o banco.
+    // Evita payload gigantesco que causa timeout/erro 413 na Vercel/Railway.
+    this.init();
+    const keys = [
+      'cf_users', 'cf_empresas', 'cf_plano_contas', 'cf_portadores',
+      'cf_lancamentos', 'cf_endividamentos', 'cf_indicadores', 'cf_orcamentos',
+      'cf_atas', 'cf_situacao_fiscal', 'cf_transaction_patterns', 'cf_clientes', 'cf_nfse'
+    ];
+    const data: Record<string, unknown> = {};
+    if (typeof window !== 'undefined') {
+      keys.forEach(key => {
+        if (key === 'cf_lancamentos') {
+          // Remove attachmentData (base64) que pode ter vários MB por lançamento
+          data[key] = this.getLancamentos().map(l => {
+            const { attachmentData, ...rest } = l as any;
+            return rest;
+          });
+        } else {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try { data[key] = JSON.parse(raw); } catch { data[key] = null; }
+          }
+        }
+      });
+    }
+    const totalSize = JSON.stringify(data).length;
+    console.log(`[exportBackupForSync] Tamanho total sem anexos: ${(totalSize / 1024).toFixed(1)} KB`);
+    Object.keys(data).forEach(k => {
+      const arr = data[k] as any[];
+      if (Array.isArray(arr)) console.log(`  ${k}: ${arr.length} itens`);
+    });
+    return JSON.stringify({ version: STORAGE_VERSION, timestamp: new Date().toISOString(), isPartial: true, data });
+  }
+
   exportPartialBackup(keys: string[]): string {
     this.init();
     const data: Record<string, unknown> = {};

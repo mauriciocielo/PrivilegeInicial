@@ -40,8 +40,10 @@ export async function POST(req: Request) {
     // Tenta upsert com parentId — se falhar, tenta sem
     let savedWithParent = false;
     if (pc.parentId) {
+      const parentId = String(pc.parentId);
       try {
         const parentExists = await db.planoConta.findUnique({ where: { id: String(pc.parentId) }, select: { id: true } });
+        const parentExists = await db.planoConta.findUnique({ where: { id: parentId }, select: { id: true } });
         if (parentExists) {
           await db.planoConta.upsert({
             where: { id: String(pc.id) },
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
               tipo: String(pc.tipo || 'receita'),
               nivel: Math.round(Number(pc.nivel)) || 1,
               parentId: String(pc.parentId),
+              parentId: parentId,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
               empresaId,
               dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
@@ -62,6 +65,23 @@ export async function POST(req: Request) {
               tipo: String(pc.tipo || 'receita'),
               nivel: Math.round(Number(pc.nivel)) || 1,
               parentId: String(pc.parentId),
+              parentId: parentId,
+              ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
+              empresaId,
+              dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
+            }
+          });
+          savedWithParent = true;
+        } else {
+          // Se o pai não existe, cria um pai "fantasma" para manter a integridade
+          await db.planoConta.create({
+            data: {
+              id: parentId,
+              empresaId: empresaId,
+              codigo: `TEMP-${parentId.slice(0, 8)}`,
+              descricao: 'Pai Ausente (Auto-Criado)',
+              tipo: 'despesa',
+              nivel: (Math.round(Number(pc.nivel)) || 1) - 1,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
               empresaId,
               dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
@@ -71,6 +91,28 @@ export async function POST(req: Request) {
         }
       } catch (_) {
         // parentId inválido — salva sem ele
+      } catch (e) {
+        console.warn(`Falha ao tentar salvar PlanoConta ${pc.id} com parentId ${parentId}. Tentando novamente sem o pai. Erro:`, e);
+        // Se mesmo com o pai fantasma falhar, salva sem o pai como último recurso.
+        savedWithParent = false;
+      }
+
+      // Se a criação com o pai (real ou fantasma) foi bem-sucedida, faz o upsert final do item.
+      if (savedWithParent) {
+        await db.planoConta.upsert({
+          where: { id: String(pc.id) },
+          update: {
+            codigo: String(pc.codigo || ''),
+            descricao: String(pc.descricao || ''),
+            tipo: String(pc.tipo || 'receita'),
+            nivel: Math.round(Number(pc.nivel)) || 1,
+            parentId: parentId,
+            ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
+            empresaId,
+            dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
+          },
+          create: { id: String(pc.id), codigo: String(pc.codigo || ''), descricao: String(pc.descricao || ''), tipo: String(pc.tipo || 'receita'), nivel: Math.round(Number(pc.nivel)) || 1, parentId: parentId, ativo: pc.ativo === undefined ? true : Boolean(pc.ativo), empresaId, dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null, }
+        });
       }
     }
 
