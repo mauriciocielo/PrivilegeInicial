@@ -500,7 +500,7 @@ export default function RelatoriosPage() {
         setShowWhatsAppModal(false);
       } else {
         const confirmFallback = confirm(
-          `A API do WhatsApp não está configurada no servidor (.env).\n\nDeseja abrir o WhatsApp Web/App para enviar esta mensagem manualmente?`
+          `Falha ao enviar pelo Zappfy.\nErro: ${data.details || data.error || 'Desconhecido'}\n\nDeseja abrir o WhatsApp Web/App para enviar manualmente?`
         );
         if (confirmFallback) {
           const cleanPhone = whatsappPhone.replace(/\D/g, '');

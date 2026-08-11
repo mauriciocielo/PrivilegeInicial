@@ -62,7 +62,6 @@ export default function EndividamentoPage() {
 
   const maxMesesParaQuitar = useMemo(() => {
     if (endividamentos.length === 0) return 0;
-    return Math.max(...endividamentos.map(e => e.parcelasFaltantes));
     const faltantes = endividamentos.map(e => e.parcelasFaltantes || 0);
     return faltantes.length > 0 ? Math.max(...faltantes) : 0;
   }, [endividamentos]);

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { store, Empresa, Lancamento, User, AuditLog, InteligenciaDoc } from '../../../lib/store';
+import { store, Empresa, Lancamento, User, StoreAuditLog, InteligenciaDoc } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { syncBackupInChunks } from '../../../lib/sync-helper';
 
@@ -14,7 +14,7 @@ export default function AdministrativoPage() {
   // Estados de Auditoria e Fechamento
   const [selectedAuditEmpresaId, setSelectedAuditEmpresaId] = useState('');
   const [fechamentoDateInput, setFechamentoDateInput] = useState('');
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<StoreAuditLog[]>([]);
   const [auditSearch, setAuditSearch] = useState('');
 
   // Estados do Google Drive Backup
@@ -134,6 +134,71 @@ export default function AdministrativoPage() {
       if (token) setGdriveToken(token);
       const calToken = sessionStorage.getItem('cf_gcal_token');
       if (calToken) setGcalToken(calToken);
+    }
+  }, []);
+
+  // Mapa de Geolocalização (Leaflet via CDN para rastreamento da equipe)
+  useEffect(() => {
+    let mapInstance: any = null;
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L) return;
+      const container = document.getElementById('admin-map');
+      if (!container) return;
+      
+      if (container.getAttribute('data-loaded')) {
+         container.innerHTML = '';
+      }
+      container.setAttribute('data-loaded', 'true');
+      
+      mapInstance = L.map('admin-map').setView([-15.7801, -47.9292], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(mapInstance);
+
+      const bounds = L.latLngBounds();
+      let hasPoints = false;
+      const ativs = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]').filter((a:any) => a.localizacao);
+      const emps = store.getEmpresas();
+
+      ativs.forEach((ativ: any) => {
+        const emp = emps.find(e => e.id === ativ.empresaId);
+        const marker = L.marker([ativ.localizacao.lat, ativ.localizacao.lng]).addTo(mapInstance);
+        const img = ativ.fotoInicio ? `<div style="margin-top:8px"><img src="${ativ.fotoInicio}" style="width:100%;height:80px;object-fit:cover;border-radius:4px" /></div>` : '';
+        marker.bindPopup(`
+          <div style="font-family:sans-serif;font-size:12px">
+            <strong style="font-size:14px;color:#600000">📍 ${emp?.nomeFantasia || emp?.razaoSocial || 'Cliente'}</strong><br/>
+            <div style="color:var(--green);font-weight:700;margin:4px 0">⏳ Em andamento...</div>
+            <b>Consultor:</b> ${ativ.consultorNome || 'Equipe'}<br/>
+            ${ativ.descricao}<br/>
+            <span style="color:#666">Iniciou: ${new Date(ativ.dataInicio).toLocaleTimeString('pt-BR')}</span>
+            ${img}
+          </div>
+        `);
+        bounds.extend([ativ.localizacao.lat, ativ.localizacao.lng]);
+        hasPoints = true;
+      });
+
+      if (hasPoints) {
+        mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+      }
+    };
+
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('leaflet-js')) {
+      const script = document.createElement('script');
+      script.id = 'leaflet-js';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => setTimeout(initMap, 100);
+      document.head.appendChild(script);
+    } else {
+      setTimeout(initMap, 200);
     }
   }, []);
 
@@ -840,6 +905,16 @@ export default function AdministrativoPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: 16, borderBottom: '1px solid var(--border-light)' }}>
+                <h3 style={{ fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>🗺️ Radar da Equipe em Campo</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Monitoramento de geolocalização e atividades (tempo real)</p>
+              </div>
+              <div id="admin-map" style={{ width: '100%', height: '350px', background: '#e5e7eb' }}>
+                <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', paddingTop: '140px' }}>Carregando mapa...</div>
+              </div>
+            </div>
+
             <div className="card">
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>Carteira por Atividade</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -369,7 +369,7 @@ Documento gerado em caráter contingencial.`);
             <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 20, marginBottom: 30 }}>
               {activeCompany?.logoData && (
                 <img 
-                  src={activeCompany.logoData} 
+                  src={activeCompany.logoData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/empresas/file?id=${activeCompany.id}&type=logo` : activeCompany.logoData} 
                   alt="Logo Empresa" 
                   style={{ maxHeight: 60, maxWidth: 150, objectFit: 'contain', marginBottom: 12 }} 
                 />

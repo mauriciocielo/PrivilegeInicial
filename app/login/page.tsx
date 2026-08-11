@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { store } from '../../lib/store';
-import BrandLogo from '../../components/BrandLogo';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,13 +33,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <BrandLogo size={72} showText={false} />
+    <div className="login-page" style={{ 
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', padding: 20 
+    }}>
+      <div className="login-card" style={{ 
+        width: '100%', maxWidth: 440, background: '#fff', borderRadius: 20, 
+        padding: '48px 40px', boxShadow: '0 20px 40px rgba(0,0,0,0.06)' 
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
+          <Image src="/logo.png" alt="Privilege Contabilidade e Consultoria" width={220} height={60} style={{ objectFit: 'contain' }} priority />
         </div>
-        <h1 className="login-title" style={{ letterSpacing: '4px', textTransform: 'uppercase', fontSize: '22px', fontWeight: 800 }}>PRIVILEGE</h1>
-        <p className="login-sub">Consultoria Financeira • Fluxo de Caixa</p>
 
         {error && (
           <div className="alert alert-danger" style={{ marginBottom: 16 }}>
@@ -48,20 +52,26 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label className="form-label">E-mail</label>
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label className="form-label" style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 8, display: 'block' }}>E-mail corporativo</label>
             <input
               type="email"
               className="form-control"
-              placeholder="seu@email.com"
+              placeholder="nome@empresa.com.br"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
               autoFocus
+              style={{
+                width: '100%', padding: '12px 16px', borderRadius: 8, border: '1.5px solid #E2E8F0',
+                fontSize: 14, outline: 'none', transition: 'border 0.2s', backgroundColor: '#F8FAFC'
+              }}
+              onFocus={e => e.target.style.borderColor = '#600000'}
+              onBlur={e => e.target.style.borderColor = '#E2E8F0'}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Senha</label>
+          <div className="form-group" style={{ marginBottom: 28 }}>
+            <label className="form-label" style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 8, display: 'block' }}>Senha</label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -70,25 +80,20 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                style={{ paddingRight: '40px' }}
+                style={{
+                  width: '100%', padding: '12px 48px 12px 16px', borderRadius: 8, border: '1.5px solid #E2E8F0',
+                  fontSize: 14, outline: 'none', transition: 'border 0.2s', backgroundColor: '#F8FAFC'
+                }}
+                onFocus={e => e.target.style.borderColor = '#600000'}
+                onBlur={e => e.target.style.borderColor = '#E2E8F0'}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontSize: '16px',
-                  lineHeight: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'var(--text-secondary)'
+                  position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px',
+                  color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}
               >
                 {showPassword ? '👁️' : '🙈'}
@@ -97,11 +102,18 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className="btn btn-primary btn-lg"
-            style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+            className="btn-primary"
+            style={{ 
+              width: '100%', padding: '14px', borderRadius: 8, display: 'flex', justifyContent: 'center', 
+              alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: '#600000', color: '#fff', transition: 'all 0.2s',
+              boxShadow: '0 4px 12px rgba(96,0,0,0.3)'
+            }}
             disabled={loading}
+            onMouseOver={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseOut={e => (e.currentTarget.style.transform = 'translateY(0)')}
           >
-            {loading ? '⏳ Entrando...' : '→  Entrar no Sistema'}
+            {loading ? '⏳ Conectando...' : 'Entrar no Sistema →'}
           </button>
         </form>
 
@@ -143,9 +155,11 @@ export default function LoginPage() {
                 setLoading(false);
               }
             }}
-            style={{ color: 'var(--primary-color)', fontSize: '13px', textDecoration: 'none', fontWeight: 500 }}
+            style={{ color: '#600000', fontSize: '13px', textDecoration: 'none', fontWeight: 600, opacity: 0.8 }}
+            onMouseOver={e => e.currentTarget.style.opacity = '1'}
+            onMouseOut={e => e.currentTarget.style.opacity = '0.8'}
           >
-            Esqueceu sua senha? Recuperar acesso
+            Esqueceu a senha? Recuperar acesso
           </a>
         </div>
       </div>

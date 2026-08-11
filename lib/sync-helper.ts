@@ -28,7 +28,7 @@ export async function syncBackupInChunks(
       { key: 'cf_empresas', label: 'Empresas', chunkSize: 25 },
       { key: 'cf_users', label: 'Usuários', chunkSize: 25 },
       { key: 'cf_unidades', label: 'Unidades', chunkSize: 25 },
-      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 1 }, // Rota dedicada: /api/plano-contas/upsert (1 por vez)
+      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 25 }, // Alterado para 25 para evitar inumeras requisições no proxy
       { key: 'cf_portadores', label: 'Portadores', chunkSize: 25 },
       { key: 'cf_clientes', label: 'Clientes', chunkSize: 25 },
       { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 25 },
@@ -49,53 +49,18 @@ export async function syncBackupInChunks(
       if (!Array.isArray(items) || items.length === 0) {
         continue;
       }
-
-      // ── Plano de Contas: rota dedicada, 1 item por vez ──────────────────────
+      
+      // Ordenação para garantir integridade pai/filho no Plano de Contas
       if (col.key === 'cf_plano_contas') {
-        // Ordena para garantir que pais (nível menor) sejam criados antes dos filhos
         items = [...items].sort((a: any, b: any) => {
           const nivelA = Number(a.nivel) || 1;
           const nivelB = Number(b.nivel) || 1;
           if (nivelA !== nivelB) return nivelA - nivelB;
           return String(a.codigo || '').localeCompare(String(b.codigo || ''));
         });
-
-        const total = items.length;
-        for (let i = 0; i < total; i++) {
-          const item = items[i];
-          if (onProgress) onProgress(`Plano de Contas (${i + 1}/${total})...`);
-
-          const MAX_RETRIES = 3;
-          let lastErr: string | undefined;
-          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-              const res = await fetch('/api/plano-contas/upsert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item)
-              });
-              if (res.ok) { lastErr = undefined; break; }
-              const errText = await res.text();
-              let parsedErr = errText;
-              try { parsedErr = JSON.parse(errText).error || errText; } catch {}
-              lastErr = `Erro ao salvar conta ${item.codigo || item.id}: ${parsedErr}`;
-            } catch (fetchErr: any) {
-              lastErr = `Falha de rede (tentativa ${attempt}): ${fetchErr.message}`;
-            }
-            if (attempt < MAX_RETRIES) {
-              console.warn(`Tentativa ${attempt} falhou para PlanoConta ${item.id}. Retentando em 1s...`);
-              await new Promise(r => setTimeout(r, 1000));
-            }
-          }
-          if (lastErr) {
-            // Não interrompe toda a migração por um item — apenas loga e continua
-            console.error('Falha definitiva no PlanoConta (ignorando):', lastErr);
-          }
-        }
-        continue; // passa para a próxima coleção
       }
 
-      // ── Todas as outras coleções: /api/migrate-backup em chunks ─────────────
+      // ── Envio em chunks ─────────────
       const totalItems = items.length;
       const chunkSize = col.chunkSize;
       console.log(`[Sync Helper] Sincronizando ${totalItems} itens de ${col.label}...`);

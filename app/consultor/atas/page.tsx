@@ -78,10 +78,56 @@ export default function AtasConsultorPage() {
     setAtas(store.getAtas(empresaId));
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const handlePrintAta = (ata: AtaAtendimento) => {
     setViewAta(ata);
-    // Espera o modal renderizar antes de imprimir
-    setTimeout(() => window.print(), 300);
+    setIsGeneratingPdf(false);
+  };
+
+  const generateRealPDF = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const element = document.getElementById('ata-print-area');
+      if (!element) return;
+      
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      // Força um estilo de bloco fixo A4 no HTML2Canvas para não distorcer espaços
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+        width: 794,
+        windowWidth: 794
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+      
+      pdf.save(`Ata_${viewAta?.id.slice(-6)}.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao gerar o PDF da ata.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const consultorNome = (id: string) =>
@@ -223,7 +269,7 @@ export default function AtasConsultorPage() {
         <div className="modal-overlay no-print" onClick={e => e.target === e.currentTarget && setViewAta(null)}>
           <div
             className="modal modal-lg ata-print-container"
-            style={{ maxWidth: 760, background: 'var(--bg-card)' }}
+            style={{ maxWidth: 850, background: 'var(--bg-card)' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Cabeçalho da modal — oculto na impressão */}
@@ -232,42 +278,56 @@ export default function AtasConsultorPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-primary"
-                  onClick={() => window.print()}
+                  onClick={generateRealPDF}
+                  disabled={isGeneratingPdf}
                 >
-                  🖨 Imprimir / Salvar PDF
+                  {isGeneratingPdf ? 'Gerando PDF...' : '🖨 Baixar PDF'}
                 </button>
                 <button className="modal-close" onClick={() => setViewAta(null)}>✕</button>
               </div>
             </div>
 
-            {/* Conteúdo da ata — visível na impressão */}
-            <div style={{ padding: '0 4px' }}>
+            <div id="ata-print-area" style={{ 
+              padding: '60px', 
+              minHeight: '1123px', /* Força tamanho A4 nativo */
+              background: '#fff', 
+              color: '#000', 
+              width: '794px', 
+              margin: '0 auto', 
+              boxSizing: 'border-box',
+              fontFamily: 'sans-serif',
+              letterSpacing: 'normal' 
+            }}>
               {/* Cabeçalho da ata */}
               <div style={{
-                borderBottom: '3px solid var(--accent)',
-                paddingBottom: 20,
-                marginBottom: 24,
+                borderBottom: '3px solid #8c1a22',
+                paddingBottom: 24,
+                marginBottom: 32,
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: 16,
+                alignItems: 'flex-start'
               }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--accent)', marginBottom: 6 }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}>
+                  <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, marginBottom: 8, objectFit: 'contain', objectPosition: 'left' }} crossOrigin="anonymous" />
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>
                     Privilege Contabilidade e Consultoria
                   </div>
-                  <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
+                  <h1 style={{ fontSize: 24, fontWeight: 700, color: '#000', margin: 0, lineHeight: 1.2 }}>
                     Ata de Atendimento
                   </h1>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  <div style={{ fontSize: 14, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>
                     {empresa?.nomeFantasia || empresa?.razaoSocial}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15, marginBottom: 2 }}>
+                <div style={{ textAlign: 'right', fontSize: 13, color: '#4b5563' }}>
+                  <div style={{ fontWeight: 700, color: '#000', fontSize: 15, marginBottom: 2 }}>
                     {new Date(viewAta.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </div>
-                  <div>Nº {viewAta.id.slice(-8).toUpperCase()}</div>
+                  <div>Nº {viewAta.id.substring(0, 8).toUpperCase()}</div>
                 </div>
               </div>
 
@@ -293,14 +353,14 @@ export default function AtasConsultorPage() {
               <div style={{ marginBottom: 32 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Conteúdo / Deliberações</div>
                 <div style={{
-                  background: 'var(--bg-base)',
+                  background: '#f9fafb',
                   borderRadius: 10,
                   padding: '18px 20px',
-                  border: '1px solid var(--border)',
+                  border: '1px solid #e5e7eb',
                   fontSize: 14,
                   lineHeight: 1.8,
                   whiteSpace: 'pre-wrap',
-                  color: 'var(--text-primary)',
+                  color: '#1f2937',
                 }}>
                   {viewAta.conteudo}
                 </div>
@@ -310,18 +370,18 @@ export default function AtasConsultorPage() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 8 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
                   <div>
-                    <div style={{ borderTop: '1px solid var(--text-muted)', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: '#4b5563' }}>
                       Assinatura do Consultor Responsável
                     </div>
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: 'var(--text-primary)' }}>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: '#111827' }}>
                       {consultorNome(viewAta.consultorId)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ borderTop: '1px solid var(--text-muted)', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: '#4b5563' }}>
                       Assinatura do Representante da Empresa
                     </div>
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: 'var(--text-primary)' }}>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: '#111827' }}>
                       {empresa?.nomeFantasia}
                     </div>
                   </div>

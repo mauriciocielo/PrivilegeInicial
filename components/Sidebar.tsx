@@ -22,6 +22,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: string;
+  adminOnly?: boolean;
 }
 
 const consultorNav: { section: string; items: NavItem[] }[] = [
@@ -30,7 +31,11 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     items: [
       { label: 'Administrativo', href: '/consultor/administrativo', icon: '⚙️' },
       { label: 'Dashboard', href: '/consultor/dashboard', icon: '📊' },
+      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: '💡' },
       { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: '🧠' },
+      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: '🔍' },
+      { label: 'Agenda Semanal', href: '/consultor/agenda', icon: '📅' },
+      { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: '⏱️' },
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: '📝' },
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
       { label: 'Endividamento', href: '/consultor/endividamento', icon: '⚖️' },
@@ -44,8 +49,8 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: '👥' },
       { label: 'Contas a Pagar', href: '/consultor/contas-pagar', icon: '💸' },
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: '💵' },
-      { label: 'NFS-e', href: '/consultor/nfse', icon: '🧾' },
-      { label: 'Integração C6 Bank', href: '/consultor/integracao-c6', icon: '🏦' },
+      { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: '🧾' },
+      { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: '🏦' },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: '📋' },
     ],
   },
@@ -55,8 +60,10 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Empresas', href: '/consultor/empresas', icon: '🏢' },
       { label: 'Usuários', href: '/consultor/usuarios', icon: '👥' },
       { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: '📋' },
+      { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: '🏷️' },
       { label: 'Atas de Atendimento', href: '/consultor/atas', icon: '📝' },
       { label: 'Portadores', href: '/consultor/portadores', icon: '🏦' },
+      { label: 'Segurança & Auditoria', href: '/consultor/configuracoes-avancadas', icon: '🔒', adminOnly: true },
     ],
   },
   {
@@ -430,13 +437,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
       {/* Switcher customizado Premium e Grupo Econômico */}
       {selectableEmpresas.length > 0 && !isSidebarCompact && (
-        <div className="sidebar-empresa" style={{ position: 'relative', border: '1px solid var(--border)', background: 'var(--bg-card2)', padding: '10px 12px', borderRadius: '8px', margin: '0 16px 16px 16px' }}>
-          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+        <div className="sidebar-empresa" style={{ position: 'relative', padding: '10px 12px', borderRadius: '10px', margin: '0 12px 12px 12px' }}>
+          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-sidebar)', fontWeight: 700, display: 'block', marginBottom: '6px', letterSpacing: '1px' }}>
             {appMode === 'condominio' ? 'Condomínio / Grupo Ativo' : 'Empresa / Grupo Ativo'}
           </label>
           <div 
             onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '6px 8px', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-light)', minHeight: '36px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '7px 10px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-sidebar)', minHeight: '36px', transition: 'all 0.15s' }}
           >
             {activeEmpresa?.logoData ? (
               <img 
@@ -447,22 +454,22 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             ) : (
               <span style={{ fontSize: '14px' }}>🏢</span>
             )}
-            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>
+            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-sidebar-title)' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>▼</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-sidebar)' }}>▼</span>
           </div>
 
           {showCompanyDropdown && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', zIndex: 1000, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)', marginTop: '4px', maxHeight: '350px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-light)' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-sidebar)', borderRadius: '10px', zIndex: 1000, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', marginTop: '6px', maxHeight: '340px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-sidebar)' }}>
                 <input 
                   type="text" 
                   placeholder="🔍 Buscar..." 
                   value={searchEmpresa}
                   onChange={e => setSearchEmpresa(e.target.value)}
                   onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', padding: '6px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-body)', color: 'var(--text-primary)' }}
+                  style={{ width: '100%', padding: '7px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-sidebar)', background: 'var(--bg-sidebar-hover)', color: 'var(--text-sidebar-title)' }}
                 />
               </div>
               <div style={{ overflowY: 'auto', padding: '6px', flex: 1 }}>
@@ -495,7 +502,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                           <div 
                             key={`recent:${e.id}:${idx}`}
                             onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', transition: 'background 0.1s', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
                             className="company-select-item"
                           >
                             {e.isGroup ? <span>🌐</span> : e.logoData ? (
@@ -519,7 +526,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                           <div 
                             key={`grupo:${g}`}
                             onClick={() => handleEmpresaChange(`grupo:${g}`)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}
+                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === `grupo:${g}` ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === `grupo:${g}` ? 700 : 600 }}
                             className="company-select-item"
                           >
                             <span>🌐</span>
@@ -538,7 +545,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                           <div 
                             key={e.id}
                             onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', transition: 'background 0.1s', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
                             className="company-select-item"
                           >
                             {e.logoData ? (
@@ -561,7 +568,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                           <div 
                             key={e.id}
                             onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
                             className="company-select-item"
                           >
                             {e.logoData ? (
@@ -584,7 +591,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                           <div 
                             key={e.id}
                             onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'var(--border-light)' : 'transparent', color: 'var(--text-primary)', fontSize: '12px' }}
+                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
                             className="company-select-item"
                           >
                             {e.logoData ? (
@@ -612,7 +619,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         </div>
       )}
 
-      <nav className="sidebar-nav" style={{ flex: 1, padding: isSidebarCompact ? '0 10px' : '0 16px' }}>
+      <nav className="sidebar-nav" style={{ flex: 1, padding: isSidebarCompact ? '0 8px' : '0 10px' }}>
         {nav.map(section => (
           <div key={section.section}>
             {!isSidebarCompact && (
@@ -631,9 +638,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                   title={isSidebarCompact ? item.label : ''}
                   style={{
                     justifyContent: isSidebarCompact ? 'center' : 'flex-start',
-                    padding: isSidebarCompact ? '10px 0' : '8px 12px',
-                    borderRadius: '8px',
-                    margin: '2px 0'
+                    padding: isSidebarCompact ? '10px 0' : '9px 12px 9px 14px',
+                    borderRadius: '9px',
+                    margin: '1px 0',
+                    fontSize: '13px',
                   }}
                 >
                   <span style={{ fontSize: 16 }}>{item.icon}</span>
@@ -659,9 +667,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               fontWeight: 600,
               padding: '8px 12px',
               borderRadius: '8px',
-              background: 'rgba(245, 158, 11, 0.15)',
+              background: 'rgba(245,158,11,0.12)',
               color: 'var(--yellow)',
-              border: '1px solid rgba(245, 158, 11, 0.25)',
+              border: '1px solid rgba(245,158,11,0.22)',
               marginBottom: 12,
               cursor: 'pointer'
             }}
@@ -710,7 +718,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           <div 
             className="user-card" 
             onClick={() => setShowProfilePopover(!showProfilePopover)}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: isSidebarCompact ? '4px' : '8px', justifyContent: isSidebarCompact ? 'center' : 'flex-start' }}
+            style={{ 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '10px', 
+              padding: isSidebarCompact ? '6px' : '10px 12px', 
+              justifyContent: isSidebarCompact ? 'center' : 'flex-start',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-sidebar)',
+              borderRadius: '12px',
+              transition: 'background 0.2s',
+              color: '#000'
+            }}
           >
             <div 
               className="user-avatar" 
@@ -723,7 +743,12 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 width: '32px', 
                 height: '32px', 
                 minWidth: '32px',
-                background: user ? getAvatarGradient(user.name) : undefined
+                background: user ? getAvatarGradient(user.name) : undefined,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '12px',
+                borderRadius: '50%',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}
             >
               {user?.avatarData ? (
@@ -738,9 +763,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             </div>
             {!isSidebarCompact && (
               <div className="user-info" style={{ flex: 1, overflow: 'hidden' }}>
-                <div className="user-name" style={{ fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-                <div className="user-role" style={{ fontSize: '10px' }}>
-                  {role === 'administrador' ? '💎 Admin' : role === 'consultor' ? '👔 Consultor' : '🏢 Cliente'}
+                <div className="user-name" style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
+                <div className="user-role" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                  {role === 'administrador' ? '💎 Administrador' : role === 'consultor' ? '👔 Consultor Especialista' : '🏢 Cliente Ativo'}
                 </div>
               </div>
             )}
@@ -753,11 +778,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 bottom: '100%', 
                 left: isSidebarCompact ? '50px' : '0', 
                 width: '220px', 
-                background: 'var(--bg-card)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '8px', 
-                boxShadow: '0 -10px 15px -3px rgba(0, 0, 0, 0.3)', 
-                padding: '12px', 
+                background: '#1f2540', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '12px', 
+                boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.6)', 
+                padding: '14px', 
                 zIndex: 1001,
                 marginBottom: '8px'
               }}

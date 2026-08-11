@@ -62,7 +62,7 @@ export interface InteligenciaDoc {
   createdAt: string;
 }
 
-export interface AuditLog {
+export interface StoreAuditLog {
   id: string;
   empresaId: string;
   timestamp: string;
@@ -166,6 +166,15 @@ export interface OrcamentoMensal {
   categorias: Record<string, number>; // planoContaId -> valor
 }
 
+export interface CentroCusto {
+  id: string;
+  empresaId: string;
+  nome: string;
+  codigo?: string;
+  ativo: boolean;
+  createdAt: string;
+}
+
 export interface Lancamento {
   id: string;
   empresaId: string;
@@ -182,6 +191,7 @@ export interface Lancamento {
   ofxId?: string;
   unidadeId?: string;
   clienteId?: string; // Vincula ao Cliente/Fornecedor cadastrado
+  centroCustoId?: string; // Rateio por Centro de Custo/Projeto/Safra
   createdAt: string;
   attachmentName?: string;
   attachmentData?: string; // Conteúdo em Base64
@@ -206,6 +216,18 @@ export interface Cliente {
   limiteCredito?: number;
   ativo: boolean;
   createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  dataLog: string;
+  horaLog: string;
+  empresaId: string;
+  userId: string;
+  userName: string;
+  acao: 'CREATE' | 'UPDATE' | 'DELETE' | 'BLOCK' | 'BATCH';
+  entidade: 'Lancamento' | 'Empresa' | 'Config';
+  detalhes: string;
 }
 
 export interface NfsE {
@@ -947,11 +969,17 @@ class DataStore {
   }
 
   mergePlanoContas(empresaId: string, sourceId: string, targetId: string) {
+    const list = this.getPlanoContas();
+    const sourceP = list.find(p => p.id === sourceId);
+    const targetP = list.find(p => p.id === targetId);
+
     // 1. Move lançamentos
     const lancamentos = this.getLancamentos();
     let lancUpdated = false;
     for (const l of lancamentos) {
       if (l.empresaId === empresaId && l.planoContaId === sourceId) {
+        // Guarda na observacao um registro de auditoria, como pedido pelo cliente
+        l.observacao = `[AUDITORIA] Movido automaticamente da categoria original [${sourceP?.codigo} - ${sourceP?.descricao}] para [${targetP?.codigo} - ${targetP?.descricao}] devido a mesclagem. Observação Original: ` + (l.observacao || '');
         l.planoContaId = targetId;
         lancUpdated = true;
       }
@@ -979,7 +1007,18 @@ class DataStore {
       }
     }
 
-    // 3. Delete the duplicate source account
+    // 3. Database remote sync
+    if (typeof window !== 'undefined' && sourceId && targetId) {
+      fetch('/api/plano-contas/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, sourceId, targetId })
+      }).then(res => {
+         // Opcionalmente recarregar aqui para sync perfeito, mas a view será otimista
+      }).catch(err => console.error('Erro na mesclagem remota API:', err));
+    }
+
+    // 4. Delete the duplicate source account
     this.deletePlanoConta(sourceId);
   }
 
@@ -1064,25 +1103,78 @@ class DataStore {
     }
   }
 
+  pruneAtividadesFotos() {
+    try {
+      const saved = localStorage.getItem('cf_atividades_log');
+      if (!saved) return;
+      const list = JSON.parse(saved);
+      let changed = false;
+      const pruned = list.map((a: any) => {
+        let mod = false;
+        let finalA = { ...a };
+        if (a.fotoInicio && a.fotoInicio.length > 500) {
+          finalA.fotoInicio = '__PRUNED_IN_LOCAL_STAGE__';
+          mod = true;
+        }
+        if (a.fotoFim && a.fotoFim.length > 500) {
+          finalA.fotoFim = '__PRUNED_IN_LOCAL_STAGE__';
+          mod = true;
+        }
+        if (mod) changed = true;
+        return finalA;
+      });
+      if (changed) {
+        localStorage.setItem('cf_atividades_log', JSON.stringify(pruned));
+      }
+    } catch (e) {}
+  }
+
   pruneEmpresasPolicyData() {
     this.init();
     const list = this.getEmpresas();
     let changed = false;
     const prunedList = list.map(e => {
-      if (e.politicaReceberData || e.politicaComprasData || e.politicaCobrancaData) {
-        changed = true;
-        const {
-          politicaReceberData,
-          politicaComprasData,
-          politicaCobrancaData,
-          ...rest
-        } = e;
-        return rest;
+      let finalE = { ...e };
+      let mod = false;
+
+      if (e.logoData && e.logoData.length > 500) {
+        finalE.logoData = '__PRUNED_IN_LOCAL_STAGE__';
+        mod = true;
       }
-      return e;
+      if (e.politicaReceberData && e.politicaReceberData.length > 500) {
+        finalE.politicaReceberData = '__PRUNED_IN_LOCAL_STAGE__';
+        mod = true;
+      }
+      if (e.politicaComprasData && e.politicaComprasData.length > 500) {
+        finalE.politicaComprasData = '__PRUNED_IN_LOCAL_STAGE__';
+        mod = true;
+      }
+      if (e.politicaCobrancaData && e.politicaCobrancaData.length > 500) {
+        finalE.politicaCobrancaData = '__PRUNED_IN_LOCAL_STAGE__';
+        mod = true;
+      }
+
+      if (mod) changed = true;
+      return finalE as Empresa;
     });
     if (changed) {
       this.set('cf_empresas', prunedList, true);
+    }
+  }
+
+  pruneUserAvatarData() {
+    this.init();
+    const list = this.getUsers();
+    let changed = false;
+    const prunedList = list.map(u => {
+      if (u.avatarData && u.avatarData.length > 500) {
+        changed = true;
+        return { ...u, avatarData: '__PRUNED_IN_LOCAL_STAGE__' } as User;
+      }
+      return u;
+    });
+    if (changed) {
+      this.set('cf_users', prunedList, true);
     }
   }
 
@@ -1321,6 +1413,27 @@ class DataStore {
     }
   }
 
+  // ---- Centros de Custo ----
+  getCentrosCusto(empresaId?: string): CentroCusto[] {
+    const list = this.get<CentroCusto[]>('cf_centros_custo', []);
+    if (empresaId) return list.filter(c => c.empresaId === empresaId);
+    return list;
+  }
+
+  saveCentroCusto(cc: CentroCusto) {
+    const list = this.getCentrosCusto();
+    const idx = list.findIndex(c => c.id === cc.id);
+    if (idx >= 0) list[idx] = cc;
+    else list.push(cc);
+    this.set('cf_centros_custo', list);
+  }
+
+  deleteCentroCusto(id: string) {
+    const list = this.getCentrosCusto();
+    if (list.findIndex(c => c.id === id) === -1) return;
+    this.set('cf_centros_custo', list.filter(c => c.id !== id));
+  }
+
   saveLancamento(lancamento: Lancamento) {
     if (this.isPeriodLocked(lancamento.empresaId, lancamento.data)) {
       throw new Error(`Este período está fechado e conciliado (limite: ${this.formatDate(this.getEmpresas().find(e => e.id === lancamento.empresaId)?.fechamentoData || '')}). Não é possível salvar.`);
@@ -1483,16 +1596,16 @@ class DataStore {
     return data <= emp.fechamentoData;
   }
 
-  getAuditLogs(empresaId?: string): AuditLog[] {
+  getAuditLogs(empresaId?: string): StoreAuditLog[] {
     this.init();
-    const all = this.get<AuditLog[]>('cf_audit_logs', []);
+    const all = this.get<StoreAuditLog[]>('cf_audit_logs', []);
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
 
   logAction(empresaId: string, action: string, details: string) {
     const logs = this.getAuditLogs();
     const currentUser = this.getCurrentUser();
-    const newLog: AuditLog = {
+    const newLog: StoreAuditLog = {
       id: 'log_' + Math.random().toString(36).slice(2, 9),
       empresaId,
       timestamp: new Date().toISOString(),

@@ -39,6 +39,49 @@ export default function RelatoriosPage() {
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
+  // Kanban Vertical no Relatório de Fluxo
+  const defaultFluxoOrder = [
+    'receitas',
+    'custos',
+    'header_despesas',
+    'despesas_fixas',
+    'despesas_variaveis',
+    'despesas_impostos',
+    'despesas_pessoal',
+    'despesas_bancarias',
+    'despesas_terceiros',
+    'outras_despesas',
+    'header_rec_bruta',
+    'liberacoes',
+    'emprestimos',
+    'investimentos',
+    'header_res_bruto',
+    'transferencias',
+    'nao_categorizados'
+  ];
+  const [fluxoOrder, setFluxoOrder] = useState<string[]>(defaultFluxoOrder);
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('sourceId', id);
+    // (Opcional: efeito visual ao drag)
+  };
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('sourceId');
+    if (!sourceId || sourceId === targetId) return;
+
+    setFluxoOrder(prev => {
+      const clone = [...prev];
+      const idxS = clone.indexOf(sourceId);
+      const idxT = clone.indexOf(targetId);
+      if (idxS === -1 || idxT === -1) return prev;
+      const [moved] = clone.splice(idxS, 1);
+      clone.splice(idxT, 0, moved);
+      return clone;
+    });
+  };
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+
   const load = useCallback((eId: string) => {
     const list = store.getEmpresas();
     let targetId = eId;
@@ -506,7 +549,7 @@ export default function RelatoriosPage() {
         setShowWhatsAppModal(false);
       } else {
         const confirmFallback = confirm(
-          `A API do WhatsApp não está configurada no servidor (.env).\n\nDeseja abrir o WhatsApp Web/App para enviar esta mensagem manualmente?`
+          `Falha ao enviar pelo Zappfy.\nErro: ${data.details || data.error || 'Desconhecido'}\n\nDeseja abrir o WhatsApp Web/App para enviar manualmente?`
         );
         if (confirmFallback) {
           const cleanPhone = whatsappPhone.replace(/\D/g, '');
@@ -535,26 +578,40 @@ export default function RelatoriosPage() {
     const isExpanded = !!expandedGroups[id];
     const valueColor = group.total < 0 ? 'var(--red)' : group.total > 0 ? (group.isDespesa ? 'var(--red)' : 'var(--green)') : 'var(--text-muted)';
     return (
-      <div key={id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+      <div 
+        key={id} 
+        style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}
+        draggable
+        onDragStart={(e) => handleDragStart(e, id)}
+        onDragOver={handleDragOver}
+        onDrop={(e) => { e.stopPropagation(); handleDrop(e, id); }}
+      >
         <div
-          onClick={() => setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }))}
           style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '14px 18px', cursor: 'pointer', background: 'var(--bg-card)',
+            padding: '14px 18px', background: 'var(--bg-card)',
             transition: 'background 0.2s', fontWeight: 600, fontSize: 13,
             userSelect: 'none'
           }}
           className="accordion-header-row"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{
-              fontSize: 9,
-              color: 'var(--text-muted)',
-              display: 'inline-block',
-              transform: isExpanded ? 'rotate(90deg)' : 'none',
-              transition: 'transform 0.15s ease'
-            }}>▶</span>
-            <span>{group.label}</span>
+            <span style={{ cursor: 'grab', marginRight: 4, color: 'var(--border)', fontSize: '16px', display: 'flex', alignItems: 'center' }} title="Arraste para reordenar" className="drag-handle">
+              ⣿
+            </span>
+            <span 
+              onClick={() => setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }))}
+              style={{
+                fontSize: 9, cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'inline-block',
+                transform: isExpanded ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.15s ease'
+              }}
+            >▶</span>
+            <span style={{ cursor: 'pointer' }} onClick={() => setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }))}>
+              {group.label}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {months.map(m => {
@@ -776,131 +833,104 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              {/* 1. Receitas */}
-              {renderGroupRow('receitas', drilldownData.groups.receitas, drilldownData.months)}
-
-              {/* 2. Custos de Mercadoria */}
-              {renderGroupRow('custos', drilldownData.groups.custos, drilldownData.months)}
-
-              {/* 3. Despesas */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '14px 18px', background: 'rgba(0,0,0,0.02)',
-                fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(0,0,0,0.06)'
-              }}>
-                <span>Despesas Totais</span>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  {drilldownData.monthlySummary.map(s => {
-                    const val = drilldownData.groups.despesas_impostos.monthlyTotals[s.key] +
-                                drilldownData.groups.despesas_fixas.monthlyTotals[s.key] +
-                                drilldownData.groups.despesas_variaveis.monthlyTotals[s.key] +
-                                drilldownData.groups.despesas_pessoal.monthlyTotals[s.key] +
-                                drilldownData.groups.despesas_bancarias.monthlyTotals[s.key] +
-                                drilldownData.groups.despesas_terceiros.monthlyTotals[s.key] +
-                                drilldownData.groups.outras_despesas.monthlyTotals[s.key];
-                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
-                    const pct = recVal ? (Math.abs(val) / recVal) * 100 : 0;
+              {/* Fluxo de Caixa Dinâmico (Kanban Vertical) */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {fluxoOrder.map(cat => {
+                  if (cat === 'header_despesas') {
                     return (
-                      <span key={s.key} style={{ color: val === 0 ? 'var(--text-muted)' : 'var(--red)', fontWeight: 700, minWidth: 100, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                        <span>{val !== 0 ? '-' : ''}{fmt.currency(val)}</span>
-                        {val !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
-                      </span>
+                      <div draggable onDragStart={(e) => handleDragStart(e, cat)} onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, cat); }} key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(0,0,0,0.02)', fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ cursor: 'grab', marginRight: 4, color: 'var(--border)', fontSize: '16px' }} title="Arraste para reordenar">⣿</span><span>Despesas Totais</span></div>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          {drilldownData.monthlySummary.map(s => {
+                            const val = drilldownData.groups.despesas_impostos.monthlyTotals[s.key] + drilldownData.groups.despesas_fixas.monthlyTotals[s.key] + drilldownData.groups.despesas_variaveis.monthlyTotals[s.key] + drilldownData.groups.despesas_pessoal.monthlyTotals[s.key] + drilldownData.groups.despesas_bancarias.monthlyTotals[s.key] + drilldownData.groups.despesas_terceiros.monthlyTotals[s.key] + drilldownData.groups.outras_despesas.monthlyTotals[s.key];
+                            const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                            const pct = recVal ? (Math.abs(val) / recVal) * 100 : 0;
+                            return (
+                              <span key={s.key} style={{ color: val === 0 ? 'var(--text-muted)' : 'var(--red)', fontWeight: 700, minWidth: 100, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                <span>{val !== 0 ? '-' : ''}{fmt.currency(val)}</span>
+                                {val !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                              </span>
+                            );
+                          })}
+                          <span style={{ color: 'var(--red)', fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            {(() => {
+                              const totalDesp = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
+                              const recTotal = drilldownData.groups.receitas.total;
+                              const pct = recTotal ? (Math.abs(totalDesp) / recTotal) * 100 : 0;
+                              return (
+                                <>
+                                  <span>{totalDesp !== 0 ? '-' : ''}{fmt.currency(totalDesp)}</span>
+                                  {totalDesp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                                </>
+                              );
+                            })()}
+                          </span>
+                        </div>
+                      </div>
                     );
-                  })}
-                  <span style={{ color: 'var(--red)', fontWeight: 800, minWidth: 100, textAlign: 'right', borderLeft: '1px solid var(--border)', paddingLeft: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    {(() => {
-                      const totalDesp = drilldownData.groups.despesas_impostos.total + drilldownData.groups.despesas_fixas.total + drilldownData.groups.despesas_variaveis.total + drilldownData.groups.despesas_pessoal.total + drilldownData.groups.despesas_bancarias.total + drilldownData.groups.despesas_terceiros.total + drilldownData.groups.outras_despesas.total;
-                      const recTotal = drilldownData.groups.receitas.total;
-                      const pct = recTotal ? (Math.abs(totalDesp) / recTotal) * 100 : 0;
-                      return (
-                        <>
-                          <span>{totalDesp !== 0 ? '-' : ''}{fmt.currency(totalDesp)}</span>
-                          {totalDesp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
-                        </>
-                      );
-                    })()}
-                  </span>
-                </div>
-              </div>
-              
-              {renderGroupRow('despesas_fixas', drilldownData.groups.despesas_fixas, drilldownData.months)}
-              {renderGroupRow('despesas_variaveis', drilldownData.groups.despesas_variaveis, drilldownData.months)}
-              {renderGroupRow('despesas_impostos', drilldownData.groups.despesas_impostos, drilldownData.months)}
-              {renderGroupRow('despesas_pessoal', drilldownData.groups.despesas_pessoal, drilldownData.months)}
-              {renderGroupRow('despesas_bancarias', drilldownData.groups.despesas_bancarias, drilldownData.months)}
-              {renderGroupRow('despesas_terceiros', drilldownData.groups.despesas_terceiros, drilldownData.months)}
-              {renderGroupRow('outras_despesas', drilldownData.groups.outras_despesas, drilldownData.months)}
-
-              {/* 4. Receita Operacional Bruta */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '14px 18px', background: 'rgba(96,0,0,0.04)',
-                fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(96,0,0,0.08)',
-                borderTop: '1px solid rgba(96,0,0,0.1)'
-              }}>
-                <span>(=) Receita Operacional Bruta (Receita - Custos - Despesas)</span>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  {drilldownData.monthlySummary.map(s => {
-                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
-                    const pct = recVal ? (s.recOp / recVal) * 100 : 0;
+                  }
+                  
+                  if (cat === 'header_rec_bruta') {
                     return (
-                      <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.recOp >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                        <span>{fmt.currency(s.recOp)}</span>
-                        {s.recOp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
-                      </span>
+                      <div draggable onDragStart={(e) => handleDragStart(e, cat)} onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, cat); }} key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(96,0,0,0.04)', fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(96,0,0,0.08)', borderTop: '1px solid rgba(96,0,0,0.1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ cursor: 'grab', marginRight: 4, color: 'var(--border)', fontSize: '16px' }} title="Arraste para reordenar">⣿</span><span>(=) Receita Operacional Bruta (Receita - Custos - Despesas)</span></div>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          {drilldownData.monthlySummary.map(s => {
+                            const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                            const pct = recVal ? (s.recOp / recVal) * 100 : 0;
+                            return (
+                              <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.recOp >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                <span>{fmt.currency(s.recOp)}</span>
+                                {s.recOp !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                              </span>
+                            );
+                          })}
+                          <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0))}</span>
+                            {drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
+                          </span>
+                        </div>
+                      </div>
                     );
-                  })}
-                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0))}</span>
-                    {drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.recOp, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
-                  </span>
-                </div>
-              </div>
+                  }
 
-              {/* 5. Liberações Bancárias */}
-              {renderGroupRow('liberacoes', drilldownData.groups.liberacoes, drilldownData.months)}
-
-              {/* 6. Empréstimos */}
-              {renderGroupRow('emprestimos', drilldownData.groups.emprestimos, drilldownData.months)}
-
-              {/* 7. Investimentos */}
-              {renderGroupRow('investimentos', drilldownData.groups.investimentos, drilldownData.months)}
-
-              {/* 8. Resultado Bruto Mensal */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '14px 18px', background: 'rgba(96,0,0,0.06)',
-                fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(96,0,0,0.15)',
-                borderBottom: '1px solid rgba(96,0,0,0.08)'
-              }}>
-                <span>(=) Resultado Bruto Mensal</span>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  {drilldownData.monthlySummary.map(s => {
-                    const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
-                    const pct = recVal ? (s.resBruto / recVal) * 100 : 0;
+                  if (cat === 'header_res_bruto') {
                     return (
-                      <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resBruto >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                        <span>{fmt.currency(s.resBruto)}</span>
-                        {s.resBruto !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
-                      </span>
+                      <div draggable onDragStart={(e) => handleDragStart(e, cat)} onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, cat); }} key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(96,0,0,0.06)', fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(96,0,0,0.15)', borderBottom: '1px solid rgba(96,0,0,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ cursor: 'grab', marginRight: 4, color: 'var(--border)', fontSize: '16px' }} title="Arraste para reordenar">⣿</span><span>(=) Resultado Bruto Mensal</span></div>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          {drilldownData.monthlySummary.map(s => {
+                            const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                            const pct = recVal ? (s.resBruto / recVal) * 100 : 0;
+                            return (
+                              <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.resBruto >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                <span>{fmt.currency(s.resBruto)}</span>
+                                {s.resBruto !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                              </span>
+                            );
+                          })}
+                          <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0))}</span>
+                            {drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
+                          </span>
+                        </div>
+                      </div>
                     );
-                  })}
-                  <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    <span>{fmt.currency(drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0))}</span>
-                    {drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(drilldownData.groups.receitas.total ? (drilldownData.monthlySummary.reduce((a, b) => a + b.resBruto, 0) / drilldownData.groups.receitas.total) * 100 : 0).toFixed(1)}%</span>}
-                  </span>
-                </div>
+                  }
+
+                  if (cat === 'nao_categorizados') {
+                    if (drilldownData.groups.nao_categorizados.total === 0) return null;
+                    return (
+                       <div key={cat} style={{ border: '2px solid var(--red)', margin: '10px 0', borderRadius: 4 }}>
+                         {renderGroupRow('nao_categorizados', drilldownData.groups.nao_categorizados, drilldownData.months)}
+                       </div>
+                    );
+                  }
+
+                  if (!drilldownData.groups[cat as keyof typeof drilldownData.groups]) return null;
+                  return renderGroupRow(cat, drilldownData.groups[cat as keyof typeof drilldownData.groups], drilldownData.months);
+                })}
               </div>
-
-              {/* Transferências */}
-              {renderGroupRow('transferencias', drilldownData.groups.transferencias, drilldownData.months)}
-
-              {/* Não Categorizados (Diagnóstico) */}
-              {drilldownData.groups.nao_categorizados.total !== 0 && (
-                <div style={{ border: '2px solid var(--red)', margin: '10px 0', borderRadius: 4 }}>
-                  {renderGroupRow('nao_categorizados', drilldownData.groups.nao_categorizados, drilldownData.months)}
-                </div>
-              )}
 
               {/* 9. Resultado Mensal Líquido */}
               <div style={{

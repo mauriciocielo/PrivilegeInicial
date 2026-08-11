@@ -245,9 +245,9 @@ ${result.portadoresAdded} portadores criados`);
                     <td style={{ fontWeight: 600 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {e.logoData ? (
-                          <img src={e.logoData} alt="Logo" style={{ maxHeight: 24, maxWidth: 48, objectFit: 'contain', borderRadius: 4 }} />
+                          <img src={e.logoData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/empresas/file?id=${e.id}&type=logo` : e.logoData} alt="Logo" style={{ maxHeight: 24, maxWidth: 48, objectFit: 'contain', borderRadius: 4 }} />
                         ) : (
-                          <div style={{ width: 32, height: 24, background: 'var(--bg-card2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--text-muted)' }}>🏢</div>
+                          <div style={{ width: 24, height: 24, background: 'var(--bg-hover)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🏢</div>
                         )}
                         <div>
                           <div>{e.razaoSocial}</div>
@@ -429,7 +429,7 @@ ${result.portadoresAdded} portadores criados`);
                     {form.politicaReceberName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={form.politicaReceberData ? `data:application/pdf;base64,${form.politicaReceberData}` : `/api/empresas/policy?id=${form.id}&type=receber`} 
+                          href={form.politicaReceberData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaReceberData ? `/api/empresas/policy?id=${form.id}&type=receber` : `data:application/pdf;base64,${form.politicaReceberData}`} 
                           download={form.politicaReceberName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaReceberName}
@@ -471,7 +471,7 @@ ${result.portadoresAdded} portadores criados`);
                     {form.politicaComprasName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={form.politicaComprasData ? `data:application/pdf;base64,${form.politicaComprasData}` : `/api/empresas/policy?id=${form.id}&type=compras`} 
+                          href={form.politicaComprasData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaComprasData ? `/api/empresas/policy?id=${form.id}&type=compras` : `data:application/pdf;base64,${form.politicaComprasData}`} 
                           download={form.politicaComprasName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaComprasName}
@@ -513,7 +513,7 @@ ${result.portadoresAdded} portadores criados`);
                     {form.politicaCobrancaName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <a 
-                          href={form.politicaCobrancaData ? `data:application/pdf;base64,${form.politicaCobrancaData}` : `/api/empresas/policy?id=${form.id}&type=cobranca`} 
+                          href={form.politicaCobrancaData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaCobrancaData ? `/api/empresas/policy?id=${form.id}&type=cobranca` : `data:application/pdf;base64,${form.politicaCobrancaData}`} 
                           download={form.politicaCobrancaName}
                           style={{ textDecoration: 'underline', color: 'var(--primary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}
                           title={form.politicaCobrancaName}

@@ -13,14 +13,15 @@ export default function OrcamentoPage() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   });
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
-  const [lancs3Meses, setLancs3Meses] = useState<Lancamento[]>([]);
+  const [lancsHistorico, setLancsHistorico] = useState<Lancamento[]>([]);
+  const [mesesMedia, setMesesMedia] = useState(3);
   const [orcamento, setOrcamento] = useState<OrcamentoMensal | null>(null);
   
   const [valores, setValores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [replicarFuturo, setReplicarFuturo] = useState(false);
 
-  const load = useCallback((eId: string, mes: string) => {
+  const load = useCallback((eId: string, mes: string, qtdMeses: number) => {
     setEmpresaId(eId);
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
     
@@ -37,29 +38,29 @@ export default function OrcamentoPage() {
       setValores({});
     }
 
-    // Load last 3 months logic for averages
+    // Load historical month logic for averages
     const [y, m] = mes.split('-');
     const baseDate = new Date(Number(y), Number(m)-1, 1);
     
-    const d3 = new Date(baseDate); d3.setMonth(d3.getMonth() - 3);
-    const m3 = `${d3.getFullYear()}-${String(d3.getMonth()+1).padStart(2,'0')}`;
+    const dHist = new Date(baseDate); dHist.setMonth(dHist.getMonth() - qtdMeses);
+    const mHist = `${dHist.getFullYear()}-${String(dHist.getMonth()+1).padStart(2,'0')}`;
     const allLancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
-    const l3 = allLancs.filter(l => l.data >= m3 && l.data < mes);
-    setLancs3Meses(l3);
+    const lHist = allLancs.filter(l => l.data >= mHist && l.data < mes);
+    setLancsHistorico(lHist);
 
   }, []);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved, mesSelecionado);
-    const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
+    load(saved, mesSelecionado, mesesMedia);
+    const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado, mesesMedia);
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
-  }, [load, mesSelecionado]);
+  }, [load, mesSelecionado, mesesMedia]);
 
   const calcMedia = (pcId: string) => {
-    const sum = lancs3Meses.filter(l => l.planoContaId === pcId).reduce((a, l) => a + l.valor, 0);
-    return sum / 3;
+    const sum = lancsHistorico.filter(l => l.planoContaId === pcId).reduce((a, l) => a + l.valor, 0);
+    return sum / mesesMedia;
   };
 
   const handleSave = () => {
@@ -128,6 +129,18 @@ export default function OrcamentoPage() {
             })}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: 'var(--bg-card)', padding: '0 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+            <label style={{ color: 'var(--text-secondary)' }}>Média base: </label>
+            <select 
+              value={mesesMedia} 
+              onChange={e => setMesesMedia(Number(e.target.value))}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: 'var(--text-primary)' }}
+            >
+              {[1, 2, 3, 4, 6, 12, 24].map(n => (
+                <option key={n} value={n}>{n} {n === 1 ? 'mês' : 'meses'}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: 'var(--bg-card)', padding: '0 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
             <input type="checkbox" id="rep" checked={replicarFuturo} onChange={e => setReplicarFuturo(e.target.checked)} />
             <label htmlFor="rep">Replicar para os próximos 11 meses</label>
           </div>
@@ -169,7 +182,7 @@ export default function OrcamentoPage() {
                   <th>Código</th>
                   <th>Plano de Contas</th>
                   <th>Tipo</th>
-                  <th style={{ textAlign: 'right' }}>Média (3 Meses)</th>
+                  <th style={{ textAlign: 'right' }}>Média ({mesesMedia} {mesesMedia === 1 ? 'Mês' : 'Meses'})</th>
                   <th style={{ width: 200, textAlign: 'right' }}>Valor Orçado (R$)</th>
                 </tr>
               </thead>

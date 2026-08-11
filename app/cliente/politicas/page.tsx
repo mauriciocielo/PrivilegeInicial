@@ -190,7 +190,7 @@ export default function ClientePoliticasPage() {
             <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 20, marginBottom: 30 }}>
               {empresa?.logoData && (
                 <img 
-                  src={empresa.logoData} 
+                  src={empresa.logoData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/empresas/file?id=${empresa.id}&type=logo` : empresa.logoData} 
                   alt="Logo Empresa" 
                   style={{ maxHeight: 60, maxWidth: 150, objectFit: 'contain', marginBottom: 12 }} 
                 />

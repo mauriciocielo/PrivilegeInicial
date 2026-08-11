@@ -297,3 +297,16 @@ model SituacaoFiscal {
   observacoes     String
   empresa         Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
+
+model Atividade {
+  id            String   @id @default(uuid())
+  empresaId     String
+  descricao     String
+  tempoSegundos Int
+  data          String
+  lat           Float?
+  lng           Float?
+  fotoInicio    String?
+  fotoFim       String?
+  createdAt     DateTime @default(now())
+}

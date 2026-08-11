@@ -26,6 +26,9 @@ export async function POST(request: Request) {
       auth: {
         user: smtpUser,
         pass: smtpPass
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 

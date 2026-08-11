@@ -68,6 +68,41 @@ export default function PlanoContasPage() {
     store.deleteTransactionPattern(id);
     setRegras(store.getTransactionPatterns(empresaId));
   };
+  
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('pc_sourceId', id);
+  };
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('pc_sourceId');
+    if (!sourceId || sourceId === targetId) return;
+
+    const strList = store.getPlanoContas(empresaId);
+    const src = strList.find(p => p.id === sourceId);
+    const tgt = strList.find(p => p.id === targetId);
+
+    if (src && tgt && src.nivel === tgt.nivel && src.parentId === tgt.parentId) {
+      if (!confirm(`Deseja alterar a ordem de [${src.codigo}] e [${tgt.codigo}]?`)) return;
+
+      const codeSrc = src.codigo;
+      const codeTgt = tgt.codigo;
+      
+      const updatedList = strList.map(p => {
+        if (p.id === src.id) return { ...p, codigo: codeTgt };
+        if (p.codigo.startsWith(codeSrc + '.')) return { ...p, codigo: p.codigo.replace(codeSrc + '.', codeTgt + '.') };
+        if (p.id === tgt.id) return { ...p, codigo: codeSrc };
+        if (p.codigo.startsWith(codeTgt + '.')) return { ...p, codigo: p.codigo.replace(codeTgt + '.', codeSrc + '.') };
+        return p;
+      });
+
+      // Saving all directly avoids multiple UI delays
+      updatedList.forEach(p => store.savePlanoConta(p));
+      setPlano(store.getPlanoContas(empresaId));
+    } else {
+      alert('Só é possível reordenar contas do mesmo nível e grupo pai.');
+    }
+  };
 
   const openNew = (parent?: PlanoConta) => {
     setEdit(null);
@@ -152,6 +187,35 @@ export default function PlanoContasPage() {
     setPlano(store.getPlanoContas(empresaId));
   };
 
+  const handleAutoDeduplicate = () => {
+    const grouped = plano.reduce((acc, pc) => {
+      const key = `${pc.tipo}-${pc.descricao.trim().toLowerCase()}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(pc);
+      return acc;
+    }, {} as Record<string, PlanoConta[]>);
+
+    const duplicates = Object.values(grouped).filter(g => g.length > 1);
+    
+    if (duplicates.length === 0) {
+      alert('Nenhuma duplicata exata foi encontrada (contas com o exato mesmo nome e tipo).');
+      return;
+    }
+    
+    if (!confirm(`Foram encontrados ${duplicates.length} grupos de categorias com nomes exatamente iguais. O sistema irá reclassificar todos os lançamentos para a versão original da categoria e excluir automaticamente as cópias duplicadas com trilha de auditoria. Deseja prosseguir com a correção profunda?`)) return;
+
+    duplicates.forEach(group => {
+      const sorted = group.sort((a,b) => a.id.localeCompare(b.id)); 
+      const target = sorted[0];
+      for (let i = 1; i < sorted.length; i++) {
+        store.mergePlanoContas(empresaId, sorted[i].id, target.id);
+      }
+    });
+
+    setPlano(store.getPlanoContas(empresaId));
+    alert('✔ Limpeza automática concluída! As contas foram desduplicadas e os lançamentos reagrupados.');
+  };
+
   const toggleAtivo = (pc: PlanoConta) => {
     store.savePlanoConta({ ...pc, ativo: !pc.ativo });
     setPlano(store.getPlanoContas(empresaId));
@@ -180,6 +244,7 @@ export default function PlanoContasPage() {
           <div className="page-subtitle">{plano.filter(p => p.ativo).length} contas ativas</div>
         </div>
         <div className="header-actions">
+          <button className="btn btn-warning" style={{ marginRight: '8px' }} onClick={handleAutoDeduplicate}>✨ Auto-Resolver Duplicadas</button>
           <button className="btn btn-danger" style={{ marginRight: '8px' }} onClick={handleDeleteAll}>🗑️ Excluir Todo o Plano</button>
           <button className="btn btn-primary" onClick={() => openNew()}>＋ Nova Conta</button>
         </div>
@@ -250,7 +315,14 @@ export default function PlanoContasPage() {
                         const isExpanded = !collapsedKeys[pc.id];
 
                         return (
-                          <tr key={pc.id} style={{ opacity: pc.ativo ? 1 : 0.5 }}>
+                          <tr 
+                            key={pc.id} 
+                            style={{ opacity: pc.ativo ? 1 : 0.5, cursor: 'grab' }}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, pc.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, pc.id)}
+                          >
                             <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
                             <td 
                               style={{ ...getNivelStyle(pc.nivel), cursor: 'pointer' }}
@@ -299,7 +371,9 @@ export default function PlanoContasPage() {
                                 <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
                                   {pc.ativo ? '⏸️' : '▶️'}
                                 </button>
-                                <button className="btn btn-ghost btn-sm btn-icon" title="Mesclar com Conta Base (Transferir Lançamentos)" onClick={() => openMerge(pc)}>🔄</button>
+                                <button className="btn btn-warning btn-sm" style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600 }} title="Se a conta duplicou, clique aqui para despachar os lançamentos para a original" onClick={() => openMerge(pc)}>
+                                  🔄 Resolver Duplicidade
+                                </button>
                                 <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
                               </div>
                             </td>
@@ -379,7 +453,7 @@ export default function PlanoContasPage() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">{edit ? 'Editar Conta' : 'Nova Conta'}</h2>
@@ -446,7 +520,7 @@ export default function PlanoContasPage() {
         </div>
       )}
       {showRegraModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowRegraModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowRegraModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">Nova Regra de IA</h2>
@@ -489,7 +563,7 @@ export default function PlanoContasPage() {
       )}
       
       {showMergeModal && mergeSource && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowMergeModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowMergeModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">Mesclar Contas (Transferir Lançamentos)</h2>
@@ -502,7 +576,10 @@ export default function PlanoContasPage() {
                 {mergeSource.codigo} - {mergeSource.descricao}
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
-                Os lançamentos desta conta e possíveis contas filhas associadas serão transferidos para a conta de destino, e em seguida esta conta original será apagada permanentemente.
+                Os lançamentos desta conta serão reclassificados para a conta de destino, e em seguida esta cópia será apagada permanentemente.
+                <div style={{ marginTop: 6, color: 'var(--green)', fontWeight: 600 }}>
+                  ✓ Auditoria Ativa: Será gravado um log na observação de cada lançamento para você não perder qual era a categoria anterior dessa transferência em lote.
+                </div>
               </div>
             </div>
 

@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
     {
       "name": "Next.js: iniciar servidor e abrir Chrome",
       "type": "node-terminal",

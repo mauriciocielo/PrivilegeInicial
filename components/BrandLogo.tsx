@@ -21,7 +21,7 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
             width: logoWidth,
             maxWidth: '100%',
             borderRadius: 8,
-            background: '#600000',
+            background: 'transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

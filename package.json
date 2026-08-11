@@ -9,6 +9,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1107.0",
+    "@aws-sdk/s3-request-presigner": "^3.1107.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@types/nodemailer": "^8.0.0",
@@ -19,11 +21,13 @@
     "lucide-react": "^1.17.0",
     "mysql2": "^3.22.4",
     "next": "16.2.6",
+    "next-pwa": "^5.6.0",
     "nodemailer": "^8.0.10",
     "pg": "^8.21.0",
     "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-dropzone": "^20.1.0",
     "recharts": "^3.8.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
@@ -34,6 +38,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-dropzone": "^4.2.2",
     "typescript": "^5"
   }
 }

@@ -18,17 +18,31 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    const cleanPhone = String(phone).replace(/\D/g, '');
+    let cleanPhone = String(phone).replace(/\D/g, '');
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) {
+      cleanPhone = '55' + cleanPhone;
+    }
     const payload: Record<string, any> = {};
 
     const isMeta = whatsappApiUrl.includes('graph.facebook.com');
 
-    if (isMeta) {
+    if (isMeta || whatsappApiUrl.includes('zappfy')) {
       payload['messaging_product'] = 'whatsapp';
       payload['recipient_type'] = 'individual';
       payload['to'] = cleanPhone;
-      payload['type'] = 'text';
-      payload['text'] = { body: message };
+      payload['type'] = 'template';
+      payload['template'] = {
+        name: 'alerta_relatorio_diario',
+        language: { code: 'pt_BR' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: message }
+            ]
+          }
+        ]
+      };
     } else if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
       payload['phone'] = cleanPhone;
       payload['message'] = message;
@@ -53,6 +67,8 @@ export async function POST(request: Request) {
     }
 
     console.log(`[WhatsApp Sender] Enviando mensagem para ${cleanPhone} via ${whatsappApiUrl}...`);
+    // Bypass self-signed certs que são comuns em instâncias Evolution API/Z-API hospedadas em VPS
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const wsRes = await fetch(whatsappApiUrl, {
       method: 'POST',
       headers: wsHeaders,

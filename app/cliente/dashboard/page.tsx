@@ -3,6 +3,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
+import AnimatedCounter from '../../../components/AnimatedCounter';
+import AIInsights from '../../../components/AIInsights';
+import HealthScore from '../../../components/HealthScore';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -196,7 +199,7 @@ export default function ClienteDashboard() {
           <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.5)', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Saldo Atual em Caixa</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
-              {fmt.currency(totais.portadores)}
+              <AnimatedCounter value={totais.portadores} />
             </div>
           </div>
         </div>
@@ -207,18 +210,21 @@ export default function ClienteDashboard() {
           dataFim={dataFim} 
           contextKey={mesSelecionado} 
         />
+        
+        {/* Painel de IA / Inteligência */}
+        <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
 
         {/* Foco na Semana */}
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Esta Semana (Sobrevivência)</h3>
         <div className="grid-2" style={{ marginBottom: 32 }}>
            <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--green)' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Entradas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}>{fmt.currency(entradasSemana)}</div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}><AnimatedCounter value={entradasSemana} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que está previsto para entrar até sábado.</div>
            </div>
            <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--red)' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Saídas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}>{fmt.currency(saidasSemana)}</div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}><AnimatedCounter value={saidasSemana} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que precisa ser pago até sábado.</div>
            </div>
         </div>
@@ -228,18 +234,18 @@ export default function ClienteDashboard() {
           <div className="glass-card" style={{ padding: '20px' }}>
             <div className="stat-icon green">↑</div>
             <div className="stat-label">Entradas no Mês</div>
-            <div className="stat-value">{fmt.currency(totais.receitas)}</div>
+            <div className="stat-value"><AnimatedCounter value={totais.receitas} /></div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
             <div className="stat-icon red">↓</div>
             <div className="stat-label">Saídas no Mês</div>
-            <div className="stat-value">{fmt.currency(totais.despesas)}</div>
+            <div className="stat-value"><AnimatedCounter value={totais.despesas} /></div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
             <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}>≈</div>
             <div className="stat-label">O que Sobrou (Fôlego)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {fmt.currency(totais.saldo)}
+              <AnimatedCounter value={totais.saldo} />
             </div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
@@ -321,8 +327,11 @@ export default function ClienteDashboard() {
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-header">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <HealthScore empresaId={empresaId} mesSelecionado={mesSelecionado} />
+            
+            <div className="card">
+              <div className="card-header">
               <div className="card-title">Saldo por Portador no Periodo</div>
             </div>
             {portadoresList.map((p, i) => {
@@ -407,6 +416,7 @@ export default function ClienteDashboard() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '../../../../lib/prisma';
+import db from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -42,7 +42,6 @@ export async function POST(req: Request) {
     if (pc.parentId) {
       const parentId = String(pc.parentId);
       try {
-        const parentExists = await db.planoConta.findUnique({ where: { id: String(pc.parentId) }, select: { id: true } });
         const parentExists = await db.planoConta.findUnique({ where: { id: parentId }, select: { id: true } });
         if (parentExists) {
           await db.planoConta.upsert({
@@ -52,7 +51,6 @@ export async function POST(req: Request) {
               descricao: String(pc.descricao || ''),
               tipo: String(pc.tipo || 'receita'),
               nivel: Math.round(Number(pc.nivel)) || 1,
-              parentId: String(pc.parentId),
               parentId: parentId,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
               empresaId,
@@ -64,7 +62,6 @@ export async function POST(req: Request) {
               descricao: String(pc.descricao || ''),
               tipo: String(pc.tipo || 'receita'),
               nivel: Math.round(Number(pc.nivel)) || 1,
-              parentId: String(pc.parentId),
               parentId: parentId,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
               empresaId,
@@ -77,20 +74,17 @@ export async function POST(req: Request) {
           await db.planoConta.create({
             data: {
               id: parentId,
-              empresaId: empresaId,
+              empresaId,
               codigo: `TEMP-${parentId.slice(0, 8)}`,
               descricao: 'Pai Ausente (Auto-Criado)',
               tipo: 'despesa',
               nivel: (Math.round(Number(pc.nivel)) || 1) - 1,
               ativo: pc.ativo === undefined ? true : Boolean(pc.ativo),
-              empresaId,
               dreCategoria: pc.dreCategoria ? String(pc.dreCategoria) : null,
             }
           });
           savedWithParent = true;
         }
-      } catch (_) {
-        // parentId inválido — salva sem ele
       } catch (e) {
         console.warn(`Falha ao tentar salvar PlanoConta ${pc.id} com parentId ${parentId}. Tentando novamente sem o pai. Erro:`, e);
         // Se mesmo com o pai fantasma falhar, salva sem o pai como último recurso.

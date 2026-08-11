@@ -39,6 +39,8 @@ async function migrateEmpresas(empresas: any[]) {
         }
       }
 
+      const existing = await db.empresa.findUnique({ where: { id: String(e.id) } });
+
       await db.empresa.upsert({
         where: { id: String(e.id) },
         update: {
@@ -56,15 +58,15 @@ async function migrateEmpresas(empresas: any[]) {
           grupoEconomico: e.grupoEconomico ? String(e.grupoEconomico) : null,
           receitaMensalEstimada: e.receitaMensalEstimada !== undefined ? Number(e.receitaMensalEstimada) : null,
           comprasMensalEstimada: e.comprasMensalEstimada !== undefined ? Number(e.comprasMensalEstimada) : null,
-          logoData: e.logoData ? String(e.logoData) : null,
+          logoData: e.logoData ? String(e.logoData) : (existing?.logoData || null),
           bancoBoleto: String(e.bancoBoleto || 'nenhum'),
           allowedRoutes: Array.isArray(e.allowedRoutes) ? e.allowedRoutes.map(String) : [],
-          politicaReceberName: e.politicaReceberName ? String(e.politicaReceberName) : null,
-          politicaReceberData: e.politicaReceberData ? String(e.politicaReceberData) : null,
-          politicaComprasName: e.politicaComprasName ? String(e.politicaComprasName) : null,
-          politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : null,
-          politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : null,
-          politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : null,
+          politicaReceberName: e.politicaReceberName ? String(e.politicaReceberName) : (existing?.politicaReceberName || null),
+          politicaReceberData: e.politicaReceberData ? String(e.politicaReceberData) : (existing?.politicaReceberData || null),
+          politicaComprasName: e.politicaComprasName ? String(e.politicaComprasName) : (existing?.politicaComprasName || null),
+          politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : (existing?.politicaComprasData || null),
+          politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : (existing?.politicaCobrancaName || null),
+          politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : (existing?.politicaCobrancaData || null),
         },
         create: {
           id: String(e.id),
@@ -96,6 +98,67 @@ async function migrateEmpresas(empresas: any[]) {
     } catch (err) {
       console.error('Erro na Empresa:', e, err);
       throw new Error(`Erro na Empresa (ID: ${e.id}): ${(err as Error).message}`);
+    }
+  }
+}
+
+async function migrateAtividades(atividades: any[]) {
+  console.log(`Migrando ${atividades.length} atividades...`);
+  
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const at of atividades) {
+    if (!at.id) continue;
+    const empresaId = String(at.empresaId || 'empresa_default');
+    
+    try {
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      const existing = await db.atividade.findUnique({ where: { id: String(at.id) } });
+
+      await db.atividade.upsert({
+        where: { id: String(at.id) },
+        update: {
+          empresaId: empresaId,
+          descricao: String(at.descricao || ''),
+          tempoSegundos: Number(at.tempoSegundos || 0),
+          data: String(at.data || new Date().toISOString()),
+          lat: at.localizacao?.lat ? Number(at.localizacao.lat) : at.lat ? Number(at.lat) : null,
+          lng: at.localizacao?.lng ? Number(at.localizacao.lng) : at.lng ? Number(at.lng) : null,
+          fotoInicio: at.fotoInicio && at.fotoInicio !== '__PRUNED_IN_LOCAL_STAGE__' ? String(at.fotoInicio) : (existing?.fotoInicio || null),
+          fotoFim: at.fotoFim && at.fotoFim !== '__PRUNED_IN_LOCAL_STAGE__' ? String(at.fotoFim) : (existing?.fotoFim || null),
+        },
+        create: {
+          id: String(at.id),
+          empresaId: empresaId,
+          descricao: String(at.descricao || ''),
+          tempoSegundos: Number(at.tempoSegundos || 0),
+          data: String(at.data || new Date().toISOString()),
+          lat: at.localizacao?.lat ? Number(at.localizacao.lat) : at.lat ? Number(at.lat) : null,
+          lng: at.localizacao?.lng ? Number(at.localizacao.lng) : at.lng ? Number(at.lng) : null,
+          fotoInicio: at.fotoInicio ? String(at.fotoInicio) : null,
+          fotoFim: at.fotoFim ? String(at.fotoFim) : null,
+        }
+      });
+    } catch (err) {
+      console.error('Erro na Atividade:', at, err);
+      throw new Error(`Erro na Atividade (ID: ${at.id}): ${(err as Error).message}`);
     }
   }
 }
@@ -133,6 +196,8 @@ async function migrateUsers(users: any[]) {
         });
       }
 
+      const existing = await db.user.findUnique({ where: { id: userId } });
+
       await db.user.upsert({
         where: { id: userId },
         update: {
@@ -141,7 +206,7 @@ async function migrateUsers(users: any[]) {
           password: String(u.password || ''),
           role: String(u.role || 'cliente'),
           empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
-          avatarData: u.avatarData ? String(u.avatarData) : null,
+          avatarData: u.avatarData && u.avatarData !== '__PRUNED_IN_LOCAL_STAGE__' ? String(u.avatarData) : (existing?.avatarData || null),
           receberEmailDiario: Boolean(u.receberEmailDiario),
           phone: u.phone ? String(u.phone) : null,
           allowedRoutes: Array.isArray(u.allowedRoutes) ? u.allowedRoutes.map(String) : [],
@@ -595,8 +660,8 @@ async function migrateLancamentos(lancamentos: any[]) {
           ofxId: l.ofxId ? String(l.ofxId) : null,
           unidadeId: l.unidadeId ? String(l.unidadeId) : null,
           clienteId: l.clienteId ? String(l.clienteId) : null,
-          attachmentName: l.attachmentName ? String(l.attachmentName) : null,
-          attachmentData: l.attachmentData ? String(l.attachmentData) : null,
+          attachmentName: l.attachmentName ? String(l.attachmentName) : (existing?.attachmentName || null),
+          attachmentData: l.attachmentData && l.attachmentData !== '__PRUNED_IN_LOCAL_STAGE__' ? String(l.attachmentData) : (existing?.attachmentData || null),
         },
         create: {
           id: String(l.id),
@@ -1234,6 +1299,18 @@ export async function GET(request: Request) {
       });
     }
 
+    if (requestedCollection === 'cf_atividades_log') {
+      const cf_atividades_log = await db.atividade.findMany();
+      return NextResponse.json({
+        version: '7',
+        isPartial: true,
+        timestamp: new Date().toISOString(),
+        data: {
+          cf_atividades_log
+        }
+      });
+    }
+
     const [
       cf_empresas,
       cf_users,
@@ -1248,7 +1325,8 @@ export async function GET(request: Request) {
       cf_orcamentosRaw,
       cf_situacao_fiscal,
       cf_transaction_patterns,
-      cf_nfse
+      cf_nfse,
+      cf_atividades_log
     ] = await Promise.all([
       db.empresa.findMany({
         select: {
@@ -1309,6 +1387,7 @@ export async function GET(request: Request) {
       db.situacaoFiscal.findMany(),
       db.transactionPattern.findMany(),
       db.nfsE.findMany(),
+      db.atividade.findMany(),
     ]);
 
     const cf_endividamentos = cf_endividamentosRaw.map(e => ({
@@ -1364,7 +1443,11 @@ export async function GET(request: Request) {
       cf_orcamentos,
       cf_situacao_fiscal,
       cf_transaction_patterns,
-      cf_nfse
+      cf_nfse,
+      cf_atividades_log: cf_atividades_log.map(a => ({
+        ...a,
+        localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
+      }))
     };
 
     return NextResponse.json({
@@ -1434,6 +1517,9 @@ export async function POST(request: Request) {
         case 'cf_transaction_patterns':
           if (Array.isArray(data)) await migrateTransactionPatterns(data);
           break;
+        case 'cf_atividades_log':
+          if (Array.isArray(data)) await migrateAtividades(data);
+          break;
         default:
           return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
@@ -1469,6 +1555,7 @@ export async function POST(request: Request) {
       if (Array.isArray(data.cf_nfse)) await migrateNfse(data.cf_nfse);
       if (Array.isArray(data.cf_situacao_fiscal)) await migrateSituacaoFiscal(data.cf_situacao_fiscal);
       if (Array.isArray(data.cf_transaction_patterns)) await migrateTransactionPatterns(data.cf_transaction_patterns);
+      if (Array.isArray(data.cf_atividades_log)) await migrateAtividades(data.cf_atividades_log);
 
       console.log('✅ Migração de backup (monolítico) concluída com sucesso!');
       return NextResponse.json({ success: true });

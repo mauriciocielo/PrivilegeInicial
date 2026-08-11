@@ -134,12 +134,23 @@ export async function GET(request: Request) {
 
     const isMeta = whatsappApiUrl.includes('graph.facebook.com');
 
-    if (isMeta) {
+    if (isMeta || whatsappApiUrl.includes('zappfy')) {
       payload['messaging_product'] = 'whatsapp';
       payload['recipient_type'] = 'individual';
       payload['to'] = cleanPhone;
-      payload['type'] = 'text';
-      payload['text'] = { body: whatsappTextBody };
+      payload['type'] = 'template';
+      payload['template'] = {
+        name: 'alerta_relatorio_diario',
+        language: { code: 'pt_BR' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: whatsappTextBody }
+            ]
+          }
+        ]
+      };
     } else if (whatsappApiUrl.includes('z-api') || whatsappApiUrl.includes('zapi')) {
       payload['phone'] = cleanPhone;
       payload['message'] = whatsappTextBody;
@@ -164,6 +175,7 @@ export async function GET(request: Request) {
     }
 
     console.log(`[WhatsApp Test] Enviando para ${whatsappApiUrl}...`);
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const wsRes = await fetch(whatsappApiUrl, {
       method: 'POST',
       headers: wsHeaders,

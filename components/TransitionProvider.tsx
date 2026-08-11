@@ -116,7 +116,8 @@ export default function TransitionProvider({ children }: { children: React.React
         'cf_orcamentos',
         'cf_nfse',
         'cf_situacao_fiscal',
-        'cf_transaction_patterns'
+        'cf_transaction_patterns',
+        'cf_atividades_log'
       ];
       if (!validCollections.includes(key)) return;
 
@@ -147,6 +148,10 @@ export default function TransitionProvider({ children }: { children: React.React
               store.pruneLancamentosAttachmentData();
             } else if (key === 'cf_empresas') {
               store.pruneEmpresasPolicyData();
+            } else if (key === 'cf_atividades_log') {
+              store.pruneAtividadesFotos();
+            } else if (key === 'cf_users') {
+              store.pruneUserAvatarData();
             }
           } else {
             console.error(`Erro ao auto-salvar ${key} no banco:`, syncResult.error);
@@ -402,7 +407,7 @@ export default function TransitionProvider({ children }: { children: React.React
       style={{
         transition: 'opacity 0.2s ease-in-out, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: transitionStage === 'fade-in' ? 1 : 0,
-        transform: transitionStage === 'fade-in' ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.995)',
+        transform: transitionStage === 'fade-in' ? 'none' : 'translateY(4px) scale(0.995)',
         width: '100%',
         minHeight: '100vh',
       }}

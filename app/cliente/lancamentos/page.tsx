@@ -1290,7 +1290,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">{editItem ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
@@ -1418,7 +1418,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal de Ações em Lote (Reclassificação ou Transferência) */}
       {showReclassModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowReclassModal(false); setSelectedIds([]); } }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) { setShowReclassModal(false); setSelectedIds([]); } }}>
           <div className="modal modal-lg" style={{ maxWidth: '650px', padding: '24px' }}>
             <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', marginBottom: '16px' }}>
               <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1555,7 +1555,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal de Importação de Cartão (Faturas CSV/Excel) */}
       {showCardImportModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !cardImporting && setShowCardImportModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && !cardImporting && setShowCardImportModal(false)}>
           <div className="modal modal-lg">
             <div className="modal-header">
               <h2 className="modal-title">Importar Fatura de Cartão</h2>

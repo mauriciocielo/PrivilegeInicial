@@ -1,0 +1,522 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { store, Empresa } from '../../../lib/store';
+import { fmt } from '../../../lib/reports';
+
+interface AtividadeLog {
+  id: string;
+  empresaId: string;
+  descricao: string;
+  tempoSegundos: number;
+  data: string;
+  localizacao: { lat: number; lng: number } | null;
+  fotoInicio?: string | null;
+  fotoFim?: string | null;
+}
+
+interface AgendaTask {
+  id: string;
+  title: string;
+  empresaId: string;
+  consultorId: string;
+  horario: string;
+  day: string;
+  completed: boolean;
+}
+
+export default function AtividadesTempoPage() {
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>('');
+  const [atividades, setAtividades] = useState<AtividadeLog[]>([]);
+  const [agendaTasks, setAgendaTasks] = useState<AgendaTask[]>([]);
+  
+  // Cronômetro
+  const [isRunning, setIsRunning] = useState(false);
+  const [timePassed, setTimePassed] = useState(0);
+  const [atividadeDesc, setAtividadeDesc] = useState('');
+  
+  // Fotos de Comprovação
+  const [fotoInicio, setFotoInicio] = useState<string | null>(null);
+  const [fotoFim, setFotoFim] = useState<string | null>(null);
+  
+  // Geolocalização
+  const [position, setPosition] = useState<{ lat: number, lng: number } | null>(null);
+  const [geoError, setGeoError] = useState('');
+
+  // PWA Install Prompt
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  useEffect(() => {
+    setEmpresas(store.getEmpresas());
+    const savedLogs = localStorage.getItem('cf_atividades_log');
+    if (savedLogs) {
+      try {
+        setAtividades(JSON.parse(savedLogs));
+      } catch (e) {}
+    }
+
+    const savedTasks = localStorage.getItem('cf_agenda_semanal');
+    if (savedTasks) {
+      try {
+        const parsed = JSON.parse(savedTasks);
+        // Exibe todas as tarefas não concluídas para que quem estiver logado possa selecioná-las
+        setAgendaTasks(parsed.filter((t: AgendaTask) => !t.completed));
+      } catch (e) {}
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        err => setGeoError('Não foi possível obter a localização. Verifique as permissões de GPS do navegador.')
+      );
+    } else {
+      setGeoError('Geolocalização não suportada no seu navegador.');
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setTimePassed(t => t + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const handleSelectAgendaTask = (taskId: string) => {
+    const task = agendaTasks.find(t => t.id === taskId);
+    if (task) {
+      setSelectedEmpresaId(task.empresaId);
+      setAtividadeDesc(task.title);
+    }
+  };
+
+  const processFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCaptureFotoInicio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setFotoInicio(await processFileToBase64(file));
+  };
+
+  const handleCaptureFotoFim = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setFotoFim(await processFileToBase64(file));
+  };
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const updateEstadoEmAndamento = (ativo: boolean) => {
+    const me = store.getCurrentUser();
+    if (!me) return;
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch (e) {}
+    list = list.filter((a: any) => a.consultorId !== me.id);
+    
+    if (ativo) {
+      list.push({
+        consultorId: me.id,
+        consultorNome: me.name,
+        empresaId: selectedEmpresaId,
+        descricao: atividadeDesc.trim() || 'Atividade não detalhada',
+        dataInicio: new Date().toISOString(),
+        localizacao: position,
+        fotoInicio
+      });
+    }
+    localStorage.setItem('cf_atividades_ativas', JSON.stringify(list));
+  };
+
+  const handleStart = () => {
+    if (!fotoInicio) {
+      alert('Bloqueado: É obrigatório anexar a Foto de Início para comprovar sua presença antes de iniciar a tarefa.');
+      return;
+    }
+    if (!selectedEmpresaId) {
+      alert('Selecione uma empresa antes de iniciar o tempo.');
+      return;
+    }
+    setIsRunning(true);
+    updateEstadoEmAndamento(true);
+  };
+  
+  const handlePause = () => {
+    setIsRunning(false);
+    updateEstadoEmAndamento(false);
+  };
+  
+  const handleReset = () => {
+    if (confirm('Deseja realmente zerar o cronômetro e remover as fotos?')) {
+      setIsRunning(false);
+      setTimePassed(0);
+      setFotoInicio(null);
+      setFotoFim(null);
+      updateEstadoEmAndamento(false);
+    }
+  };
+
+  const handleStopAndSave = () => {
+    if (!atividadeDesc.trim()) {
+      alert('Por favor, informe a descrição da atividade antes de salvar.');
+      return;
+    }
+    if (!selectedEmpresaId) {
+      alert('Por favor, selecione uma empresa.');
+      return;
+    }
+    if (timePassed === 0) {
+      alert('O tempo registrado está zerado.');
+      return;
+    }
+    if (!fotoFim) {
+      alert('Bloqueado: É obrigatório anexar a Foto de Fim para comprovar a conclusão antes de salvar a tarefa.');
+      return;
+    }
+    
+    setIsRunning(false);
+    updateEstadoEmAndamento(false);
+    
+    const novaAtividade: AtividadeLog = {
+      id: Math.random().toString(36).substr(2, 9),
+      empresaId: selectedEmpresaId,
+      descricao: atividadeDesc,
+      tempoSegundos: timePassed,
+      data: new Date().toISOString(),
+      localizacao: position,
+      fotoInicio,
+      fotoFim
+    };
+    
+    const updated = [novaAtividade, ...atividades];
+    setAtividades(updated);
+    localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
+    
+    setAtividadeDesc('');
+    setTimePassed(0);
+    setSelectedEmpresaId('');
+    setFotoInicio(null);
+    setFotoFim(null);
+    
+    alert('✅ Atividade registrada com sucesso!');
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Deseja excluir este registro de atividade?')) {
+      const updated = atividades.filter(a => a.id !== id);
+      setAtividades(updated);
+      localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
+    }
+  };
+
+  const mapUrl = position 
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${position.lng - 0.005}%2C${position.lat - 0.005}%2C${position.lng + 0.005}%2C${position.lat + 0.005}&layer=mapnik&marker=${position.lat}%2C${position.lng}`
+    : '';
+
+  return (
+    <>
+      <style>{`
+        .atividades-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+          gap: 24px;
+        }
+        .photos-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .btn-group-timer {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .btn-mobile-full {
+          flex: 1;
+        }
+        
+        @media (max-width: 768px) {
+          .atividades-layout {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          .photos-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          .btn-group-timer {
+            flex-direction: column;
+          }
+          .btn-mobile-full {
+            width: 100% !important;
+            flex: none !important;
+          }
+          .time-display {
+            font-size: 48px !important;
+          }
+        }
+      `}</style>
+
+      <div className="page-header">
+        <div>
+          <div className="page-title">Atividades e Tempos</div>
+          <div className="page-subtitle">Controle suas horas de consultoria, tarefas e localização</div>
+        </div>
+        <div className="header-actions">
+           {deferredPrompt && (
+              <button 
+                className="btn" 
+                style={{ background: '#ec4899', color: '#fff', border: 'none', fontWeight: 700 }}
+                onClick={() => {
+                  deferredPrompt.prompt();
+                  deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+                }}
+              >
+                📲 Instalar no Celular (Modo Offline)
+              </button>
+           )}
+        </div>
+      </div>
+
+      <div className="page-body">
+        <div className="atividades-layout">
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="card">
+              <h3 style={{ fontSize: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                ⏱️ Tracker de Tempo
+              </h3>
+              
+              <div style={{ background: 'var(--bg-body)', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px', border: '1px solid var(--border-light)' }}>
+                <div className="time-display" style={{ fontSize: '64px', fontWeight: 800, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent-glow)' : 'none', transition: 'all 0.3s' }}>
+                  {formatTime(timePassed)}
+                </div>
+                {isRunning && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, fontWeight: 600 }} className="pulse-glow">CRONÔMETRO RODANDO...</div>}
+              </div>
+
+              {agendaTasks.length > 0 && (
+                <div style={{ marginBottom: '16px', background: 'var(--bg-body)', padding: '12px', borderRadius: '8px', border: '1px solid var(--accent)' }}>
+                  <label className="form-label" style={{ fontWeight: 600, color: 'var(--accent)' }}>Vincular à Agenda Semanal (Opcional)</label>
+                  <select 
+                    className="form-control"
+                    onChange={e => handleSelectAgendaTask(e.target.value)}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Selecione uma tarefa agendada para você...</option>
+                    {agendaTasks.map(t => {
+                      const et = empresas.find(em => em.id === t.empresaId);
+                      return <option key={t.id} value={t.id}>{t.day} {t.horario} - {t.title} ({et?.nomeFantasia || et?.razaoSocial})</option>
+                    })}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '24px' }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Empresa / Cliente *</label>
+                  <select 
+                    className="form-control form-control-lg"
+                    value={selectedEmpresaId} 
+                    onChange={e => setSelectedEmpresaId(e.target.value)}
+                  >
+                    <option value="">-- Selecione a Empresa --</option>
+                    {empresas.map(e => (
+                      <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo? *</label>
+                  <textarea 
+                    className="form-control form-control-lg"
+                    rows={2} 
+                    placeholder="Ex: Auditoria de fluxo de caixa, Treinamento com equipe..." 
+                    value={atividadeDesc} 
+                    onChange={e => setAtividadeDesc(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Photos Panel */}
+              <div className="photos-grid">
+                <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
+                  <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Início</h4>
+                  {fotoInicio ? (
+                    <div style={{ position: 'relative' }}>
+                      <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoInicio(null)}>X</button>
+                    </div>
+                  ) : (
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                      Anexar/Tirar Foto
+                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoInicio} />
+                    </label>
+                  )}
+                </div>
+                <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
+                  <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Fim</h4>
+                  {fotoFim ? (
+                    <div style={{ position: 'relative' }}>
+                      <img src={fotoFim} alt="Fim" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoFim(null)}>X</button>
+                    </div>
+                  ) : (
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                      Anexar/Tirar Foto
+                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoFim} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="btn-group-timer">
+                {!isRunning ? (
+                  <button className="btn btn-primary btn-lg btn-mobile-full" onClick={handleStart} style={{ fontWeight: 700 }}>
+                    ▶ INICIAR TAREFA
+                  </button>
+                ) : (
+                  <button className="btn btn-danger btn-lg btn-mobile-full" onClick={handlePause} style={{ fontWeight: 700, background: 'var(--red)', border: 'none' }}>
+                    ⏸ PAUSAR TAREFA
+                  </button>
+                )}
+                <button className="btn btn-secondary btn-lg btn-mobile-full" onClick={handleReset} disabled={timePassed === 0 && !fotoInicio && !fotoFim} style={{ width: '120px' }}>
+                  🔄 ZERAR
+                </button>
+                <button 
+                  className="btn btn-success btn-lg btn-mobile-full" 
+                  onClick={handleStopAndSave} 
+                  disabled={timePassed === 0}
+                  style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 700 }}
+                >
+                  💾 SALVAR E CONCLUIR
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📋 Histórico Recente de Atividades
+              </h3>
+              
+              {atividades.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontStyle: 'italic', background: 'var(--bg-body)', borderRadius: '8px' }}>
+                  Nenhum registro de atividade salvo ainda.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {atividades.map((ativ) => {
+                    const emp = empresas.find(e => e.id === ativ.empresaId);
+                    return (
+                      <div key={ativ.id} style={{ padding: '16px', background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                        <div style={{ background: 'var(--border-light)', padding: '12px', borderRadius: '8px', fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)', minWidth: '95px', textAlign: 'center' }}>
+                          {formatTime(ativ.tempoSegundos)}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{emp?.nomeFantasia || emp?.razaoSocial || 'Empresa não encontrada'}</h4>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>{ativ.descricao}</p>
+                          
+                          {(ativ.fotoInicio || ativ.fotoFim) && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 8, marginBottom: 8 }}>
+                              {ativ.fotoInicio && (
+                                <img 
+                                  src={ativ.fotoInicio === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/atividades/foto?id=${ativ.id}&tipo=inicio` : ativ.fotoInicio} 
+                                  alt="Início" 
+                                  style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: '1px solid var(--border)' }} 
+                                  onClick={() => window.open(ativ.fotoInicio === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/atividades/foto?id=${ativ.id}&tipo=inicio` : ativ.fotoInicio!, '_blank')} 
+                                />
+                              )}
+                              {ativ.fotoFim && (
+                                <img 
+                                  src={ativ.fotoFim === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/atividades/foto?id=${ativ.id}&tipo=fim` : ativ.fotoFim} 
+                                  alt="Fim" 
+                                  style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: '1px solid var(--border)' }} 
+                                  onClick={() => window.open(ativ.fotoFim === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/atividades/foto?id=${ativ.id}&tipo=fim` : ativ.fotoFim!, '_blank')} 
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: 12, fontSize: '11px', color: 'var(--text-muted)' }}>
+                            <span>📅 {fmt.date(ativ.data)} às {new Date(ativ.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {ativ.localizacao && (
+                              <span title={`Lat: ${ativ.localizacao.lat}, Lng: ${ativ.localizacao.lng}`}>📍 GPS Salvo</span>
+                            )}
+                          </div>
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(ativ.id)}>
+                          Excluir
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="card" style={{ height: 'fit-content' }}>
+              <h3 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📍 Sua Localização Atual
+              </h3>
+              
+              {geoError ? (
+                <div style={{ padding: '20px', background: 'var(--red-bg)', color: 'var(--red)', borderRadius: '8px', fontSize: '13px', textAlign: 'center', fontWeight: 600 }}>
+                  ⚠️ {geoError}
+                </div>
+              ) : !position ? (
+                <div style={{ padding: '40px', background: 'var(--bg-body)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  ⏳ Obtendo coordenadas do GPS...
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ 
+                    borderRadius: '12px', 
+                    overflow: 'hidden', 
+                    border: '1px solid var(--border)',
+                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)' 
+                  }}>
+                    <iframe
+                      width="100%"
+                      height="350"
+                      style={{ border: 0, display: 'block' }}
+                      src={mapUrl}
+                      title="Localização do Consultor"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-body)', padding: '10px 14px', borderRadius: '8px' }}>
+                    <span>**Latitude:** {position.lat.toFixed(6)}</span>
+                    <span>**Longitude:** {position.lng.toFixed(6)}</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '0 4px' }}>
+                    O GPS está ativo. Ao salvar uma atividade, estas coordenadas serão ancoradas ao registro para auditoria de visita ao cliente.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

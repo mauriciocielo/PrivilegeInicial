@@ -126,10 +126,14 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
-          secure: smtpPort === 465, // true para 465, false para outras portas
+          secure: smtpPort === 465,
           auth: {
             user: smtpUser,
             pass: smtpPass
+          },
+          tls: {
+            // Não falha por certificados SSL inválidos (comum em cPanel/Hostgator)
+            rejectUnauthorized: false
           }
         });
 
@@ -140,7 +144,7 @@ export async function POST(request: Request) {
           text: `Olá, ${user.name}.\n\nUma nova senha temporária foi gerada para a sua conta.\n\nSua nova senha de acesso: ${newPassword}\n\nRecomendamos alterar sua senha após fazer login.\n\nAtenciosamente,\nEquipe Privilege`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; borderRadius: 8px;">
-              <h2 style="color: #1e3a8a; text-align: center; text-transform: uppercase;">Privilege</h2>
+              <h2 style="color: #600000; text-align: center; text-transform: uppercase;">Privilege</h2>
               <p>Olá, <strong>${user.name}</strong>,</p>
               <p>Uma nova senha temporária foi gerada com sucesso para a sua conta.</p>
               <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #1f2937; margin: 20px 0; borderRadius: 4px;">

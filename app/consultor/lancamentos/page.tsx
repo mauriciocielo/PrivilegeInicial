@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, uid } from '../../../lib/store';
+import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, type CentroCusto, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 
@@ -67,21 +67,23 @@ export default function LancamentosPage() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false });
+  const [filtros, setFiltros] = useState<Filtros & { centroCustoId?: string }>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, centroCustoId: '' });
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
-  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string, _valorDisplay?: string }>({});
+  const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
+  const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string, _valorDisplay?: string, isRecorrente?: boolean, parcelas?: number }>({});
   const [contaSearch, setContaSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Estados e funções de apoio para Edição Inline (Rápida)
   const [inlineEditRowId, setInlineEditRowId] = useState<string | null>(null);
-  const [inlineEditField, setInlineEditField] = useState<'descricao' | 'planoContaId' | 'portadorId' | null>(null);
+  const [inlineEditField, setInlineEditField] = useState<'descricao' | 'planoContaId' | 'portadorId' | 'centroCustoId' | null>(null);
   const [inlineValue, setInlineValue] = useState('');
+  const [inlineSearch, setInlineSearch] = useState('');
 
-  const saveInlineEdit = (lanc: Lancamento, field: 'descricao' | 'planoContaId' | 'portadorId', value: string) => {
+  const saveInlineEdit = (lanc: Lancamento, field: 'descricao' | 'planoContaId' | 'portadorId', value: string, keepEditing = false) => {
     if (field === 'descricao' && !value.trim()) {
-      cancelInlineEdit();
+      if (!keepEditing) cancelInlineEdit();
       return;
     }
     try {
@@ -91,13 +93,11 @@ export default function LancamentosPage() {
       };
       store.saveLancamento(updated);
       setLancamentos(store.getLancamentos(empresaId));
-
-      // Dispatch event to update references elsewhere if needed
       window.dispatchEvent(new CustomEvent('lancamentoChange'));
     } catch (e) {
       alert((e as Error).message);
     } finally {
-      cancelInlineEdit();
+      if (!keepEditing) cancelInlineEdit();
     }
   };
 
@@ -105,6 +105,7 @@ export default function LancamentosPage() {
     setInlineEditRowId(null);
     setInlineEditField(null);
     setInlineValue('');
+    setInlineSearch('');
   };
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showReclassModal, setShowReclassModal] = useState(false);
@@ -203,6 +204,7 @@ export default function LancamentosPage() {
     // Carrega todas as contas analíticas (nível 3) incluindo transferências
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
+    setCentrosCusto(store.getCentrosCusto(eId).filter(c => c.ativo));
 
     const emp = store.getEmpresas().find(e => e.id === eId) || null;
     setActiveCompany(emp);
@@ -230,6 +232,7 @@ export default function LancamentosPage() {
       const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
       setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
       setLancamentos(store.getLancamentos(current));
+      setCentrosCusto(store.getCentrosCusto(current).filter(c => c.ativo));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);
@@ -412,24 +415,41 @@ export default function LancamentosPage() {
           }
         }
 
-        const lanc: Lancamento = {
-          id: editItem?.id || uid(),
-          empresaId,
-          data: form.data!,
-          descricao: form.descricao!,
-          valor: parseMoney(form.valor),
-          tipo: form.tipoTransacao as 'receita' | 'despesa',
-          planoContaId: form.planoContaId!,
-          portadorId: form.portadorId!,
-          status: (form.status || 'realizado') as 'previsto' | 'realizado',
-          numeroDocumento: form.numeroDocumento,
-          observacao: form.observacao,
-          attachmentName: form.attachmentName,
-          attachmentData: form.attachmentData,
-          origem: 'manual',
-          createdAt: editItem?.createdAt || new Date().toISOString(),
-        };
-        store.saveLancamento(lanc);
+        const baseDate = new Date(form.data! + 'T12:00:00');
+        const count = form.isRecorrente ? Math.max(2, form.parcelas || 2) : 1;
+        const nowIso = editItem?.createdAt || new Date().toISOString();
+
+        for (let i = 0; i < count; i++) {
+          const dt = new Date(baseDate);
+          dt.setMonth(dt.getMonth() + i);
+          const dataIso = dt.toISOString().split('T')[0];
+          
+          let desc = form.descricao!;
+          if (count > 1) desc = `${desc} (${i + 1}/${count})`;
+
+          const lanc: Lancamento = {
+            id: editItem ? editItem.id : uid(),
+            empresaId,
+            data: dataIso,
+            descricao: desc,
+            valor: parseMoney(form.valor),
+            tipo: form.tipoTransacao as 'receita' | 'despesa',
+            planoContaId: form.planoContaId!,
+            portadorId: form.portadorId!,
+            status: i === 0 ? ((form.status || 'realizado') as 'previsto' | 'realizado') : 'previsto',
+            numeroDocumento: form.numeroDocumento,
+            observacao: form.observacao,
+            attachmentName: form.attachmentName,
+            attachmentData: form.attachmentData,
+            centroCustoId: form.centroCustoId,
+            origem: 'manual',
+            createdAt: nowIso,
+          };
+          store.saveLancamento(lanc);
+          
+          // If editing an existing item, break to not duplicate it as recurrence
+          if (editItem) break;
+        }
 
         setLancamentos(store.getLancamentos(empresaId));
         setShowModal(false);
@@ -1118,9 +1138,50 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <p>Ajuste os filtros ou adicione um novo lançamento.</p>
                     </div>
                   </td></tr>
-                ) : filtered.map(l => {
+                ) : filtered.map((l, idx) => {
                   const pc = planoContas.find(p => p.id === l.planoContaId);
                   const port = portadores.find(p => p.id === l.portadorId);
+                  const nextLanc = filtered[idx + 1];
+                  const prevLanc = filtered[idx - 1];
+
+                  const handleTurboNav = (e: React.KeyboardEvent, field: 'descricao' | 'planoContaId' | 'portadorId', currentVal: string) => {
+                    const isSelect = field === 'planoContaId' || field === 'portadorId';
+                    
+                    if (e.key === 'Enter') {
+                      if (!isSelect) {
+                        e.preventDefault();
+                        if (nextLanc) {
+                          saveInlineEdit(l, field, currentVal, true);
+                          setInlineEditRowId(nextLanc.id);
+                          setInlineValue(nextLanc[field] || '');
+                        } else {
+                          saveInlineEdit(l, field, currentVal, false);
+                        }
+                      } else {
+                        // On select tags, Enter just saves and stops editing immediately.
+                        e.preventDefault();
+                        saveInlineEdit(l, field, currentVal, false);
+                      }
+                    } else if (e.key === 'ArrowDown' && (!isSelect || e.shiftKey)) {
+                      e.preventDefault();
+                      if (nextLanc) {
+                        saveInlineEdit(l, field, currentVal, true);
+                        setInlineEditRowId(nextLanc.id);
+                        setInlineValue(nextLanc[field] || '');
+                      }
+                    } else if (e.key === 'ArrowUp' && (!isSelect || e.shiftKey)) {
+                      e.preventDefault();
+                      if (prevLanc) {
+                        saveInlineEdit(l, field, currentVal, true);
+                        setInlineEditRowId(prevLanc.id);
+                        setInlineValue(prevLanc[field] || '');
+                      }
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelInlineEdit();
+                    }
+                  };
+
                   return (
                     <tr key={l.id} style={{ background: selectedIds.includes(l.id) ? 'var(--bg-card2)' : undefined }}>
                       <td style={{ textAlign: 'center' }}>
@@ -1137,10 +1198,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               value={inlineValue}
                               onChange={e => setInlineValue(e.target.value)}
                               onBlur={() => saveInlineEdit(l, 'descricao', inlineValue)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') saveInlineEdit(l, 'descricao', inlineValue);
-                                else if (e.key === 'Escape') cancelInlineEdit();
-                              }}
+                              onKeyDown={e => handleTurboNav(e, 'descricao', inlineValue)}
                               autoFocus
                               style={{ width: '100%', padding: '4px 8px', fontSize: '13px' }}
                             />
@@ -1181,17 +1239,26 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                         {l.planoContaId === 'transf' ? (
                           <div style={{ padding: '8px 14px', color: 'var(--accent)', fontStyle: 'italic', fontSize: 11 }}>⇄ Transf.</div>
                         ) : inlineEditRowId === l.id && inlineEditField === 'planoContaId' ? (
-                          <div style={{ padding: '4px' }}>
+                          <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <input
+                              className="form-control form-control-sm"
+                              placeholder="Pesquisar..."
+                              value={inlineSearch}
+                              onChange={e => setInlineSearch(e.target.value)}
+                              onKeyDown={e => handleTurboNav(e, 'planoContaId', inlineValue)}
+                              autoFocus
+                              style={{ padding: '4px', fontSize: '11px', height: '24px' }}
+                            />
                             <select
                               className="form-control form-control-sm"
                               value={inlineValue}
-                              onChange={e => saveInlineEdit(l, 'planoContaId', e.target.value)}
-                              onBlur={cancelInlineEdit}
-                              onKeyDown={e => {
-                                if (e.key === 'Escape') cancelInlineEdit();
+                              onChange={e => {
+                                setInlineValue(e.target.value);
+                                saveInlineEdit(l, 'planoContaId', e.target.value, false);
                               }}
-                              autoFocus
-                              style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
+                              onKeyDown={e => handleTurboNav(e, 'planoContaId', inlineValue)}
+                              size={4}
+                              style={{ width: '100%', padding: '2px 4px', fontSize: '11px', maxHeight: '100px' }}
                             >
                               <option value="">-- Sem Categoria --</option>
                               {planoContas.filter(p => {
@@ -1199,8 +1266,9 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                                   const pcL = planoContas.find(x => x.id === l.planoContaId);
                                   return pcL?.tipo === 'transferencia' || pcL?.codigo.startsWith('6');
                                 })();
-                                if (isTransfLanc) return p.tipo === 'transferencia' || p.codigo.startsWith('6');
-                                return p.tipo === l.tipo;
+                                const matchesTipo = isTransfLanc ? (p.tipo === 'transferencia' || p.codigo.startsWith('6')) : p.tipo === l.tipo;
+                                const matchesSearch = (p.codigo + p.descricao).toLowerCase().includes(inlineSearch.toLowerCase());
+                                return matchesTipo && matchesSearch;
                               }).map(pc => (
                                 <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
                               ))}
@@ -1228,11 +1296,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                             <select
                               className="form-control form-control-sm"
                               value={inlineValue}
-                              onChange={e => saveInlineEdit(l, 'portadorId', e.target.value)}
-                              onBlur={cancelInlineEdit}
-                              onKeyDown={e => {
-                                if (e.key === 'Escape') cancelInlineEdit();
+                              onChange={e => {
+                                setInlineValue(e.target.value);
+                                saveInlineEdit(l, 'portadorId', e.target.value, false);
                               }}
+                              onBlur={cancelInlineEdit}
+                              onKeyDown={e => handleTurboNav(e, 'portadorId', inlineValue)}
                               autoFocus
                               style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
                             >
@@ -1287,7 +1356,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">{editItem ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
@@ -1397,6 +1466,56 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </div>
             </div>
 
+            {centrosCusto.length > 0 && form.tipoTransacao !== 'transferencia' && (
+              <div className="form-group">
+                <label className="form-label">Rateio (Centro de Custo / Safra)</label>
+                <select className="form-control" value={form.centroCustoId || ''} onChange={e => setForm(f => ({ ...f, centroCustoId: e.target.value }))}>
+                  <option value="">Não Atribuir (Geral)</option>
+                  {centrosCusto.map(c => <option key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</option>)}
+                </select>
+              </div>
+            )}
+
+            {!editItem && form.tipoTransacao !== 'transferencia' && (
+              <div className="form-group" style={{ 
+                border: '1px solid var(--border)', 
+                padding: '12px 14px', 
+                borderRadius: 8,
+                background: form.isRecorrente ? 'var(--bg-hover)' : 'transparent',
+                transition: '0.2s'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)', marginBottom: form.isRecorrente ? 12 : 0 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={form.isRecorrente || false}
+                    onChange={e => setForm(f => ({ ...f, isRecorrente: e.target.checked, parcelas: e.target.checked ? 12 : undefined }))}
+                  />
+                  🔄 Lançamento Recorrente (Criar parcelas futuras)
+                </label>
+                {form.isRecorrente && (
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Frequência</label>
+                      <select className="form-control form-control-sm" disabled>
+                        <option>Mensal</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Total de Meses</label>
+                      <input 
+                        type="number" 
+                        min={2} 
+                        max={360}
+                        className="form-control form-control-sm" 
+                        value={form.parcelas || 12}
+                        onChange={e => setForm(f => ({ ...f, parcelas: parseInt(e.target.value) || 2 }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label">Anexo (Opcional)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1415,7 +1534,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal de Ações em Lote (Reclassificação ou Transferência) */}
       {showReclassModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowReclassModal(false); setSelectedIds([]); } }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) { setShowReclassModal(false); setSelectedIds([]); } }}>
           <div className="modal modal-lg" style={{ maxWidth: '650px', padding: '24px' }}>
             <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', marginBottom: '16px' }}>
               <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1552,7 +1671,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* Modal de Importação de Cartão (Faturas CSV/Excel) */}
       {showCardImportModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !cardImporting && setShowCardImportModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && !cardImporting && setShowCardImportModal(false)}>
           <div className="modal modal-lg">
             <div className="modal-header">
               <h2 className="modal-title">Importar Fatura de Cartão</h2>
@@ -1643,7 +1762,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
       {/* C6 Bank Boleto Modal */}
       {showC6BoletoModal && c6BoletoLanc && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowC6BoletoModal(false)}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowC6BoletoModal(false)}>
           <div className="modal c6-boleto-modal-container" style={{ maxWidth: 800, padding: 24, background: '#fff', color: '#000', fontFamily: 'Courier New, monospace', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
             <style dangerouslySetInnerHTML={{
               __html: `

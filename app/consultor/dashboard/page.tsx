@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { store, Empresa, Lancamento, Portador, PlanoConta } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
+import AnimatedCounter from '../../../components/AnimatedCounter';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -188,6 +189,9 @@ export default function ConsultorDashboard() {
               return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
             })}
           </select>
+          <a href={`/consultor/report-board?empresaId=${empresaId}&mes=${mesSelecionado}`} className="btn btn-secondary" style={{ background: '#030712', color: '#fff', border: 'none' }}>
+             🖨️ Board Report (PDF)
+          </a>
           <a href="/consultor/lancamentos" className="btn btn-primary">
             ＋ Novo Lançamento
           </a>
@@ -207,20 +211,20 @@ export default function ConsultorDashboard() {
           <div className="stat-card green">
             <div className="stat-icon green">↑</div>
             <div className="stat-label">Receitas do Mês</div>
-            <div className="stat-value">{fmt.currency(totais.receitas)}</div>
+            <div className="stat-value"><AnimatedCounter value={totais.receitas} /></div>
             <div className="stat-change up">▲ Realizado</div>
           </div>
           <div className="stat-card red">
             <div className="stat-icon red">↓</div>
             <div className="stat-label">Despesas do Mês</div>
-            <div className="stat-value">{fmt.currency(totais.despesas)}</div>
+            <div className="stat-value"><AnimatedCounter value={totais.despesas} /></div>
             <div className="stat-change down">▼ Realizado</div>
           </div>
           <div className={`stat-card ${totais.saldo >= 0 ? 'blue' : 'red'}`}>
             <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}>≈</div>
             <div className="stat-label">Resultado do Mês</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {fmt.currency(totais.saldo)}
+              <AnimatedCounter value={totais.saldo} />
             </div>
             <div className={`stat-change ${totais.saldo >= 0 ? 'up' : 'down'}`}>
               {totais.saldo >= 0 ? '▲ Superávit' : '▼ Déficit'}
@@ -229,13 +233,13 @@ export default function ConsultorDashboard() {
           <div className="stat-card purple">
             <div className="stat-icon purple">🏦</div>
             <div className="stat-label">Saldo em Caixa no Periodo</div>
-            <div className="stat-value">{fmt.currency(totais.portadores)}</div>
+            <div className="stat-value"><AnimatedCounter value={totais.portadores} /></div>
             <div className="stat-change up">Fechamento dos portadores</div>
           </div>
           <div className="stat-card" style={{ borderTop: '4px solid #f59e0b', background: 'var(--bg-card)' }}>
             <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>⚖️</div>
             <div className="stat-label">Endividamento Ativo</div>
-            <div className="stat-value" style={{ color: '#b45309' }}>{fmt.currency(totalDivida)}</div>
+            <div className="stat-value" style={{ color: '#b45309' }}><AnimatedCounter value={totalDivida} /></div>
             <div className="stat-change" style={{ color: '#d97706' }}>Em aberto</div>
           </div>
         </div>

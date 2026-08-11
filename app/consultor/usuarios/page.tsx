@@ -172,7 +172,7 @@ export default function UsuariosPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {u.avatarData ? (
-                              <img src={u.avatarData} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                              <img src={u.avatarData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/users/avatar?id=${u.id}` : u.avatarData} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                             ) : (
                               initials
                             )}
@@ -315,7 +315,7 @@ export default function UsuariosPage() {
                   <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ fontSize: 12 }} />
                   {form.avatarData && (
                     <img 
-                      src={form.avatarData} 
+                      src={form.avatarData === '__PRUNED_IN_LOCAL_STAGE__' && edit ? `/api/users/avatar?id=${edit.id}` : form.avatarData} 
                       alt="Miniatura" 
                       style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border-light)' }} 
                     />
