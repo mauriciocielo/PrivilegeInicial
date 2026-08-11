@@ -144,48 +144,67 @@ export default function AdministrativoPage() {
   // Mapa de Geolocalização (Leaflet via CDN para rastreamento da equipe)
   useEffect(() => {
     let mapInstance: any = null;
-    const initMap = () => {
+    let markersLayer: any = null;
+    let syncInterval: NodeJS.Timeout;
+
+    const initMap = async () => {
       const L = (window as any).L;
       if (!L) return;
       const container = document.getElementById('admin-map');
       if (!container) return;
       
-      if (container.getAttribute('data-loaded')) {
+      if (!container.getAttribute('data-loaded')) {
          container.innerHTML = '';
+         container.setAttribute('data-loaded', 'true');
+         mapInstance = L.map('admin-map').setView([-15.7801, -47.9292], 4);
+         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+           attribution: '© OpenStreetMap'
+         }).addTo(mapInstance);
+         markersLayer = L.layerGroup().addTo(mapInstance);
       }
-      container.setAttribute('data-loaded', 'true');
-      
-      mapInstance = L.map('admin-map').setView([-15.7801, -47.9292], 4);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(mapInstance);
 
-      const bounds = L.latLngBounds();
-      let hasPoints = false;
-      const ativs = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]').filter((a:any) => a.localizacao);
-      const emps = store.getEmpresas();
+      const updateMarkers = async () => {
+        if (!mapInstance || !markersLayer) return;
+        let list = [];
+        try {
+          const res = await fetch('/api/atividades-ativas');
+          if (res.ok) list = await res.json();
+        } catch(e) {}
+        if (list.length === 0) {
+          try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch(e){}
+        }
+        
+        markersLayer.clearLayers();
+        const emps = store.getEmpresas();
+        let hasPoints = false;
+        const bounds = L.latLngBounds();
 
-      ativs.forEach((ativ: any) => {
-        const emp = emps.find(e => e.id === ativ.empresaId);
-        const marker = L.marker([ativ.localizacao.lat, ativ.localizacao.lng]).addTo(mapInstance);
-        const img = ativ.fotoInicio ? `<div style="margin-top:8px"><img src="${ativ.fotoInicio}" style="width:100%;height:80px;object-fit:cover;border-radius:4px" /></div>` : '';
-        marker.bindPopup(`
-          <div style="font-family:sans-serif;font-size:12px">
-            <strong style="font-size:14px;color:#600000">📍 ${emp?.nomeFantasia || emp?.razaoSocial || 'Cliente'}</strong><br/>
-            <div style="color:var(--green);font-weight:700;margin:4px 0">⏳ Em andamento...</div>
-            <b>Consultor:</b> ${ativ.consultorNome || 'Equipe'}<br/>
-            ${ativ.descricao}<br/>
-            <span style="color:#666">Iniciou: ${new Date(ativ.dataInicio).toLocaleTimeString('pt-BR')}</span>
-            ${img}
-          </div>
-        `);
-        bounds.extend([ativ.localizacao.lat, ativ.localizacao.lng]);
-        hasPoints = true;
-      });
+        const ativs = list.filter((a:any) => a.localizacao);
+        ativs.forEach((ativ: any) => {
+          const emp = emps.find(e => e.id === ativ.empresaId);
+          const marker = L.marker([ativ.localizacao.lat, ativ.localizacao.lng]).addTo(markersLayer);
+          const img = ativ.fotoInicio ? `<div style="margin-top:8px"><img src="${ativ.fotoInicio}" style="width:100%;height:80px;object-fit:cover;border-radius:4px" /></div>` : '';
+          marker.bindPopup(`
+            <div style="font-family:sans-serif;font-size:12px">
+              <strong style="font-size:14px;color:#600000">📍 ${emp?.nomeFantasia || emp?.razaoSocial || 'Cliente'}</strong><br/>
+              <div style="color:var(--green);font-weight:700;margin:4px 0">⏳ Em andamento...</div>
+              <b>Consultor:</b> ${ativ.consultorNome || 'Equipe'}<br/>
+              ${ativ.descricao}<br/>
+              <span style="color:#666">Iniciou: ${new Date(ativ.dataInicio).toLocaleTimeString('pt-BR')}</span>
+              ${img}
+            </div>
+          `);
+          bounds.extend([ativ.localizacao.lat, ativ.localizacao.lng]);
+          hasPoints = true;
+        });
 
-      if (hasPoints) {
-        mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
-      }
+        if (hasPoints) {
+          mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+        }
+      };
+
+      await updateMarkers();
+      syncInterval = setInterval(updateMarkers, 5000);
     };
 
     if (!document.getElementById('leaflet-css')) {
@@ -204,6 +223,10 @@ export default function AdministrativoPage() {
     } else {
       setTimeout(initMap, 200);
     }
+
+    return () => {
+       if (syncInterval) clearInterval(syncInterval);
+    };
   }, []);
 
   // Carrega dinamicamente o script do Google Identity Services

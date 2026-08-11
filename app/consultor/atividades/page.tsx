@@ -128,11 +128,19 @@ export default function AtividadesTempoPage() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const updateEstadoEmAndamento = (ativo: boolean) => {
+  const updateEstadoEmAndamento = async (ativo: boolean) => {
     const me = store.getCurrentUser();
     if (!me) return;
     let list = [];
-    try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch (e) {}
+    try { 
+      const res = await fetch('/api/atividades-ativas');
+      if(res.ok) list = await res.json();
+    } catch (e) {}
+    
+    if (list.length === 0) {
+       try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch (e) {}
+    }
+    
     list = list.filter((a: any) => a.consultorId !== me.id);
     
     if (ativo) {
@@ -147,6 +155,14 @@ export default function AtividadesTempoPage() {
       });
     }
     localStorage.setItem('cf_atividades_ativas', JSON.stringify(list));
+    
+    try {
+      await fetch('/api/atividades-ativas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(list)
+      });
+    } catch (e) {}
   };
 
   const handleStart = () => {
@@ -381,12 +397,13 @@ export default function AtividadesTempoPage() {
                 ⏱️ Tracker de Tempo
               </h3>
               
-              <div style={{ background: 'var(--bg-body)', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px', border: '1px solid var(--border-light)' }}>
-                <div className="time-display" style={{ fontSize: '64px', fontWeight: 800, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent-glow)' : 'none', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                  {isRunning && <span className="clock-icon-spin" style={{ fontSize: '48px' }}>🕐</span>}
+              <div style={{ background: isRunning ? 'var(--accent-glow)' : 'var(--bg-body)', padding: '36px', borderRadius: '16px', textAlign: 'center', marginBottom: '24px', border: isRunning ? '2px solid var(--accent)' : '1px solid var(--border-light)', transition: 'all 0.3s ease', cursor: 'pointer', boxShadow: isRunning ? '0 10px 40px var(--accent-glow)' : 'none' }}>
+                <div className="time-display" style={{ fontSize: '72px', fontWeight: 900, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent)' : 'none', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  {isRunning && <span className="clock-icon-spin" style={{ fontSize: '56px' }}>🕐</span>}
                   {formatTime(timePassed)}
                 </div>
-                {isRunning && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, fontWeight: 600 }} className="pulse-glow">CRONÔMETRO RODANDO...</div>}
+                {isRunning && <div style={{ fontSize: 14, color: 'var(--accent)', marginTop: 12, fontWeight: 700 }} className="pulse-glow">🔵 EM ANDAMENTO - GRAVANDO LOCALIZAÇÃO</div>}
+                {!isRunning && timePassed > 0 && <div style={{ fontSize: 14, color: 'var(--red)', marginTop: 12, fontWeight: 700 }}>⏸ PAUSADO</div>}
               </div>
 
               {(!isRunning && timePassed === 0) ? (
