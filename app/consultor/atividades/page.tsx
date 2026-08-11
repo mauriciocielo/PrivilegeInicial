@@ -34,6 +34,8 @@ export default function AtividadesTempoPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [timePassed, setTimePassed] = useState(0);
   const [atividadeDesc, setAtividadeDesc] = useState('');
+  const [modoAtividade, setModoAtividade] = useState<'avulsa' | 'agenda'>('avulsa');
+  const [selectedAgendaTaskId, setSelectedAgendaTaskId] = useState<string | null>(null);
   
   // Fotos de Comprovação
   const [fotoInicio, setFotoInicio] = useState<string | null>(null);
@@ -171,6 +173,7 @@ export default function AtividadesTempoPage() {
       setTimePassed(0);
       setFotoInicio(null);
       setFotoFim(null);
+      setSelectedAgendaTaskId(null);
       updateEstadoEmAndamento(false);
     }
   };
@@ -207,6 +210,24 @@ export default function AtividadesTempoPage() {
       fotoFim
     };
     
+    // Conclui na agenda se selecionado
+    if (selectedAgendaTaskId) {
+      const savedTasks = localStorage.getItem('cf_agenda_semanal');
+      if (savedTasks) {
+        try {
+          const parsed = JSON.parse(savedTasks);
+          const updatedTasks = parsed.map((t: any) => {
+            if (t.id === selectedAgendaTaskId) {
+              return { ...t, completed: true };
+            }
+            return t;
+          });
+          localStorage.setItem('cf_agenda_semanal', JSON.stringify(updatedTasks));
+          setAgendaTasks(agendaTasks.filter(t => t.id !== selectedAgendaTaskId));
+        } catch (e) {}
+      }
+    }
+    
     const updated = [novaAtividade, ...atividades];
     setAtividades(updated);
     localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
@@ -216,6 +237,7 @@ export default function AtividadesTempoPage() {
     setSelectedEmpresaId('');
     setFotoInicio(null);
     setFotoFim(null);
+    setSelectedAgendaTaskId(null);
     
     alert('✅ Atividade registrada com sucesso!');
   };
@@ -235,6 +257,14 @@ export default function AtividadesTempoPage() {
   return (
     <>
       <style>{`
+        @keyframes clockSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .clock-icon-spin {
+          display: inline-block;
+          animation: clockSpin 2s linear infinite;
+        }
         .atividades-layout {
           display: grid;
           grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
@@ -254,6 +284,25 @@ export default function AtividadesTempoPage() {
         .btn-mobile-full {
           flex: 1;
         }
+        .history-item {
+          padding: 16px;
+          background: var(--bg-card2);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+        }
+        .history-time {
+          background: var(--border-light);
+          padding: 12px;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 18px;
+          color: var(--text-primary);
+          min-width: 95px;
+          text-align: center;
+        }
         
         @media (max-width: 768px) {
           .atividades-layout {
@@ -270,9 +319,34 @@ export default function AtividadesTempoPage() {
           .btn-mobile-full {
             width: 100% !important;
             flex: none !important;
+            padding: 16px !important;
+            font-size: 16px !important;
           }
           .time-display {
             font-size: 48px !important;
+          }
+          .history-item {
+            flex-direction: column !important;
+          }
+          .history-time {
+            width: 100% !important;
+          }
+          .history-action {
+            width: 100% !important;
+            padding: 12px !important;
+          }
+          .page-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .header-actions {
+            width: 100% !important;
+            margin-top: 8px;
+          }
+          .header-actions button {
+            width: 100% !important;
+            padding: 12px !important;
           }
         }
       `}</style>
@@ -308,85 +382,165 @@ export default function AtividadesTempoPage() {
               </h3>
               
               <div style={{ background: 'var(--bg-body)', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px', border: '1px solid var(--border-light)' }}>
-                <div className="time-display" style={{ fontSize: '64px', fontWeight: 800, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent-glow)' : 'none', transition: 'all 0.3s' }}>
+                <div className="time-display" style={{ fontSize: '64px', fontWeight: 800, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent-glow)' : 'none', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  {isRunning && <span className="clock-icon-spin" style={{ fontSize: '48px' }}>🕐</span>}
                   {formatTime(timePassed)}
                 </div>
                 {isRunning && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, fontWeight: 600 }} className="pulse-glow">CRONÔMETRO RODANDO...</div>}
               </div>
 
-              {agendaTasks.length > 0 && (
-                <div style={{ marginBottom: '16px', background: 'var(--bg-body)', padding: '12px', borderRadius: '8px', border: '1px solid var(--accent)' }}>
-                  <label className="form-label" style={{ fontWeight: 600, color: 'var(--accent)' }}>Vincular à Agenda Semanal (Opcional)</label>
-                  <select 
-                    className="form-control"
-                    onChange={e => handleSelectAgendaTask(e.target.value)}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>Selecione uma tarefa agendada para você...</option>
-                    {agendaTasks.map(t => {
-                      const et = empresas.find(em => em.id === t.empresaId);
-                      return <option key={t.id} value={t.id}>{t.day} {t.horario} - {t.title} ({et?.nomeFantasia || et?.razaoSocial})</option>
-                    })}
-                  </select>
+              {(!isRunning && timePassed === 0) ? (
+                <>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: 'var(--bg-body)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                    <button 
+                      className="btn"
+                      style={{ flex: 1, background: modoAtividade === 'avulsa' ? 'var(--accent)' : 'transparent', color: modoAtividade === 'avulsa' ? '#fff' : 'var(--text-primary)', border: 'none', fontWeight: 600, padding: '12px' }}
+                      onClick={() => setModoAtividade('avulsa')}
+                    >
+                      ⚡ Nova Rápida
+                    </button>
+                    <button 
+                      className="btn"
+                      style={{ flex: 1, background: modoAtividade === 'agenda' ? 'var(--accent)' : 'transparent', color: modoAtividade === 'agenda' ? '#fff' : 'var(--text-primary)', border: 'none', fontWeight: 600, padding: '12px' }}
+                      onClick={() => setModoAtividade('agenda')}
+                    >
+                      📅 Agendadas
+                    </button>
+                  </div>
+
+                  {modoAtividade === 'agenda' ? (
+                    <div style={{ marginBottom: '24px' }}>
+                      {agendaTasks.length === 0 ? (
+                        <div style={{ background: 'var(--bg-body)', padding: '24px', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          Você não tem tarefas agendadas pendentes na sua agenda semanal.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto' }}>
+                          {agendaTasks.map(t => {
+                            const et = empresas.find(em => em.id === t.empresaId);
+                            const isSelected = selectedAgendaTaskId === t.id;
+                            return (
+                              <div 
+                                key={t.id} 
+                                onClick={() => { setSelectedAgendaTaskId(t.id); setSelectedEmpresaId(t.empresaId); setAtividadeDesc(t.title); }}
+                                style={{ 
+                                  padding: '16px', 
+                                  borderRadius: '8px', 
+                                  border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                  background: isSelected ? 'var(--accent-light)' : 'var(--bg-body)',
+                                  cursor: 'pointer',
+                                  display: 'flex', gap: 12, alignItems: 'center'
+                                }}
+                              >
+                                <div style={{ fontSize: 24 }}>{isSelected ? '☑️' : '🗓️'}</div>
+                                <div>
+                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{t.title}</div>
+                                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                    {t.day} às {t.horario} - {et?.nomeFantasia || et?.razaoSocial}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '24px' }}>
+                      <div>
+                        <label className="form-label" style={{ fontWeight: 600 }}>Empresa / Cliente *</label>
+                        <select 
+                          className="form-control form-control-lg"
+                          value={selectedEmpresaId} 
+                          onChange={e => setSelectedEmpresaId(e.target.value)}
+                        >
+                          <option value="">-- Selecione a Empresa --</option>
+                          {empresas.map(e => (
+                            <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo? *</label>
+                        <textarea 
+                          className="form-control form-control-lg"
+                          rows={2} 
+                          placeholder="Ex: Auditoria de fluxo de caixa, Treinamento com equipe..." 
+                          value={atividadeDesc} 
+                          onChange={e => setAtividadeDesc(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '24px', opacity: 0.8 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Empresa / Cliente</label>
+                    <select 
+                      className="form-control form-control-lg"
+                      value={selectedEmpresaId} 
+                      disabled
+                    >
+                      <option value="">-- Selecione a Empresa --</option>
+                      {empresas.map(e => (
+                        <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo?</label>
+                    <textarea 
+                      className="form-control form-control-lg"
+                      rows={2} 
+                      value={atividadeDesc} 
+                      disabled
+                    />
+                  </div>
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '24px' }}>
-                <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Empresa / Cliente *</label>
-                  <select 
-                    className="form-control form-control-lg"
-                    value={selectedEmpresaId} 
-                    onChange={e => setSelectedEmpresaId(e.target.value)}
-                  >
-                    <option value="">-- Selecione a Empresa --</option>
-                    {empresas.map(e => (
-                      <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo? *</label>
-                  <textarea 
-                    className="form-control form-control-lg"
-                    rows={2} 
-                    placeholder="Ex: Auditoria de fluxo de caixa, Treinamento com equipe..." 
-                    value={atividadeDesc} 
-                    onChange={e => setAtividadeDesc(e.target.value)}
-                  />
-                </div>
-              </div>
-
               {/* Photos Panel */}
-              <div className="photos-grid">
-                <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
-                  <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Início</h4>
-                  {fotoInicio ? (
-                    <div style={{ position: 'relative' }}>
-                      <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
-                      <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoInicio(null)}>X</button>
+              <div className="photos-grid" style={{ gridTemplateColumns: (!isRunning && timePassed > 0) ? '1fr 1fr' : '1fr' }}>
+                {timePassed === 0 && (
+                  <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
+                    <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Início (Obrigatória)</h4>
+                    {fotoInicio ? (
+                      <div style={{ position: 'relative' }}>
+                        <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoInicio(null)}>X</button>
+                      </div>
+                    ) : (
+                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                        Anexar/Tirar Foto
+                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoInicio} />
+                      </label>
+                    )}
+                  </div>
+                )}
+                
+                {(!isRunning && timePassed > 0) && (
+                  <>
+                    <div style={{ border: '1px solid var(--border-light)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
+                      <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Início (Concluída)</h4>
+                      {fotoInicio && <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', opacity: 0.8 }} />}
                     </div>
-                  ) : (
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                      Anexar/Tirar Foto
-                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoInicio} />
-                    </label>
-                  )}
-                </div>
-                <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
-                  <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Fim</h4>
-                  {fotoFim ? (
-                    <div style={{ position: 'relative' }}>
-                      <img src={fotoFim} alt="Fim" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
-                      <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoFim(null)}>X</button>
+                    <div style={{ border: '1px dashed var(--accent)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--accent-light)' }}>
+                      <h4 style={{ fontSize: 13, marginBottom: 12, color: 'var(--accent)' }}>📷 Finalizar Tarefa (Obrigatória)</h4>
+                      {fotoFim ? (
+                        <div style={{ position: 'relative' }}>
+                          <img src={fotoFim} alt="Fim" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
+                          <button className="btn btn-sm btn-danger" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => setFotoFim(null)}>X</button>
+                        </div>
+                      ) : (
+                        <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-block', fontWeight: 600 }}>
+                          Anexar/Tirar Foto
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoFim} />
+                        </label>
+                      )}
                     </div>
-                  ) : (
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                      Anexar/Tirar Foto
-                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCaptureFotoFim} />
-                    </label>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
 
               <div className="btn-group-timer">
@@ -399,7 +553,7 @@ export default function AtividadesTempoPage() {
                     ⏸ PAUSAR TAREFA
                   </button>
                 )}
-                <button className="btn btn-secondary btn-lg btn-mobile-full" onClick={handleReset} disabled={timePassed === 0 && !fotoInicio && !fotoFim} style={{ width: '120px' }}>
+                <button className="btn btn-secondary btn-lg btn-mobile-full" onClick={handleReset} disabled={timePassed === 0 && !fotoInicio && !fotoFim}>
                   🔄 ZERAR
                 </button>
                 <button 
@@ -427,11 +581,11 @@ export default function AtividadesTempoPage() {
                   {atividades.map((ativ) => {
                     const emp = empresas.find(e => e.id === ativ.empresaId);
                     return (
-                      <div key={ativ.id} style={{ padding: '16px', background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                        <div style={{ background: 'var(--border-light)', padding: '12px', borderRadius: '8px', fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)', minWidth: '95px', textAlign: 'center' }}>
+                      <div key={ativ.id} className="history-item">
+                        <div className="history-time">
                           {formatTime(ativ.tempoSegundos)}
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, width: '100%' }}>
                           <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{emp?.nomeFantasia || emp?.razaoSocial || 'Empresa não encontrada'}</h4>
                           <p style={{ margin: '0 0 6px 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>{ativ.descricao}</p>
                           
@@ -463,7 +617,7 @@ export default function AtividadesTempoPage() {
                             )}
                           </div>
                         </div>
-                        <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(ativ.id)}>
+                        <button className="btn btn-secondary btn-sm history-action" onClick={() => handleDelete(ativ.id)}>
                           Excluir
                         </button>
                       </div>

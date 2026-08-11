@@ -31,6 +31,7 @@ export default function AdministrativoPage() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarSearch, setCalendarSearch] = useState('');
   const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [worklog, setWorklog] = useState<any[]>([]);
 
   const handleMigrateToPostgres = async () => {
     if (!confirm('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?')) return;
@@ -73,6 +74,9 @@ export default function AdministrativoPage() {
       setFechamentoDateInput(emp?.fechamentoData || '');
       setAuditLogs(store.getAuditLogs(targetEmpId));
     }
+    try {
+      setWorklog(JSON.parse(localStorage.getItem('cf_atividades_log') || '[]'));
+    } catch(e){}
   }, [selectedAuditEmpresaId]);
 
   const handleSaveFechamento = () => {
@@ -912,6 +916,48 @@ export default function AdministrativoPage() {
               </div>
               <div id="admin-map" style={{ width: '100%', height: '350px', background: '#e5e7eb' }}>
                 <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', paddingTop: '140px' }}>Carregando mapa...</div>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>📋 Worklog da Equipe</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
+                Histórico detalhado de todas as atividades realizadas pelos consultores.
+              </p>
+              
+              <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
+                <table style={{ fontSize: 11.5 }}>
+                  <thead>
+                    <tr>
+                      <th>Data/Hora</th>
+                      <th>Consultor</th>
+                      <th>Empresa</th>
+                      <th>Atividade</th>
+                      <th>Duração</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worklog.slice().reverse().map((l: any) => {
+                      const emp = empresas.find(e => e.id === l.empresaId);
+                      return (
+                        <tr key={l.id}>
+                          <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{new Date(l.dataFim || l.dataInicio).toLocaleString('pt-BR')}</td>
+                          <td style={{ fontWeight: 600 }}>{l.consultorNome}</td>
+                          <td>{emp?.nomeFantasia || emp?.razaoSocial || 'N/A'}</td>
+                          <td>{l.descricao}</td>
+                          <td style={{ fontWeight: 500, color: 'var(--accent)' }}>{l.duracaoMinutos ? `${l.duracaoMinutos} min` : '-'}</td>
+                        </tr>
+                      );
+                    })}
+                    {worklog.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                          Nenhuma atividade registrada no histórico.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 

@@ -841,7 +841,8 @@ class DataStore {
 
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') return null;
-    const raw = sessionStorage.getItem('cf_current_user');
+    let raw = localStorage.getItem('cf_current_user');
+    if (!raw) raw = sessionStorage.getItem('cf_current_user');
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   }
@@ -849,11 +850,11 @@ class DataStore {
   setCurrentUser(user: User | null) {
     if (typeof window === 'undefined') return;
     if (user) {
-      sessionStorage.setItem('cf_current_user', JSON.stringify(user));
+      localStorage.setItem('cf_current_user', JSON.stringify(user));
     } else {
-      sessionStorage.removeItem('cf_current_user');
-      sessionStorage.removeItem('cf_empresa_sel');
-      sessionStorage.removeItem('cf_app_mode');
+      localStorage.removeItem('cf_current_user');
+      localStorage.removeItem('cf_empresa_sel');
+      localStorage.removeItem('cf_app_mode');
     }
   }
 

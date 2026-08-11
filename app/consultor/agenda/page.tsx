@@ -10,6 +10,7 @@ interface AgendaTask {
   horario: string;
   day: 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta';
   completed: boolean;
+  recurrent?: boolean;
 }
 
 const DAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'] as const;
@@ -26,7 +27,8 @@ export default function AgendaPage() {
     title: '',
     empresaId: '',
     consultorId: '',
-    horario: '09:00'
+    horario: '09:00',
+    recurrent: false
   });
 
   useEffect(() => {
@@ -59,12 +61,13 @@ export default function AgendaPage() {
       consultorId: newTask.consultorId,
       horario: newTask.horario,
       day: newTask.day as any,
-      completed: false
+      completed: false,
+      recurrent: newTask.recurrent || false
     };
 
     saveTasks([...tasks, task]);
     setIsModalOpen(false);
-    setNewTask({ day: 'Segunda', title: '', empresaId: '', consultorId: '', horario: '09:00' });
+    setNewTask({ day: 'Segunda', title: '', empresaId: '', consultorId: '', horario: '09:00', recurrent: false });
   };
 
   const handleDelete = (id: string) => {
@@ -100,6 +103,18 @@ export default function AgendaPage() {
     }));
   };
 
+  const handleStartNewWeek = () => {
+    if (confirm('Deseja iniciar uma nova semana? As tarefas não-recorrentes já concluídas serão removidas e as recorrentes serão desmarcadas como concluídas para se repetir.')) {
+      const updated = tasks
+        .filter(t => !t.completed || t.recurrent)
+        .map(t => {
+          if (t.recurrent) return { ...t, completed: false };
+          return t;
+        });
+      saveTasks(updated);
+    }
+  };
+
   return (
     <>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -107,9 +122,14 @@ export default function AgendaPage() {
           <div className="page-title">Agenda Semanal</div>
           <div className="page-subtitle">Organize e distribua os atendimentos a clientes na semana</div>
         </div>
-        <button className="btn btn-primary btn-lg" onClick={() => setIsModalOpen(true)}>
-          ➕ Novo Agendamento
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-secondary btn-lg" onClick={handleStartNewWeek} title="Inicia uma nova semana limpando agendas passadas.">
+            🔄 Nova Semana
+          </button>
+          <button className="btn btn-primary btn-lg" onClick={() => setIsModalOpen(true)}>
+            ➕ Novo Agendamento
+          </button>
+        </div>
       </div>
 
       <div className="page-body">
@@ -176,6 +196,7 @@ export default function AgendaPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textDecoration: task.completed ? 'line-through' : 'none' }}>
                           <span style={{ color: 'var(--accent)', marginRight: '6px' }}>{task.horario}</span>
+                          {task.recurrent && <span style={{ marginRight: '4px' }} title="Recorrente Semanal">🔁</span>}
                           {task.title}
                         </span>
                         <div style={{ display: 'flex', gap: '4px' }}>
@@ -290,6 +311,18 @@ export default function AgendaPage() {
                     onChange={e => setNewTask({...newTask, horario: e.target.value})}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '12px', background: 'var(--bg-body)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={newTask.recurrent || false}
+                    onChange={e => setNewTask({...newTask, recurrent: e.target.checked})}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span>🔁 <b>Atividade Recorrente</b> (Limpar a semana manterá esta)</span>
+                </label>
               </div>
 
               <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
