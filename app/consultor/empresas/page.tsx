@@ -6,6 +6,9 @@ import ImageCropper from '../../../components/ImageCropper';
 
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
+  { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
+  { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
+  { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
   { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
   { label: '🧠 Inteligência Financeira', route: '/consultor/inteligencia' },
   { label: '📝 Lançamentos', route: '/consultor/lancamentos' },
