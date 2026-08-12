@@ -146,6 +146,7 @@ export default function AdministrativoPage() {
     let mapInstance: any = null;
     let markersLayer: any = null;
     let syncInterval: NodeJS.Timeout;
+    let updateMarkersRef: (() => void) | null = null;
 
     const initMap = async () => {
       const L = (window as any).L;
@@ -166,13 +167,9 @@ export default function AdministrativoPage() {
       const updateMarkers = async () => {
         if (!mapInstance || !markersLayer) return;
         let list = [];
-        try {
-          const res = await fetch('/api/atividades-ativas');
-          if (res.ok) list = await res.json();
+        try { 
+          list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); 
         } catch(e) {}
-        if (list.length === 0) {
-          try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch(e){}
-        }
         
         markersLayer.clearLayers();
         const emps = store.getEmpresas();
@@ -203,8 +200,25 @@ export default function AdministrativoPage() {
         }
       };
 
+      // Busca o estado real das atividades ativas no servidor antes da primeira
+      // renderização — sem isso, um usuário que acabou de abrir esta tela só
+      // veria atividades de equipe iniciadas depois que ele conectou no WebSocket.
+      try {
+        const res = await fetch('/api/atividades-ativas');
+        if (res.ok) {
+          const serverList = await res.json();
+          if (Array.isArray(serverList)) {
+            localStorage.setItem('cf_atividades_ativas', JSON.stringify(serverList));
+          }
+        }
+      } catch (e) { /* segue com o cache local existente */ }
+
       await updateMarkers();
-      syncInterval = setInterval(updateMarkers, 5000);
+
+      // Update by event or interval fallback
+      updateMarkersRef = updateMarkers;
+      window.addEventListener('cfMapDataReceived', updateMarkers);
+      syncInterval = setInterval(updateMarkers, 15000);
     };
 
     if (!document.getElementById('leaflet-css')) {
@@ -226,6 +240,7 @@ export default function AdministrativoPage() {
 
     return () => {
        if (syncInterval) clearInterval(syncInterval);
+       if (updateMarkersRef) window.removeEventListener('cfMapDataReceived', updateMarkersRef);
     };
   }, []);
 

@@ -19,6 +19,7 @@ export default function TransitionProvider({ children }: { children: React.React
   const [transitionStage, setTransitionStage] = useState('fade-in');
   const prevPathnameRef = useRef(pathname);
   const hasPendingChangesRef = useRef(false);
+  const socketRef = useRef<any>(null);
 
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function TransitionProvider({ children }: { children: React.React
   // Auto-salvamento automático no PostgreSQL ao fazer alterações no sistema (Debounced em 300ms)
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    const pendingKeys = new Set<string>();
 
     const handleDataChange = (event: any) => {
       // Ignora se a sincronização inicial não terminou
@@ -123,6 +125,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
       // Sinaliza que há modificações locais aguardando envio
       hasPendingChangesRef.current = true;
+      pendingKeys.add(key);
 
       clearTimeout(timeoutId);
 
@@ -133,32 +136,40 @@ export default function TransitionProvider({ children }: { children: React.React
           return;
         }
 
+        const keysToSync = Array.from(pendingKeys);
+        if (keysToSync.length === 0) return;
+
+        pendingKeys.clear();
+
         try {
-          console.log(`☁️ Auto-salvando ${key} no PostgreSQL...`);
+          console.log(`☁️ Auto-salvando ${keysToSync.join(', ')} no PostgreSQL...`);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
           sessionStorage.setItem('cf_sync_in_progress', 'true');
-          const backupData = store.exportPartialBackup([key]);
-          const syncResult = await syncBackupInChunks(backupData, undefined, [key]);
+          const backupData = store.exportPartialBackup(keysToSync);
+          const syncResult = await syncBackupInChunks(backupData, undefined, keysToSync);
           sessionStorage.setItem('cf_sync_in_progress', 'false');
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
             
-            if (key === 'cf_lancamentos') {
-              store.pruneLancamentosAttachmentData();
-            } else if (key === 'cf_empresas') {
-              store.pruneEmpresasPolicyData();
-            } else if (key === 'cf_atividades_log') {
-              store.pruneAtividadesFotos();
-            } else if (key === 'cf_users') {
-              store.pruneUserAvatarData();
+            if (keysToSync.includes('cf_lancamentos')) store.pruneLancamentosAttachmentData();
+            if (keysToSync.includes('cf_empresas')) store.pruneEmpresasPolicyData();
+            if (keysToSync.includes('cf_atividades_log')) store.pruneAtividadesFotos();
+            if (keysToSync.includes('cf_users')) store.pruneUserAvatarData();
+
+            if (socketRef.current) {
+              keysToSync.forEach(k => {
+                socketRef.current.emit('colecao_atualizada', { collection: k, triggerFetch: true });
+              });
             }
           } else {
-            console.error(`Erro ao auto-salvar ${key} no banco:`, syncResult.error);
+            keysToSync.forEach(k => pendingKeys.add(k));
+            console.error(`Erro ao auto-salvar no banco:`, syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           }
         } catch (err) {
-          console.error(`Erro ao auto-salvar ${key} no banco:`, err);
+          keysToSync.forEach(k => pendingKeys.add(k));
+          console.error(`Erro ao auto-salvar no banco:`, err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           sessionStorage.setItem('cf_sync_in_progress', 'false');
         }
@@ -181,6 +192,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
     console.log('🔌 Inicializando conexão WebSocket global...');
     const socket = io();
+    socketRef.current = socket;
 
     socket.on('connect', () => {
       console.log('🔌 Conectado ao servidor WebSocket:', socket.id);
@@ -196,9 +208,30 @@ export default function TransitionProvider({ children }: { children: React.React
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
-        console.log(`🔌 WebSocket: Coleção ${payload.collection} atualizada via WS.`);
+        console.log(`🔌 WebSocket: Coleção ${payload.collection} atualizada via WS, sincronizando...`);
         sessionStorage.setItem('cf_sync_in_progress', 'true');
         
+        if (payload.triggerFetch) {
+          fetch(`/api/migrate-backup?collection=${payload.collection}&t=${Date.now()}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : null)
+            .then(backup => {
+              if (backup && backup.data && backup.data[payload.collection]) {
+                 store.importBackup(JSON.stringify(backup));
+              }
+              sessionStorage.setItem('cf_sync_in_progress', 'false');
+            }).catch(() => {
+              sessionStorage.setItem('cf_sync_in_progress', 'false');
+            });
+          return;
+        }
+
+        if (payload.collection === '__mapa_atividade') {
+          localStorage.setItem('cf_atividades_ativas', JSON.stringify(payload.data || []));
+          window.dispatchEvent(new Event('cfMapDataReceived'));
+          sessionStorage.setItem('cf_sync_in_progress', 'false');
+          return;
+        }
+
         store.importBackup(JSON.stringify({
           version: '7',
           isPartial: true,
@@ -277,8 +310,17 @@ export default function TransitionProvider({ children }: { children: React.React
       }
     });
 
+    // Bridge do Map 
+    const handleMapBroadcast = (e: any) => {
+      if (socketRef.current) {
+        socketRef.current.emit('colecao_atualizada', { collection: '__mapa_atividade', data: e.detail });
+      }
+    };
+    window.addEventListener('cfMapBroadcast', handleMapBroadcast as any);
+
     return () => {
       console.log('🔌 Desconectando e limpando socket...');
+      window.removeEventListener('cfMapBroadcast', handleMapBroadcast as any);
       socket.disconnect();
     };
   }, [pathname === '/login']);

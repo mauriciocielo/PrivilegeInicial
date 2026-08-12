@@ -3,6 +3,14 @@ import { useRouter, usePathname } from 'next/navigation';
 import { store, User, Empresa } from '../lib/store';
 import { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
+import {
+  Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
+  NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
+  ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
+  ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
+  UserCog, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, type LucideIcon,
+} from 'lucide-react';
 
 const getAvatarGradient = (name: string) => {
   const colors = [
@@ -21,7 +29,7 @@ const getAvatarGradient = (name: string) => {
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: LucideIcon;
   adminOnly?: boolean;
 }
 
@@ -29,56 +37,56 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Principal',
     items: [
-      { label: 'Administrativo', href: '/consultor/administrativo', icon: '⚙️' },
-      { label: 'Dashboard', href: '/consultor/dashboard', icon: '📊' },
-      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: '💡' },
-      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: '🧠' },
-      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: '🔍' },
-      { label: 'Agenda Semanal', href: '/consultor/agenda', icon: '📅' },
-      { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: '⏱️' },
-      { label: 'Lançamentos', href: '/consultor/lancamentos', icon: '📝' },
-      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
-      { label: 'Endividamento', href: '/consultor/endividamento', icon: '⚖️' },
-      { label: 'Indicadores', href: '/consultor/indicadores', icon: '🎯' },
-      { label: 'Orçamento', href: '/consultor/orcamento', icon: '💰' },
+      { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
+      { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
+      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
+      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
+      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
+      { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
+      { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
+      { label: 'Lançamentos', href: '/consultor/lancamentos', icon: NotebookPen },
+      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
+      { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
+      { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
+      { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
     ],
   },
   {
     section: 'Financeiro',
     items: [
-      { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: '👥' },
-      { label: 'Contas a Pagar', href: '/consultor/contas-pagar', icon: '💸' },
-      { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: '💵' },
-      { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: '🧾' },
-      { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: '🏦' },
-      { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: '📋' },
+      { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
+      { label: 'Contas a Pagar', href: '/consultor/contas-pagar', icon: CreditCard },
+      { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
+      { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
+      { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
+      { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
   },
   {
     section: 'Cadastros',
     items: [
-      { label: 'Empresas', href: '/consultor/empresas', icon: '🏢' },
-      { label: 'Usuários', href: '/consultor/usuarios', icon: '👥' },
-      { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: '📋' },
-      { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: '🏷️' },
-      { label: 'Atas de Atendimento', href: '/consultor/atas', icon: '📝' },
-      { label: 'Portadores', href: '/consultor/portadores', icon: '🏦' },
-      { label: 'Segurança & Auditoria', href: '/consultor/configuracoes-avancadas', icon: '🔒', adminOnly: true },
+      { label: 'Empresas', href: '/consultor/empresas', icon: Building2 },
+      { label: 'Usuários', href: '/consultor/usuarios', icon: UserCog },
+      { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: ListTree },
+      { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: Tag },
+      { label: 'Atas de Atendimento', href: '/consultor/atas', icon: FileText },
+      { label: 'Portadores', href: '/consultor/portadores', icon: Wallet },
+      { label: 'Segurança & Auditoria', href: '/consultor/configuracoes-avancadas', icon: ShieldCheck, adminOnly: true },
     ],
   },
   {
     section: 'Relatórios',
     items: [
-      { label: 'Relatórios', href: '/consultor/relatorios', icon: '📈' },
+      { label: 'Relatórios', href: '/consultor/relatorios', icon: BarChart3 },
     ],
   },
   {
     section: 'Logística',
     items: [
-      { label: 'Dashboard Frota', href: '/consultor/logistica/dashboard', icon: '🚚' },
-      { label: 'Veículos e Motoristas', href: '/consultor/logistica/veiculos', icon: '🚗' },
-      { label: 'Controle de Gastos', href: '/consultor/logistica/despesas', icon: '⛽' },
-      { label: 'Orçamentos', href: '/consultor/logistica/orcamentos', icon: '🎯' },
+      { label: 'Dashboard Frota', href: '/consultor/logistica/dashboard', icon: Truck },
+      { label: 'Veículos e Motoristas', href: '/consultor/logistica/veiculos', icon: Car },
+      { label: 'Controle de Gastos', href: '/consultor/logistica/despesas', icon: Fuel },
+      { label: 'Orçamentos', href: '/consultor/logistica/orcamentos', icon: Target },
     ],
   },
 ];
@@ -87,22 +95,22 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Minha Empresa',
     items: [
-      { label: 'Dashboard', href: '/cliente/dashboard', icon: '📊' },
-      { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: '🧠' },
-      { label: 'Extrato', href: '/cliente/extrato', icon: '📋' },
-      { label: 'Lançamentos', href: '/cliente/lancamentos', icon: '📝' },
-      { label: 'Atas de Atendimento', href: '/cliente/atas', icon: '📝' },
-      { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: '📋' },
-      { label: 'Relatórios', href: '/cliente/relatorios', icon: '📈' },
+      { label: 'Dashboard', href: '/cliente/dashboard', icon: LayoutDashboard },
+      { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
+      { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
+      { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },
+      { label: 'Atas de Atendimento', href: '/cliente/atas', icon: FileText },
+      { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: ClipboardList },
+      { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
     ],
   },
   {
     section: 'Logística',
     items: [
-      { label: 'Dashboard Frota', href: '/cliente/logistica/dashboard', icon: '🚚' },
-      { label: 'Veículos e Motoristas', href: '/cliente/logistica/veiculos', icon: '🚗' },
-      { label: 'Controle de Gastos', href: '/cliente/logistica/despesas', icon: '⛽' },
-      { label: 'Orçamentos', href: '/cliente/logistica/orcamentos', icon: '🎯' },
+      { label: 'Dashboard Frota', href: '/cliente/logistica/dashboard', icon: Truck },
+      { label: 'Veículos e Motoristas', href: '/cliente/logistica/veiculos', icon: Car },
+      { label: 'Controle de Gastos', href: '/cliente/logistica/despesas', icon: Fuel },
+      { label: 'Orçamentos', href: '/cliente/logistica/orcamentos', icon: Target },
     ],
   },
 ];
@@ -111,18 +119,18 @@ const condominioNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Condomínios',
     items: [
-      { label: 'Painel Condomínio', href: '/consultor/condominio', icon: '🏘️' },
-      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: '📂' },
-      { label: 'Atas de Reunião', href: '/consultor/atas', icon: '📝' },
-      { label: 'Portadores / Contas', href: '/consultor/portadores', icon: '🏦' },
+      { label: 'Painel Condomínio', href: '/consultor/condominio', icon: Building },
+      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
+      { label: 'Atas de Reunião', href: '/consultor/atas', icon: FileText },
+      { label: 'Portadores / Contas', href: '/consultor/portadores', icon: Wallet },
     ],
   },
   {
     section: 'Cadastros',
     items: [
-      { label: 'Configurar Condos', href: '/consultor/empresas', icon: '⚙️' },
-      { label: 'Usuários Síndicos', href: '/consultor/usuarios', icon: '👥' },
-      { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: '📋' },
+      { label: 'Configurar Condos', href: '/consultor/empresas', icon: Settings },
+      { label: 'Usuários Síndicos', href: '/consultor/usuarios', icon: Users },
+      { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: ListTree },
     ]
   }
 ];
@@ -368,7 +376,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard') return true;
       if (item.href === '/consultor/administrativo') return true;
-      if (item.href.includes('/logistica')) return true; // Bypass for V2 beta
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -385,7 +392,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     return baseNav.map(section => {
       const items = section.items.filter(item => {
         if (item.href === '/consultor/dashboard') return true;
-        if (item.href.includes('/logistica')) return true; // Bypass for V2 beta
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
         return userOk && companyOk;
@@ -415,21 +421,30 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
         {isSidebarCompact && (
-          <div style={{ fontSize: 20 }} onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}>🛸</div>
+          <div
+            className="logo-icon"
+            style={{ cursor: 'pointer' }}
+            onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}
+          >
+            <Landmark size={18} color="#fff" strokeWidth={2.2} />
+          </div>
         )}
-        <button 
+        <button
           onClick={toggleCompact}
+          className="sidebar-collapse-btn"
           style={{
             background: 'none',
             border: 'none',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
-            fontSize: '14px',
-            padding: '4px'
+            padding: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           title={isSidebarCompact ? "Expandir Menu" : "Recolher Menu"}
         >
-          {isSidebarCompact ? '⏩' : '⏪'}
+          {isSidebarCompact ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
         </button>
       </div>
 
@@ -446,30 +461,35 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '7px 10px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-sidebar)', minHeight: '36px', transition: 'all 0.15s' }}
           >
             {activeEmpresa?.logoData ? (
-              <img 
-                src={activeEmpresa.logoData} 
-                alt="Logo" 
-                style={{ height: '20px', width: '20px', objectFit: 'contain', borderRadius: '4px' }} 
+              <img
+                src={activeEmpresa.logoData}
+                alt="Logo"
+                style={{ height: '20px', width: '20px', objectFit: 'contain', borderRadius: '4px' }}
               />
             ) : (
-              <span style={{ fontSize: '14px' }}>🏢</span>
+              <Building2 size={14} color="var(--text-sidebar)" />
             )}
             <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-sidebar-title)' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-sidebar)' }}>▼</span>
+            <ChevronDown
+              size={13}
+              color="var(--text-sidebar)"
+              style={{ transition: 'transform var(--dur-base) var(--ease-out)', transform: showCompanyDropdown ? 'rotate(180deg)' : 'none' }}
+            />
           </div>
 
           {showCompanyDropdown && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-sidebar)', borderRadius: '10px', zIndex: 1000, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', marginTop: '6px', maxHeight: '340px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-sidebar)' }}>
-                <input 
-                  type="text" 
-                  placeholder="🔍 Buscar..." 
+            <div className="dropdown-anim-down" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-sidebar)', borderRadius: '10px', zIndex: 1000, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', marginTop: '6px', maxHeight: '340px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-sidebar)', position: 'relative' }}>
+                <Search size={13} color="var(--text-sidebar)" style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar..."
                   value={searchEmpresa}
                   onChange={e => setSearchEmpresa(e.target.value)}
                   onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', padding: '7px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-sidebar)', background: 'var(--bg-sidebar-hover)', color: 'var(--text-sidebar-title)' }}
+                  style={{ width: '100%', padding: '7px 10px 7px 28px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-sidebar)', background: 'var(--bg-sidebar-hover)', color: 'var(--text-sidebar-title)' }}
                 />
               </div>
               <div style={{ overflowY: 'auto', padding: '6px', flex: 1 }}>
@@ -497,18 +517,18 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                   <>
                     {searchEmpresa === '' && recentsObjs.length > 0 && (
                       <>
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🕒 Recentes</div>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Clock size={11} /> Recentes</div>
                         {recentsObjs.map((e, idx) => (
-                          <div 
+                          <div
                             key={`recent:${e.id}:${idx}`}
                             onClick={() => handleEmpresaChange(e.id)}
                             style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', transition: 'background 0.1s', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
                             className="company-select-item"
                           >
-                            {e.isGroup ? <span>🌐</span> : e.logoData ? (
+                            {e.isGroup ? <Globe size={14} /> : e.logoData ? (
                               <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
                             ) : (
-                              <span>{e.tipo === 'condominio' ? '🏘️' : e.tipo === 'cooperativa' ? '🤝' : '🏢'}</span>
+                              e.tipo === 'condominio' ? <Building size={14} /> : e.tipo === 'cooperativa' ? <Handshake size={14} /> : <Building2 size={14} />
                             )}
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: e.isGroup ? 600 : 400 }}>
                               {e.nomeFantasia || e.razaoSocial}
@@ -529,7 +549,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                             style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === `grupo:${g}` ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === `grupo:${g}` ? 700 : 600 }}
                             className="company-select-item"
                           >
-                            <span>🌐</span>
+                            <Globe size={14} />
                             <span>Grupo {g} (Consolidado)</span>
                           </div>
                         ))}
@@ -551,7 +571,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                             {e.logoData ? (
                               <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
                             ) : (
-                              <span>🏢</span>
+                              <Building2 size={14} />
                             )}
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
                           </div>
@@ -563,9 +583,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                     {filteredCooperativas.length > 0 && (
                       <>
                         <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Cooperativas</div>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Handshake size={11} /> Cooperativas</div>
                         {filteredCooperativas.map(e => (
-                          <div 
+                          <div
                             key={e.id}
                             onClick={() => handleEmpresaChange(e.id)}
                             style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
@@ -574,7 +594,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                             {e.logoData ? (
                               <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
                             ) : (
-                              <span>🤝</span>
+                              <Handshake size={14} />
                             )}
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
                           </div>
@@ -586,9 +606,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                     {filteredCondominios.length > 0 && (
                       <>
                         <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏘️ Condomínios</div>
+                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Building size={11} /> Condomínios</div>
                         {filteredCondominios.map(e => (
-                          <div 
+                          <div
                             key={e.id}
                             onClick={() => handleEmpresaChange(e.id)}
                             style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
@@ -597,7 +617,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                             {e.logoData ? (
                               <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
                             ) : (
-                              <span>🏘️</span>
+                              <Building size={14} />
                             )}
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
                           </div>
@@ -644,7 +664,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                     fontSize: '13px',
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <span className="nav-icon">
+                    <item.icon size={17} strokeWidth={2.1} />
+                  </span>
                   {!isSidebarCompact && item.label}
                 </a>
               );
@@ -654,9 +676,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       </nav>
 
       <div className="sidebar-footer" style={{ padding: isSidebarCompact ? '12px' : '16px' }}>
-        {/* Central de Notificações com ícone de Alertas (sino 🔔) */}
+        {/* Central de Notificações — pendências de conciliação */}
         {pendenciasReconciliacao > 0 && (
-          <div 
+          <div
             onClick={() => router.push(role === 'cliente' ? '/cliente/extrato' : '/consultor/importar-ofx')}
             style={{
               display: 'flex',
@@ -675,7 +697,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             }}
             title={`${pendenciasReconciliacao} conciliações pendentes!`}
           >
-            <span className="pulse-glow" style={{ fontSize: 14 }}>🔔</span>
+            <Bell size={14} className="pulse-glow" style={{ flexShrink: 0 }} />
             {!isSidebarCompact && (
               <span style={{ flex: 1 }}>{pendenciasReconciliacao} Pendentes</span>
             )}
@@ -764,25 +786,26 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             {!isSidebarCompact && (
               <div className="user-info" style={{ flex: 1, overflow: 'hidden' }}>
                 <div className="user-name" style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-                <div className="user-role" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
-                  {role === 'administrador' ? '💎 Administrador' : role === 'consultor' ? '👔 Consultor Especialista' : '🏢 Cliente Ativo'}
+                <div className="user-role" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {role === 'administrador' ? <><Gem size={10} /> Administrador</> : role === 'consultor' ? <><Briefcase size={10} /> Consultor Especialista</> : <><Building2 size={10} /> Cliente Ativo</>}
                 </div>
               </div>
             )}
           </div>
 
           {showProfilePopover && (
-            <div 
-              style={{ 
-                position: 'absolute', 
-                bottom: '100%', 
-                left: isSidebarCompact ? '50px' : '0', 
-                width: '220px', 
-                background: '#1f2540', 
-                border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '12px', 
-                boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.6)', 
-                padding: '14px', 
+            <div
+              className="dropdown-anim-up"
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: isSidebarCompact ? '50px' : '0',
+                width: '220px',
+                background: '#1f2540',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.6)',
+                padding: '14px',
                 zIndex: 1001,
                 marginBottom: '8px'
               }}
@@ -794,16 +817,16 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Tema</span>
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '4px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                     onClick={toggleTheme}
                   >
-                    {theme === 'dark' ? '☀️ Claro' : '🌙 Escuro'}
+                    {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}
                   </button>
                 </div>
                 <button className="btn btn-secondary btn-sm" style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={handleLogout}>
-                  🚪 Sair da Conta
+                  <LogOut size={13} /> Sair da Conta
                 </button>
               </div>
             </div>

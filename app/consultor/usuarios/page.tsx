@@ -7,6 +7,8 @@ import ImageCropper from '../../../components/ImageCropper';
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
   { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
+  { label: '💡 Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
+  { label: '🔍 Diagnóstico 360º', route: '/consultor/diagnostico-360' },
   { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
   { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
   { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
@@ -20,13 +22,18 @@ const AVAILABLE_SCREENS = [
   { label: '💸 Contas a Pagar', route: '/consultor/contas-pagar' },
   { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
   { label: '🧾 NFS-e', route: '/consultor/nfse' },
+  { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
+  { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
   { label: '🏢 Empresas', route: '/consultor/empresas' },
   { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
   { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
+  { label: '🏷️ Centros de Custo', route: '/consultor/centros-custo' },
   { label: '📝 Atas de Atendimento', route: '/consultor/atas' },
   { label: '🏦 Portadores / Contas', route: '/consultor/portadores' },
+  { label: '🔒 Segurança & Auditoria', route: '/consultor/configuracoes-avancadas' },
   { label: '📈 Relatórios', route: '/consultor/relatorios' },
+  { label: '🚚 Logística', route: '/consultor/logistica' },
   { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
 ];
 
@@ -37,7 +44,7 @@ const AVAILABLE_CLIENT_SCREENS = [
   { label: '📝 Lançamentos', route: '/cliente/lancamentos' },
   { label: '📈 Relatórios', route: '/cliente/relatorios' },
   { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
-  { label: '📋 Políticas da Empresa', route: '/cliente/politicas' },
+  { label: '📋 Políticas Financeiras', route: '/cliente/politicas' },
   { label: '📝 Atas de Atendimento', route: '/cliente/atas' },
 ];
 

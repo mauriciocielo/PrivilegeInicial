@@ -57,8 +57,7 @@ export default function AtividadesTempoPage() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  useEffect(() => {
-    setEmpresas(store.getEmpresas());
+  const loadFromLocal = () => {
     const savedLogs = localStorage.getItem('cf_atividades_log');
     if (savedLogs) {
       try {
@@ -74,6 +73,11 @@ export default function AtividadesTempoPage() {
         setAgendaTasks(parsed.filter((t: AgendaTask) => !t.completed));
       } catch (e) {}
     }
+  };
+
+  useEffect(() => {
+    setEmpresas(store.getEmpresas());
+    loadFromLocal();
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -83,6 +87,23 @@ export default function AtividadesTempoPage() {
     } else {
       setGeoError('Geolocalização não suportada no seu navegador.');
     }
+
+    // Busca o estado real das atividades em andamento no servidor — garante que
+    // atividades iniciadas em outro dispositivo (ex: celular) apareçam aqui também.
+    fetch('/api/atividades-ativas')
+      .then(res => res.ok ? res.json() : null)
+      .then(list => {
+        if (Array.isArray(list)) {
+          localStorage.setItem('cf_atividades_ativas', JSON.stringify(list));
+          window.dispatchEvent(new Event('cfMapDataReceived'));
+        }
+      })
+      .catch(() => {});
+
+    // Mantém a lista de atividades registradas em tempo real quando outro
+    // usuário/dispositivo salva ou exclui um registro (via sync/WebSocket).
+    window.addEventListener('cfDataChange', loadFromLocal);
+    return () => window.removeEventListener('cfDataChange', loadFromLocal);
   }, []);
 
   useEffect(() => {
@@ -131,15 +152,11 @@ export default function AtividadesTempoPage() {
   const updateEstadoEmAndamento = async (ativo: boolean) => {
     const me = store.getCurrentUser();
     if (!me) return;
+    
     let list = [];
     try { 
-      const res = await fetch('/api/atividades-ativas');
-      if(res.ok) list = await res.json();
+      list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); 
     } catch (e) {}
-    
-    if (list.length === 0) {
-       try { list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); } catch (e) {}
-    }
     
     list = list.filter((a: any) => a.consultorId !== me.id);
     
@@ -155,14 +172,19 @@ export default function AtividadesTempoPage() {
       });
     }
     localStorage.setItem('cf_atividades_ativas', JSON.stringify(list));
-    
+    window.dispatchEvent(new CustomEvent('cfMapBroadcast', { detail: list }));
+
+    // Persiste no servidor para que outros dispositivos/usuários vejam o estado
+    // atual ao carregar a página (não dependam apenas do WebSocket estar aberto).
     try {
       await fetch('/api/atividades-ativas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(list)
+        body: JSON.stringify(list),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('Erro ao sincronizar atividades ativas com o servidor:', e);
+    }
   };
 
   const handleStart = () => {
@@ -247,7 +269,8 @@ export default function AtividadesTempoPage() {
     const updated = [novaAtividade, ...atividades];
     setAtividades(updated);
     localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
-    
+    window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
+
     setAtividadeDesc('');
     setTimePassed(0);
     setSelectedEmpresaId('');
@@ -263,6 +286,7 @@ export default function AtividadesTempoPage() {
       const updated = atividades.filter(a => a.id !== id);
       setAtividades(updated);
       localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
     }
   };
 

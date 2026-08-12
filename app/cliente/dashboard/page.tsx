@@ -6,6 +6,7 @@ import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
+import { TrendingUp, TrendingDown, Activity, Percent } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -199,7 +200,7 @@ export default function ClienteDashboard() {
           <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.5)', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Saldo Atual em Caixa</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
-              <AnimatedCounter value={totais.portadores} />
+              <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
             </div>
           </div>
         </div>
@@ -219,12 +220,12 @@ export default function ClienteDashboard() {
         <div className="grid-2" style={{ marginBottom: 32 }}>
            <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--green)' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Entradas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}><AnimatedCounter value={entradasSemana} /></div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}><AnimatedCounter target={entradasSemana} prefix="R$ " decimals={2} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que está previsto para entrar até sábado.</div>
            </div>
            <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--red)' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Saídas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}><AnimatedCounter value={saidasSemana} /></div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}><AnimatedCounter target={saidasSemana} prefix="R$ " decimals={2} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que precisa ser pago até sábado.</div>
            </div>
         </div>
@@ -232,24 +233,24 @@ export default function ClienteDashboard() {
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Resumo do Mês ({mesAtualLabel})</h3>
         <div className="stat-grid" style={{ marginBottom: 32 }}>
           <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon green">↑</div>
+            <div className="stat-icon green"><TrendingUp size={20} /></div>
             <div className="stat-label">Entradas no Mês</div>
-            <div className="stat-value"><AnimatedCounter value={totais.receitas} /></div>
+            <div className="stat-value"><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon red">↓</div>
+            <div className="stat-icon red"><TrendingDown size={20} /></div>
             <div className="stat-label">Saídas no Mês</div>
-            <div className="stat-value"><AnimatedCounter value={totais.despesas} /></div>
+            <div className="stat-value"><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
-            <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}>≈</div>
+            <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
             <div className="stat-label">O que Sobrou (Fôlego)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              <AnimatedCounter value={totais.saldo} />
+              <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
           </div>
           <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon purple">%</div>
+            <div className="stat-icon purple"><Percent size={20} /></div>
             <div className="stat-label">Margem Limpa</div>
             <div className="stat-value" style={{ color: margem >= 20 ? 'var(--green)' : margem >= 0 ? 'var(--yellow)' : 'var(--red)' }}>
               {margem.toFixed(1)}%
@@ -262,8 +263,8 @@ export default function ClienteDashboard() {
           <div className="card">
             <div className="card-header">
               <div>
-                <div className="card-title">Evolução Financeira</div>
-                <div className="card-subtitle">Receitas, despesas e resultado nos últimos 6 meses</div>
+                <div className="card-title text-gradient" style={{ fontSize: '18px' }}>Evolução Financeira</div>
+                <div className="card-subtitle">Receitas, despesas e resultado líquido mensal</div>
               </div>
             </div>
             <div className="chart-container">
@@ -304,8 +305,8 @@ export default function ClienteDashboard() {
           <div className="card">
             <div className="card-header">
               <div>
-                <div className="card-title">Tendência de Resultado</div>
-                <div className="card-subtitle">Resultado líquido mensal</div>
+                <div className="card-title text-gradient" style={{ fontSize: '18px' }}>Crescimento & Sobrevivência (Margem)</div>
+                <div className="card-subtitle">Resultado líquido mensal e fôlego em caixa</div>
               </div>
             </div>
             <div className="chart-container">
@@ -321,7 +322,7 @@ export default function ClienteDashboard() {
                   <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v: any) => fmt.currency(Number(v || 0))} contentStyle={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', borderRadius: 8 }} />
-                  <Area type="monotone" dataKey="saldo" name="Resultado" stroke="#22c55e" fill="url(#gradPos)" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="saldo" name="Resultado Líquido" stroke="#22c55e" fill="url(#gradPos)" strokeWidth={4} style={{ filter: 'drop-shadow(0 0 10px rgba(34,197,94,0.3))' }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

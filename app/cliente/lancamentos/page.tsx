@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
+import DateRangeFilter from '../../../components/DateRangeFilter';
 
-type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean };
+type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
   id: string;
   data: string;
@@ -67,7 +68,7 @@ export default function LancamentosPage() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false });
+  const [filtros, setFiltros] = useState<Filtros>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, planoContaId: '', dataIni: '', dataFim: '' });
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
   const [form, setForm] = useState<Partial<Lancamento> & { tipoTransacao?: 'receita' | 'despesa' | 'transferencia', portadorDestinoId?: string, _valorDisplay?: string }>({});
@@ -264,6 +265,9 @@ export default function LancamentosPage() {
       if (filtros.portadorId && l.portadorId !== filtros.portadorId) return false;
       if (filtros.search && !l.descricao.toLowerCase().includes(filtros.search.toLowerCase())) return false;
       if (filtros.mes && !l.data.startsWith(filtros.mes)) return false;
+      if (filtros.dataIni && l.data < filtros.dataIni) return false;
+      if (filtros.dataFim && l.data > filtros.dataFim) return false;
+      if (filtros.planoContaId && l.planoContaId !== filtros.planoContaId) return false;
       if (filtros.semPlano) {
         if (l.planoContaId === 'transf') return false;
         const hasPlan = planoContas.some(pc => pc.id === l.planoContaId);
@@ -1047,13 +1051,27 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               )}
             </div>
             <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.mes} onChange={e => setFiltros(f => ({ ...f, mes: e.target.value }))}>
-                <option value="">Todos os meses</option>
+              <select className="form-control" value={filtros.mes} onChange={e => setFiltros(f => ({ ...f, mes: e.target.value, dataIni: '', dataFim: '' }))} title="Mês Rápido">
+                <option value="">Filtro rápido (Mês)</option>
                 {meses.map(m => {
                   const [y, mo] = m.split('-');
                   const d = new Date(Number(y), Number(mo) - 1, 1);
                   return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
                 })}
+              </select>
+            </div>
+            
+            <DateRangeFilter
+              ini={filtros.dataIni}
+              fim={filtros.dataFim}
+              onChange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim, mes: '' }))}
+              placeholder="Período (data)"
+            />
+            <div className="form-group" style={{ margin: 0 }}>
+              <select className="form-control" value={filtros.planoContaId} onChange={e => setFiltros(f => ({ ...f, planoContaId: e.target.value }))}>
+                <option value="">Todos os planos</option>
+                <option value="transf">⇄ Transferência</option>
+                {planoContas.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ margin: 0 }}>
@@ -1076,13 +1094,13 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingBottom: '8px' }}>
               <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
-              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>Sem Plano</label>
+              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>🚨 Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})</label>
             </div>
-            {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano) && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false })}>
-                ✕ Limpar
+            {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano || filtros.planoContaId || filtros.dataIni || filtros.dataFim) && (
+              <button className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, planoContaId: '', dataIni: '', dataFim: '' })}>
+                ✕ Limpar Restrições
               </button>
             )}
           </div>

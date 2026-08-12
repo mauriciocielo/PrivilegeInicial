@@ -2,9 +2,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { Sparkles, Rocket, TrendingDown, AlertTriangle, Wallet, AlertOctagon, Lightbulb, BrainCircuit, type LucideIcon } from 'lucide-react';
 
 export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: string, mesSelecionado: string }) {
-  const [insights, setInsights] = useState<{ type: 'positive' | 'negative' | 'warning', title: string, desc: string, icon: string }[]>([]);
+  const [insights, setInsights] = useState<{ type: 'positive' | 'negative' | 'warning', title: string, desc: string, icon: LucideIcon }[]>([]);
 
   useEffect(() => {
     if (!empresaId || !mesSelecionado) return;
@@ -28,24 +29,24 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
     const recAnt = lancs.filter(l => l.tipo === 'receita' && l.data.startsWith(mAntStr)).reduce((a, l) => a + l.valor, 0);
     const despAnt = lancs.filter(l => l.tipo === 'despesa' && l.data.startsWith(mAntStr)).reduce((a, l) => a + l.valor, 0);
 
-    const generated: { type: 'positive' | 'negative' | 'warning', title: string, desc: string, icon: string }[] = [];
+    const generated: { type: 'positive' | 'negative' | 'warning', title: string, desc: string, icon: LucideIcon }[] = [];
 
     // Regra 1: Crescimento de Receita (Wow factor)
     if (recAtual > 0 && recAnt > 0) {
       const variacao = ((recAtual - recAnt) / recAnt) * 100;
       if (variacao > 5) {
-        generated.push({ 
-          type: 'positive', 
-          icon: '🚀',
-          title: 'Crescimento Acelerado', 
-          desc: `O seu volume de faturamento aumentou ${variacao.toFixed(1)}% comparado ao mês anterior.` 
+        generated.push({
+          type: 'positive',
+          icon: Rocket,
+          title: 'Crescimento Acelerado',
+          desc: `O seu volume de faturamento aumentou ${variacao.toFixed(1)}% comparado ao mês anterior.`
         });
       } else if (variacao < -10) {
-        generated.push({ 
-          type: 'warning', 
-          icon: '📉',
-          title: 'Queda de Receita', 
-          desc: `Atenção: Houve uma retração de ${Math.abs(variacao).toFixed(1)}% nas suas entradas deste mês.` 
+        generated.push({
+          type: 'warning',
+          icon: TrendingDown,
+          title: 'Queda de Receita',
+          desc: `Atenção: Houve uma retração de ${Math.abs(variacao).toFixed(1)}% nas suas entradas deste mês.`
         });
       }
     }
@@ -56,7 +57,7 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
       if (variacaoDesp > 10) {
          generated.push({
            type: 'negative',
-           icon: '⚠️',
+           icon: AlertTriangle,
            title: 'Despesas Infladas',
            desc: `Os gastos da empresa subiram ${variacaoDesp.toFixed(1)}% (R$ ${fmt.currency(despAtual - despAnt)} a mais que no mês anterior).`
          });
@@ -68,14 +69,14 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
     if (margemAtual > 20) {
       generated.push({
         type: 'positive',
-        icon: '💰',
+        icon: Wallet,
         title: 'Alta Lucratividade',
         desc: `Excelente operação! A cada R$100 captados, sua empresa reteve livre R$${margemAtual.toFixed(0)} no caixa.`
       });
     } else if (margemAtual < 0) {
       generated.push({
         type: 'negative',
-        icon: '🚨',
+        icon: AlertOctagon,
         title: 'Operação no Vermelho',
         desc: 'O fluxo de caixa deste mês gerou déficit. As saídas superaram a capacidade de geração de caixa.'
       });
@@ -85,7 +86,7 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
     if (margemAtual > 5 && generated.length < 3) {
        generated.push({
           type: 'positive',
-          icon: '💡',
+          icon: Lightbulb,
           title: 'Fôlego Confirmado',
           desc: 'A operação do mês apresentou superávit. Fale com seu consultor sobre estratégias de alocação segura.'
        });
@@ -95,7 +96,7 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
     if (generated.length === 0) {
        generated.push({
          type: 'positive',
-         icon: '🧠',
+         icon: BrainCircuit,
          title: 'Inteligência Financeira Ativa',
          desc: 'A inteligência artificial precisa de mais volume de dados nos últimos 2 meses para gerar insights absolutos para o seu negócio.'
        });
@@ -108,27 +109,35 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
 
   return (
     <div style={{ marginBottom: 32 }}>
-      <h3 style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16 }}>
-        ✨ Privilege Insights
+      <h3 className="ai-insights-title" style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <Sparkles size={14} className="pulse-glow" /> Privilege Insights
       </h3>
       <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
         {insights.map((insight, idx) => {
           const isPos = insight.type === 'positive';
           const isWarn = insight.type === 'warning';
+          const accentColor = isPos ? 'var(--green)' : isWarn ? 'var(--yellow)' : 'var(--red)';
+          const accentBg = isPos ? 'var(--green-bg)' : isWarn ? 'var(--yellow-bg)' : 'var(--red-bg)';
+          const Icon = insight.icon;
           return (
-            <div 
+            <div
               key={idx}
-              className="glass-card" 
+              className="glass-card ai-insight-card"
               style={{
-                padding: '20px', 
-                borderLeft: `4px solid ${isPos ? 'var(--green)' : isWarn ? 'var(--orange)' : 'var(--red)'}`,
+                padding: '18px',
+                borderLeft: `3px solid ${accentColor}`,
                 display: 'flex', gap: 14, alignItems: 'flex-start',
-                background: 'linear-gradient(to right, rgba(255,255,255,0.02), transparent)'
               }}
             >
-              <div style={{ fontSize: 24, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>{insight.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: accentBg, color: accentColor,
+              }}>
+                <Icon size={17} strokeWidth={2.2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 13, letterSpacing: 0.2, marginBottom: 4 }}>
                   {insight.title}
                 </div>
                 <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
