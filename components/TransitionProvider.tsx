@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 
 import { store } from '../lib/store';
 import { syncBackupInChunks } from '../lib/sync-helper';
+import { SYNC_COLLECTIONS, getCollectionForPath } from '../lib/sync-registry';
 import { toast } from 'sonner';
 
 if (typeof window !== 'undefined') {
@@ -208,26 +209,10 @@ export default function TransitionProvider({ children }: { children: React.React
       const key = event?.detail?.key;
       if (!key || key === 'cf_current_user' || key === 'cf_postgres_synced' || key === 'cf_sync_in_progress') return;
 
-      // Lista de coleções válidas para sincronização automática
-      const validCollections = [
-        'cf_empresas',
-        'cf_users',
-        'cf_unidades',
-        'cf_plano_contas',
-        'cf_portadores',
-        'cf_clientes',
-        'cf_endividamentos',
-        'cf_atas',
-        'cf_indicadores',
-        'cf_orcamentos',
-        'cf_nfse',
-        'cf_situacao_fiscal',
-        'cf_transaction_patterns',
-        'cf_atividades_log',
-        'cf_audit_logs',
-        'cf_centros_custo',
-        'cf_agenda_semanal'
-      ];
+      // Coleções válidas para sincronização automática — vem do registro único
+      // (lib/sync-registry.ts). cf_lancamentos fica de fora aqui de propósito:
+      // tem seu próprio caminho de tempo real (autoSync: false no registro).
+      const validCollections = SYNC_COLLECTIONS.filter(c => c.autoSync).map(c => c.key);
       if (!validCollections.includes(key)) return;
 
       // Sinaliza que há modificações locais aguardando envio (em memória E de forma
@@ -457,23 +442,10 @@ export default function TransitionProvider({ children }: { children: React.React
     };
   }, [pathname === '/login']);
 
-  // Função auxiliar para mapear o caminho atual para a coleção correspondente
-  const getCollectionFromPath = (path: string): string | null => {
-    if (path.includes('/lancamentos')) return 'cf_lancamentos';
-    if (path.includes('/plano-de-contas')) return 'cf_plano_contas';
-    if (path.includes('/portadores')) return 'cf_portadores';
-    if (path.includes('/clientes')) return 'cf_clientes';
-    if (path.includes('/endividamento')) return 'cf_endividamentos';
-    if (path.includes('/atas')) return 'cf_atas';
-    if (path.includes('/indicadores')) return 'cf_indicadores';
-    if (path.includes('/orcamento')) return 'cf_orcamentos';
-    if (path.includes('/empresas')) return 'cf_empresas';
-    if (path.includes('/usuarios')) return 'cf_users';
-    if (path.includes('/administrativo') || path.includes('/configuracoes-avancadas')) return 'cf_audit_logs';
-    if (path.includes('/centros-custo')) return 'cf_centros_custo';
-    if (path.includes('/agenda')) return 'cf_agenda_semanal';
-    return null;
-  };
+  // Mapeia o caminho atual para a coleção correspondente — vem do registro
+  // único (lib/sync-registry.ts), então toda coleção com pagePaths definido
+  // ganha polling de fallback automaticamente, sem precisar editar aqui.
+  const getCollectionFromPath = getCollectionForPath;
 
   // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa da página
   useEffect(() => {

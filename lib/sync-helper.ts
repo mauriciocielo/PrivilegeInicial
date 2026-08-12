@@ -5,7 +5,12 @@
  *
  * cf_plano_contas usa uma rota dedicada e leve (/api/plano-contas/upsert) para evitar
  * Inactivity Timeout no Vercel Free (cold start da rota de 1600 linhas era muito lento).
+ *
+ * A lista de coleções e seus tamanhos de lote vêm de lib/sync-registry.ts — a
+ * mesma fonte usada pelo gatilho de auto-salvamento e pelo servidor, para que
+ * nunca fiquem dessincronizadas entre si.
  */
+import { SYNC_COLLECTIONS } from './sync-registry';
 
 export async function syncBackupInChunks(
   backupText: string,
@@ -23,27 +28,9 @@ export async function syncBackupInChunks(
       return { success: false, error: 'Dados do backup ausentes.' };
     }
 
-    // Dependency order of collections to avoid foreign key violations
-    const collectionsOrder = [
-      { key: 'cf_empresas', label: 'Empresas', chunkSize: 25 },
-      { key: 'cf_users', label: 'Usuários', chunkSize: 25 },
-      { key: 'cf_unidades', label: 'Unidades', chunkSize: 25 },
-      { key: 'cf_plano_contas', label: 'Plano de Contas', chunkSize: 25 }, // Alterado para 25 para evitar inumeras requisições no proxy
-      { key: 'cf_portadores', label: 'Portadores', chunkSize: 25 },
-      { key: 'cf_clientes', label: 'Clientes', chunkSize: 25 },
-      { key: 'cf_lancamentos', label: 'Lançamentos', chunkSize: 25 },
-      { key: 'cf_endividamentos', label: 'Endividamentos', chunkSize: 25 },
-      { key: 'cf_atas', label: 'Atas de Atendimento', chunkSize: 25 },
-      { key: 'cf_indicadores', label: 'Indicadores', chunkSize: 25 },
-      { key: 'cf_orcamentos', label: 'Orçamentos', chunkSize: 25 },
-      { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 25 },
-      { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 25 },
-      { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 25 },
-      { key: 'cf_atividades_log', label: 'Atividades e Tempo', chunkSize: 25 },
-      { key: 'cf_audit_logs', label: 'Log de Auditoria', chunkSize: 25 },
-      { key: 'cf_centros_custo', label: 'Centros de Custo', chunkSize: 25 },
-      { key: 'cf_agenda_semanal', label: 'Agenda Semanal', chunkSize: 25 }
-    ];
+    // Ordem de dependência das coleções (evita violação de FK ao criar registros
+    // relacionados antes das empresas, por exemplo) — segue a ordem do registro.
+    const collectionsOrder = SYNC_COLLECTIONS;
 
     for (const col of collectionsOrder) {
       if (collectionsToSync && !collectionsToSync.includes(col.key)) {

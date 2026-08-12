@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 import crypto from 'crypto';
+import { SYNC_COLLECTION_KEYS } from '../../../lib/sync-registry';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -234,6 +235,34 @@ async function migrateAgendaTasks(tasks: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Tarefa da Agenda (ID: ${t.id}), pulando este item e continuando o lote:`, err);
+    }
+  }
+}
+
+async function migrateInteligenciaDocs(docs: any[]) {
+  console.log(`Migrando ${docs.length} documentos de inteligência...`);
+
+  for (const d of docs) {
+    if (!d.id) continue;
+    try {
+      await db.inteligenciaDoc.upsert({
+        where: { id: String(d.id) },
+        update: {
+          name: String(d.name || ''),
+          type: String(d.type || ''),
+          size: Number(d.size || 0),
+          content: String(d.content || ''),
+        },
+        create: {
+          id: String(d.id),
+          name: String(d.name || ''),
+          type: String(d.type || ''),
+          size: Number(d.size || 0),
+          content: String(d.content || ''),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro no Documento de Inteligência (ID: ${d.id}), pulando este item e continuando o lote:`, err);
     }
   }
 }
@@ -1394,160 +1423,102 @@ async function migrateTransactionPatterns(patterns: any[]) {
   }
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const requestedCollection = searchParams.get('collection');
+// ============================================================
+// REGISTRO ÚNICO: migrator (POST) e query (GET) de cada coleção
+// ============================================================
+// Antes disso existiam DUAS listas de dispatch (switch-case do POST em lote +
+// if-chain do POST monolítico) e uma construção manual de array posicional
+// pro GET (destructuring + Promise.all + objeto, três lugares que precisavam
+// concordar na mesma ordem). Bastava atualizar um lugar e esquecer outro pra
+// uma coleção parar de sincronizar silenciosamente — foi o que aconteceu 5
+// vezes. Agora é um Record por chave, usado igual nos dois métodos.
 
-    if (requestedCollection === 'cf_lancamentos') {
-      const cf_lancamentos = await db.lancamento.findMany({
-        select: {
-          id: true,
-          empresaId: true,
-          data: true,
-          descricao: true,
-          valor: true,
-          tipo: true,
-          planoContaId: true,
-          portadorId: true,
-          status: true,
-          numeroDocumento: true,
-          observacao: true,
-          origem: true,
-          ofxId: true,
-          unidadeId: true,
-          clienteId: true,
-          attachmentName: true,
-          createdAt: true,
-        },
-        orderBy: [
-          { data: 'desc' },
-          { createdAt: 'desc' }
-        ]
-      });
-      return NextResponse.json({
-        version: '7',
-        isPartial: true,
-        timestamp: new Date().toISOString(),
-        data: {
-          cf_lancamentos
-        }
-      });
+type CollectionMigrator = (data: any[]) => Promise<void>;
+
+const MIGRATORS: Record<string, CollectionMigrator> = {
+  cf_empresas: migrateEmpresas,
+  cf_users: migrateUsers,
+  cf_unidades: migrateUnidades,
+  cf_plano_contas: migratePlanoContas,
+  cf_portadores: migratePortadores,
+  cf_clientes: migrateClientes,
+  cf_lancamentos: migrateLancamentos,
+  cf_endividamentos: migrateEndividamentos,
+  cf_atas: migrateAtas,
+  cf_indicadores: migrateIndicadores,
+  cf_orcamentos: migrateOrcamentos,
+  cf_nfse: migrateNfse,
+  cf_situacao_fiscal: migrateSituacaoFiscal,
+  cf_transaction_patterns: migrateTransactionPatterns,
+  cf_atividades_log: migrateAtividades,
+  cf_audit_logs: migrateAuditLogs,
+  cf_centros_custo: migrateCentrosCusto,
+  cf_agenda_semanal: migrateAgendaTasks,
+  cf_inteligencia_docs: migrateInteligenciaDocs,
+};
+
+type CollectionQuery = () => Promise<any>;
+
+const QUERIES: Record<string, CollectionQuery> = {
+  cf_empresas: () => db.empresa.findMany({
+    select: {
+      id: true,
+      razaoSocial: true,
+      nomeFantasia: true,
+      cnpj: true,
+      responsavel: true,
+      email: true,
+      telefone: true,
+      atividade: true,
+      tipo: true,
+      taxaMensalPadrao: true,
+      fundoReservaPct: true,
+      dataInicioContrato: true,
+      grupoEconomico: true,
+      receitaMensalEstimada: true,
+      comprasMensalEstimada: true,
+      logoData: true,
+      bancoBoleto: true,
+      createdAt: true,
+      allowedRoutes: true,
+      politicaReceberName: true,
+      politicaComprasName: true,
+      politicaCobrancaName: true,
     }
-
-    if (requestedCollection === 'cf_atividades_log') {
-      const cf_atividades_log = await db.atividade.findMany();
-      return NextResponse.json({
-        version: '7',
-        isPartial: true,
-        timestamp: new Date().toISOString(),
-        data: {
-          cf_atividades_log
-        }
-      });
-    }
-
-    if (requestedCollection === 'cf_audit_logs') {
-      const cf_audit_logs = await db.auditLog.findMany({
-        orderBy: { timestamp: 'desc' },
-        take: 1000,
-      });
-      return NextResponse.json({
-        version: '7',
-        isPartial: true,
-        timestamp: new Date().toISOString(),
-        data: {
-          cf_audit_logs
-        }
-      });
-    }
-
-    const [
-      cf_empresas,
-      cf_users,
-      cf_unidades,
-      cf_plano_contas,
-      cf_portadores,
-      cf_clientes,
-      cf_lancamentos,
-      cf_endividamentosRaw,
-      cf_atas,
-      cf_indicadores,
-      cf_orcamentosRaw,
-      cf_situacao_fiscal,
-      cf_transaction_patterns,
-      cf_nfse,
-      cf_atividades_log,
-      cf_audit_logs,
-      cf_centros_custo,
-      cf_agenda_semanal
-    ] = await Promise.all([
-      db.empresa.findMany({
-        select: {
-          id: true,
-          razaoSocial: true,
-          nomeFantasia: true,
-          cnpj: true,
-          responsavel: true,
-          email: true,
-          telefone: true,
-          atividade: true,
-          tipo: true,
-          taxaMensalPadrao: true,
-          fundoReservaPct: true,
-          dataInicioContrato: true,
-          grupoEconomico: true,
-          receitaMensalEstimada: true,
-          comprasMensalEstimada: true,
-          logoData: true,
-          bancoBoleto: true,
-          createdAt: true,
-          allowedRoutes: true,
-          politicaReceberName: true,
-          politicaComprasName: true,
-          politicaCobrancaName: true,
-        }
-      }),
-      db.user.findMany(),
-      db.unidade.findMany(),
-      db.planoConta.findMany(),
-      db.portador.findMany(),
-      db.cliente.findMany(),
-      db.lancamento.findMany({
-        select: {
-          id: true,
-          empresaId: true,
-          data: true,
-          descricao: true,
-          valor: true,
-          tipo: true,
-          planoContaId: true,
-          portadorId: true,
-          status: true,
-          numeroDocumento: true,
-          observacao: true,
-          origem: true,
-          ofxId: true,
-          unidadeId: true,
-          clienteId: true,
-          attachmentName: true,
-          createdAt: true,
-        }
-      }),
-      db.endividamento.findMany({ include: { pagamentos: true } }),
-      db.ataAtendimento.findMany(),
-      db.indicadorMensal.findMany(),
-      db.orcamentoMensal.findMany({ include: { valores: true } }),
-      db.situacaoFiscal.findMany(),
-      db.transactionPattern.findMany(),
-      db.nfsE.findMany(),
-      db.atividade.findMany(),
-      db.auditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 1000 }),
-      db.centroCusto.findMany(),
-      db.agendaTask.findMany(),
-    ]);
-
-    const cf_endividamentos = cf_endividamentosRaw.map(e => ({
+  }),
+  cf_users: () => db.user.findMany(),
+  cf_unidades: () => db.unidade.findMany(),
+  cf_plano_contas: () => db.planoConta.findMany(),
+  cf_portadores: () => db.portador.findMany(),
+  cf_clientes: () => db.cliente.findMany(),
+  cf_lancamentos: () => db.lancamento.findMany({
+    select: {
+      id: true,
+      empresaId: true,
+      data: true,
+      descricao: true,
+      valor: true,
+      tipo: true,
+      planoContaId: true,
+      portadorId: true,
+      status: true,
+      numeroDocumento: true,
+      observacao: true,
+      origem: true,
+      ofxId: true,
+      unidadeId: true,
+      clienteId: true,
+      attachmentName: true,
+      createdAt: true,
+    },
+    orderBy: [
+      { data: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  }),
+  cf_endividamentos: async () => {
+    const raw = await db.endividamento.findMany({ include: { pagamentos: true } });
+    return raw.map(e => ({
       id: e.id,
       empresaId: e.empresaId,
       tipo: e.tipo,
@@ -1572,43 +1543,66 @@ export async function GET(request: Request) {
         valorAmortizacao: p.valorAmortizacao
       }))
     }));
-
-    const cf_orcamentos = cf_orcamentosRaw.map(orc => {
+  },
+  cf_atas: () => db.ataAtendimento.findMany(),
+  cf_indicadores: () => db.indicadorMensal.findMany(),
+  cf_orcamentos: async () => {
+    const raw = await db.orcamentoMensal.findMany({ include: { valores: true } });
+    return raw.map(orc => {
       const categorias: Record<string, number> = {};
-      orc.valores.forEach(v => {
-        categorias[v.planoContaId] = v.valor;
-      });
-      return {
-        id: orc.id,
-        empresaId: orc.empresaId,
-        mes: orc.mes,
-        categorias
-      };
+      orc.valores.forEach(v => { categorias[v.planoContaId] = v.valor; });
+      return { id: orc.id, empresaId: orc.empresaId, mes: orc.mes, categorias };
     });
+  },
+  cf_nfse: () => db.nfsE.findMany(),
+  cf_situacao_fiscal: () => db.situacaoFiscal.findMany(),
+  cf_transaction_patterns: () => db.transactionPattern.findMany(),
+  cf_atividades_log: async () => {
+    const raw = await db.atividade.findMany();
+    return raw.map(a => ({
+      ...a,
+      localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
+    }));
+  },
+  cf_audit_logs: () => db.auditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 1000 }),
+  cf_centros_custo: () => db.centroCusto.findMany(),
+  cf_agenda_semanal: () => db.agendaTask.findMany(),
+  cf_inteligencia_docs: () => db.inteligenciaDoc.findMany(),
+};
 
-    const backupData = {
-      cf_empresas,
-      cf_users,
-      cf_unidades,
-      cf_plano_contas,
-      cf_portadores,
-      cf_clientes,
-      cf_lancamentos,
-      cf_endividamentos,
-      cf_atas,
-      cf_indicadores,
-      cf_orcamentos,
-      cf_situacao_fiscal,
-      cf_transaction_patterns,
-      cf_nfse,
-      cf_atividades_log: cf_atividades_log.map(a => ({
-        ...a,
-        localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
-      })),
-      cf_audit_logs,
-      cf_centros_custo,
-      cf_agenda_semanal
-    };
+// Checagem de consistência em tempo de execução: se uma coleção for adicionada
+// no registro central (lib/sync-registry.ts) e faltar o migrator/query
+// correspondente aqui, isso aparece BEM alto nos logs do servidor assim que a
+// rota carrega — em vez de virar um bug invisível por meses.
+for (const key of SYNC_COLLECTION_KEYS) {
+  if (!MIGRATORS[key]) console.error(`🚨 [sync-registry] Coleção "${key}" está no registro mas não tem migrator implementado em app/api/migrate-backup/route.ts!`);
+  if (!QUERIES[key]) console.error(`🚨 [sync-registry] Coleção "${key}" está no registro mas não tem query implementada em app/api/migrate-backup/route.ts!`);
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const requestedCollection = searchParams.get('collection');
+
+    if (requestedCollection) {
+      const query = QUERIES[requestedCollection];
+      if (!query) {
+        return NextResponse.json({ error: `Coleção desconhecida: ${requestedCollection}` }, { status: 400 });
+      }
+      const collectionData = await query();
+      return NextResponse.json({
+        version: '7',
+        isPartial: true,
+        timestamp: new Date().toISOString(),
+        data: { [requestedCollection]: collectionData }
+      });
+    }
+
+    // Sem "collection" na query string: busca tudo de uma vez (usado no sync
+    // inicial ao carregar o site e na inicialização de banco vazio).
+    const entries = Object.entries(QUERIES);
+    const results = await Promise.all(entries.map(([, fn]) => fn()));
+    const backupData = Object.fromEntries(entries.map(([key], i) => [key, results[i]]));
 
     return NextResponse.json({
       version: '7',
@@ -1633,65 +1627,12 @@ export async function POST(request: Request) {
 
     if (collection) {
       console.log(`[Chunked Migration] Iniciando migração da coleção: ${collection}...`);
-      
-      switch (collection) {
-        case 'cf_empresas':
-          if (Array.isArray(data)) await migrateEmpresas(data);
-          break;
-        case 'cf_users':
-          if (Array.isArray(data)) await migrateUsers(data);
-          break;
-        case 'cf_unidades':
-          if (Array.isArray(data)) await migrateUnidades(data);
-          break;
-        case 'cf_plano_contas':
-          if (Array.isArray(data)) await migratePlanoContas(data);
-          break;
-        case 'cf_portadores':
-          if (Array.isArray(data)) await migratePortadores(data);
-          break;
-        case 'cf_clientes':
-          if (Array.isArray(data)) await migrateClientes(data);
-          break;
-        case 'cf_lancamentos':
-          if (Array.isArray(data)) await migrateLancamentos(data);
-          break;
-        case 'cf_endividamentos':
-          if (Array.isArray(data)) await migrateEndividamentos(data);
-          break;
-        case 'cf_atas':
-          if (Array.isArray(data)) await migrateAtas(data);
-          break;
-        case 'cf_indicadores':
-          if (Array.isArray(data)) await migrateIndicadores(data);
-          break;
-        case 'cf_orcamentos':
-          if (Array.isArray(data)) await migrateOrcamentos(data);
-          break;
-        case 'cf_nfse':
-          if (Array.isArray(data)) await migrateNfse(data);
-          break;
-        case 'cf_situacao_fiscal':
-          if (Array.isArray(data)) await migrateSituacaoFiscal(data);
-          break;
-        case 'cf_transaction_patterns':
-          if (Array.isArray(data)) await migrateTransactionPatterns(data);
-          break;
-        case 'cf_atividades_log':
-          if (Array.isArray(data)) await migrateAtividades(data);
-          break;
-        case 'cf_audit_logs':
-          if (Array.isArray(data)) await migrateAuditLogs(data);
-          break;
-        case 'cf_centros_custo':
-          if (Array.isArray(data)) await migrateCentrosCusto(data);
-          break;
-        case 'cf_agenda_semanal':
-          if (Array.isArray(data)) await migrateAgendaTasks(data);
-          break;
-        default:
-          return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
+
+      const migrator = MIGRATORS[collection];
+      if (!migrator) {
+        return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
+      if (Array.isArray(data)) await migrator(data);
 
       console.log(`[Chunked Migration] ✅ Sincronização da coleção ${collection} concluída com sucesso.`);
 
@@ -1709,25 +1650,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     } else {
       console.log('Iniciando migração de backup (monolítico) para o PostgreSQL...');
-      
-      if (Array.isArray(data.cf_empresas)) await migrateEmpresas(data.cf_empresas);
-      if (Array.isArray(data.cf_users)) await migrateUsers(data.cf_users);
-      if (Array.isArray(data.cf_unidades)) await migrateUnidades(data.cf_unidades);
-      if (Array.isArray(data.cf_plano_contas)) await migratePlanoContas(data.cf_plano_contas);
-      if (Array.isArray(data.cf_portadores)) await migratePortadores(data.cf_portadores);
-      if (Array.isArray(data.cf_clientes)) await migrateClientes(data.cf_clientes);
-      if (Array.isArray(data.cf_lancamentos)) await migrateLancamentos(data.cf_lancamentos);
-      if (Array.isArray(data.cf_endividamentos)) await migrateEndividamentos(data.cf_endividamentos);
-      if (Array.isArray(data.cf_atas)) await migrateAtas(data.cf_atas);
-      if (Array.isArray(data.cf_indicadores)) await migrateIndicadores(data.cf_indicadores);
-      if (Array.isArray(data.cf_orcamentos)) await migrateOrcamentos(data.cf_orcamentos);
-      if (Array.isArray(data.cf_nfse)) await migrateNfse(data.cf_nfse);
-      if (Array.isArray(data.cf_situacao_fiscal)) await migrateSituacaoFiscal(data.cf_situacao_fiscal);
-      if (Array.isArray(data.cf_transaction_patterns)) await migrateTransactionPatterns(data.cf_transaction_patterns);
-      if (Array.isArray(data.cf_atividades_log)) await migrateAtividades(data.cf_atividades_log);
-      if (Array.isArray(data.cf_audit_logs)) await migrateAuditLogs(data.cf_audit_logs);
-      if (Array.isArray(data.cf_centros_custo)) await migrateCentrosCusto(data.cf_centros_custo);
-      if (Array.isArray(data.cf_agenda_semanal)) await migrateAgendaTasks(data.cf_agenda_semanal);
+
+      for (const [key, migrator] of Object.entries(MIGRATORS)) {
+        if (Array.isArray(data[key])) await migrator(data[key]);
+      }
 
       console.log('✅ Migração de backup (monolítico) concluída com sucesso!');
       return NextResponse.json({ success: true });

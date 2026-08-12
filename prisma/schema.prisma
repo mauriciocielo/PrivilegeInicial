@@ -347,3 +347,12 @@ model AgendaTask {
 
   @@index([empresaId])
 }
+
+model InteligenciaDoc {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  size      Int
+  content   String
+  createdAt DateTime @default(now())
+}

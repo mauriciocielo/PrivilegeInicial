@@ -3,6 +3,7 @@
 // ============================================================
 
 import { idbGetAllLancamentos, idbSaveAllLancamentos, idbPutLancamento, idbDeleteLancamento, migrateFromLocalStorage } from './idb';
+import { SYNC_COLLECTION_KEYS } from './sync-registry';
 
 export interface User {
   id: string;
@@ -1878,26 +1879,10 @@ class DataStore {
   }
 
   exportBackup(): string {
-    return this.exportPartialBackup([
-      'cf_users',
-      'cf_empresas',
-      'cf_plano_contas',
-      'cf_portadores',
-      'cf_lancamentos',
-      'cf_endividamentos',
-      'cf_indicadores',
-      'cf_orcamentos',
-      'cf_atas',
-      'cf_situacao_fiscal',
-      'cf_transaction_patterns',
-      'cf_clientes',
-      'cf_nfse',
-      'cf_inteligencia_docs',
-      'cf_atividades_log',
-      'cf_audit_logs',
-      'cf_centros_custo',
-      'cf_agenda_semanal'
-    ]);
+    // Deriva da mesma lista única de coleções sincronizáveis usada pelo resto do
+    // pipeline (ver lib/sync-registry.ts) — evita que o backup completo "esqueça"
+    // uma coleção que já existe nos outros pontos de sincronização.
+    return this.exportPartialBackup(SYNC_COLLECTION_KEYS);
   }
 
   exportBackupForSync(): string {
