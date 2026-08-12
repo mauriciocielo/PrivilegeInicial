@@ -102,6 +102,36 @@ async function migrateEmpresas(empresas: any[]) {
   }
 }
 
+async function migrateAuditLogs(logs: any[]) {
+  console.log(`Migrando ${logs.length} logs de auditoria...`);
+
+  for (const log of logs) {
+    if (!log.id) continue;
+    try {
+      await db.auditLog.upsert({
+        where: { id: String(log.id) },
+        update: {
+          empresaId: String(log.empresaId || 'empresa_default'),
+          timestamp: String(log.timestamp || new Date().toISOString()),
+          userName: String(log.userName || 'Sistema/BPO'),
+          action: String(log.action || ''),
+          details: String(log.details || ''),
+        },
+        create: {
+          id: String(log.id),
+          empresaId: String(log.empresaId || 'empresa_default'),
+          timestamp: String(log.timestamp || new Date().toISOString()),
+          userName: String(log.userName || 'Sistema/BPO'),
+          action: String(log.action || ''),
+          details: String(log.details || ''),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro no Log de Auditoria (ID: ${log.id}), pulando este item e continuando o lote:`, err);
+    }
+  }
+}
+
 async function migrateAtividades(atividades: any[]) {
   console.log(`Migrando ${atividades.length} atividades...`);
   
@@ -1313,6 +1343,21 @@ export async function GET(request: Request) {
       });
     }
 
+    if (requestedCollection === 'cf_audit_logs') {
+      const cf_audit_logs = await db.auditLog.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: 1000,
+      });
+      return NextResponse.json({
+        version: '7',
+        isPartial: true,
+        timestamp: new Date().toISOString(),
+        data: {
+          cf_audit_logs
+        }
+      });
+    }
+
     const [
       cf_empresas,
       cf_users,
@@ -1328,7 +1373,8 @@ export async function GET(request: Request) {
       cf_situacao_fiscal,
       cf_transaction_patterns,
       cf_nfse,
-      cf_atividades_log
+      cf_atividades_log,
+      cf_audit_logs
     ] = await Promise.all([
       db.empresa.findMany({
         select: {
@@ -1390,6 +1436,7 @@ export async function GET(request: Request) {
       db.transactionPattern.findMany(),
       db.nfsE.findMany(),
       db.atividade.findMany(),
+      db.auditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 1000 }),
     ]);
 
     const cf_endividamentos = cf_endividamentosRaw.map(e => ({
@@ -1449,7 +1496,8 @@ export async function GET(request: Request) {
       cf_atividades_log: cf_atividades_log.map(a => ({
         ...a,
         localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
-      }))
+      })),
+      cf_audit_logs
     };
 
     return NextResponse.json({
@@ -1522,6 +1570,9 @@ export async function POST(request: Request) {
         case 'cf_atividades_log':
           if (Array.isArray(data)) await migrateAtividades(data);
           break;
+        case 'cf_audit_logs':
+          if (Array.isArray(data)) await migrateAuditLogs(data);
+          break;
         default:
           return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
@@ -1558,6 +1609,7 @@ export async function POST(request: Request) {
       if (Array.isArray(data.cf_situacao_fiscal)) await migrateSituacaoFiscal(data.cf_situacao_fiscal);
       if (Array.isArray(data.cf_transaction_patterns)) await migrateTransactionPatterns(data.cf_transaction_patterns);
       if (Array.isArray(data.cf_atividades_log)) await migrateAtividades(data.cf_atividades_log);
+      if (Array.isArray(data.cf_audit_logs)) await migrateAuditLogs(data.cf_audit_logs);
 
       console.log('✅ Migração de backup (monolítico) concluída com sucesso!');
       return NextResponse.json({ success: true });

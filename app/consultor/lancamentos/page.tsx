@@ -4,7 +4,13 @@ import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, t
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import DateRangeFilter from '../../../components/DateRangeFilter';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
+import LancamentosInsights from '../../../components/LancamentosInsights';
+import {
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Copy, Search, X,
+  TrendingUp, TrendingDown, Activity, Hash, ListFilter, Target, RefreshCw,
+  ArrowLeftRight, CheckCheck, Trash2, BarChart3, FolderUp, Plus, FileSpreadsheet,
+  AlertTriangle, Printer, ChevronDown, Wallet, Receipt,
+} from 'lucide-react';
 
 type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
@@ -17,9 +23,10 @@ type CardImportRow = {
 
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-const currentMonthStr = () => {
+const currentMonthRange = (): [string, string] => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const toISO = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  return [toISO(new Date(d.getFullYear(), d.getMonth(), 1)), toISO(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
 };
 
 const parseMoney = (value: unknown): number => {
@@ -74,7 +81,10 @@ export default function LancamentosPage() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const [filtros, setFiltros] = useState<Filtros & { centroCustoId?: string }>({ tipo: '', status: '', portadorId: '', search: '', mes: currentMonthStr(), semPlano: false, centroCustoId: '', planoContaId: '', dataIni: '', dataFim: '' });
+  const [filtros, setFiltros] = useState<Filtros & { centroCustoId?: string }>(() => {
+    const [ini, fim] = currentMonthRange();
+    return { tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, centroCustoId: '', planoContaId: '', dataIni: ini, dataFim: fim };
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [showModal, setShowModal] = useState(false);
@@ -907,16 +917,6 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
     }
   };
 
-  const meses = useMemo(() => {
-    const list: string[] = [];
-    const hoje = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-    return list;
-  }, []);
-
   const modalPlanoContas = useMemo(() => {
     if (form.tipoTransacao === 'transferencia') {
       // Inclui contas cujo tipo é transferência OU cujo código começa com '6'
@@ -941,79 +941,82 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={selectMissing} title="Selecionar todos os lançamentos sem plano de contas configurado">
-            🎯 Selecionar s/ Plano
+            <Target size={14} /> Selecionar s/ Plano
           </button>
           {selectedIds.length > 0 && (
             <>
               <button className="btn btn-secondary" onClick={() => { setBulkMode('reclassificar'); setReclassContaId(''); setReclassContaSearch(''); setReclassPortadorId(''); setTransferDate(new Date().toISOString().split('T')[0]); setShowReclassModal(true); }}>
-                🔄 Ações em Lote ({selectedIds.length})
+                <RefreshCw size={14} /> Ações em Lote ({selectedIds.length})
               </button>
               <button className="btn btn-primary" onClick={() => { setBulkMode('transferir'); setReclassContaId(''); setReclassContaSearch(''); setReclassPortadorId(''); setTransferDate(new Date().toISOString().split('T')[0]); setShowReclassModal(true); }}>
-                ⇄ Transferir em Lote
+                <ArrowLeftRight size={14} /> Transferir em Lote
               </button>
               <button className="btn btn-secondary" onClick={handleBulkMarkAsPaid}>
-                ✅ Marcar como Pago ({selectedIds.length})
+                <CheckCheck size={14} /> Marcar como Pago ({selectedIds.length})
               </button>
               <button className="btn btn-danger" onClick={handleBulkDelete}>
-                🗑️ Excluir ({selectedIds.length})
+                <Trash2 size={14} /> Excluir ({selectedIds.length})
               </button>
             </>
           )}
           <div style={{ position: 'relative' }}>
             <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
-              📊 Exportar ▾
+              <BarChart3 size={14} /> Exportar <ChevronDown size={12} />
             </button>
             {showExportMenu && (
-              <div 
-                style={{ 
-                  position: 'absolute', 
-                  right: 0, 
-                  top: '100%', 
+              <div
+                className="dropdown-anim-down"
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '100%',
                   marginTop: 6,
-                  background: 'var(--bg-card)', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: 8, 
-                  boxShadow: 'var(--shadow-md)', 
-                  padding: 6, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: 4, 
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  boxShadow: 'var(--shadow-md)',
+                  padding: 6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
                   zIndex: 100,
                   minWidth: 200
                 }}
               >
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
                   onClick={() => { handleExportToExcel(); setShowExportMenu(false); }}
                 >
-                  🟢 Baixar Excel (.xlsx)
+                  <FileSpreadsheet size={13} /> Baixar Excel (.xlsx)
                 </button>
                 <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
                   onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
                 >
-                  ⚠️ Exportar Duvidosos (CSV)
+                  <AlertTriangle size={13} /> Exportar Duvidosos (CSV)
                 </button>
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }} 
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
                   onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
                 >
-                  🖨️ Imprimir Duvidosos (PDF)
+                  <Printer size={13} /> Imprimir Duvidosos (PDF)
                 </button>
               </div>
             )}
           </div>
-          <button className="btn btn-secondary" onClick={openCardImport}>📂 Importar Caixa/Fatura</button>
-          <button className="btn btn-primary" onClick={openNew}>＋ Novo Lançamento</button>
+          <button className="btn btn-secondary" onClick={openCardImport}><FolderUp size={14} /> Importar Caixa/Fatura</button>
+          <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Novo Lançamento</button>
         </div>
       </div>
 
       <div className="page-body">
         <GeminiQuickEntry empresaId={empresaId} onSuccess={() => load(empresaId)} />
+
+        <LancamentosInsights lancamentos={filtered} planoContas={planoContas} onSelectMissing={selectMissing} />
 
         {/* Quick Tabs for Accounts Payable/Receivable */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
@@ -1022,45 +1025,45 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: '', tipo: '' }))}
           >
-            📋 Todos os Lançamentos
+            <ListFilter size={13} /> Todos os Lançamentos
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'receita') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'receita' }))}
           >
-            💰 Contas a Receber (Pendentes)
+            <Wallet size={13} /> Contas a Receber (Pendentes)
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'despesa') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'despesa' }))}
           >
-            💸 Contas a Pagar (Pendentes)
+            <Receipt size={13} /> Contas a Pagar (Pendentes)
           </button>
         </div>
 
         {/* Totais */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card green">
-            <div className="stat-icon green">↑</div>
+            <div className="stat-icon green"><TrendingUp size={20} /></div>
             <div className="stat-label">Receitas (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totRec)}</div>
           </div>
           <div className="stat-card red">
-            <div className="stat-icon red">↓</div>
+            <div className="stat-icon red"><TrendingDown size={20} /></div>
             <div className="stat-label">Despesas (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totDesp)}</div>
           </div>
           <div className={`stat-card ${totRec - totDesp >= 0 ? 'blue' : 'red'}`}>
-            <div className={`stat-icon ${totRec - totDesp >= 0 ? 'blue' : 'red'}`}>≈</div>
+            <div className={`stat-icon ${totRec - totDesp >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
             <div className="stat-label">Resultado</div>
             <div className="stat-value" style={{ fontSize: 18, color: totRec - totDesp >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {fmt.currency(totRec - totDesp)}
             </div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">#</div>
+            <div className="stat-icon purple"><Hash size={20} /></div>
             <div className="stat-label">Total de Registros</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{filtered.length}</div>
           </div>
@@ -1070,7 +1073,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         <div className="card card-sm" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div className="search-bar" style={{ position: 'relative' }}>
-              <span>🔍</span>
+              <Search size={14} />
               <input
                 placeholder="Buscar descrição..."
                 value={filtros.search}
@@ -1088,7 +1091,6 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: '12px',
                     color: 'var(--text-muted)',
                     padding: '4px',
                     display: 'flex',
@@ -1098,21 +1100,10 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   }}
                   title="Limpar busca"
                 >
-                  ✕
+                  <X size={12} />
                 </button>
               )}
             </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.mes} onChange={e => setFiltros(f => ({ ...f, mes: e.target.value, dataIni: '', dataFim: '' }))} title="Mês Rápido">
-                <option value="">Filtro rápido (Mês)</option>
-                {meses.map(m => {
-                  const [y, mo] = m.split('-');
-                  const d = new Date(Number(y), Number(mo) - 1, 1);
-                  return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
-                })}
-              </select>
-            </div>
-            
             <DateRangeFilter
               ini={filtros.dataIni}
               fim={filtros.dataFim}
@@ -1148,11 +1139,13 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingBottom: '8px' }}>
               <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
-              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>🚨 Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})</label>
+              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <AlertTriangle size={12} color="var(--yellow)" /> Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})
+              </label>
             </div>
             {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano || filtros.planoContaId || filtros.dataIni || filtros.dataFim) && (
               <button className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, centroCustoId: '', planoContaId: '', dataIni: '', dataFim: '' })}>
-                ✕ Limpar Restrições
+                <X size={13} /> Limpar Restrições
               </button>
             )}
           </div>

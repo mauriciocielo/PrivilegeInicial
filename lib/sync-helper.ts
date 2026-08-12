@@ -39,7 +39,8 @@ export async function syncBackupInChunks(
       { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 25 },
       { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 25 },
       { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 25 },
-      { key: 'cf_atividades_log', label: 'Atividades e Tempo', chunkSize: 25 }
+      { key: 'cf_atividades_log', label: 'Atividades e Tempo', chunkSize: 25 },
+      { key: 'cf_audit_logs', label: 'Log de Auditoria', chunkSize: 25 }
     ];
 
     for (const col of collectionsOrder) {

@@ -310,3 +310,15 @@ model Atividade {
   fotoFim       String?
   createdAt     DateTime @default(now())
 }
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  empresaId String
+  timestamp String
+  userName  String
+  action    String
+  details   String
+  createdAt DateTime @default(now())
+
+  @@index([empresaId])
+}

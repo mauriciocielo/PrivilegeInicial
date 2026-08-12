@@ -1892,7 +1892,9 @@ class DataStore {
       'cf_transaction_patterns',
       'cf_clientes',
       'cf_nfse',
-      'cf_inteligencia_docs'
+      'cf_inteligencia_docs',
+      'cf_atividades_log',
+      'cf_audit_logs'
     ]);
   }
 

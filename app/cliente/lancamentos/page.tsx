@@ -4,6 +4,7 @@ import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, u
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import DateRangeFilter from '../../../components/DateRangeFilter';
+import LancamentosInsights from '../../../components/LancamentosInsights';
 
 type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
@@ -855,15 +856,6 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
     }
   };
 
-  const meses = useMemo(() => {
-    const list: string[] = [];
-    const hoje = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-    return list;
-  }, []);
 
   const modalPlanoContas = useMemo(() => {
     if (form.tipoTransacao === 'transferencia') {
@@ -963,6 +955,8 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       <div className="page-body">
         <GeminiQuickEntry empresaId={empresaId} onSuccess={() => load(empresaId)} />
 
+        <LancamentosInsights lancamentos={filtered} planoContas={planoContas} onSelectMissing={selectMissing} />
+
         {/* Quick Tabs for Accounts Payable/Receivable */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
           <button
@@ -1050,17 +1044,6 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 </button>
               )}
             </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.mes} onChange={e => setFiltros(f => ({ ...f, mes: e.target.value, dataIni: '', dataFim: '' }))} title="Mês Rápido">
-                <option value="">Filtro rápido (Mês)</option>
-                {meses.map(m => {
-                  const [y, mo] = m.split('-');
-                  const d = new Date(Number(y), Number(mo) - 1, 1);
-                  return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
-                })}
-              </select>
-            </div>
-            
             <DateRangeFilter
               ini={filtros.dataIni}
               fim={filtros.dataFim}

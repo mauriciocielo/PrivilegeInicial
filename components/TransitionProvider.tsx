@@ -171,7 +171,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
       // Ignora chaves temporárias ou não relevantes
       const key = event?.detail?.key;
-      if (!key || key === 'cf_current_user' || key === 'cf_postgres_synced' || key === 'cf_sync_in_progress' || key === 'cf_audit_logs') return;
+      if (!key || key === 'cf_current_user' || key === 'cf_postgres_synced' || key === 'cf_sync_in_progress') return;
 
       // Lista de coleções válidas para sincronização automática
       const validCollections = [
@@ -188,7 +188,8 @@ export default function TransitionProvider({ children }: { children: React.React
         'cf_nfse',
         'cf_situacao_fiscal',
         'cf_transaction_patterns',
-        'cf_atividades_log'
+        'cf_atividades_log',
+        'cf_audit_logs'
       ];
       if (!validCollections.includes(key)) return;
 
@@ -276,6 +277,19 @@ export default function TransitionProvider({ children }: { children: React.React
     socket.on('disconnect', () => {
       console.log('🔌 Desconectado do servidor WebSocket');
     });
+
+    // Em celulares, a aba em segundo plano (app trocado / tela bloqueada) pode
+    // derrubar a conexão WebSocket. Ao voltar a ficar visível, reconecta na hora
+    // em vez de esperar o backoff automático do socket.io (que pode demorar).
+    const handleVisibleReconnect = () => {
+      if (document.visibilityState === 'visible' && socket && !socket.connected) {
+        console.log('🔌 Aba voltou a ficar visível e o socket estava desconectado — reconectando...');
+        socket.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibleReconnect);
+    window.addEventListener('focus', handleVisibleReconnect);
+    window.addEventListener('pageshow', handleVisibleReconnect);
 
     // Ouvinte para qualquer atualização de coleção em tempo real
     socket.on('colecao_atualizada', (payload: any) => {
@@ -399,6 +413,9 @@ export default function TransitionProvider({ children }: { children: React.React
     return () => {
       console.log('🔌 Desconectando e limpando socket...');
       window.removeEventListener('cfMapBroadcast', handleMapBroadcast as any);
+      document.removeEventListener('visibilitychange', handleVisibleReconnect);
+      window.removeEventListener('focus', handleVisibleReconnect);
+      window.removeEventListener('pageshow', handleVisibleReconnect);
       socket.disconnect();
     };
   }, [pathname === '/login']);
@@ -415,6 +432,7 @@ export default function TransitionProvider({ children }: { children: React.React
     if (path.includes('/orcamento')) return 'cf_orcamentos';
     if (path.includes('/empresas')) return 'cf_empresas';
     if (path.includes('/usuarios')) return 'cf_users';
+    if (path.includes('/administrativo') || path.includes('/configuracoes-avancadas')) return 'cf_audit_logs';
     return null;
   };
 
@@ -426,8 +444,8 @@ export default function TransitionProvider({ children }: { children: React.React
     if (!collection) return;
 
     let lastSyncTime = '';
-    
-    const pollInterval = setInterval(async () => {
+
+    const tick = async (force = false) => {
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       if (hasPendingChangesRef.current) return;
       // Checagem durável (sobrevive a refresh): não sobrescreve esta coleção
@@ -460,8 +478,9 @@ export default function TransitionProvider({ children }: { children: React.React
             }
           }
         } else {
-          if (Math.random() > 0.2) return; // ~1 a cada 5 ciclos (~15s)
-          
+          // Ao forçar (ex: aba voltou a ficar visível), não pula o ciclo aleatoriamente.
+          if (!force && Math.random() > 0.2) return; // ~1 a cada 5 ciclos (~15s)
+
           const res = await fetch(`/api/migrate-backup?collection=${collection}&t=${Date.now()}`, { cache: 'no-store' });
           if (!res.ok) return;
           const backup = await res.json();
@@ -482,9 +501,27 @@ export default function TransitionProvider({ children }: { children: React.React
       } catch (err) {
         console.error('Erro no polling de tempo real:', err);
       }
-    }, 3000);
+    };
 
-    return () => clearInterval(pollInterval);
+    const pollInterval = setInterval(() => tick(), 3000);
+
+    // Celulares suspendem a aba (e param os timers) quando o app vai para
+    // segundo plano ou a tela bloqueia. Ao voltar, o próximo "tick" do
+    // setInterval pode demorar — força uma checagem imediata nesse momento
+    // para não parecer que "não atualiza no celular".
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') tick(true);
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleVisible);
+    window.addEventListener('pageshow', handleVisible);
+
+    return () => {
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
+      window.removeEventListener('pageshow', handleVisible);
+    };
   }, [pathname]);
 
   useEffect(() => {
