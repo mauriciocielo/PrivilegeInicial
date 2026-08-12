@@ -1894,7 +1894,9 @@ class DataStore {
       'cf_nfse',
       'cf_inteligencia_docs',
       'cf_atividades_log',
-      'cf_audit_logs'
+      'cf_audit_logs',
+      'cf_centros_custo',
+      'cf_agenda_semanal'
     ]);
   }
 

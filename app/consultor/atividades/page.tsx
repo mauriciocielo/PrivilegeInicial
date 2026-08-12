@@ -261,6 +261,7 @@ export default function AtividadesTempoPage() {
             return t;
           });
           localStorage.setItem('cf_agenda_semanal', JSON.stringify(updatedTasks));
+          window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_agenda_semanal' } }));
           setAgendaTasks(agendaTasks.filter(t => t.id !== selectedAgendaTaskId));
         } catch (e) {}
       }

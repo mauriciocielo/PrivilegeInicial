@@ -53,6 +53,41 @@ export default function TransitionProvider({ children }: { children: React.React
     hasPendingChangesRef.current = readPendingKeys().length > 0;
   }, []);
 
+  // Envio de última chance ao sair/trocar de app: o auto-salvamento normal espera
+  // ~1s (debounce) antes de tentar enviar — se o usuário fechar a aba, trocar de
+  // app no celular ou bloquear a tela nesse meio tempo, a alteração fica só local
+  // até a próxima sincronização. Aqui, tentamos mandar na hora (best-effort, via
+  // sendBeacon — não bloqueia o fechamento da página). Não substitui a rede de
+  // segurança principal (as chaves continuam marcadas como pendentes até o
+  // servidor confirmar), só reduz a janela em que os dados ficam só no aparelho.
+  useEffect(() => {
+    const flushOnLeave = () => {
+      const pending = readPendingKeys();
+      if (pending.length === 0) return;
+      if (typeof navigator === 'undefined' || !navigator.sendBeacon) return;
+      try {
+        const backupData = store.exportPartialBackup(pending);
+        const blob = new Blob([backupData], { type: 'application/json' });
+        navigator.sendBeacon('/api/migrate-backup', blob);
+      } catch {
+        // Best-effort apenas — se falhar, a rede de segurança principal
+        // (flush ao carregar a próxima sessão) ainda cobre esses dados.
+      }
+    };
+
+    const handleVisibilityHidden = () => {
+      if (document.visibilityState === 'hidden') flushOnLeave();
+    };
+
+    window.addEventListener('pagehide', flushOnLeave);
+    document.addEventListener('visibilitychange', handleVisibilityHidden);
+
+    return () => {
+      window.removeEventListener('pagehide', flushOnLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityHidden);
+    };
+  }, []);
+
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
     const syncDb = async () => {
@@ -189,7 +224,9 @@ export default function TransitionProvider({ children }: { children: React.React
         'cf_situacao_fiscal',
         'cf_transaction_patterns',
         'cf_atividades_log',
-        'cf_audit_logs'
+        'cf_audit_logs',
+        'cf_centros_custo',
+        'cf_agenda_semanal'
       ];
       if (!validCollections.includes(key)) return;
 
@@ -433,6 +470,8 @@ export default function TransitionProvider({ children }: { children: React.React
     if (path.includes('/empresas')) return 'cf_empresas';
     if (path.includes('/usuarios')) return 'cf_users';
     if (path.includes('/administrativo') || path.includes('/configuracoes-avancadas')) return 'cf_audit_logs';
+    if (path.includes('/centros-custo')) return 'cf_centros_custo';
+    if (path.includes('/agenda')) return 'cf_agenda_semanal';
     return null;
   };
 

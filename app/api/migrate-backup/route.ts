@@ -96,8 +96,8 @@ async function migrateEmpresas(empresas: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na Empresa:', e, err);
-      throw new Error(`Erro na Empresa (ID: ${e.id}): ${(err as Error).message}`);
+      console.error(`Erro na Empresa (ID: ${e.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -128,6 +128,112 @@ async function migrateAuditLogs(logs: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Log de Auditoria (ID: ${log.id}), pulando este item e continuando o lote:`, err);
+    }
+  }
+}
+
+async function migrateCentrosCusto(centros: any[]) {
+  console.log(`Migrando ${centros.length} centros de custo...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const cc of centros) {
+    if (!cc.id) continue;
+    try {
+      const empresaId = String(cc.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      await db.centroCusto.upsert({
+        where: { id: String(cc.id) },
+        update: {
+          empresaId: empresaId,
+          nome: String(cc.nome || ''),
+          codigo: cc.codigo ? String(cc.codigo) : null,
+          ativo: cc.ativo === undefined ? true : Boolean(cc.ativo),
+        },
+        create: {
+          id: String(cc.id),
+          empresaId: empresaId,
+          nome: String(cc.nome || ''),
+          codigo: cc.codigo ? String(cc.codigo) : null,
+          ativo: cc.ativo === undefined ? true : Boolean(cc.ativo),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro no Centro de Custo (ID: ${cc.id}), pulando este item e continuando o lote:`, err);
+    }
+  }
+}
+
+async function migrateAgendaTasks(tasks: any[]) {
+  console.log(`Migrando ${tasks.length} tarefas da agenda...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const t of tasks) {
+    if (!t.id) continue;
+    try {
+      const empresaId = String(t.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      await db.agendaTask.upsert({
+        where: { id: String(t.id) },
+        update: {
+          title: String(t.title || ''),
+          empresaId: empresaId,
+          consultorId: String(t.consultorId || ''),
+          horario: String(t.horario || ''),
+          day: String(t.day || ''),
+          completed: Boolean(t.completed),
+          recurrent: Boolean(t.recurrent),
+        },
+        create: {
+          id: String(t.id),
+          title: String(t.title || ''),
+          empresaId: empresaId,
+          consultorId: String(t.consultorId || ''),
+          horario: String(t.horario || ''),
+          day: String(t.day || ''),
+          completed: Boolean(t.completed),
+          recurrent: Boolean(t.recurrent),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro na Tarefa da Agenda (ID: ${t.id}), pulando este item e continuando o lote:`, err);
     }
   }
 }
@@ -254,8 +360,7 @@ async function migrateUsers(users: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro no Usuário:', u, err);
-      throw new Error(`Erro no Usuário (Email: ${u.email}): ${(err as Error).message}`);
+      console.error(`Erro no Usuário (Email: ${u.email}), pulando este item e continuando o lote:`, err);
     }
   }
 }
@@ -320,8 +425,8 @@ async function migrateUnidades(unidades: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na Unidade:', uni, err);
-      throw new Error(`Erro na Unidade (ID: ${uni.id}): ${(err as Error).message}`);
+      console.error(`Erro na Unidade (ID: ${uni.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -411,8 +516,7 @@ async function migratePlanoContas(planoContas: any[]) {
         });
         console.warn(`⚠️ PlanoConta ${pc.id}: salvo SEM parentId (FK inválido para parentId=${pc.parentId}). Ignorando hierarquia.`);
       } catch (fallbackErr) {
-        console.error('Erro no PlanoConta (Passo único):', pc, fallbackErr);
-        throw new Error(`Erro no PlanoConta (ID: ${pc.id}): ${(fallbackErr as Error).message}`);
+        console.error(`Erro no PlanoConta (ID: ${pc.id}), pulando este item e continuando o lote:`, fallbackErr);
       }
     }
   }
@@ -473,8 +577,8 @@ async function migratePortadores(portadores: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro no Portador:', p, err);
-      throw new Error(`Erro no Portador (ID: ${p.id}): ${(err as Error).message}`);
+      console.error(`Erro no Portador (ID: ${p.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -548,8 +652,8 @@ async function migrateClientes(clientes: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro no Cliente:', c, err);
-      throw new Error(`Erro no Cliente (ID: ${c.id}): ${(err as Error).message}`);
+      console.error(`Erro no Cliente (ID: ${c.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -845,8 +949,8 @@ async function migrateEndividamentos(endividamentos: any[]) {
         }
       }
     } catch (err) {
-      console.error('Erro no Endividamento:', end, err);
-      throw new Error(`Erro no Endividamento (ID: ${end.id}): ${(err as Error).message}`);
+      console.error(`Erro no Endividamento (ID: ${end.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -900,8 +1004,8 @@ async function migrateAtas(atas: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na Ata:', ata, err);
-      throw new Error(`Erro na Ata (ID: ${ata.id}): ${(err as Error).message}`);
+      console.error(`Erro na Ata (ID: ${ata.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -953,8 +1057,8 @@ async function migrateIndicadores(indicadores: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro no Indicador:', ind, err);
-      throw new Error(`Erro no Indicador (ID: ${ind.id}): ${(err as Error).message}`);
+      console.error(`Erro no Indicador (ID: ${ind.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -1037,8 +1141,8 @@ async function migrateOrcamentos(orcamentos: any[]) {
         }
       }
     } catch (err) {
-      console.error('Erro no Orçamento:', orc, err);
-      throw new Error(`Erro no Orçamento (ID: ${orc.id}): ${(err as Error).message}`);
+      console.error(`Erro no Orçamento (ID: ${orc.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -1162,8 +1266,8 @@ async function migrateNfse(nfse: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na NFS-e:', n, err);
-      throw new Error(`Erro na NFS-e (ID: ${n.id}): ${(err as Error).message}`);
+      console.error(`Erro na NFS-e (ID: ${n.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -1213,8 +1317,8 @@ async function migrateSituacaoFiscal(situacaoFiscal: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na Situação Fiscal:', sf, err);
-      throw new Error(`Erro na Situação Fiscal (ID: ${sf.id}): ${(err as Error).message}`);
+      console.error(`Erro na Situação Fiscal (ID: ${sf.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -1284,8 +1388,8 @@ async function migrateTransactionPatterns(patterns: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro no Padrão de Transação:', tp, err);
-      throw new Error(`Erro no Padrão de Transação (ID: ${tp.id}): ${(err as Error).message}`);
+      console.error(`Erro no Padrão de Transação (ID: ${tp.id}), pulando este item e continuando o lote:`, err);
+      continue;
     }
   }
 }
@@ -1374,7 +1478,9 @@ export async function GET(request: Request) {
       cf_transaction_patterns,
       cf_nfse,
       cf_atividades_log,
-      cf_audit_logs
+      cf_audit_logs,
+      cf_centros_custo,
+      cf_agenda_semanal
     ] = await Promise.all([
       db.empresa.findMany({
         select: {
@@ -1437,6 +1543,8 @@ export async function GET(request: Request) {
       db.nfsE.findMany(),
       db.atividade.findMany(),
       db.auditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 1000 }),
+      db.centroCusto.findMany(),
+      db.agendaTask.findMany(),
     ]);
 
     const cf_endividamentos = cf_endividamentosRaw.map(e => ({
@@ -1497,7 +1605,9 @@ export async function GET(request: Request) {
         ...a,
         localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
       })),
-      cf_audit_logs
+      cf_audit_logs,
+      cf_centros_custo,
+      cf_agenda_semanal
     };
 
     return NextResponse.json({
@@ -1573,6 +1683,12 @@ export async function POST(request: Request) {
         case 'cf_audit_logs':
           if (Array.isArray(data)) await migrateAuditLogs(data);
           break;
+        case 'cf_centros_custo':
+          if (Array.isArray(data)) await migrateCentrosCusto(data);
+          break;
+        case 'cf_agenda_semanal':
+          if (Array.isArray(data)) await migrateAgendaTasks(data);
+          break;
         default:
           return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
@@ -1610,6 +1726,8 @@ export async function POST(request: Request) {
       if (Array.isArray(data.cf_transaction_patterns)) await migrateTransactionPatterns(data.cf_transaction_patterns);
       if (Array.isArray(data.cf_atividades_log)) await migrateAtividades(data.cf_atividades_log);
       if (Array.isArray(data.cf_audit_logs)) await migrateAuditLogs(data.cf_audit_logs);
+      if (Array.isArray(data.cf_centros_custo)) await migrateCentrosCusto(data.cf_centros_custo);
+      if (Array.isArray(data.cf_agenda_semanal)) await migrateAgendaTasks(data.cf_agenda_semanal);
 
       console.log('✅ Migração de backup (monolítico) concluída com sucesso!');
       return NextResponse.json({ success: true });

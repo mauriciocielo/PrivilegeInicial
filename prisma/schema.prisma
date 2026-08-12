@@ -322,3 +322,28 @@ model AuditLog {
 
   @@index([empresaId])
 }
+
+model CentroCusto {
+  id        String   @id @default(uuid())
+  empresaId String
+  nome      String
+  codigo    String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([empresaId])
+}
+
+model AgendaTask {
+  id          String   @id @default(uuid())
+  title       String
+  empresaId   String
+  consultorId String
+  horario     String
+  day         String
+  completed   Boolean  @default(false)
+  recurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([empresaId])
+}

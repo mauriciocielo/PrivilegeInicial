@@ -40,7 +40,9 @@ export async function syncBackupInChunks(
       { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 25 },
       { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 25 },
       { key: 'cf_atividades_log', label: 'Atividades e Tempo', chunkSize: 25 },
-      { key: 'cf_audit_logs', label: 'Log de Auditoria', chunkSize: 25 }
+      { key: 'cf_audit_logs', label: 'Log de Auditoria', chunkSize: 25 },
+      { key: 'cf_centros_custo', label: 'Centros de Custo', chunkSize: 25 },
+      { key: 'cf_agenda_semanal', label: 'Agenda Semanal', chunkSize: 25 }
     ];
 
     for (const col of collectionsOrder) {

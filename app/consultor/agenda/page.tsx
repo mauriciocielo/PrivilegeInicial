@@ -32,20 +32,26 @@ export default function AgendaPage() {
   });
 
   useEffect(() => {
-    setEmpresas(store.getEmpresas());
-    setUsers(store.getUsers().filter(u => u.role !== 'cliente')); // Mostrar apenas equipe
+    const load = () => {
+      setEmpresas(store.getEmpresas());
+      setUsers(store.getUsers().filter(u => u.role !== 'cliente')); // Mostrar apenas equipe
 
-    const saved = localStorage.getItem('cf_agenda_semanal');
-    if (saved) {
-      try {
-        setTasks(JSON.parse(saved));
-      } catch (e) {}
-    }
+      const saved = localStorage.getItem('cf_agenda_semanal');
+      if (saved) {
+        try {
+          setTasks(JSON.parse(saved));
+        } catch (e) {}
+      }
+    };
+    load();
+    window.addEventListener('cfDataChange', load);
+    return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
   const saveTasks = (updated: AgendaTask[]) => {
     setTasks(updated);
     localStorage.setItem('cf_agenda_semanal', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_agenda_semanal' } }));
   };
 
   const handleSaveTask = () => {
