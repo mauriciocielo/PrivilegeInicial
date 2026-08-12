@@ -4,6 +4,7 @@ import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, t
 import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import DateRangeFilter from '../../../components/DateRangeFilter';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
 
 type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
@@ -15,6 +16,11 @@ type CardImportRow = {
 };
 
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+const currentMonthStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
 
 const parseMoney = (value: unknown): number => {
   if (typeof value === 'number') return Math.abs(value);
@@ -68,7 +74,9 @@ export default function LancamentosPage() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  const [filtros, setFiltros] = useState<Filtros & { centroCustoId?: string }>({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, centroCustoId: '', planoContaId: '', dataIni: '', dataFim: '' });
+  const [filtros, setFiltros] = useState<Filtros & { centroCustoId?: string }>({ tipo: '', status: '', portadorId: '', search: '', mes: currentMonthStr(), semPlano: false, centroCustoId: '', planoContaId: '', dataIni: '', dataFim: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Lancamento | null>(null);
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
@@ -277,6 +285,15 @@ export default function LancamentosPage() {
     }).sort((a, b) => b.data.localeCompare(a.data));
   }, [lancamentos, filtros, planoContas]);
 
+  // Paginação — evita renderizar milhares de linhas de uma vez (lento e desnecessário).
+  useEffect(() => { setPage(1); }, [filtros, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => filtered.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [filtered, pageSafe, pageSize]
+  );
+
   const totRec = useMemo(() => filtered.filter(l => {
     if (l.planoContaId === 'transf') return false;
     const pc = planoContas.find(p => p.id === l.planoContaId);
@@ -339,6 +356,24 @@ export default function LancamentosPage() {
     } else {
       setForm({ ...l, tipoTransacao: l.tipo });
     }
+    setShowModal(true);
+  };
+
+  // Duplica um lançamento existente (data de hoje, sem anexo/nº doc) para agilizar
+  // o cadastro de lançamentos parecidos com um recorrente.
+  const handleDuplicate = (l: Lancamento) => {
+    if (l.planoContaId === 'transf') return;
+    setEditItem(null);
+    setContaSearch('');
+    setForm({
+      ...l,
+      id: undefined,
+      tipoTransacao: l.tipo,
+      data: new Date().toISOString().split('T')[0],
+      numeroDocumento: '',
+      attachmentName: undefined,
+      attachmentData: undefined,
+    });
     setShowModal(true);
   };
 
@@ -1156,11 +1191,11 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <p>Ajuste os filtros ou adicione um novo lançamento.</p>
                     </div>
                   </td></tr>
-                ) : filtered.map((l, idx) => {
+                ) : paginated.map((l, idx) => {
                   const pc = planoContas.find(p => p.id === l.planoContaId);
                   const port = portadores.find(p => p.id === l.portadorId);
-                  const nextLanc = filtered[idx + 1];
-                  const prevLanc = filtered[idx - 1];
+                  const nextLanc = paginated[idx + 1];
+                  const prevLanc = paginated[idx - 1];
 
                   const handleTurboNav = (e: React.KeyboardEvent, field: 'descricao' | 'planoContaId' | 'portadorId', currentVal: string) => {
                     const isSelect = field === 'planoContaId' || field === 'portadorId';
@@ -1360,6 +1395,11 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                             </button>
                           )}
                           <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
+                          {l.planoContaId !== 'transf' && (
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleDuplicate(l)} title="Duplicar (cria uma cópia com a data de hoje)">
+                              <Copy size={13} />
+                            </button>
+                          )}
                           <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir">🗑️</button>
                         </div>
                       </td>
@@ -1369,6 +1409,43 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </tbody>
             </table>
           </div>
+
+          {filtered.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, filtered.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong>
+                {selectedIds.length > 0 && ` · ${selectedIds.length} selecionados`}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <select
+                  className="form-control form-control-sm"
+                  value={pageSize}
+                  onChange={e => setPageSize(Number(e.target.value))}
+                  style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                  title="Itens por página"
+                >
+                  {[25, 50, 100, 200].map(n => <option key={n} value={n}>{n} / página</option>)}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(1)} title="Primeira página">
+                    <ChevronsLeft size={14} />
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} title="Página anterior">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
+                    Página {pageSafe} de {totalPages}
+                  </span>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} title="Próxima página">
+                    <ChevronRight size={14} />
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(totalPages)} title="Última página">
+                    <ChevronsRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

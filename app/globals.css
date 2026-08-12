@@ -817,6 +817,8 @@ textarea.form-control {
    ============================================================ */
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 68vh;
   border-radius: var(--radius);
   -webkit-overflow-scrolling: touch;
 }
@@ -829,6 +831,13 @@ table {
 thead tr {
   background: var(--bg-card2);
   border-bottom: 1.5px solid var(--border);
+}
+
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-card2);
 }
 
 [data-theme="dark"] thead tr {
