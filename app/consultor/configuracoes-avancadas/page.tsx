@@ -37,8 +37,16 @@ export default function ConfiguracoesAvancadasPage() {
     loadData(saved);
 
     const handler = (e: Event) => loadData((e as CustomEvent<string>).detail);
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id || '';
+      loadData(current);
+    };
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, [loadData]);
 
   const handleSalvarCofre = () => {

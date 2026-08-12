@@ -97,14 +97,20 @@ export default function EmpresasPage() {
   };
 
   useEffect(() => {
-    const empresas = store.getEmpresas();
-    setList(empresas);
-    // Mapeia quais empresas já possuem plano de contas
-    const mapa: Record<string, boolean> = {};
-    empresas.forEach(e => {
-      mapa[e.id] = store.getPlanoContas(e.id).length > 0;
-    });
-    setPlanosMap(mapa);
+    const load = () => {
+      const empresas = store.getEmpresas();
+      setList(empresas);
+      // Mapeia quais empresas já possuem plano de contas
+      const mapa: Record<string, boolean> = {};
+      empresas.forEach(e => {
+        mapa[e.id] = store.getPlanoContas(e.id).length > 0;
+      });
+      setPlanosMap(mapa);
+    };
+    load();
+    // Atualiza sozinho quando os dados mudam (localmente, via WebSocket ou sync).
+    window.addEventListener('cfDataChange', load);
+    return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
   const openNew = () => { 

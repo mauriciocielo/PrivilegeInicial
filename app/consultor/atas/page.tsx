@@ -25,8 +25,16 @@ export default function AtasConsultorPage() {
     loadData(saved);
 
     const handleEmpresaChange = (event: Event) => loadData((event as CustomEvent<string>).detail);
+    const handleDataChange = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+      loadData(current);
+    };
     window.addEventListener('empresaChange', handleEmpresaChange);
-    return () => window.removeEventListener('empresaChange', handleEmpresaChange);
+    window.addEventListener('cfDataChange', handleDataChange);
+    return () => {
+      window.removeEventListener('empresaChange', handleEmpresaChange);
+      window.removeEventListener('cfDataChange', handleDataChange);
+    };
   }, [loadData]);
 
   const sortedAtas = useMemo(() => [...atas].sort((a, b) => b.data.localeCompare(a.data)), [atas]);

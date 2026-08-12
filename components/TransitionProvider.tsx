@@ -13,6 +13,32 @@ if (typeof window !== 'undefined') {
   };
 }
 
+// Rastreio DURÁVEL (localStorage, sobrevive a refresh e a fechar a aba) de quais
+// coleções têm alterações locais ainda não confirmadas no servidor. Sem isso, um
+// refresh no meio de um envio (ex: import de OFX que falhou por payload grande)
+// fazia o app "esquecer" que havia dados locais pendentes e sobrescrevê-los com
+// a versão antiga do servidor — apagando o que o usuário acabou de inserir.
+const PENDING_SYNC_KEY = 'cf_pending_sync_keys';
+
+const readPendingKeys = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || '[]'); } catch { return []; }
+};
+
+const addPendingKeys = (keys: string[]) => {
+  if (typeof window === 'undefined') return;
+  const current = new Set(readPendingKeys());
+  keys.forEach(k => current.add(k));
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(Array.from(current)));
+};
+
+const removePendingKeys = (keys: string[]) => {
+  if (typeof window === 'undefined') return;
+  const current = new Set(readPendingKeys());
+  keys.forEach(k => current.delete(k));
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(Array.from(current)));
+};
+
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [displayChildren, setDisplayChildren] = useState(children);
@@ -21,11 +47,54 @@ export default function TransitionProvider({ children }: { children: React.React
   const hasPendingChangesRef = useRef(false);
   const socketRef = useRef<any>(null);
 
+  // Restaura o estado "há alterações pendentes" a partir do localStorage ao montar
+  // (o ref em memória não sobrevive a um refresh, mas o localStorage sim).
+  useEffect(() => {
+    hasPendingChangesRef.current = readPendingKeys().length > 0;
+  }, []);
+
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
     const syncDb = async () => {
       if (sessionStorage.getItem('cf_postgres_synced') === 'true') {
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
+        return;
+      }
+
+      // Se ficaram alterações locais não confirmadas no servidor de uma sessão
+      // anterior (ex: refresh no meio de um envio), tenta enviá-las ANTES de
+      // buscar/sobrescrever com os dados do servidor.
+      const leftoverPendingKeys = readPendingKeys();
+      let pendingFlushFailed = false;
+      if (leftoverPendingKeys.length > 0) {
+        console.warn(`⚠️ Encontradas alterações locais não sincronizadas de uma sessão anterior: ${leftoverPendingKeys.join(', ')}. Enviando antes de continuar...`);
+        try {
+          const backupData = store.exportPartialBackup(leftoverPendingKeys);
+          // Não deixa o carregamento da página travar indefinidamente se a rede
+          // estiver instável — depois de 10s, desiste por agora e tenta de novo depois.
+          const flushTimeout = new Promise<{ success: false; error: string }>((resolve) =>
+            setTimeout(() => resolve({ success: false, error: 'timeout' }), 10000)
+          );
+          const flushResult = await Promise.race([syncBackupInChunks(backupData, undefined, leftoverPendingKeys), flushTimeout]);
+          if (flushResult.success) {
+            removePendingKeys(leftoverPendingKeys);
+            console.log('☁️ Alterações pendentes de sessão anterior enviadas com sucesso.');
+          } else {
+            pendingFlushFailed = true;
+            console.error('❌ Falha ao enviar alterações pendentes:', flushResult.error);
+          }
+        } catch (e) {
+          pendingFlushFailed = true;
+          console.error('❌ Erro ao enviar alterações pendentes:', e);
+        }
+      }
+
+      if (pendingFlushFailed) {
+        // Não sobrescreve dados locais enquanto houver alterações não confirmadas
+        // no servidor — evita apagar o que o usuário acabou de inserir/importar.
+        console.warn('⚠️ Pulando sincronização inicial: existem alterações locais que ainda não foram confirmadas no servidor.');
+        sessionStorage.setItem('cf_postgres_synced', 'true');
+        window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
         return;
       }
 
@@ -123,9 +192,11 @@ export default function TransitionProvider({ children }: { children: React.React
       ];
       if (!validCollections.includes(key)) return;
 
-      // Sinaliza que há modificações locais aguardando envio
+      // Sinaliza que há modificações locais aguardando envio (em memória E de forma
+      // durável em localStorage, para sobreviver a um refresh no meio do envio).
       hasPendingChangesRef.current = true;
       pendingKeys.add(key);
+      addPendingKeys([key]);
 
       clearTimeout(timeoutId);
 
@@ -151,7 +222,8 @@ export default function TransitionProvider({ children }: { children: React.React
           if (syncResult.success) {
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
             hasPendingChangesRef.current = false;
-            
+            removePendingKeys(keysToSync);
+
             if (keysToSync.includes('cf_lancamentos')) store.pruneLancamentosAttachmentData();
             if (keysToSync.includes('cf_empresas')) store.pruneEmpresasPolicyData();
             if (keysToSync.includes('cf_atividades_log')) store.pruneAtividadesFotos();
@@ -166,12 +238,15 @@ export default function TransitionProvider({ children }: { children: React.React
             keysToSync.forEach(k => pendingKeys.add(k));
             console.error(`Erro ao auto-salvar no banco:`, syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+            // Continua tentando mesmo sem novas edições — não depende do usuário mexer de novo.
+            timeoutId = setTimeout(runSync, 10000);
           }
         } catch (err) {
           keysToSync.forEach(k => pendingKeys.add(k));
           console.error(`Erro ao auto-salvar no banco:`, err);
           window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
           sessionStorage.setItem('cf_sync_in_progress', 'false');
+          timeoutId = setTimeout(runSync, 10000);
         }
       };
 
@@ -206,11 +281,14 @@ export default function TransitionProvider({ children }: { children: React.React
     socket.on('colecao_atualizada', (payload: any) => {
       if (!payload || !payload.collection) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
+      // Ainda temos alterações locais não confirmadas para esta coleção — não
+      // sobrescreve com o que veio de fora, para não perder o que está pendente.
+      if (readPendingKeys().includes(payload.collection)) return;
 
       try {
         console.log(`🔌 WebSocket: Coleção ${payload.collection} atualizada via WS, sincronizando...`);
         sessionStorage.setItem('cf_sync_in_progress', 'true');
-        
+
         if (payload.triggerFetch) {
           fetch(`/api/migrate-backup?collection=${payload.collection}&t=${Date.now()}`, { cache: 'no-store' })
             .then(res => res.ok ? res.json() : null)
@@ -352,6 +430,9 @@ export default function TransitionProvider({ children }: { children: React.React
     const pollInterval = setInterval(async () => {
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       if (hasPendingChangesRef.current) return;
+      // Checagem durável (sobrevive a refresh): não sobrescreve esta coleção
+      // enquanto houver alterações locais dela ainda não confirmadas no servidor.
+      if (readPendingKeys().includes(collection)) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {

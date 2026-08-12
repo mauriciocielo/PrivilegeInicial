@@ -58,8 +58,13 @@ export default function UsuariosPage() {
   const [rawImageData, setRawImageData] = useState<string | null>(null);
 
   useEffect(() => {
-    setUsers(store.getUsers());
-    setEmpresas(store.getEmpresas());
+    const load = () => {
+      setUsers(store.getUsers());
+      setEmpresas(store.getEmpresas());
+    };
+    load();
+    window.addEventListener('cfDataChange', load);
+    return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
   const openNew = () => { 

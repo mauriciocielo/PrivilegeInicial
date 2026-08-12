@@ -149,8 +149,18 @@ export default function ConsultorDashboard() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
+    // Recarrega quando os dados mudam localmente, via WebSocket ou via sync com o servidor,
+    // para que o dashboard atualize sozinho sem precisar dar F5.
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+      load(current);
+    };
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, [load]);
 
   const [anoLabel, mesLabel] = mesSelecionado.split('-');

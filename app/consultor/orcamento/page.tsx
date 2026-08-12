@@ -54,8 +54,16 @@ export default function OrcamentoPage() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
     load(saved, mesSelecionado, mesesMedia);
     const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado, mesesMedia);
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+      load(current, mesSelecionado, mesesMedia);
+    };
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, [load, mesSelecionado, mesesMedia]);
 
   const calcMedia = (pcId: string) => {

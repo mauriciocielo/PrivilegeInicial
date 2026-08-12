@@ -34,8 +34,16 @@ export default function ClientesPage() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || '';
     if (saved) load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || '';
+      if (current) load(current);
+    };
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, []);
 
   const filtered = useMemo(() => {

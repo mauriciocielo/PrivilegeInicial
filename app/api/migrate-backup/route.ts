@@ -157,8 +157,7 @@ async function migrateAtividades(atividades: any[]) {
         }
       });
     } catch (err) {
-      console.error('Erro na Atividade:', at, err);
-      throw new Error(`Erro na Atividade (ID: ${at.id}): ${(err as Error).message}`);
+      console.error(`Erro na Atividade (ID: ${at.id}), pulando este item e continuando o lote:`, err);
     }
   }
 }
@@ -722,8 +721,11 @@ async function migrateLancamentos(lancamentos: any[]) {
         }
       }
     } catch (err) {
-      console.error('Erro no Lançamento:', l, err);
-      throw new Error(`Erro no Lançamento (ID: ${l.id}): ${(err as Error).message}`);
+      // Não aborta o lote inteiro por causa de UM lançamento malformado — isso
+      // fazia uma importação de 50 itens ser descartada por completo (e o
+      // cliente re-sincronizar do zero, apagando localmente o que tinha sido
+      // importado) quando só um item tinha um problema. Pula só o item ruim.
+      console.error(`Erro no Lançamento (ID: ${l.id}), pulando este item e continuando o lote:`, err);
     }
   }
 }

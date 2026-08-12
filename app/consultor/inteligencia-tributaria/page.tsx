@@ -167,8 +167,16 @@ export default function InteligenciaTributariaPage() {
     const saved = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id;
     if (saved) loadData(saved);
     const h = (e: Event) => loadData((e as CustomEvent).detail);
+    const dataChangeHandler = () => {
+      const current = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id;
+      if (current) loadData(current);
+    };
     window.addEventListener('empresaChange', h);
-    return () => window.removeEventListener('empresaChange', h);
+    window.addEventListener('cfDataChange', dataChangeHandler);
+    return () => {
+      window.removeEventListener('empresaChange', h);
+      window.removeEventListener('cfDataChange', dataChangeHandler);
+    };
   }, [loadData]);
 
   // NCM debounce search
