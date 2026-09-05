@@ -28,6 +28,9 @@ export async function syncBackupInChunks(
       return { success: false, error: 'Dados do backup ausentes.' };
     }
 
+    const lastSyncRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('cf_last_sync_timestamp') : null;
+    const lastSyncTime = lastSyncRaw ? new Date(lastSyncRaw).getTime() : 0;
+
     // Ordem de dependência das coleções (evita violação de FK ao criar registros
     // relacionados antes das empresas, por exemplo) — segue a ordem do registro.
     const collectionsOrder = SYNC_COLLECTIONS;
@@ -40,6 +43,15 @@ export async function syncBackupInChunks(
       if (!Array.isArray(items) || items.length === 0) {
         continue;
       }
+
+      // Delta Sync Filter: só enviar modificados pós último envio
+      items = items.filter(item => {
+        if (!lastSyncTime) return true; // full sync
+        const dTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+        return dTime >= lastSyncTime;
+      });
+
+      if (items.length === 0) continue;
       
       // Ordenação para garantir integridade pai/filho no Plano de Contas
       if (col.key === 'cf_plano_contas') {
@@ -92,6 +104,29 @@ export async function syncBackupInChunks(
         }
         if (lastErr) return { success: false, error: lastErr };
       }
+    }
+
+    // Processa registros removidos
+    const deletedRecordsRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('cf_deleted_records') : null;
+    if (deletedRecordsRaw) {
+      try {
+        const deletedRecords = JSON.parse(deletedRecordsRaw);
+        if (Array.isArray(deletedRecords) && deletedRecords.length > 0) {
+          if (onProgress) onProgress('Excluindo registros no servidor...');
+          await fetch('/api/migrate-backup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collection: 'cf_deleted_records', data: deletedRecords })
+          });
+          if (typeof localStorage !== 'undefined') localStorage.setItem('cf_deleted_records', '[]');
+        }
+      } catch (err) {
+        console.error('Falha ao processar excluídos', err);
+      }
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('cf_last_sync_timestamp', new Date().toISOString());
     }
 
     return { success: true };

@@ -9,7 +9,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, type LucideIcon,
 } from 'lucide-react';
 
 const getAvatarGradient = (name: string) => {
@@ -49,6 +49,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
       { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
       { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
+      { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
     ],
   },
   {
@@ -59,6 +60,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
+      { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
   },

@@ -58,6 +58,11 @@ model Empresa {
   situacoesFiscais      SituacaoFiscal[]
   patterns              TransactionPattern[]
   unidades              Unidade[]
+  contasBalanco         ContaBalanco[]
+  balancosPatrimoniais  BalancoPatrimonial[]
+  diagnosticos360       Diagnostico360[]
+  curvaAbcConfig        CurvaAbcConfig?
+  curvasAbc             CurvaAbc[]
 }
 
 model Unidade {
@@ -176,6 +181,99 @@ model OrcamentoValor {
   planoContaId String
   valor        Float
   orcamento    OrcamentoMensal @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+}
+
+model ContaBalanco {
+  id        String         @id @default(uuid())
+  empresaId String
+  grupo     String         // ativo_circulante | ativo_nao_circulante | passivo_circulante | passivo_nao_circulante | patrimonio_liquido
+  subgrupo  String?        // ex: "Imobilizado", "Realizável a Longo Prazo" (subdivisão opcional dentro do grupo)
+  codigo    String
+  descricao String
+  ordem     Int            @default(0)
+  ativo     Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  empresa   Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  valores   BalancoValor[]
+
+  @@index([empresaId])
+}
+
+model BalancoPatrimonial {
+  id          String         @id @default(uuid())
+  empresaId   String
+  competencia String         // YYYY-MM
+  observacao  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt @default(now())
+  empresa     Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  valores     BalancoValor[]
+
+  @@unique([empresaId, competencia])
+  @@index([empresaId])
+}
+
+model BalancoValor {
+  id             String             @id @default(uuid())
+  balancoId      String
+  contaBalancoId String
+  valor          Float              @default(0)
+  balanco        BalancoPatrimonial @relation(fields: [balancoId], references: [id], onDelete: Cascade)
+  contaBalanco   ContaBalanco       @relation(fields: [contaBalancoId], references: [id], onDelete: Cascade)
+
+  @@unique([balancoId, contaBalancoId])
+}
+
+model Diagnostico360 {
+  id          String   @id @default(uuid())
+  empresaId   String
+  data        String
+  consultor   String
+  respondente Json
+  respostas   Json
+  anotacoes   Json
+  parecer     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
+
+model CurvaAbcConfig {
+  id          String  @id @default(uuid())
+  empresaId   String  @unique
+  percentualA Float   @default(80)
+  percentualB Float   @default(95)
+  empresa     Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+model CurvaAbc {
+  id             String         @id @default(uuid())
+  empresaId      String
+  nome           String
+  dataImportacao String
+  percentualA    Float
+  percentualB    Float
+  createdAt      DateTime       @default(now())
+  empresa        Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  itens          CurvaAbcItem[]
+
+  @@index([empresaId])
+}
+
+model CurvaAbcItem {
+  id                   String   @id @default(uuid())
+  curvaId              String
+  nome                 String
+  valorFaturado        Float
+  percentualIndividual Float
+  percentualAcumulado  Float
+  classificacao        String
+  ordem                Int
+  curva                CurvaAbc @relation(fields: [curvaId], references: [id], onDelete: Cascade)
+
+  @@index([curvaId])
 }
 
 model Lancamento {

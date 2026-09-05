@@ -475,6 +475,16 @@ export default function LancamentosPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const toggleConfere = (l: Lancamento) => {
+    try {
+      const updated: Lancamento = { ...l, conferido: !l.conferido };
+      store.saveLancamento(updated);
+      setLancamentos(store.getLancamentos(empresaId));
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1110,6 +1120,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   <th>Status</th>
                   <th>Origem</th>
                   <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th style={{ textAlign: 'center' }}>Confere</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -1264,6 +1275,15 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <td><span className={`badge ${l.origem === 'ofx' ? 'badge-purple' : 'badge-gray'}`}>{l.origem === 'ofx' ? 'OFX' : 'Manual'}</span></td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: (l.tipo === 'receita' && pc && pc.descricao.trim().startsWith('( - )')) ? 'var(--red)' : l.tipo === 'receita' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap' }}>
                         {(l.tipo === 'receita' && pc && pc.descricao.trim().startsWith('( - )')) ? '-' : l.tipo === 'receita' ? '+' : '-'}{fmt.currency(l.valor)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={!!l.conferido} 
+                          onChange={() => toggleConfere(l)} 
+                          title="Marcar como conferido"
+                          style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
+                        />
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>

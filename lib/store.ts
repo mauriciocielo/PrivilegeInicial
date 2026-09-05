@@ -18,6 +18,7 @@ export interface User {
   phone?: string;
   allowedRoutes?: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Empresa {
@@ -52,6 +53,7 @@ export interface Empresa {
   politicaComprasTexto?: string;
   politicaPagamentosTexto?: string;
   politicaCreditoTexto?: string;
+  updatedAt?: string;
 }
 
 export interface InteligenciaDoc {
@@ -61,6 +63,7 @@ export interface InteligenciaDoc {
   size: number;
   content: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface StoreAuditLog {
@@ -85,6 +88,7 @@ export interface Unidade {
   moradorCpf?: string;
   moradorEmail?: string;
   moradorTelefone?: string;
+  updatedAt?: string;
 }
 
 export interface PlanoConta {
@@ -97,6 +101,7 @@ export interface PlanoConta {
   ativo: boolean;
   empresaId: string;
   dreCategoria?: string;
+  updatedAt?: string;
 }
 
 export interface Portador {
@@ -110,6 +115,7 @@ export interface Portador {
   saldoInicialData?: string;
   ativo: boolean;
   empresaId: string;
+  updatedAt?: string;
 }
 
 export interface PagamentoEndividamento {
@@ -138,6 +144,7 @@ export interface Endividamento {
   garantia: string;
   pagamentoMes: number;
   pagamentos?: PagamentoEndividamento[];
+  updatedAt?: string;
 }
 
 export interface AtaAtendimento {
@@ -149,6 +156,7 @@ export interface AtaAtendimento {
   conteudo: string;
   participantes: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface IndicadorMensal {
@@ -158,6 +166,7 @@ export interface IndicadorMensal {
   faturamento: number;
   compras: number;
   inadimplencia: number;
+  updatedAt?: string;
 }
 
 export interface OrcamentoMensal {
@@ -165,6 +174,60 @@ export interface OrcamentoMensal {
   empresaId: string;
   mes: string; // YYYY-MM
   categorias: Record<string, number>; // planoContaId -> valor
+  updatedAt?: string;
+}
+
+export type GrupoContaBalanco = 'ativo_circulante' | 'ativo_nao_circulante' | 'passivo_circulante' | 'passivo_nao_circulante' | 'patrimonio_liquido';
+
+export interface ContaBalanco {
+  id: string;
+  empresaId: string;
+  grupo: GrupoContaBalanco;
+  subgrupo?: string; // ex: "Imobilizado", "Realizável a Longo Prazo" (subdivisão opcional dentro do grupo)
+  codigo: string;
+  descricao: string;
+  ordem: number;
+  ativo: boolean;
+  createdAt: string;
+}
+
+export interface BalancoPatrimonial {
+  id: string;
+  empresaId: string;
+  competencia: string; // YYYY-MM
+  observacao?: string;
+  valores: Record<string, number>; // contaBalancoId -> valor
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type ClassificacaoAbc = 'A' | 'B' | 'C';
+
+export interface CurvaAbcConfig {
+  empresaId: string;
+  percentualA: number; // corte acumulado até a Classe A (padrão 80%)
+  percentualB: number; // corte acumulado até a Classe B (padrão 95%) — o restante é Classe C
+}
+
+export interface CurvaAbcItemEntry {
+  id: string;
+  nome: string;
+  valorFaturado: number;
+  percentualIndividual: number;
+  percentualAcumulado: number;
+  classificacao: ClassificacaoAbc;
+  ordem: number;
+}
+
+export interface CurvaAbc {
+  id: string;
+  empresaId: string;
+  nome: string; // nome do arquivo importado / descrição do lote
+  dataImportacao: string; // YYYY-MM-DD
+  percentualA: number; // percentuais usados nesta classificação (snapshot da config no momento da importação)
+  percentualB: number;
+  itens: CurvaAbcItemEntry[];
+  createdAt: string;
 }
 
 export interface CentroCusto {
@@ -174,6 +237,7 @@ export interface CentroCusto {
   codigo?: string;
   ativo: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Lancamento {
@@ -194,8 +258,10 @@ export interface Lancamento {
   clienteId?: string; // Vincula ao Cliente/Fornecedor cadastrado
   centroCustoId?: string; // Rateio por Centro de Custo/Projeto/Safra
   createdAt: string;
+  updatedAt?: string;
   attachmentName?: string;
   attachmentData?: string; // Conteúdo em Base64
+  conferido?: boolean; // Conciliação manual (OFX/extrato)
 }
 
 export interface Cliente {
@@ -217,6 +283,7 @@ export interface Cliente {
   limiteCredito?: number;
   ativo: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AuditLog {
@@ -294,6 +361,7 @@ export interface TransactionPattern {
   empresaId: string;
   pattern: string; // Parte do texto do histórico
   categoryId: string; // ID da categoria a ser aplicada
+  updatedAt?: string;
 }
 
 export interface SituacaoFiscal {
@@ -302,6 +370,7 @@ export interface SituacaoFiscal {
   dataVerificacao: string;
   status: 'regular' | 'pendencia' | 'atencao';
   observacoes: string;
+  updatedAt?: string;
 }
 
 // ---- Defaults ----
@@ -491,6 +560,55 @@ const DEFAULT_PORTADORES: Portador[] = [
   { id: 'p4', nome: 'Cartão Corporativo', tipo: 'cartao', saldoInicial: 0, saldoInicialData: '2023-01-01', ativo: true, empresaId: 'e1' },
 ];
 
+// Estrutura padrão do Balanço Patrimonial (pré-criada para toda empresa nova).
+// O usuário apenas preenche os valores manualmente — não precisa montar a estrutura contábil.
+const DEFAULT_CONTAS_BALANCO: Omit<ContaBalanco, 'id' | 'empresaId' | 'createdAt'>[] = [
+  // ATIVO CIRCULANTE
+  { grupo: 'ativo_circulante', codigo: '1.1.01', descricao: 'Caixa', ordem: 1, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.02', descricao: 'Bancos Conta Movimento', ordem: 2, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.03', descricao: 'Aplicações Financeiras', ordem: 3, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.04', descricao: 'Contas a Receber de Clientes', ordem: 4, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.05', descricao: 'Estoques', ordem: 5, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.06', descricao: 'Impostos a Recuperar', ordem: 6, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.07', descricao: 'Despesas Antecipadas', ordem: 7, ativo: true },
+  { grupo: 'ativo_circulante', codigo: '1.1.08', descricao: 'Outros Créditos de Curto Prazo', ordem: 8, ativo: true },
+
+  // ATIVO NÃO CIRCULANTE
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Realizável a Longo Prazo', codigo: '1.2.1.01', descricao: 'Empréstimos a Sócios/Coligadas', ordem: 1, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Realizável a Longo Prazo', codigo: '1.2.1.02', descricao: 'Depósitos Judiciais', ordem: 2, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Investimentos', codigo: '1.2.2.01', descricao: 'Participações Societárias', ordem: 3, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Imobilizado', codigo: '1.2.3.01', descricao: 'Móveis e Utensílios', ordem: 4, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Imobilizado', codigo: '1.2.3.02', descricao: 'Veículos', ordem: 5, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Imobilizado', codigo: '1.2.3.03', descricao: 'Máquinas e Equipamentos', ordem: 6, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Imobilizado', codigo: '1.2.3.04', descricao: 'Edificações e Benfeitorias', ordem: 7, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Imobilizado', codigo: '1.2.3.05', descricao: '( - ) Depreciação Acumulada', ordem: 8, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Intangível', codigo: '1.2.4.01', descricao: 'Softwares e Sistemas', ordem: 9, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Intangível', codigo: '1.2.4.02', descricao: 'Marcas e Patentes', ordem: 10, ativo: true },
+  { grupo: 'ativo_nao_circulante', subgrupo: 'Intangível', codigo: '1.2.4.03', descricao: '( - ) Amortização Acumulada', ordem: 11, ativo: true },
+
+  // PASSIVO CIRCULANTE
+  { grupo: 'passivo_circulante', codigo: '2.1.01', descricao: 'Fornecedores', ordem: 1, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.02', descricao: 'Empréstimos e Financiamentos (Curto Prazo)', ordem: 2, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.03', descricao: 'Obrigações Trabalhistas', ordem: 3, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.04', descricao: 'Obrigações Tributárias', ordem: 4, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.05', descricao: 'Impostos e Contribuições a Recolher', ordem: 5, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.06', descricao: 'Adiantamento de Clientes', ordem: 6, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.07', descricao: 'Dividendos/Pró-labore a Pagar', ordem: 7, ativo: true },
+  { grupo: 'passivo_circulante', codigo: '2.1.08', descricao: 'Outras Contas a Pagar', ordem: 8, ativo: true },
+
+  // PASSIVO NÃO CIRCULANTE
+  { grupo: 'passivo_nao_circulante', codigo: '2.2.01', descricao: 'Empréstimos e Financiamentos (Longo Prazo)', ordem: 1, ativo: true },
+  { grupo: 'passivo_nao_circulante', codigo: '2.2.02', descricao: 'Provisões para Contingências', ordem: 2, ativo: true },
+  { grupo: 'passivo_nao_circulante', codigo: '2.2.03', descricao: 'Outras Obrigações de Longo Prazo', ordem: 3, ativo: true },
+
+  // PATRIMÔNIO LÍQUIDO
+  { grupo: 'patrimonio_liquido', codigo: '2.3.01', descricao: 'Capital Social', ordem: 1, ativo: true },
+  { grupo: 'patrimonio_liquido', codigo: '2.3.02', descricao: 'Reservas de Capital', ordem: 2, ativo: true },
+  { grupo: 'patrimonio_liquido', codigo: '2.3.03', descricao: 'Reservas de Lucros', ordem: 3, ativo: true },
+  { grupo: 'patrimonio_liquido', codigo: '2.3.04', descricao: 'Lucros/Prejuízos Acumulados', ordem: 4, ativo: true },
+  { grupo: 'patrimonio_liquido', codigo: '2.3.05', descricao: 'Resultado do Exercício', ordem: 5, ativo: true },
+];
+
 function adaptPlanoContaDescricao(pcId: string, descricao: string, tipo?: 'empresa' | 'condominio' | 'cooperativa'): string {
   if (tipo === 'condominio') {
     if (pcId === 'pc1_1_1') return 'Taxas Condominiais Ordinárias';
@@ -517,7 +635,25 @@ function gerarLancamentos(): Lancamento[] {
 // ---- Store Class ----
 type StoredRecord = { id: string };
 
+export interface DeletedRecord { id: string; collection: string; deletedAt: string; }
+
 class DataStore {
+  getDeletedRecords(): DeletedRecord[] {
+    this.init();
+    return this.get<DeletedRecord[]>("cf_deleted_records", []);
+  }
+
+  addDeletedRecord(id: string, collection: string) {
+    if(!id) return;
+    const records = this.getDeletedRecords();
+    records.push({ id, collection, deletedAt: new Date().toISOString() });
+    this.set("cf_deleted_records", records);
+  }
+
+  clearDeletedRecords() {
+    this.set("cf_deleted_records", []);
+  }
+
   private initialized = false;
   private cache: Record<string, unknown> = {};
 
@@ -865,13 +1001,15 @@ class DataStore {
     return this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
   }
   saveUser(user: User) {
+    if (user && typeof user === "object") user.updatedAt = new Date().toISOString();
     const users = this.getUsers();
     const idx = users.findIndex(u => u.id === user.id);
     if (idx >= 0) users[idx] = user; else users.push(user);
     this.set('cf_users', users);
   }
   deleteUser(id: string) {
-    this.set('cf_users', this.getUsers().filter(u => u.id !== id));
+    this.addDeletedRecord(id, "cf_users");
+    this.set("cf_users", this.getUsers().filter(u => u.id !== id));
   }
 
   // Políticas Financeiras Globais
@@ -899,6 +1037,7 @@ class DataStore {
     return Array.from(new Map(list.map(e => [e.id, e])).values());
   }
   saveEmpresa(empresa: Empresa) {
+    if (empresa && typeof empresa === "object") empresa.updatedAt = new Date().toISOString();
     const list = this.getEmpresas();
     const idx = list.findIndex(e => e.id === empresa.id);
     const isNew = idx < 0;
@@ -942,7 +1081,8 @@ class DataStore {
     }
   }
   deleteEmpresa(id: string) {
-    this.set('cf_empresas', this.getEmpresas().filter(e => e.id !== id));
+    this.addDeletedRecord(id, "cf_empresas");
+    this.set("cf_empresas", this.getEmpresas().filter(e => e.id !== id));
   }
 
   // Plano de Contas
@@ -952,13 +1092,15 @@ class DataStore {
     return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
   }
   savePlanoConta(pc: PlanoConta) {
+    if (pc && typeof pc === "object") pc.updatedAt = new Date().toISOString();
     const list = this.getPlanoContas();
     const idx = list.findIndex(p => p.id === pc.id);
     if (idx >= 0) list[idx] = pc; else list.push(pc);
     this.set('cf_plano_contas', list);
   }
   deletePlanoConta(id: string) {
-    this.set('cf_plano_contas', this.getPlanoContas().filter(p => p.id !== id));
+    this.addDeletedRecord(id, "cf_plano_contas");
+    this.set("cf_plano_contas", this.getPlanoContas().filter(p => p.id !== id));
     
     // Remote Sync (Database)
     if (typeof window !== 'undefined') {
@@ -1079,13 +1221,15 @@ class DataStore {
     return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
   }
   savePortador(portador: Portador) {
+    if (portador && typeof portador === "object") portador.updatedAt = new Date().toISOString();
     const list = this.getPortadores();
     const idx = list.findIndex(p => p.id === portador.id);
     if (idx >= 0) list[idx] = portador; else list.push(portador);
     this.set('cf_portadores', list);
   }
   deletePortador(id: string) {
-    this.set('cf_portadores', this.getPortadores().filter(p => p.id !== id));
+    this.addDeletedRecord(id, "cf_portadores");
+    this.set("cf_portadores", this.getPortadores().filter(p => p.id !== id));
   }
 
   pruneLancamentosAttachmentData() {
@@ -1423,6 +1567,7 @@ class DataStore {
   }
 
   saveCentroCusto(cc: CentroCusto) {
+    if (cc && typeof cc === "object") cc.updatedAt = new Date().toISOString();
     const list = this.getCentrosCusto();
     const idx = list.findIndex(c => c.id === cc.id);
     if (idx >= 0) list[idx] = cc;
@@ -1433,10 +1578,12 @@ class DataStore {
   deleteCentroCusto(id: string) {
     const list = this.getCentrosCusto();
     if (list.findIndex(c => c.id === id) === -1) return;
-    this.set('cf_centros_custo', list.filter(c => c.id !== id));
+    this.addDeletedRecord(id, "cf_centros_custo");
+    this.set("cf_centros_custo", list.filter(c => c.id !== id));
   }
 
   saveLancamento(lancamento: Lancamento) {
+    if (lancamento && typeof lancamento === "object") lancamento.updatedAt = new Date().toISOString();
     if (this.isPeriodLocked(lancamento.empresaId, lancamento.data)) {
       throw new Error(`Este período está fechado e conciliado (limite: ${this.formatDate(this.getEmpresas().find(e => e.id === lancamento.empresaId)?.fechamentoData || '')}). Não é possível salvar.`);
     }
@@ -1542,6 +1689,7 @@ class DataStore {
   }
 
   deleteLancamento(id: string) {
+    this.addDeletedRecord(id, "cf_lancamentos");
     const list = this.getLancamentos();
     const l = list.find(item => item.id === id);
     if (l) {
@@ -1632,13 +1780,15 @@ class DataStore {
     return empresaId ? all.filter(c => c.empresaId === empresaId) : all;
   }
   saveCliente(cliente: Cliente) {
+    if (cliente && typeof cliente === "object") cliente.updatedAt = new Date().toISOString();
     const list = this.getClientes();
     const idx = list.findIndex(c => c.id === cliente.id);
     if (idx >= 0) list[idx] = cliente; else list.push(cliente);
     this.set('cf_clientes', list);
   }
   deleteCliente(id: string) {
-    this.set('cf_clientes', this.getClientes().filter(c => c.id !== id));
+    this.addDeletedRecord(id, "cf_clientes");
+    this.set("cf_clientes", this.getClientes().filter(c => c.id !== id));
   }
 
   // NFS-e
@@ -1648,6 +1798,7 @@ class DataStore {
     return empresaId ? all.filter(n => n.empresaId === empresaId) : all;
   }
   saveNfsE(nfse: NfsE) {
+    if (nfse && typeof nfse === "object") nfse.updatedAt = new Date().toISOString();
     const list = this.getNfsE();
     const idx = list.findIndex(n => n.id === nfse.id);
     if (idx >= 0) list[idx] = { ...nfse, updatedAt: new Date().toISOString() };
@@ -1655,7 +1806,8 @@ class DataStore {
     this.set('cf_nfse', list);
   }
   deleteNfsE(id: string) {
-    this.set('cf_nfse', this.getNfsE().filter(n => n.id !== id));
+    this.addDeletedRecord(id, "cf_nfse");
+    this.set("cf_nfse", this.getNfsE().filter(n => n.id !== id));
   }
   getNextNfseNumero(empresaId: string): string {
     const list = this.getNfsE(empresaId).filter(n => n.status !== 'cancelada');
@@ -1671,13 +1823,15 @@ class DataStore {
     return condominioId ? all.filter(u => u.condominioId === condominioId) : all;
   }
   saveUnidade(unidade: Unidade) {
+    if (unidade && typeof unidade === "object") unidade.updatedAt = new Date().toISOString();
     const list = this.getUnidades();
     const idx = list.findIndex(u => u.id === unidade.id);
     if (idx >= 0) list[idx] = unidade; else list.push(unidade);
     this.set('cf_unidades', list);
   }
   deleteUnidade(id: string) {
-    this.set('cf_unidades', this.getUnidades().filter(u => u.id !== id));
+    this.addDeletedRecord(id, "cf_unidades");
+    this.set("cf_unidades", this.getUnidades().filter(u => u.id !== id));
   }
 
   // Endividamento
@@ -1687,13 +1841,15 @@ class DataStore {
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveEndividamento(endividamento: Endividamento) {
+    if (endividamento && typeof endividamento === "object") endividamento.updatedAt = new Date().toISOString();
     const list = this.getEndividamentos();
     const idx = list.findIndex(l => l.id === endividamento.id);
     if (idx >= 0) list[idx] = endividamento; else list.push(endividamento);
     this.set('cf_endividamentos', list);
   }
   deleteEndividamento(id: string) {
-    this.set('cf_endividamentos', this.getEndividamentos().filter(l => l.id !== id));
+    this.addDeletedRecord(id, "cf_endividamentos");
+    this.set("cf_endividamentos", this.getEndividamentos().filter(l => l.id !== id));
   }
 
   // Atas
@@ -1703,13 +1859,15 @@ class DataStore {
     return empresaId ? all.filter(a => a.empresaId === empresaId) : all;
   }
   saveAta(ata: AtaAtendimento) {
+    if (ata && typeof ata === "object") ata.updatedAt = new Date().toISOString();
     const list = this.getAtas();
     const idx = list.findIndex(a => a.id === ata.id);
     if (idx >= 0) list[idx] = ata; else list.push(ata);
     this.set('cf_atas', list);
   }
   deleteAta(id: string) {
-    this.set('cf_atas', this.getAtas().filter(a => a.id !== id));
+    this.addDeletedRecord(id, "cf_atas");
+    this.set("cf_atas", this.getAtas().filter(a => a.id !== id));
   }
 
   // Padrões de Classificação
@@ -1720,6 +1878,7 @@ class DataStore {
   }
 
   saveTransactionPattern(pattern: TransactionPattern) {
+    if (pattern && typeof pattern === "object") pattern.updatedAt = new Date().toISOString();
     const list = this.getTransactionPatterns();
     const idx = list.findIndex(p => p.id === pattern.id);
     if (idx >= 0) list[idx] = pattern; else list.push(pattern);
@@ -1728,7 +1887,8 @@ class DataStore {
 
   deleteTransactionPattern(id: string) {
     const list = this.getTransactionPatterns().filter(p => p.id !== id);
-    this.set('cf_transaction_patterns', list);
+    this.addDeletedRecord(id, "cf_transaction_patterns");
+    this.set("cf_transaction_patterns", list);
   }
 
   // Situação Fiscal
@@ -1737,6 +1897,7 @@ class DataStore {
     return this.get<SituacaoFiscal[]>('cf_situacao_fiscal', []).filter(s => s.empresaId === empresaId);
   }
   saveSituacaoFiscal(item: SituacaoFiscal) {
+    if (item && typeof item === "object") item.updatedAt = new Date().toISOString();
     const all = this.get<SituacaoFiscal[]>('cf_situacao_fiscal', []);
     all.push(item);
     this.set('cf_situacao_fiscal', all);
@@ -1748,6 +1909,7 @@ class DataStore {
   }
 
   saveInteligenciaDoc(doc: InteligenciaDoc) {
+    if (doc && typeof doc === "object") doc.updatedAt = new Date().toISOString();
     const list = this.getInteligenciaDocs();
     const idx = list.findIndex(d => d.id === doc.id);
     if (idx >= 0) list[idx] = doc; else list.push(doc);
@@ -1757,7 +1919,8 @@ class DataStore {
 
   deleteInteligenciaDoc(id: string) {
     const list = this.getInteligenciaDocs().filter(d => d.id !== id);
-    this.set('cf_inteligencia_docs', list);
+    this.addDeletedRecord(id, "cf_inteligencia_docs");
+    this.set("cf_inteligencia_docs", list);
     window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_inteligencia_docs' } }));
   }
 
@@ -1768,13 +1931,15 @@ class DataStore {
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveIndicador(indicador: IndicadorMensal) {
+    if (indicador && typeof indicador === "object") indicador.updatedAt = new Date().toISOString();
     const list = this.getIndicadores();
     const idx = list.findIndex(l => l.id === indicador.id);
     if (idx >= 0) list[idx] = indicador; else list.push(indicador);
     this.set('cf_indicadores', list);
   }
   deleteIndicador(id: string) {
-    this.set('cf_indicadores', this.getIndicadores().filter(l => l.id !== id));
+    this.addDeletedRecord(id, "cf_indicadores");
+    this.set("cf_indicadores", this.getIndicadores().filter(l => l.id !== id));
   }
 
   // Orçamentos
@@ -1784,13 +1949,102 @@ class DataStore {
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveOrcamento(orcamento: OrcamentoMensal) {
+    if (orcamento && typeof orcamento === "object") orcamento.updatedAt = new Date().toISOString();
     const list = this.getOrcamentos();
     const idx = list.findIndex(l => l.id === orcamento.id);
     if (idx >= 0) list[idx] = orcamento; else list.push(orcamento);
     this.set('cf_orcamentos', list);
   }
   deleteOrcamento(id: string) {
-    this.set('cf_orcamentos', this.getOrcamentos().filter(l => l.id !== id));
+    this.addDeletedRecord(id, "cf_orcamentos");
+    this.set("cf_orcamentos", this.getOrcamentos().filter(l => l.id !== id));
+  }
+
+  // Contas do Balanço Patrimonial (estrutura pré-criada, editável apenas para inclusão de contas extras)
+  getContasBalanco(empresaId?: string): ContaBalanco[] {
+    this.init();
+    const all = this.get<ContaBalanco[]>('cf_contas_balanco', []);
+    if (!empresaId) return all;
+    const existing = all.filter(c => c.empresaId === empresaId);
+    if (existing.length === 0 && this.getEmpresas().some(e => e.id === empresaId)) {
+      return this.seedContasBalancoForEmpresa(empresaId);
+    }
+    return existing;
+  }
+  /**
+   * Gera a estrutura padrão do Balanço Patrimonial para uma empresa que ainda não possui.
+   * Não duplica se já existir — pode ser chamado a qualquer momento.
+   */
+  seedContasBalancoForEmpresa(empresaId: string): ContaBalanco[] {
+    const all = this.get<ContaBalanco[]>('cf_contas_balanco', []);
+    const already = all.filter(c => c.empresaId === empresaId);
+    if (already.length > 0) return already;
+
+    const novas: ContaBalanco[] = DEFAULT_CONTAS_BALANCO.map(c => ({
+      ...c,
+      id: uid(),
+      empresaId,
+      createdAt: new Date().toISOString(),
+    }));
+    all.push(...novas);
+    this.set('cf_contas_balanco', all);
+    return novas;
+  }
+  saveContaBalanco(conta: ContaBalanco) {
+    const list = this.get<ContaBalanco[]>('cf_contas_balanco', []);
+    const idx = list.findIndex(c => c.id === conta.id);
+    if (idx >= 0) list[idx] = conta; else list.push(conta);
+    this.set('cf_contas_balanco', list);
+  }
+  deleteContaBalanco(id: string) {
+    this.addDeletedRecord(id, "cf_contas_balanco");
+    this.set("cf_contas_balanco", this.get<ContaBalanco[]>('cf_contas_balanco', []).filter(c => c.id !== id));
+  }
+
+  // Balanços Patrimoniais (lançamento manual de valores por competência)
+  getBalancosPatrimoniais(empresaId?: string): BalancoPatrimonial[] {
+    this.init();
+    const all = this.get<BalancoPatrimonial[]>('cf_balancos_patrimoniais', []);
+    return empresaId ? all.filter(b => b.empresaId === empresaId) : all;
+  }
+  saveBalancoPatrimonial(balanco: BalancoPatrimonial) {
+    balanco.updatedAt = new Date().toISOString();
+    const list = this.getBalancosPatrimoniais();
+    const idx = list.findIndex(b => b.id === balanco.id);
+    if (idx >= 0) list[idx] = balanco; else list.push(balanco);
+    this.set('cf_balancos_patrimoniais', list);
+  }
+  deleteBalancoPatrimonial(id: string) {
+    this.addDeletedRecord(id, "cf_balancos_patrimoniais");
+    this.set("cf_balancos_patrimoniais", this.getBalancosPatrimoniais().filter(b => b.id !== id));
+  }
+
+  // Curva ABC
+  getCurvaAbcConfig(empresaId: string): CurvaAbcConfig {
+    this.init();
+    const all = this.get<CurvaAbcConfig[]>('cf_curva_abc_config', []);
+    return all.find(c => c.empresaId === empresaId) || { empresaId, percentualA: 80, percentualB: 95 };
+  }
+  saveCurvaAbcConfig(config: CurvaAbcConfig) {
+    const list = this.get<CurvaAbcConfig[]>('cf_curva_abc_config', []);
+    const idx = list.findIndex(c => c.empresaId === config.empresaId);
+    if (idx >= 0) list[idx] = config; else list.push(config);
+    this.set('cf_curva_abc_config', list);
+  }
+  getCurvasAbc(empresaId?: string): CurvaAbc[] {
+    this.init();
+    const all = this.get<CurvaAbc[]>('cf_curvas_abc', []);
+    return empresaId ? all.filter(c => c.empresaId === empresaId) : all;
+  }
+  saveCurvaAbc(curva: CurvaAbc) {
+    const list = this.get<CurvaAbc[]>('cf_curvas_abc', []);
+    const idx = list.findIndex(c => c.id === curva.id);
+    if (idx >= 0) list[idx] = curva; else list.push(curva);
+    this.set('cf_curvas_abc', list);
+  }
+  deleteCurvaAbc(id: string) {
+    this.addDeletedRecord(id, "cf_curvas_abc");
+    this.set("cf_curvas_abc", this.getCurvasAbc().filter(c => c.id !== id));
   }
 
   // Helpers

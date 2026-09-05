@@ -1176,6 +1176,312 @@ async function migrateOrcamentos(orcamentos: any[]) {
   }
 }
 
+async function migrateContasBalanco(contas: any[]) {
+  console.log(`Migrando ${contas.length} contas do balanço patrimonial...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const c of contas) {
+    if (!c.id) continue;
+    try {
+      const empresaId = String(c.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      await db.contaBalanco.upsert({
+        where: { id: String(c.id) },
+        update: {
+          empresaId: empresaId,
+          grupo: String(c.grupo || 'ativo_circulante'),
+          subgrupo: c.subgrupo ? String(c.subgrupo) : null,
+          codigo: String(c.codigo || ''),
+          descricao: String(c.descricao || ''),
+          ordem: Math.round(Number(c.ordem)) || 0,
+          ativo: c.ativo === undefined ? true : Boolean(c.ativo),
+        },
+        create: {
+          id: String(c.id),
+          empresaId: empresaId,
+          grupo: String(c.grupo || 'ativo_circulante'),
+          subgrupo: c.subgrupo ? String(c.subgrupo) : null,
+          codigo: String(c.codigo || ''),
+          descricao: String(c.descricao || ''),
+          ordem: Math.round(Number(c.ordem)) || 0,
+          ativo: c.ativo === undefined ? true : Boolean(c.ativo),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro na Conta de Balanço (ID: ${c.id}), pulando este item e continuando o lote:`, err);
+      continue;
+    }
+  }
+}
+
+async function migrateBalancosPatrimoniais(balancos: any[]) {
+  console.log(`Migrando ${balancos.length} balanços patrimoniais...`);
+
+  const [existingEmpresas, existingContasBalanco] = await Promise.all([
+    db.empresa.findMany({ select: { id: true } }),
+    db.contaBalanco.findMany({ select: { id: true } })
+  ]);
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+  const contaBalancoIdsSet = new Set(existingContasBalanco.map(c => c.id));
+
+  for (const b of balancos) {
+    if (!b.id) continue;
+    try {
+      const empresaId = String(b.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      const currentBalanco = await db.balancoPatrimonial.upsert({
+        where: { id: String(b.id) },
+        update: {
+          empresaId: empresaId,
+          competencia: String(b.competencia || ''),
+          observacao: b.observacao ? String(b.observacao) : null,
+        },
+        create: {
+          id: String(b.id),
+          empresaId: empresaId,
+          competencia: String(b.competencia || ''),
+          observacao: b.observacao ? String(b.observacao) : null,
+        }
+      });
+
+      if (b.valores && typeof b.valores === 'object') {
+        await db.balancoValor.deleteMany({
+          where: { balancoId: currentBalanco.id }
+        });
+        for (const [contaBalancoId, valor] of Object.entries(b.valores)) {
+          if (!contaBalancoIdsSet.has(contaBalancoId)) continue;
+
+          await db.balancoValor.create({
+            data: {
+              id: crypto.randomUUID(),
+              balancoId: currentBalanco.id,
+              contaBalancoId: contaBalancoId,
+              valor: Number(valor || 0)
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`Erro no Balanço Patrimonial (ID: ${b.id}), pulando este item e continuando o lote:`, err);
+      continue;
+    }
+  }
+}
+
+async function migrateDiagnosticos360(diagnosticos: any[]) {
+  console.log(`Migrando ${diagnosticos.length} diagnósticos 360º...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const d of diagnosticos) {
+    if (!d.id) continue;
+    try {
+      const empresaId = String(d.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      await db.diagnostico360.upsert({
+        where: { id: String(d.id) },
+        update: {
+          empresaId: empresaId,
+          data: String(d.data || ''),
+          consultor: String(d.consultor || ''),
+          respondente: d.respondente || {},
+          respostas: d.respostas || {},
+          anotacoes: d.anotacoes || {},
+          parecer: String(d.parecer || ''),
+        },
+        create: {
+          id: String(d.id),
+          empresaId: empresaId,
+          data: String(d.data || ''),
+          consultor: String(d.consultor || ''),
+          respondente: d.respondente || {},
+          respostas: d.respostas || {},
+          anotacoes: d.anotacoes || {},
+          parecer: String(d.parecer || ''),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro no Diagnóstico 360º (ID: ${d.id}), pulando este item e continuando o lote:`, err);
+      continue;
+    }
+  }
+}
+
+async function migrateCurvaAbcConfig(configs: any[]) {
+  console.log(`Migrando ${configs.length} configurações de Curva ABC...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const c of configs) {
+    if (!c.empresaId) continue;
+    try {
+      const empresaId = String(c.empresaId);
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      await db.curvaAbcConfig.upsert({
+        where: { empresaId },
+        update: {
+          percentualA: Number(c.percentualA ?? 80),
+          percentualB: Number(c.percentualB ?? 95),
+        },
+        create: {
+          id: crypto.randomUUID(),
+          empresaId,
+          percentualA: Number(c.percentualA ?? 80),
+          percentualB: Number(c.percentualB ?? 95),
+        }
+      });
+    } catch (err) {
+      console.error(`Erro na Configuração de Curva ABC (Empresa: ${c.empresaId}), pulando este item e continuando o lote:`, err);
+      continue;
+    }
+  }
+}
+
+async function migrateCurvasAbc(curvas: any[]) {
+  console.log(`Migrando ${curvas.length} curvas ABC...`);
+
+  const existingEmpresas = await db.empresa.findMany({ select: { id: true } });
+  const empresaIdsSet = new Set(existingEmpresas.map(e => e.id));
+
+  for (const cv of curvas) {
+    if (!cv.id) continue;
+    try {
+      const empresaId = String(cv.empresaId || 'empresa_default');
+
+      if (!empresaIdsSet.has(empresaId)) {
+        await db.empresa.upsert({
+          where: { id: empresaId },
+          update: {},
+          create: {
+            id: empresaId,
+            razaoSocial: 'Empresa Auto-Criada',
+            nomeFantasia: 'Empresa Auto-Criada',
+            cnpj: `CNPJ-${empresaId.substring(0, 10)}`,
+            responsavel: 'Responsável',
+            email: 'contato@empresa.com',
+            telefone: '0000000000',
+          }
+        });
+        empresaIdsSet.add(empresaId);
+      }
+
+      const currentCurva = await db.curvaAbc.upsert({
+        where: { id: String(cv.id) },
+        update: {
+          empresaId: empresaId,
+          nome: String(cv.nome || ''),
+          dataImportacao: String(cv.dataImportacao || ''),
+          percentualA: Number(cv.percentualA ?? 80),
+          percentualB: Number(cv.percentualB ?? 95),
+        },
+        create: {
+          id: String(cv.id),
+          empresaId: empresaId,
+          nome: String(cv.nome || ''),
+          dataImportacao: String(cv.dataImportacao || ''),
+          percentualA: Number(cv.percentualA ?? 80),
+          percentualB: Number(cv.percentualB ?? 95),
+        }
+      });
+
+      if (Array.isArray(cv.itens)) {
+        await db.curvaAbcItem.deleteMany({
+          where: { curvaId: currentCurva.id }
+        });
+        for (const item of cv.itens) {
+          await db.curvaAbcItem.create({
+            data: {
+              id: String(item.id || crypto.randomUUID()),
+              curvaId: currentCurva.id,
+              nome: String(item.nome || ''),
+              valorFaturado: Number(item.valorFaturado || 0),
+              percentualIndividual: Number(item.percentualIndividual || 0),
+              percentualAcumulado: Number(item.percentualAcumulado || 0),
+              classificacao: String(item.classificacao || 'C'),
+              ordem: Math.round(Number(item.ordem)) || 0,
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`Erro na Curva ABC (ID: ${cv.id}), pulando este item e continuando o lote:`, err);
+      continue;
+    }
+  }
+}
+
 async function migrateNfse(nfse: any[]) {
   console.log(`Migrando ${nfse.length} notas fiscais (NFS-e)...`);
   
@@ -1447,6 +1753,11 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
   cf_atas: migrateAtas,
   cf_indicadores: migrateIndicadores,
   cf_orcamentos: migrateOrcamentos,
+  cf_contas_balanco: migrateContasBalanco,
+  cf_balancos_patrimoniais: migrateBalancosPatrimoniais,
+  cf_diagnosticos_360: migrateDiagnosticos360,
+  cf_curva_abc_config: migrateCurvaAbcConfig,
+  cf_curvas_abc: migrateCurvasAbc,
   cf_nfse: migrateNfse,
   cf_situacao_fiscal: migrateSituacaoFiscal,
   cf_transaction_patterns: migrateTransactionPatterns,
@@ -1554,6 +1865,41 @@ const QUERIES: Record<string, CollectionQuery> = {
       return { id: orc.id, empresaId: orc.empresaId, mes: orc.mes, categorias };
     });
   },
+  cf_contas_balanco: () => db.contaBalanco.findMany(),
+  cf_balancos_patrimoniais: async () => {
+    const raw = await db.balancoPatrimonial.findMany({ include: { valores: true } });
+    return raw.map(b => {
+      const valores: Record<string, number> = {};
+      b.valores.forEach(v => { valores[v.contaBalancoId] = v.valor; });
+      return { id: b.id, empresaId: b.empresaId, competencia: b.competencia, observacao: b.observacao, valores };
+    });
+  },
+  cf_diagnosticos_360: () => db.diagnostico360.findMany(),
+  cf_curva_abc_config: () => db.curvaAbcConfig.findMany(),
+  cf_curvas_abc: async () => {
+    const raw = await db.curvaAbc.findMany({ include: { itens: true } });
+    return raw.map(cv => ({
+      id: cv.id,
+      empresaId: cv.empresaId,
+      nome: cv.nome,
+      dataImportacao: cv.dataImportacao,
+      percentualA: cv.percentualA,
+      percentualB: cv.percentualB,
+      createdAt: cv.createdAt.toISOString(),
+      itens: cv.itens
+        .slice()
+        .sort((a, b) => a.ordem - b.ordem)
+        .map(i => ({
+          id: i.id,
+          nome: i.nome,
+          valorFaturado: i.valorFaturado,
+          percentualIndividual: i.percentualIndividual,
+          percentualAcumulado: i.percentualAcumulado,
+          classificacao: i.classificacao,
+          ordem: i.ordem,
+        }))
+    }));
+  },
   cf_nfse: () => db.nfsE.findMany(),
   cf_situacao_fiscal: () => db.situacaoFiscal.findMany(),
   cf_transaction_patterns: () => db.transactionPattern.findMany(),
@@ -1623,6 +1969,39 @@ export async function POST(request: Request) {
 
     if (!data) {
       return NextResponse.json({ error: 'Nenhum dado fornecido' }, { status: 400 });
+    }
+
+    if (collection === 'cf_deleted_records') {
+      console.log('Processando exclusões: ' + data.length + ' registros');
+      for (const record of data) {
+        if (!record.id || !record.collection) continue;
+        try {
+          switch(record.collection) {
+            case 'cf_empresas': await db.empresa.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_users': await db.user.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_plano_contas': await db.planoConta.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_portadores': await db.portador.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_clientes': await db.cliente.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_lancamentos': await db.lancamento.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_endividamentos': await db.endividamento.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_atas': await db.ataAtendimento.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_indicadores': await db.indicadorMensal.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_orcamentos': await db.orcamentoMensal.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_nfse': await db.nfsE.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_situacao_fiscal': await db.situacaoFiscal.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_transaction_patterns': await db.transactionPattern.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_atividades_log': await db.atividade.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_audit_logs': await db.auditLog.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_centros_custo': await db.centroCusto.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_agenda_semanal': await db.agendaTask.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_inteligencia_docs': await db.inteligenciaDoc.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_unidades': await db.unidade.deleteMany({ where: { id: record.id } }); break;
+          }
+        } catch(e) {
+          console.error('Falha ao excluir ' + record.id, e);
+        }
+      }
+      return NextResponse.json({ success: true });
     }
 
     if (collection) {

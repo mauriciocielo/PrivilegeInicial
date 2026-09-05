@@ -11,6 +11,18 @@ import {
 } from './diagnostico360';
 import { fmt } from './reports';
 import type { Empresa } from './store';
+import {
+  PDF_ACCENT as ACCENT,
+  PDF_DARK as DARK,
+  PDF_GRAY as GRAY,
+  PDF_LIGHT as LIGHT,
+  PDF_BORDER as BORDER,
+  PDF_BRAND_NAME,
+  getOfficeLogoBase64,
+  drawPdfHeaderBand,
+  drawPdfFooter,
+  slugifyFileName,
+} from './pdf-branding';
 
 export interface FinanceiroSnapshot {
   receitas: number;
@@ -34,18 +46,12 @@ const H = 297;
 const M = 15;
 const CW = W - M * 2;
 
-const ACCENT: [number, number, number] = [96, 0, 0];
-const DARK: [number, number, number] = [17, 24, 39];
-const GRAY: [number, number, number] = [107, 114, 128];
-const LIGHT: [number, number, number] = [243, 244, 246];
-const BORDER: [number, number, number] = [226, 232, 240];
-
 export async function gerarPdfDiagnostico360(options: PdfDiagnosticoOptions): Promise<void> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const { diagnostico, resultado, empresa, financeiro } = options;
-  const marca = options.marca || 'CashFlow System';
+  const marca = options.marca || PDF_BRAND_NAME;
   const nomeEmpresa =
     diagnostico.respondente.nomeEmpresa || empresa?.nomeFantasia || empresa?.razaoSocial || 'Empresa';
 
@@ -122,36 +128,17 @@ export async function gerarPdfDiagnostico360(options: PdfDiagnosticoOptions): Pr
   };
 
   // -------------------- CAPA --------------------
-  doc.setFillColor(...ACCENT);
-  doc.rect(0, 0, W, 85, 'F');
-
-  // Adiciona Logo da Empresa Cliente (lado direito)
-  if (empresa?.logoData) {
-    try {
-      const tipo = empresa.logoData.includes('image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(empresa.logoData, tipo, W - M - 30, 12, 30, 18, undefined, 'FAST');
-    } catch {
-      /* logo inválida — segue sem imagem */
-    }
-  }
-
-  // Tenta carregar e adicionar a Logo do Escritório Privilége (lado esquerdo)
-  try {
-    const res = await fetch('/logo.png');
-    if (res.ok) {
-      const blob = await res.blob();
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-      // Pinta o fundo da logo do escritório com a cor base da logo original (#600000 = [96,0,0])
-      // Ou apenas deixa transparente dependendo do logo.png
-      doc.addImage(base64, 'PNG', M, 10, 24, 24, undefined, 'FAST');
-    }
-  } catch (err) {
-    // Se falhar o carregamento (ex: sem logo.png), segue sem a logo
-  }
+  // Logos sobre placa branca (evita "sumir" fundida na faixa vinho quando o
+  // PNG tem fundo transparente) — a capa é alta o bastante (85mm) para o
+  // título começar bem abaixo delas, então mantém o título alinhado em M.
+  const officeLogoBase64 = await getOfficeLogoBase64();
+  drawPdfHeaderBand(doc, {
+    pageWidth: W,
+    margin: M,
+    headerHeight: 85,
+    officeLogoBase64,
+    empresaLogoData: empresa?.logoData,
+  });
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
@@ -553,28 +540,8 @@ export async function gerarPdfDiagnostico360(options: PdfDiagnosticoOptions): Pr
   doc.text(diagnostico.respondente.nome || 'Representante da empresa', W - M - 50, y + 5, { align: 'center' });
 
   // -------------------- RODAPÉ --------------------
-  const totalPaginas = doc.getNumberOfPages();
-  for (let p = 1; p <= totalPaginas; p++) {
-    doc.setPage(p);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...GRAY);
-    if (p > 1) {
-      doc.setDrawColor(...BORDER);
-      doc.setLineWidth(0.2);
-      doc.line(M, H - 14, W - M, H - 14);
-      doc.text(`${marca} · Documento confidencial de uso restrito`, M, H - 9);
-    } else {
-      doc.text(`${marca} · Documento confidencial de uso restrito`, M, H - 9);
-    }
-    doc.text(`Página ${p} de ${totalPaginas}`, W - M, H - 9, { align: 'right' });
-  }
+  drawPdfFooter(doc, { pageWidth: W, pageHeight: H, margin: M, marca });
 
-  const slug = nomeEmpresa
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
+  const slug = slugifyFileName(nomeEmpresa);
   doc.save(`Diagnostico-360-${slug || 'empresa'}-${diagnostico.data}.pdf`);
 }
