@@ -6,7 +6,7 @@ import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
-import { TrendingUp, TrendingDown, Activity, Percent } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Percent, Scale } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -403,25 +403,24 @@ export default function ClienteDashboard() {
             
             <div className="card">
               <div className="card-header">
-              <div className="card-title">Saldo por Portador no Periodo</div>
-            </div>
-            {portadoresList.map((p, i) => {
-              const pct = totais.portadores > 0 ? (Math.max(0, p.saldo) / Math.max(totais.portadores, 1)) * 100 : 0;
-              return (
-                <div key={i} style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>🏦 {p.nome}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmt.currency(p.saldo)}
-                    </span>
+                <div className="card-title">Saldo por Portador no Periodo</div>
+              </div>
+              {portadoresList.map((p, i) => {
+                const pct = totais.portadores > 0 ? (Math.max(0, p.saldo) / Math.max(totais.portadores, 1)) * 100 : 0;
+                return (
+                  <div key={i} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>🏦 {p.nome}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {fmt.currency(p.saldo)}
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${pct}%`, background: COLORS[i % COLORS.length] }} />
+                    </div>
                   </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: COLORS[i % COLORS.length] }} />
-                  </div>
-                </div>
-              );
-            })}
-
+                );
+              })}
             </div>
 
             {/* Políticas e Diretrizes Estratégicas */}
