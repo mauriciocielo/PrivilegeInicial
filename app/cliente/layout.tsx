@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { store } from '../../lib/store';
+import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
+import FloatingCopilot from '../../components/FloatingCopilot';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -99,12 +100,16 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
             <p style={{ color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 24px auto', fontSize: 15 }}>
               Desculpe, o seu usuário não possui permissão para acessar este módulo. Entre em contato com a equipe.
             </p>
-            <button className="btn btn-primary" onClick={() => router.push('/cliente/dashboard')}>
-              Voltar ao Dashboard
+            <button className="btn btn-primary" onClick={() => {
+              store.setCurrentUser(null);
+              router.push('/login');
+            }}>
+              Ir para o Login
             </button>
           </div>
         )}
       </main>
+      <FloatingCopilot />
     </div>
   );
 }

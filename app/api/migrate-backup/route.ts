@@ -1029,6 +1029,10 @@ async function migrateAtas(atas: any[]) {
         empresaIdsSet.add(empresaId);
       }
 
+      // Referência da assinatura eletrônica (Autentique), quando existir.
+      const assinaturaId = ata.assinaturaId ? String(ata.assinaturaId) : null;
+      const assinaturaEnviadaEm = ata.assinaturaEnviadaEm ? new Date(ata.assinaturaEnviadaEm) : null;
+
       await db.ataAtendimento.upsert({
         where: { id: String(ata.id) },
         update: {
@@ -1038,6 +1042,8 @@ async function migrateAtas(atas: any[]) {
           titulo: String(ata.titulo || ''),
           conteudo: String(ata.conteudo || ''),
           participantes: String(ata.participantes || ''),
+          assinaturaId,
+          assinaturaEnviadaEm,
         },
         create: {
           id: String(ata.id),
@@ -1047,6 +1053,8 @@ async function migrateAtas(atas: any[]) {
           titulo: String(ata.titulo || ''),
           conteudo: String(ata.conteudo || ''),
           participantes: String(ata.participantes || ''),
+          assinaturaId,
+          assinaturaEnviadaEm,
         }
       });
     } catch (err) {

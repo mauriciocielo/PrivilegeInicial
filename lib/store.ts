@@ -35,6 +35,22 @@ export interface Empresa {
   taxaMensalPadrao?: number;
   fundoReservaPct?: number;
   dataInicioContrato?: string;
+  /** Endereço — usado na qualificação das partes do contrato. */
+  endereco?: string;
+  cep?: string;
+  cidade?: string;
+  uf?: string;
+  /** Termos comerciais do contrato de prestação de serviços. */
+  contratoValorTotal?: number;
+  contratoValorEntrada?: number;
+  contratoParcelas?: number;
+  contratoDiaVencimento?: number;
+  contratoPrimeiroVencimento?: string;
+  contratoInicioServicos?: string;
+  contratoDuracaoMeses?: number;
+  contratoHorasSemanais?: number;
+  /** Descricao dos servicos do Anexo I (texto livre, por cliente). */
+  contratoServicos?: string;
   grupoEconomico?: string;
   receitaMensalEstimada?: number;
   comprasMensalEstimada?: number;
@@ -66,6 +82,11 @@ export interface InteligenciaDoc {
   createdAt: string;
   updatedAt?: string;
 }
+
+// Identificadores do registro de visualização de ata dentro do log de auditoria.
+// Ficam no topo para que a leitura e a escrita nunca saiam de sincronia.
+export const ATA_ACESSO_ACTION = 'Visualizacao de Ata';
+const ATA_REF = 'ata:';
 
 export interface StoreAuditLog {
   id: string;
@@ -158,6 +179,20 @@ export interface AtaAtendimento {
   participantes: string;
   createdAt: string;
   updatedAt?: string;
+  /** Id do documento no Autentique, quando enviado para assinatura eletrônica. */
+  assinaturaId?: string;
+  assinaturaEnviadaEm?: string;
+}
+
+export interface Imobilizado {
+  id: string;
+  empresaId: string;
+  nome: string;
+  dataAquisicao: string;
+  valorAquisicao: number;
+  taxaDepreciacao: number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AtividadeLog {
@@ -188,6 +223,16 @@ export interface OrcamentoMensal {
   mes: string; // YYYY-MM
   categorias: Record<string, number>; // planoContaId -> valor
   updatedAt?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  empresaId: string;
+  userId: string;
+  userName: string;
+  acao: string;
+  descricao: string;
+  data: string; // ISO String
 }
 
 export type GrupoContaBalanco = 'ativo_circulante' | 'ativo_nao_circulante' | 'passivo_circulante' | 'passivo_nao_circulante' | 'patrimonio_liquido';
@@ -1228,6 +1273,24 @@ class DataStore {
     this.set("cf_portadores", this.getPortadores().filter(p => p.id !== id));
   }
 
+  // Imobilizado
+  getImobilizados(empresaId?: string): Imobilizado[] {
+    this.init();
+    const all = this.get<Imobilizado[]>('cf_imobilizados', []);
+    return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
+  }
+  saveImobilizado(item: Imobilizado) {
+    if (item && typeof item === "object") item.updatedAt = new Date().toISOString();
+    const list = this.getImobilizados();
+    const idx = list.findIndex(p => p.id === item.id);
+    if (idx >= 0) list[idx] = item; else list.push(item);
+    this.set('cf_imobilizados', list);
+  }
+  deleteImobilizado(id: string) {
+    this.addDeletedRecord(id, "cf_imobilizados");
+    this.set("cf_imobilizados", this.getImobilizados().filter(p => p.id !== id));
+  }
+
   getAtividadesLog(empresaId?: string): AtividadeLog[] {
     this.init();
     const arr = this.get<AtividadeLog[]>("cf_atividades_log", []);
@@ -1759,6 +1822,30 @@ class DataStore {
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
 
+  /**
+   * Registra que o usuário atual abriu uma ata para leitura. Reaproveita o log
+   * de auditoria (que já sincroniza para o Postgres) em vez de criar uma
+   * coleção nova. Evita duplicar o registro quando a mesma pessoa reabre a
+   * mesma ata em sequência — senão um F5 repetido inflaria o histórico.
+   */
+  logAtaAcesso(ata: { id: string; empresaId: string; titulo: string }) {
+    const JANELA_MS = 5 * 60 * 1000;
+    const anteriores = this.getAtaAcessos(ata.id);
+    const usuario = this.getCurrentUser();
+    const nome = usuario ? usuario.name : 'Sistema/BPO';
+    const ultimo = anteriores.find(l => l.userName === nome);
+    if (ultimo && Date.now() - new Date(ultimo.timestamp).getTime() < JANELA_MS) return;
+
+    this.logAction(ata.empresaId, ATA_ACESSO_ACTION, `${ATA_REF}${ata.id}|${ata.titulo}`);
+  }
+
+  /** Histórico de quem visualizou uma ata, do mais recente para o mais antigo. */
+  getAtaAcessos(ataId: string): StoreAuditLog[] {
+    return this.getAuditLogs()
+      .filter(l => l.action === ATA_ACESSO_ACTION && l.details.startsWith(`${ATA_REF}${ataId}|`))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+
   logAction(empresaId: string, action: string, details: string) {
     const logs = this.getAuditLogs();
     const currentUser = this.getCurrentUser();
@@ -2263,6 +2350,44 @@ class DataStore {
     const list = this.getLancamentos(empresaId);
     // Find anticipated/predicted transactions that are not reconciled yet
     return list.filter(l => l.portadorId === portadorId && l.status === 'previsto');
+  }
+
+  // --- ORÇAMENTOS MENSAIS ---
+  getOrcamentosMensais(empresaId?: string): OrcamentoMensal[] {
+    this.init();
+    const all = this.get<OrcamentoMensal[]>('cf_orcamentos_mensais', []);
+    return empresaId ? all.filter(o => o.empresaId === empresaId) : all;
+  }
+
+  saveOrcamentoMensal(orc: OrcamentoMensal) {
+    if (orc && typeof orc === "object") orc.updatedAt = new Date().toISOString();
+    const list = this.getOrcamentosMensais();
+    const idx = list.findIndex(o => o.id === orc.id);
+    if (idx >= 0) list[idx] = orc; else list.push(orc);
+    this.set('cf_orcamentos_mensais', list);
+  }
+
+  deleteOrcamentoMensal(id: string) {
+    this.set('cf_orcamentos_mensais', this.getOrcamentosMensais().filter(o => o.id !== id));
+  }
+
+  // --- AUDITORIA DE ELITE ---
+  logAudit(empresaId: string, action: string, details: string) {
+    const user = this.getCurrentUser();
+    if (!user) return;
+    
+    const d = new Date();
+    const log: StoreAuditLog = {
+      id: uid(),
+      empresaId,
+      timestamp: d.toISOString(),
+      userName: user.name,
+      action,
+      details,
+    };
+    const list = this.getAuditLogs();
+    list.push(log);
+    this.set('cf_audit_logs', list);
   }
 }
 

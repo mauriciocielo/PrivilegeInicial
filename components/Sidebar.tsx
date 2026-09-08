@@ -75,6 +75,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
       { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
       { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
+      { label: 'Imobilizado', href: '/consultor/imobilizado', icon: Building },
       { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
       { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
     ],
@@ -103,9 +104,10 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
-    section: 'Relatórios',
+    section: 'Relatórios & Auditoria',
     items: [
-      { label: 'Relatórios', href: '/consultor/relatorios', icon: BarChart3 },
+      { label: 'Relatórios Financeiros', href: '/consultor/relatorios', icon: BarChart3 },
+      { label: 'Trilha de Auditoria (Logs)', href: '/consultor/auditoria', icon: ShieldCheck },
     ],
   },
   {

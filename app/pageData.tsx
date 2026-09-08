@@ -26,6 +26,7 @@ export const integrations = [
   { name: 'Omie', color: '#FF6B35' },
   { name: 'Conta Azul', color: '#0066CC' },
   { name: 'Bling', color: '#F7941D' },
+  { name: 'Okton', color: '#00A3A1' },
   { name: 'eSocial', color: '#1B5E20' },
   { name: 'Domínio', color: '#8c1a22' },
   { name: 'Power BI', color: '#F2C811' },

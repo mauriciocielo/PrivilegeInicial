@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
+import FloatingCopilot from '../../components/FloatingCopilot';
 
 export default function ConsultorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -147,6 +148,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
           </div>
         )}
       </main>
+      <FloatingCopilot />
     </div>
   );
 }

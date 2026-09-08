@@ -40,6 +40,8 @@ export default function RelatoriosPage() {
   const [whatsappPhone, setWhatsappPhone] = useState('46999048990');
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [viewPdfData, setViewPdfData] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Kanban Vertical no Relatório de Fluxo
   const defaultFluxoOrder = [
@@ -224,7 +226,7 @@ export default function RelatoriosPage() {
 
     Object.keys(catGroups).forEach(k => {
       const grp = catGroups[k as keyof typeof catGroups];
-      grp.subaccounts.sort((a, b) => b.total - a.total);
+      grp.subaccounts.sort((a, b) => String(a.desc).localeCompare(String(b.desc), undefined, { numeric: true }));
     });
 
     const monthlySummary = months.map(m => {
@@ -461,20 +463,39 @@ export default function RelatoriosPage() {
     return ['Data', 'Descrição', 'Tipo', 'Plano de Contas', 'Portador', 'Status', 'Valor'];
   };
 
-  const handlePDF = async () => {
+  const handlePDF = () => {
     if (!empresa) return;
-    setGenerating('pdf');
+    setViewPdfData(true);
+  };
+
+  const generateRealPDF = async () => {
+    setIsGeneratingPdf(true);
     try {
-      await generatePDF({
-        title: getTitle(),
-        empresa,
-        periodo: getPeriodo(),
-        columns: getColumns(),
-        rows: preview?.rows || [],
-        summary: preview?.totais,
-        tipo,
-      });
-    } finally { setGenerating(null); }
+      const element = document.getElementById('relatorio-print-area');
+      if (!element) return;
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      let heightLeft = pdfHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+      pdf.save(`Privilege_${getTitle().replace(/\s+/g,'_')}_Analitico.pdf`);
+    } catch (e) {
+      toast.error('Erro ao gerar o PDF analítico.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleXLS = async () => {
@@ -1202,6 +1223,83 @@ export default function RelatoriosPage() {
               >
                 {sendingWhatsApp ? 'Enviando...' : '✓ Enviar via WhatsApp'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewPdfData && (
+        <div className="modal-overlay no-print" onClick={e => e.target === e.currentTarget && setViewPdfData(false)}>
+          <div className="modal modal-lg ata-print-container" style={{ maxWidth: 850, background: 'var(--bg-card)', padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header no-print" style={{ marginBottom: 0, padding: 24, borderBottom: '1px solid var(--border)' }}>
+              <h2 className="modal-title">📄 Visualizar PDF Analítico</h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" onClick={generateRealPDF} disabled={isGeneratingPdf}>
+                  {isGeneratingPdf ? '⏳ Gerando...' : '🖨 Baixar PDF'}
+                </button>
+                <button className="modal-close" style={{ position: 'relative', top: 0, right: 0 }} onClick={() => setViewPdfData(false)}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div id="relatorio-print-area" style={{ 
+                padding: '60px', minHeight: '1123px', background: '#fff', color: '#000', 
+                width: '794px', margin: '0 auto', boxSizing: 'border-box', fontFamily: 'sans-serif', letterSpacing: 'normal' 
+              }}>
+                <div style={{ borderBottom: '3px solid #8c1a22', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, width: 165, marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>Privilege Contabilidade e Consultoria</div>
+                    <h1 style={{ fontSize: 24, fontWeight: 700, color: '#000', margin: 0, lineHeight: 1.2 }}>Relatório Analítico Detalhado</h1>
+                    <div style={{ fontSize: 14, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>{empresa?.nomeFantasia || empresa?.razaoSocial}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: 13, color: '#4b5563' }}>
+                    <div style={{ fontWeight: 700, color: '#000', fontSize: 15, marginBottom: 2 }}>{getTitle()}</div>
+                    <div>Período: {getPeriodo()}</div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                  {fluxoOrder.map(groupKey => {
+                    const group = (drilldownData.groups as any)[groupKey];
+                    if (!group || group.total === 0) return null;
+                    return (
+                      <div key={groupKey} style={{ marginBottom: 16 }}>
+                        <div style={{ background: '#f3f4f6', padding: '8px 12px', fontWeight: 700, color: '#111827', display: 'flex', justifyContent: 'space-between', borderLeft: '4px solid #8c1a22' }}>
+                          <span style={{ textTransform: 'uppercase' }}>{group.label}</span>
+                          <span>{fmt.currency(group.total)}</span>
+                        </div>
+                        {group.subaccounts.map((sub: any) => (
+                          <div key={sub.id} style={{ padding: '8px 12px 4px', borderBottom: '1px dotted #d1d5db' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#374151', fontSize: 11, marginBottom: 4 }}>
+                              <span>{sub.desc}</span>
+                              <span>{fmt.currency(sub.total)}</span>
+                            </div>
+                            <div style={{ paddingLeft: 12, marginBottom: 6 }}>
+                              {sub.lancs.map((l: any) => (
+                                <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#6b7280', padding: '3px 0', borderBottom: '1px solid #f3f4f6' }}>
+                                  <span style={{ width: 60 }}>{fmt.date(l.data)}</span>
+                                  <span style={{ flex: 1, paddingLeft: 8 }}>{l.descricao} {portadores.find(p => p.id === l.portadorId)?.nome ? `(Ref: ${portadores.find(p => p.id === l.portadorId)?.nome})` : ''}</span>
+                                  <span style={{ width: 100, textAlign: 'right', fontWeight: 600, color: (l.valorLinha ?? l.valor) >= 0 ? '#16a34a' : '#ef4444' }}>{fmt.currency(l.valorLinha ?? (l.tipo === 'receita' ? l.valor : -l.valor))}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div style={{ marginTop: 24, borderTop: '2px solid #e5e7eb', paddingTop: 16 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#111827', textTransform: 'uppercase' }}>Resumo de Totais (Relatório Gerencial)</h3>
+                  {preview?.totais.map((t, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, fontWeight: 700, background: idx % 2 === 0 ? '#f9fafb' : '#fff' }}>
+                      <span style={{ color: '#4b5563' }}>{t.label}</span>
+                      <span style={{ color: t.color === 'green' ? '#16a34a' : t.color === 'red' ? '#dc2626' : '#111827' }}>{t.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

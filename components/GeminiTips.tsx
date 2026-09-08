@@ -76,25 +76,26 @@ export default function GeminiTips({ empresaId, dataIni, dataFim, status = 'real
         ].filter(Boolean).join('\n')
       : '';
 
-    const prompt = `Você é o robô Privilege AI, assistente contábil e de inteligência financeira de elite do escritório Privilege Consultoria.
-Analise a saúde de fluxo de caixa da empresa "${e?.razaoSocial || 'Cliente'}" no período "${periodLabel}", considerando os filtros atuais da tela:
-- Faturamento (Receitas): R$ ${rec.toLocaleString('pt-BR')}
-- Custos/Despesas Totais: R$ ${desp.toLocaleString('pt-BR')}
-- Margem Líquida Realizada: R$ ${saldo.toLocaleString('pt-BR')}
-- Top Categorias de Saídas: ${topDespesas || 'Nenhum débito importante'}
+    const prompt = `Você é o robô Privilege AI, consultor contábil e assistente financeiro sênior (braço direito) do escritório Privilege Consultoria.
+Você deve agir com inteligência de BPO Financeiro Premium.
+Analise e faça auditoria rápida do fluxo de caixa da empresa "${e?.razaoSocial || 'Cliente'}" no período "${periodLabel}", com base nos filtros operacionais apresentados da tela onde você foi chamado:
+- Faturamento (Receitas Realizadas): R$ ${rec.toLocaleString('pt-BR')}
+- Custos/Despesas (Saídas Realizadas): R$ ${desp.toLocaleString('pt-BR')}
+- Geração de Caixa (Saldo do Filtro): R$ ${saldo.toLocaleString('pt-BR')}
+- Top 3 Categorias de Consumo: ${topDespesas || 'Nenhum débito importante'}
 ${policiesContext}
 ${docsContext}
 
-Forneça 3 insights ou dicas contábeis/financeiras extremamente estratégicas, objetivas e acionáveis para melhorar a saúde financeira desta empresa de forma direcionada aos números apresentados.
+Forneça 3 "super dicas" altamente estratégicas, voltadas para o dono do negócio/consultor financeiro, contendo alertas e planos de ação diretos e factíveis. Não dê dicas clichês, analise a proporção das saídas contra o faturamento e seja analítico. 
 
 Retorne estritamente um array JSON válido sem blocos de código ou markdown adicionais. Cada item do array deve ter o formato exato:
 {
-  "icon": "Emoji condizente com a dica",
-  "title": "Título curto da recomendação",
-  "text": "Ação prática descrita de forma curta e objetiva"
+  "icon": "Emoji condizente",
+  "title": "Título incisivo",
+  "text": "Ação ou observação prática"
 }
 
-Responda em Português do Brasil.`;
+Responda em Português do Brasil com postura de Conselheiro Financeiro de BPO de elite.`;
 
     try {
       const response = await fetch(

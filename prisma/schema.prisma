@@ -49,6 +49,24 @@ model Empresa {
   politicaCobrancaData   String?
   createdAt             DateTime             @default(now())
   allowedRoutes         String[]
+  // Endereço — exigido na qualificação das partes do contrato de prestação
+  // de serviços, que antes era digitado manualmente a cada emissão.
+  endereco              String?
+  cep                   String?
+  cidade                String?
+  uf                    String?
+  // Termos comerciais do contrato, cadastrados uma vez e reaproveitados na
+  // emissão do documento.
+  contratoValorTotal        Float?
+  contratoValorEntrada      Float?
+  contratoParcelas          Int?
+  contratoDiaVencimento     Int?
+  contratoPrimeiroVencimento String?
+  contratoInicioServicos    String?
+  contratoDuracaoMeses      Int?
+  contratoHorasSemanais     Int?
+  // Descricao dos servicos do Anexo I, editavel por cliente.
+  contratoServicos          String?
   atas                  AtaAtendimento[]
   clientes              Cliente[]
   endividamentos        Endividamento[]
@@ -64,6 +82,7 @@ model Empresa {
   contasBalanco         ContaBalanco[]
   balancosPatrimoniais  BalancoPatrimonial[]
   diagnosticos360       Diagnostico360[]
+  imobilizados          Imobilizado[]
   curvaAbcConfig        CurvaAbcConfig?
   curvasAbc             CurvaAbc[]
 }
@@ -136,6 +155,16 @@ model Endividamento {
   pagamentoMes      Int
   empresa           Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   pagamentos        PagamentoEndividamento[]
+  historicoSaldos   HistoricoSaldoEndividamento[]
+}
+
+model HistoricoSaldoEndividamento {
+  id              String        @id @default(uuid())
+  endividamentoId String
+  mes             String
+  saldoDevedor    Float
+  createdAt       DateTime      @default(now())
+  endividamento   Endividamento @relation(fields: [endividamentoId], references: [id], onDelete: Cascade)
 }
 
 model PagamentoEndividamento {
@@ -149,15 +178,20 @@ model PagamentoEndividamento {
 }
 
 model AtaAtendimento {
-  id            String   @id @default(uuid())
-  empresaId     String
-  consultorId   String
-  data          String
-  titulo        String
-  conteudo      String
-  participantes String
-  createdAt     DateTime @default(now())
-  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(uuid())
+  empresaId           String
+  consultorId         String
+  data                String
+  titulo              String
+  conteudo            String
+  participantes       String
+  createdAt           DateTime  @default(now())
+  // Vínculo com o documento no Autentique, quando a ata foi enviada para
+  // assinatura eletrônica. A situação de cada signatário fica na plataforma e
+  // é consultada sob demanda — aqui guardamos apenas a referência.
+  assinaturaId        String?
+  assinaturaEnviadaEm DateTime?
+  empresa             Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 model IndicadorMensal {
@@ -457,4 +491,18 @@ model InteligenciaDoc {
   size      Int
   content   String
   createdAt DateTime @default(now())
+}
+
+model Imobilizado {
+  id              String   @id @default(uuid())
+  empresaId       String
+  nome            String
+  dataAquisicao   String
+  valorAquisicao  Float
+  taxaDepreciacao Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt @default(now())
+  empresa         Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
 }

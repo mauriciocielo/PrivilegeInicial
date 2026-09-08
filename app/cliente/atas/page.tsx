@@ -12,8 +12,15 @@ export default function AtasClientePage() {
   const consultorNome = (id: string) =>
     consultores.find(c => c.id === id)?.name || 'Consultor';
 
-  const handlePrint = (ata: AtaAtendimento) => {
+  /** Abrir a ata para leitura fica registrado — é o acesso do cliente que o
+   *  consultor precisa comprovar depois, no histórico da própria ata. */
+  const abrirAta = (ata: AtaAtendimento) => {
+    store.logAtaAcesso(ata);
     setViewAta(ata);
+  };
+
+  const handlePrint = (ata: AtaAtendimento) => {
+    abrirAta(ata);
     setTimeout(() => window.print(), 300);
   };
 
@@ -109,7 +116,7 @@ export default function AtasClientePage() {
                       <td>{consultorNome(ata.consultorId)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>👁 Ver</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => abrirAta(ata)}>👁 Ver</button>
                           <button className="btn btn-secondary btn-sm" onClick={() => handlePrint(ata)}>🖨 PDF</button>
                         </div>
                       </td>

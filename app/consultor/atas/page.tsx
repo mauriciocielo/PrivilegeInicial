@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AtaAtendimento, Empresa, store, uid, User } from '../../../lib/store';
+import { AtaAtendimento, Empresa, store, StoreAuditLog, uid, User } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { gerarAtaPdf, gerarAtaPdfBlob } from '../../../lib/ata-pdf';
 
 export default function AtasConsultorPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -90,48 +91,121 @@ export default function AtasConsultorPage() {
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  const [acessos, setAcessos] = useState<StoreAuditLog[]>([]);
+
+  // ── Assinatura eletrônica (Autentique) ────────────────────────────────
+  const [assinaturaDisponivel, setAssinaturaDisponivel] = useState(false);
+  const [assinaturas, setAssinaturas] = useState<any[]>([]);
+  const [carregandoAssinatura, setCarregandoAssinatura] = useState(false);
+  const [enviandoAssinatura, setEnviandoAssinatura] = useState(false);
+  const [emailsSignatarios, setEmailsSignatarios] = useState('');
+
+  // Descobre uma única vez se o servidor tem o Autentique configurado — sem
+  // isso, a seção de assinatura nem aparece na tela.
+  useEffect(() => {
+    fetch('/api/atas/assinatura')
+      .then(r => r.json())
+      .then(r => setAssinaturaDisponivel(Boolean(r?.configurado)))
+      .catch(() => setAssinaturaDisponivel(false));
+  }, []);
+
+  const consultarAssinatura = useCallback(async (documentoId: string) => {
+    setCarregandoAssinatura(true);
+    try {
+      const res = await fetch(`/api/atas/assinatura?id=${encodeURIComponent(documentoId)}`);
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error || 'Não foi possível consultar a assinatura.'); return; }
+      setAssinaturas(json?.documento?.assinaturas || []);
+    } catch {
+      toast.error('Erro de conexão ao consultar a assinatura.');
+    } finally {
+      setCarregandoAssinatura(false);
+    }
+  }, []);
+
+  const enviarParaAssinatura = async () => {
+    if (!viewAta) return;
+    const emails = emailsSignatarios.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+    if (emails.length === 0) {
+      toast.error('Informe ao menos um e-mail para assinar.');
+      return;
+    }
+
+    setEnviandoAssinatura(true);
+    try {
+      const { blob, nome } = await gerarAtaPdfBlob({
+        id: viewAta.id,
+        data: viewAta.data,
+        titulo: viewAta.titulo,
+        conteudo: viewAta.conteudo,
+        participantes: viewAta.participantes,
+        consultorNome: consultorNome(viewAta.consultorId),
+        empresaNome: empresa?.nomeFantasia || empresa?.razaoSocial || '',
+        empresaLogoData: empresa?.logoData,
+      });
+
+      const fd = new FormData();
+      fd.append('file', blob, `${nome}.pdf`);
+      fd.append('nome', `${viewAta.titulo} — ${empresa?.nomeFantasia || ''}`.trim());
+      fd.append('mensagem', 'Segue a ata de atendimento para sua assinatura.');
+      fd.append('signers', JSON.stringify(emails.map(email => ({ email, action: 'SIGN' }))));
+
+      const res = await fetch('/api/atas/assinatura', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error || 'Falha ao enviar para assinatura.'); return; }
+
+      // Guarda a referência do documento na ata para acompanhar depois.
+      const atualizada: AtaAtendimento = {
+        ...viewAta,
+        assinaturaId: json.documento.id,
+        assinaturaEnviadaEm: new Date().toISOString(),
+      };
+      store.saveAta(atualizada);
+      setViewAta(atualizada);
+      setAtas(store.getAtas(empresaId));
+      setAssinaturas(json.documento.assinaturas || []);
+      setEmailsSignatarios('');
+      toast.success(`Ata enviada para ${emails.length} signatário(s).`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao enviar a ata para assinatura.');
+    } finally {
+      setEnviandoAssinatura(false);
+    }
+  };
+
   const handlePrintAta = (ata: AtaAtendimento) => {
+    // Toda abertura para leitura fica registrada (o próprio store evita duplicar
+    // o registro quando a mesma pessoa reabre a ata em poucos minutos).
+    store.logAtaAcesso(ata);
+    setAcessos(store.getAtaAcessos(ata.id));
     setViewAta(ata);
     setIsGeneratingPdf(false);
+
+    // Prepara a seção de assinatura: já sugere o e-mail da empresa e busca a
+    // situação atual caso a ata tenha sido enviada anteriormente.
+    setAssinaturas([]);
+    setEmailsSignatarios(empresa?.email || '');
+    if (ata.assinaturaId) consultarAssinatura(ata.assinaturaId);
   };
 
   const generateRealPDF = async () => {
+    if (!viewAta) return;
     setIsGeneratingPdf(true);
     try {
-      const element = document.getElementById('ata-print-area');
-      if (!element) return;
-      
-      const html2canvas = (await import('html2canvas')).default;
-      const { jsPDF } = await import('jspdf');
-
-      // Força um estilo de bloco fixo A4 no HTML2Canvas para não distorcer espaços
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true, 
-        logging: false,
-        width: 794,
-        windowWidth: 794
+      // PDF montado com texto nativo em A4: as linhas são quebradas antes de
+      // serem escritas, então a paginação nunca corta a escrita ao meio — que
+      // era o defeito da versão anterior, baseada em captura de tela fatiada.
+      await gerarAtaPdf({
+        id: viewAta.id,
+        data: viewAta.data,
+        titulo: viewAta.titulo,
+        conteudo: viewAta.conteudo,
+        participantes: viewAta.participantes,
+        consultorNome: consultorNome(viewAta.consultorId),
+        empresaNome: empresa?.nomeFantasia || empresa?.razaoSocial || '',
+        empresaLogoData: empresa?.logoData,
       });
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pdf.internal.pageSize.getHeight();
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
-      }
-      
-      pdf.save(`Ata_${viewAta?.id.slice(-6)}.pdf`);
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar o PDF da ata.');
@@ -322,7 +396,9 @@ export default function AtasConsultorPage() {
                   flexDirection: 'column',
                   gap: 4,
                 }}>
-                  <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, marginBottom: 8, objectFit: 'contain', objectPosition: 'left' }} crossOrigin="anonymous" />
+                  {/* logo.png é 1024x442 (2,32:1). Fixar 165x45 (3,67:1) espremia a
+                      marca; a largura agora acompanha a altura na proporção real. */}
+                  <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Privilege Contabilidade e Consultoria" style={{ height: 45, width: 'auto', marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
                   <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>
                     Privilege Contabilidade e Consultoria
                   </div>
@@ -399,6 +475,129 @@ export default function AtasConsultorPage() {
                 <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'var(--text-muted)' }}>
                   Documento gerado em {new Date().toLocaleDateString('pt-BR')} — Privilege Contabilidade e Consultoria
                 </div>
+              </div>
+            </div>
+
+            {/* Assinatura eletrônica (Autentique) — fora da área de impressão */}
+            {assinaturaDisponivel && (
+              <div className="no-print" style={{ marginTop: 24, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Assinatura eletrônica
+                  </div>
+                  {viewAta.assinaturaId && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => consultarAssinatura(viewAta.assinaturaId!)}
+                      disabled={carregandoAssinatura}
+                    >
+                      {carregandoAssinatura ? 'Consultando...' : '↻ Atualizar situação'}
+                    </button>
+                  )}
+                </div>
+
+                {!viewAta.assinaturaId ? (
+                  <>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                      Envie esta ata para assinatura. Cada pessoa recebe o documento por e-mail
+                      com um link próprio para assinar.
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <input
+                        className="form-control"
+                        style={{ flex: 1, minWidth: 260 }}
+                        placeholder="E-mails separados por vírgula"
+                        value={emailsSignatarios}
+                        onChange={e => setEmailsSignatarios(e.target.value)}
+                      />
+                      <button
+                        className="btn btn-primary"
+                        onClick={enviarParaAssinatura}
+                        disabled={enviandoAssinatura}
+                      >
+                        {enviandoAssinatura ? 'Enviando...' : 'Enviar para assinatura'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                      Enviado em {viewAta.assinaturaEnviadaEm ? new Date(viewAta.assinaturaEnviadaEm).toLocaleString('pt-BR') : '—'}
+                    </div>
+                    {assinaturas.length === 0 ? (
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                        {carregandoAssinatura ? 'Consultando o Autentique...' : 'Nenhum signatário retornado.'}
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {assinaturas.map((s: any, i: number) => {
+                            const assinado = Boolean(s.assinadoEm);
+                            const rejeitado = Boolean(s.rejeitadoEm);
+                            const rotulo = rejeitado ? 'Recusado' : assinado ? 'Assinado' : s.visualizadoEm ? 'Visualizou' : 'Pendente';
+                            const cor = rejeitado ? 'var(--red)' : assinado ? 'var(--green)' : 'var(--text-muted)';
+                            return (
+                              <tr key={s.public_id || i} style={{ borderTop: i ? '1px solid var(--border-light)' : 'none' }}>
+                                <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '8px 0' }}>
+                                  {s.name || s.email || '—'}
+                                  {s.email && s.name ? <span style={{ color: 'var(--text-muted)' }}> · {s.email}</span> : null}
+                                </td>
+                                <td style={{ fontSize: 13, padding: '8px 0', textAlign: 'right', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                  {rotulo}
+                                  {s.link && !assinado && !rejeitado && (
+                                    <a href={s.link} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 10, fontWeight: 500 }}>abrir link</a>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Registro de acessos — fora da área de impressão, é controle interno */}
+            <div className="no-print" style={{ marginTop: 24, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Quem visualizou esta ata
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {acessos.length} {acessos.length === 1 ? 'registro' : 'registros'}
+                </div>
+              </div>
+
+              {acessos.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  Nenhuma visualização registrada além desta.
+                </div>
+              ) : (
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Usuário</th>
+                        <th style={{ textAlign: 'right', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Data e hora</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {acessos.map(a => (
+                        <tr key={a.id} style={{ borderTop: '1px solid var(--border-light)' }}>
+                          <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '8px 0' }}>{a.userName}</td>
+                          <td style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '8px 0', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {new Date(a.timestamp).toLocaleString('pt-BR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+                Controle interno — não aparece no PDF exportado.
               </div>
             </div>
           </div>

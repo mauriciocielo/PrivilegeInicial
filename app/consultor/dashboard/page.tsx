@@ -30,6 +30,7 @@ export default function ConsultorDashboard() {
   const [endividamentos, setEndividamentos] = useState<ReturnType<typeof store.getEndividamentos>>([]);
   const [totalDivida, setTotalDivida] = useState(0);
   const [indicador, setIndicador] = useState<ReturnType<typeof store.getIndicadores>[0] | null>(null);
+  const [valuation, setValuation] = useState({ ebitdaMedio: 0, mult: 5, divida: 0, valor: 0 });
   const [mesSelecionado, setMesSelecionado] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -149,9 +150,18 @@ export default function ConsultorDashboard() {
       inds = store.getIndicadores(eId);
     }
 
+    const totalDiv = endivs.reduce((acc, e) => acc + Math.max(0, e.valorAPagar - e.pagamentoMes), 0);
     setEndividamentos(endivs);
-    setTotalDivida(endivs.reduce((acc, e) => acc + Math.max(0, e.valorAPagar - e.pagamentoMes), 0));
+    setTotalDivida(totalDiv);
     setIndicador(inds.find(i => i.mes === mesSelecionado) || null);
+
+    // Motor de Valuation 
+    const ebitdas = r.map(m => m.receitas - m.despesas);
+    const ebitdaMedio = ebitdas.reduce((acc, cur) => acc + cur, 0) / Math.max(ebitdas.length, 1);
+    // Fórmula: (EBITDA Anualizado * Múltiplo Setorial) - Dívidas
+    const valor = (ebitdaMedio * 12 * 5) - totalDiv;
+    setValuation({ ebitdaMedio, mult: 5, divida: totalDiv, valor: valor > 0 ? valor : 0 });
+
   }, [mesSelecionado]);
 
   useEffect(() => {
@@ -198,7 +208,7 @@ export default function ConsultorDashboard() {
               <div style={{ position: 'relative' }}>
                 <div 
                   onClick={() => setShowLogout(!showLogout)}
-                  style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(10px)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   Consultor: {userName}
                 </div>
@@ -225,7 +235,7 @@ export default function ConsultorDashboard() {
             className="form-control" 
             value={mesSelecionado} 
             onChange={e => setMesSelecionado(e.target.value)}
-            style={{ width: 160, background: 'rgba(255,255,255,0.7)', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)', fontWeight: 600 }}
+            style={{ width: 160, background: 'rgba(255,255,255,0.96)', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)', fontWeight: 600 }}
           >
             {mesesOptions.map(m => {
               const [y, mo] = m.split('-');
@@ -275,7 +285,7 @@ export default function ConsultorDashboard() {
           
           <div style={{ 
             textAlign: 'right', 
-            background: 'rgba(255,255,255,0.7)', 
+            background: 'rgba(255,255,255,0.96)', 
             padding: '18px 26px', 
             borderRadius: '16px', 
             boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
@@ -299,69 +309,112 @@ export default function ConsultorDashboard() {
         
         {/* KPI Cards (Glass) */}
         <div className="stat-grid" style={{ marginBottom: 32 }}>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '100ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '100ms' }}>
             <div className="stat-icon green animate-float" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><TrendingUp size={22} /></div>
             <div className="stat-label">Receitas Efetivas (Mês)</div>
             <div className="stat-value" style={{ fontSize: 28 }}><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
           </div>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '200ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '200ms' }}>
             <div className="stat-icon red animate-float" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}><TrendingDown size={22} /></div>
             <div className="stat-label">Despesas Efetivas (Mês)</div>
             <div className="stat-value" style={{ fontSize: 28 }}><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
           </div>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '300ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '300ms' }}>
             <div className={`stat-icon animate-float ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={22} /></div>
             <div className="stat-label">Resultado Operacional Líquido</div>
             <div className="stat-value" style={{ fontSize: 28, color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
           </div>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '400ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '400ms' }}>
              <div className="stat-icon animate-float" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Scale size={22} /></div>
-             <div className="stat-label">Total Endividamento Ativo</div>
+            <div className="stat-label">Total Endividamento Ativo</div>
              <div className="stat-value" style={{ fontSize: 28, color: '#b45309' }}><AnimatedCounter target={totalDivida} prefix="R$ " decimals={2} /></div>
           </div>
         </div>
 
-        {/* Indicadores de Negócio - Painel Estratégico Especial */}
-        <div className="glass-card card-dynamic animate-slide-up" style={{ marginBottom: 32, padding: '28px 32px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', background: 'linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(30, 30, 30, 0.95) 100%)', border: '1px solid rgba(0,0,0,0.8)', boxShadow: '0 15px 35px rgba(0,0,0,0.15)', animationDelay: '500ms' }}>
-          <div style={{ minWidth: 150 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.5 }}>🎯 Metas do Mês</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 6, fontWeight: 500 }}>Acompanhamento Tático</div>
+        {/* Valuation Module (Elite CFO) */}
+        <div className="glass-card card-dynamic animate-slide-up" style={{
+          marginBottom: 32, padding: '32px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: 'linear-gradient(135deg, #FDF9F1 0%, #E8DCC4 100%)', border: '1px solid #D4C3A3', boxShadow: '0 20px 50px rgba(0,0,0,0.08)', animationDelay: '450ms'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 24 }}>💎</span>
+              <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 2, color: '#977A42', fontWeight: 800 }}>Valuation Engine (Estimativa)</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#4A3B18', letterSpacing: '-1px' }}>
+              <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
+            </div>
+            <div style={{ fontSize: 13, color: '#73603C', marginTop: 8, display: 'flex', alignItems: 'center' }}>
+              VCF baseado no EBITDA Anualizado projetado (&nbsp;<AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} />&nbsp;/mês x 12).
+            </div>
           </div>
-          <div style={{ flex: 1, display: 'flex', gap: 40, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: 30 }}>
+          <div style={{ display: 'flex', gap: 32, textAlign: 'right' }}>
             <div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Faturamento Realizado</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#10b981' }}>{fmt.currency(indicador?.faturamento || 0)}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Alocação: {fmt.currency(empresa?.receitaMensalEstimada || 0)}</div>
+              <div style={{ fontSize: 11, color: '#73603C', textTransform: 'uppercase', letterSpacing: 1 }}>Múltiplo Setor</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#4A3B18' }}>
+                 <AnimatedCounter target={valuation.mult} suffix="x" decimals={0} />
+              </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Compras Aprovadas</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#ef4444' }}>{fmt.currency(indicador?.compras || 0)}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Limite: {fmt.currency(empresa?.comprasMensalEstimada || 0)}</div>
+               <div style={{ fontSize: 11, color: '#73603C', textTransform: 'uppercase', letterSpacing: 1 }}>Dívida Abatida</div>
+               <div style={{ fontSize: 20, fontWeight: 700, color: '#b91c1c', display: 'flex', alignItems: 'center' }}>
+                 -<AnimatedCounter target={valuation.divida} prefix="R$ " decimals={2} />
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Indicadores de Negócio - Painel Estratégico Especial */}
+        <div className="glass-card card-dynamic animate-slide-up" style={{ marginBottom: 32, padding: '28px 32px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', background: 'linear-gradient(135deg, #F9F6F0 0%, #EBE3D5 100%)', border: '1px solid #D8CFC0', boxShadow: '0 15px 35px rgba(0,0,0,0.06)', animationDelay: '500ms' }}>
+          <div style={{ minWidth: 150 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#977A42', textTransform: 'uppercase', letterSpacing: 1.5 }}>🎯 Metas do Mês</div>
+            <div style={{ fontSize: 13, color: '#4A3B18', marginTop: 6, fontWeight: 600 }}>Acompanhamento Tático</div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', gap: 40, borderLeft: '1px solid #D8CFC0', paddingLeft: 30 }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#73603C', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Faturamento Realizado</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#059669' }}>
+                 <AnimatedCounter target={indicador?.faturamento || 0} prefix="R$ " decimals={2} />
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, display: 'flex' }}>
+                 Alocação:&nbsp;<AnimatedCounter target={empresa?.receitaMensalEstimada || 0} prefix="R$ " decimals={2} />
+              </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Inadimplência Tolerada</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#f59e0b' }}>{indicador?.inadimplencia || 0}%</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Sobre recebíveis mensais</div>
+              <div style={{ fontSize: 12, color: '#73603C', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Compras Aprovadas</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626' }}>
+                 <AnimatedCounter target={indicador?.compras || 0} prefix="R$ " decimals={2} />
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, display: 'flex' }}>
+                 Limite:&nbsp;<AnimatedCounter target={empresa?.comprasMensalEstimada || 0} prefix="R$ " decimals={2} />
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#73603C', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Inadimplência Tolerada</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#d97706' }}>
+                 <AnimatedCounter target={indicador?.inadimplencia || 0} suffix="%" decimals={1} />
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Sobre recebíveis mensais</div>
             </div>
           </div>
           {!indicador && (
-            <a href="/consultor/indicadores" className="btn" style={{ alignSelf: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>＋ Definir KPIs</a>
+            <a href="/consultor/indicadores" className="btn" style={{ alignSelf: 'center', padding: '10px 16px', background: '#fff', color: '#4A3B18', border: '1px solid #D8CFC0' }}>＋ Definir KPIs</a>
           )}
         </div>
 
         {/* Charts Row */}
         <div className="grid-21" style={{ marginBottom: 32 }}>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.45)', animationDelay: '600ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'rgba(255,255,255,0.45)', animationDelay: '600ms', display: 'flex', flexDirection: 'column' }}>
             <div className="card-header">
               <div>
-                <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Receitas vs Despesas (Trimestral)</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Comparação analítica dos últimos 6 meses</div>
+                <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>DRE Interativa — YOY / MoM</div>
+                <div className="card-subtitle" style={{ fontSize: '13px' }}>Crescimento e Margem nos últimos 6 meses (Waterfall simulado)</div>
               </div>
             </div>
-            <div className="chart-container" style={{ paddingTop: '12px' }}>
-              <ResponsiveContainer width="100%" height={290}>
+            <div className="chart-container" style={{ paddingTop: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={resumo} barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -372,8 +425,9 @@ export default function ConsultorDashboard() {
                     formatter={(v: any) => fmt.currency(Number(v || 0))}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
-                  <Bar dataKey="receitas" name="Entradas" fill="url(#colorRecC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
-                  <Bar dataKey="despesas" name="Saídas" fill="url(#colorDespC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="receitas" name="Entradas (Revenue)" fill="url(#colorRecC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="despesas" name="Saídas (Costs)" fill="url(#colorDespC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="saldo" name="Margem Bruta (Net)" fill="var(--amber)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
                   <defs>
                     <linearGradient id="colorRecC" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
@@ -386,10 +440,41 @@ export default function ConsultorDashboard() {
                   </defs>
                 </BarChart>
               </ResponsiveContainer>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                 {resumo.length >= 2 && (() => {
+                    const atual = resumo[resumo.length - 1];
+                    const anterior = resumo[resumo.length - 2];
+                    const diffRec = atual.receitas - anterior.receitas;
+                    const pctRec = anterior.receitas > 0 ? (diffRec / anterior.receitas) * 100 : 0;
+                    return (
+                      <div style={{ padding: '12px', background: 'rgba(255,255,255,0.94)', borderRadius: 8, border: '1px solid rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Receita vs Mês Ant.)</span>
+                         <span style={{ fontSize: 13, fontWeight: 800, color: diffRec >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                           {diffRec >= 0 ? '↗' : '↘'} {Math.abs(pctRec).toFixed(1)}% ({fmt.currency(diffRec)})
+                         </span>
+                      </div>
+                    )
+                 })()}
+                 {resumo.length >= 2 && (() => {
+                    const atual = resumo[resumo.length - 1];
+                    const anterior = resumo[resumo.length - 2];
+                    const diffDesp = atual.despesas - anterior.despesas;
+                    const pctDesp = anterior.despesas > 0 ? (diffDesp / anterior.despesas) * 100 : 0;
+                    return (
+                      <div style={{ padding: '12px', background: 'rgba(255,255,255,0.94)', borderRadius: 8, border: '1px solid rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Despesas vs Mês Ant.)</span>
+                         <span style={{ fontSize: 13, fontWeight: 800, color: diffDesp <= 0 ? 'var(--green)' : 'var(--red)' }}>
+                           {diffDesp <= 0 ? '↘' : '↗'} {Math.abs(pctDesp).toFixed(1)}% ({fmt.currency(diffDesp)})
+                         </span>
+                      </div>
+                    )
+                 })()}
+              </div>
             </div>
           </div>
 
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.45)', animationDelay: '700ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'rgba(255,255,255,0.45)', animationDelay: '700ms' }}>
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontSize: '18px', fontWeight: 800 }}>Mapeamento de Despesas</div>
@@ -416,7 +501,7 @@ export default function ConsultorDashboard() {
 
         {/* Saldo evolution + portadores */}
         <div className="grid-21" style={{ marginBottom: 32 }}>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)', animationDelay: '800ms', display: 'flex', flexDirection: 'column' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)', animationDelay: '800ms', display: 'flex', flexDirection: 'column' }}>
             <div className="card-header" style={{ marginBottom: 24 }}>
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Central de Relatórios e Auditoria</div>
@@ -459,7 +544,7 @@ export default function ConsultorDashboard() {
             </div>
           </div>
 
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.45)', animationDelay: '900ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'rgba(255,255,255,0.45)', animationDelay: '900ms' }}>
             <div className="card-header" style={{ marginBottom: '24px' }}>
               <div className="card-title" style={{ fontSize: '18px', fontWeight: 800 }}>Concentração nos Portadores</div>
             </div>
@@ -492,7 +577,7 @@ export default function ConsultorDashboard() {
                 <h4 style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16 }}>Políticas Estratégicas Estabelecidas</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {empresa.politicaReceberName && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.94) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>💵</span>
                         <div style={{ minWidth: 0 }}>
@@ -511,7 +596,7 @@ export default function ConsultorDashboard() {
                     </div>
                   )}
                   {empresa.politicaComprasName && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.94) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🛒</span>
                         <div style={{ minWidth: 0 }}>
@@ -530,7 +615,7 @@ export default function ConsultorDashboard() {
                     </div>
                   )}
                   {empresa.politicaCobrancaName && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.94) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>⚖️</span>
                         <div style={{ minWidth: 0 }}>
@@ -580,7 +665,7 @@ export default function ConsultorDashboard() {
                 {/* Custom Table Body */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {endividamentos.slice(0, 5).map(e => (
-                    <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1.5fr', alignItems: 'center', padding: '16px', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '12px', transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={ev => ev.currentTarget.style.backgroundColor = '#fff'} onMouseLeave={ev => ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'}>
+                    <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1.5fr', alignItems: 'center', padding: '16px', background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '12px', transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={ev => ev.currentTarget.style.backgroundColor = '#fff'} onMouseLeave={ev => ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.96)'}>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b45309' }} />
                         {e.banco}
@@ -627,7 +712,7 @@ export default function ConsultorDashboard() {
                 {lancRecentes.map(l => {
                   const port = store.getPortadores(empresaId).find(p => p.id === l.portadorId);
                   return (
-                    <div key={l.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 3fr 1.5fr 1.5fr 1fr 1.5fr', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '12px', transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={ev => ev.currentTarget.style.backgroundColor = '#fff'} onMouseLeave={ev => ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.7)'}>
+                    <div key={l.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 3fr 1.5fr 1.5fr 1fr 1.5fr', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '12px', transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={ev => ev.currentTarget.style.backgroundColor = '#fff'} onMouseLeave={ev => ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.96)'}>
                       <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>{fmt.date(l.data)}</div>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{l.descricao}</div>
                       <div>

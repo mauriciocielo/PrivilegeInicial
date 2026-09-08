@@ -51,10 +51,15 @@
   --teal:       #14b8a6;
   --teal-bg:    rgba(20, 184, 166, 0.09);
 
-  /* Text */
+  /* Text
+     --text-muted era #9ca3af: apenas 2,6:1 de contraste sobre o fundo branco,
+     abaixo do mínimo de 4,5:1 da WCAG AA. Como essa cor veste os rótulos dos
+     indicadores e os cabeçalhos de tabela, o texto mais importante da tela era
+     justamente o menos legível. #667085 sobe o contraste para ~5:1 mantendo a
+     hierarquia visual em relação ao texto secundário. */
   --text-primary:   #0f1117;
-  --text-secondary: #4b5563;
-  --text-muted:     #9ca3af;
+  --text-secondary: #414b5a;
+  --text-muted:     #667085;
   --text-inverse:   #ffffff;
 
   /* Radius */
@@ -87,24 +92,24 @@
    DEEP DARK MODE — PREMIUM
    ============================================================ */
 [data-theme="dark"] {
-  --bg-base:    #0c0e1a;
-  --bg-card:    #1f2540;
-  --bg-sidebar: #0e1020;
-  --bg-sidebar-hover: rgba(255,255,255,0.08);
-  --text-sidebar: rgba(255,255,255,0.55);
+  --bg-base:    #030408;
+  --bg-card:    #0a0b12;
+  --bg-sidebar: #05060a;
+  --bg-sidebar-hover: rgba(255,255,255,0.06);
+  --text-sidebar: rgba(255,255,255,0.60);
   --text-sidebar-title: #ffffff;
   --text-sidebar-active: #ffffff;
-  --border-sidebar: rgba(255,255,255,0.05);
-  --bg-hover:   #1d2238;
-  --bg-input:   #181c2e;
+  --border-sidebar: rgba(255,255,255,0.04);
+  --bg-hover:   #0e101a;
+  --bg-input:   #0c0d15;
 
-  --border:       #1f2540;
-  --border-light: #252a42;
-  --border-dark:  #1f2540;
+  --border:       #151829;
+  --border-light: #1b1e33;
+  --border-dark:  #181a2b;
 
-  --text-primary:   #f0f2f9;
-  --text-secondary: #8b95b5;
-  --text-muted:     #535d7e;
+  --text-primary:   #ffffff;
+  --text-secondary: #c2c9d6;
+  --text-muted:     #8f9caf;
 
   --accent:        #e53935;
   --accent-dark:   #b71c1c;
@@ -503,7 +508,7 @@ body {
   border-radius: var(--radius);
   padding: 22px;
   box-shadow: var(--shadow);
-  transition: box-shadow var(--dur-base), border-color var(--dur-base);
+  transition: all var(--dur-base) var(--ease-out);
 }
 
 .card:hover {
@@ -566,13 +571,19 @@ body {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base), border-color var(--dur-base);
+  transition: transform var(--dur-slow) cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow var(--dur-slow);
   cursor: default;
+  animation: floatCard 6s ease-in-out infinite alternate;
+}
+
+.stat-card:nth-child(even) {
+  animation-delay: 1.5s;
 }
 
 .stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
 }
 
 /* Glow blob no canto */
@@ -587,9 +598,10 @@ body {
   filter: blur(28px);
   opacity: 0.55;
   transition: opacity var(--dur-base);
+  animation: pulseGlow 4s ease-in-out infinite alternate;
 }
 
-.stat-card:hover::after { opacity: 0.80; }
+.stat-card:hover::after { opacity: 0.85; filter: blur(24px); }
 
 .stat-card.green { border-left: 3px solid var(--green); }
 .stat-card.green::after { background: var(--green); }
@@ -1391,8 +1403,18 @@ tbody td {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.45; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes pulseGlow {
+  0% { opacity: 0.4; transform: scale(1); }
+  100% { opacity: 0.7; transform: scale(1.15); }
+}
+
+@keyframes floatCard {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-3px); }
 }
 
 @keyframes pulse-green {
@@ -1452,6 +1474,63 @@ tbody td {
 .stat-grid > *:nth-child(5) { animation-delay: 0.22s; }
 .stat-grid > *:nth-child(6) { animation-delay: 0.27s; }
 .stat-grid > *:nth-child(n+7) { animation-delay: 0.3s; }
+
+/* ============================================================
+   KPI EM DESTAQUE — barra de acento, brilho de entrada e hover
+   ============================================================ */
+
+/* Barra colorida que se desenha no topo do cartão ao carregar. */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: kpiBar 0.9s var(--ease-out) 0.35s forwards;
+}
+.stat-card:has(.stat-icon.green)::before  { background: linear-gradient(90deg, #059669, #10b981); }
+.stat-card:has(.stat-icon.red)::before    { background: linear-gradient(90deg, #dc2626, #ef4444); }
+.stat-card:has(.stat-icon.blue)::before   { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+.stat-card:has(.stat-icon.purple)::before { background: linear-gradient(90deg, #6d28d9, #8b5cf6); }
+@keyframes kpiBar { to { transform: scaleX(1); } }
+
+/* Brilho que varre o cartão uma única vez, logo após a entrada — é o gesto
+   que puxa o olho para os números assim que o painel abre. */
+.stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: kpiShine 1.5s var(--ease-out) 0.5s 1;
+  pointer-events: none;
+}
+@keyframes kpiShine { to { transform: translateX(120%); } }
+
+/* Hover com elevação e realce do ícone. */
+.stat-card { transition: transform .35s var(--ease-out), box-shadow .35s var(--ease-out); }
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(15, 17, 23, 0.10); }
+.stat-card .stat-icon { transition: transform .4s var(--ease-out); }
+.stat-card:hover .stat-icon { transform: scale(1.12) rotate(-6deg); }
+
+/* O número do indicador precisa de peso — é a informação principal da tela. */
+.stat-card .stat-value {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card::after { animation: none; opacity: 0; }
+  .stat-card::before { animation: none; transform: scaleX(1); }
+  .stat-card:hover { transform: none; }
+}
 
 @keyframes navItemRise {
   from { opacity: 0; transform: translateX(-10px); }

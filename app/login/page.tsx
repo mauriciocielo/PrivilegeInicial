@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { store } from '../../lib/store';
 import Image from 'next/image';
+import BrandLogo from '../../components/BrandLogo';
 import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
 
@@ -196,8 +197,8 @@ export default function LoginPage() {
         width: '100%', maxWidth: 440, background: '#fff', borderRadius: 20, 
         padding: '48px 40px', boxShadow: '0 20px 40px rgba(0,0,0,0.06)' 
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
-          <Image src="/logo.png" alt="Privilege Contabilidade e Consultoria" width={220} height={60} style={{ objectFit: 'contain' }} priority />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32, transform: 'scale(1.15)', transformOrigin: 'center' }}>
+          <BrandLogo size={70} subtitle="PORTAL DE INTELIGÊNCIA" />
         </div>
 
         {error && (

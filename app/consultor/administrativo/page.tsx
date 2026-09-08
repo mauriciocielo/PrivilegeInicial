@@ -5,6 +5,7 @@ import { fmt } from '../../../lib/reports';
 import { syncBackupInChunks } from '../../../lib/sync-helper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { SERVICOS_PADRAO } from '../../../lib/contrato-pdf';
 
 type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup';
 
@@ -157,6 +158,122 @@ export default function AdministrativoPage() {
       );
     });
   }, [auditLogs, auditSearch]);
+
+  // ── Geração do contrato de prestação de serviços ──────────────────────
+  const [showContrato, setShowContrato] = useState(false);
+  const [gerandoContrato, setGerandoContrato] = useState(false);
+  const [contratoEmpresa, setContratoEmpresa] = useState<Empresa | null>(null);
+  const [contratoForm, setContratoForm] = useState({
+    endereco: '', cep: '', cidade: 'Francisco Beltrão', uf: 'PR',
+    valorTotal: '45000', valorEntrada: '7500', parcelas: '12', diaVencimento: '10',
+    primeiroVencimento: '', inicioServicos: '', duracaoMeses: '6', horasSemanais: '4',
+    incluirConfidencialidade: true, servicos: '',
+  });
+
+  const handleGerarContrato = () => {
+    const eid = sessionStorage.getItem('cf_empresa_sel');
+    if (!eid || eid.startsWith('grupo:')) {
+      toast.error('Selecione uma empresa específica (não um grupo) para gerar o contrato.');
+      return;
+    }
+    const emp = empresas.find(e => e.id === eid);
+    if (!emp) { toast.error('Empresa não encontrada.'); return; }
+    if (!emp.cnpj) { toast.error('A empresa não tem CNPJ cadastrado — preencha antes de gerar o contrato.'); return; }
+
+    // Tudo vem do cadastro da empresa; o formulário abaixo apenas confirma e
+    // permite ajustar pontualmente antes de emitir, sem redigitar o que já existe.
+    setContratoForm({
+      endereco: emp.endereco || '',
+      cep: emp.cep || '',
+      cidade: emp.cidade || 'Francisco Beltrão',
+      uf: emp.uf || 'PR',
+      valorTotal: emp.contratoValorTotal != null ? String(emp.contratoValorTotal) : '',
+      valorEntrada: emp.contratoValorEntrada != null ? String(emp.contratoValorEntrada) : '',
+      parcelas: emp.contratoParcelas != null ? String(emp.contratoParcelas) : '12',
+      diaVencimento: emp.contratoDiaVencimento != null ? String(emp.contratoDiaVencimento) : '10',
+      primeiroVencimento: emp.contratoPrimeiroVencimento || '',
+      inicioServicos: emp.contratoInicioServicos || '',
+      duracaoMeses: emp.contratoDuracaoMeses != null ? String(emp.contratoDuracaoMeses) : '6',
+      horasSemanais: emp.contratoHorasSemanais != null ? String(emp.contratoHorasSemanais) : '4',
+      incluirConfidencialidade: true,
+      servicos: emp.contratoServicos || SERVICOS_PADRAO,
+    });
+    setContratoEmpresa(emp);
+    setShowContrato(true);
+  };
+
+  const emitirContrato = async () => {
+    if (!contratoEmpresa) return;
+    const f = contratoForm;
+    if (!f.endereco.trim() || !f.cep.trim()) {
+      toast.error('Informe o endereço e o CEP do cliente — eles entram na qualificação das partes.');
+      return;
+    }
+
+    setGerandoContrato(true);
+    try {
+      const { gerarContratoPdf } = await import('../../../lib/contrato-pdf');
+      const hoje = new Date();
+      const { blob, nome } = await gerarContratoPdf(
+        {
+          razaoSocial: contratoEmpresa.razaoSocial || contratoEmpresa.nomeFantasia,
+          cnpj: contratoEmpresa.cnpj,
+          endereco: f.endereco.trim(),
+          cep: f.cep.trim(),
+          cidade: f.cidade.trim(),
+          uf: f.uf.trim().toUpperCase(),
+        },
+        {
+          valorTotal: Number(f.valorTotal) || 0,
+          valorEntrada: Number(f.valorEntrada) || 0,
+          parcelas: Number(f.parcelas) || 1,
+          diaVencimento: Number(f.diaVencimento) || 10,
+          primeiroVencimento: f.primeiroVencimento.trim() || '—',
+          inicioServicos: f.inicioServicos.trim() || '—',
+          duracaoMeses: Number(f.duracaoMeses) || 6,
+          horasSemanais: Number(f.horasSemanais) || 4,
+          dataAssinatura: hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
+          incluirConfidencialidade: f.incluirConfidencialidade,
+          servicos: f.servicos,
+        }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nome}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Devolve os dados ao cadastro para que a próxima emissão já venha pronta
+      // e o contrato deixe de depender do que foi digitado nesta janela.
+      store.saveEmpresa({
+        ...contratoEmpresa,
+        endereco: f.endereco.trim(),
+        cep: f.cep.trim(),
+        cidade: f.cidade.trim(),
+        uf: f.uf.trim().toUpperCase(),
+        contratoValorTotal: Number(f.valorTotal) || 0,
+        contratoValorEntrada: Number(f.valorEntrada) || 0,
+        contratoParcelas: Number(f.parcelas) || 0,
+        contratoDiaVencimento: Number(f.diaVencimento) || 0,
+        contratoPrimeiroVencimento: f.primeiroVencimento.trim(),
+        contratoInicioServicos: f.inicioServicos.trim(),
+        contratoDuracaoMeses: Number(f.duracaoMeses) || 0,
+        contratoHorasSemanais: Number(f.horasSemanais) || 0,
+        contratoServicos: f.servicos,
+      });
+
+      store.logAudit(contratoEmpresa.id, 'CONTRATO', `Contrato gerado para ${contratoEmpresa.razaoSocial}`);
+      setShowContrato(false);
+      toast.success('Contrato gerado e dados salvos no cadastro.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar contrato: ' + (e as Error).message);
+    } finally {
+      setGerandoContrato(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -774,6 +891,15 @@ export default function AdministrativoPage() {
                   ))}
                 </optgroup>
               </select>
+            </div>
+            <div style={{ marginLeft: '12px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleGerarContrato}
+                style={{ padding: '12px 20px', borderRadius: '10px', height: '100%', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                📄 Gerar Contrato BPO
+              </button>
             </div>
           </div>
         </div>
@@ -1455,6 +1581,134 @@ export default function AdministrativoPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Modal: dados variáveis do contrato ── */}
+      {showContrato && contratoEmpresa && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowContrato(false)}>
+          <div className="modal" style={{ maxWidth: 720 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Gerar contrato — {contratoEmpresa.nomeFantasia || contratoEmpresa.razaoSocial}</h2>
+              <button className="modal-close" onClick={() => setShowContrato(false)}>✕</button>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 18 }}>
+              Os dados vêm do cadastro de <strong>{contratoEmpresa.razaoSocial}</strong> (CNPJ {contratoEmpresa.cnpj}).
+              Confira antes de emitir — o que você ajustar aqui é salvo de volta no cadastro.
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
+              Endereço do cliente
+            </div>
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 2 }}>
+                <label className="form-label">Logradouro, número, bairro *</label>
+                <input className="form-control" placeholder="Rua ..., 000, Centro" value={contratoForm.endereco} onChange={e => setContratoForm(f => ({ ...f, endereco: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">CEP *</label>
+                <input className="form-control" placeholder="85.601-000" value={contratoForm.cep} onChange={e => setContratoForm(f => ({ ...f, cep: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Cidade</label>
+                <input className="form-control" value={contratoForm.cidade} onChange={e => setContratoForm(f => ({ ...f, cidade: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">UF</label>
+                <input className="form-control" maxLength={2} value={contratoForm.uf} onChange={e => setContratoForm(f => ({ ...f, uf: e.target.value }))} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+              Remuneração
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Valor total (R$)</label>
+                <input className="form-control" type="number" value={contratoForm.valorTotal} onChange={e => setContratoForm(f => ({ ...f, valorTotal: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Entrada na assinatura (R$)</label>
+                <input className="form-control" type="number" value={contratoForm.valorEntrada} onChange={e => setContratoForm(f => ({ ...f, valorEntrada: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Nº de parcelas</label>
+                <input className="form-control" type="number" value={contratoForm.parcelas} onChange={e => setContratoForm(f => ({ ...f, parcelas: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Dia do vencimento</label>
+                <input className="form-control" type="number" value={contratoForm.diaVencimento} onChange={e => setContratoForm(f => ({ ...f, diaVencimento: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">1º vencimento (por extenso)</label>
+                <input className="form-control" placeholder="10 de outubro de 2026" value={contratoForm.primeiroVencimento} onChange={e => setContratoForm(f => ({ ...f, primeiroVencimento: e.target.value }))} />
+              </div>
+            </div>
+            {Number(contratoForm.parcelas) > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: -6, marginBottom: 6 }}>
+                Resulta em {contratoForm.parcelas} parcelas de{' '}
+                <strong>
+                  {((Number(contratoForm.valorTotal) - Number(contratoForm.valorEntrada)) / Number(contratoForm.parcelas))
+                    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </strong>
+              </div>
+            )}
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+              Prazo
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Início dos serviços</label>
+                <input className="form-control" placeholder="03 de setembro" value={contratoForm.inicioServicos} onChange={e => setContratoForm(f => ({ ...f, inicioServicos: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Duração (meses)</label>
+                <input className="form-control" type="number" value={contratoForm.duracaoMeses} onChange={e => setContratoForm(f => ({ ...f, duracaoMeses: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Horas semanais</label>
+                <input className="form-control" type="number" value={contratoForm.horasSemanais} onChange={e => setContratoForm(f => ({ ...f, horasSemanais: e.target.value }))} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+              Anexo I — serviços que serão prestados
+            </div>
+            <div className="form-group">
+              <textarea
+                className="form-control"
+                style={{ minHeight: 190, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                value={contratoForm.servicos}
+                onChange={e => setContratoForm(f => ({ ...f, servicos: e.target.value }))}
+              />
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
+                Uma linha por serviço. Linha no formato <strong>1.2 - TÍTULO</strong> vira subtítulo de seção;
+                <strong> Rótulo: descrição</strong> destaca o rótulo em negrito no PDF; linha em branco separa blocos.
+              </div>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>
+              <input
+                type="checkbox"
+                checked={contratoForm.incluirConfidencialidade}
+                onChange={e => setContratoForm(f => ({ ...f, incluirConfidencialidade: e.target.checked }))}
+              />
+              Incluir o contrato de confidencialidade como anexo
+            </label>
+
+            <div className="form-actions" style={{ marginTop: 20 }}>
+              <button className="btn btn-secondary" onClick={() => setShowContrato(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={emitirContrato} disabled={gerandoContrato}>
+                {gerandoContrato ? 'Gerando...' : 'Gerar contrato'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

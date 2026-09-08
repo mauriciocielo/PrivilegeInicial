@@ -6,6 +6,7 @@ import { parseCurvaAbcFile, classificarAbc } from '../../../lib/curva-abc-parser
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import GeminiAbc from '../../../components/GeminiAbc';
 
 const BADGE_CLASSE: Record<string, string> = {
   A: 'badge-green',
@@ -263,6 +264,8 @@ export default function CurvaAbcPage() {
             </div>
           </div>
         )}
+        
+        <GeminiAbc empresaId={empresaId} curva={curvaAtual} />
 
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-header">

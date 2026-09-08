@@ -36,6 +36,9 @@ export default function AgendaPage() {
     recurrent: false
   });
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const getWeekData = (date: Date) => {
     const jsDate = new Date(date);
     const dow = jsDate.getDay();
@@ -113,11 +116,13 @@ export default function AgendaPage() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          setTasks(parsed.map((p: any) => ({
-             ...p,
-             // fallback migration from old 'day' field to specific 'dateStr'
-             dateStr: p.dateStr || new Date().toISOString().split('T')[0]
-          })));
+          if (Array.isArray(parsed)) {
+            setTasks(parsed.map((p: any) => ({
+               ...p,
+               dateStr: p.dateStr || p.day || new Date().toISOString().split('T')[0],
+               horario: p.horario || '09:00'
+            })));
+          }
         } catch (e) {}
       }
     };
@@ -178,6 +183,8 @@ export default function AgendaPage() {
     }
   };
 
+  if (!mounted) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando agenda...</div>;
+
   return (
     <>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -213,7 +220,7 @@ export default function AgendaPage() {
         {/* Dynamic Kanban Board with Current Dates */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', alignItems: 'start', minHeight: '600px', overflowX: 'auto' }}>
           {currentWeekInfo.map(dayObj => {
-            const dayTasks = tasks.filter(t => t.dateStr === dayObj.iso).sort((a,b) => a.horario.localeCompare(b.horario));
+            const dayTasks = tasks.filter(t => t.dateStr === dayObj.iso).sort((a,b) => String(a.horario || '').localeCompare(String(b.horario || '')));
             const isToday = new Date().toISOString().split('T')[0] === dayObj.iso;
 
             return (

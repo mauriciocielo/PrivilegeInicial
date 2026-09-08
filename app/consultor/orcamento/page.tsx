@@ -1,233 +1,253 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { store, Empresa, OrcamentoMensal, PlanoConta, Lancamento } from '../../../lib/store';
-import { uid } from '../../../lib/store';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { store, Empresa, OrcamentoMensal, PlanoConta, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import { Target, TrendingDown, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function OrcamentoPage() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresaId, setEmpresaId] = useState('');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [mesSelecionado, setMesSelecionado] = useState(() => {
+  const [competencia, setCompetencia] = useState(() => {
     const d = new Date();
-    d.setMonth(d.getMonth() + 1); // Default to next month for budget
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
-  const [lancsHistorico, setLancsHistorico] = useState<Lancamento[]>([]);
-  const [mesesMedia, setMesesMedia] = useState(3);
-  const [orcamento, setOrcamento] = useState<OrcamentoMensal | null>(null);
   
-  const [valores, setValores] = useState<Record<string, number>>({});
-  const [saving, setSaving] = useState(false);
-  const [replicarFuturo, setReplicarFuturo] = useState(false);
+  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
+  const [orcamento, setOrcamento] = useState<OrcamentoMensal | null>(null);
+  const [limites, setLimites] = useState<Record<string, number>>({});
+  
+  // Realizado
+  const [lancamentos, setLancamentos] = useState<ReturnType<typeof store.getLancamentos>>([]);
 
-  const load = useCallback((eId: string, mes: string, qtdMeses: number) => {
+  const load = useCallback((eId: string, comp: string) => {
     setEmpresaId(eId);
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
     
-    const plano = store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo);
-    setPlanoContas(plano.sort((a,b) => a.codigo.localeCompare(b.codigo)));
-
-    // Find if budget exists for this month
-    const orc = store.getOrcamentos(eId).find(o => o.mes === mes);
-    if (orc) {
-      setOrcamento(orc);
-      setValores(orc.categorias);
+    if (!eId) return;
+    
+    const contas = store.getPlanoContas(eId).filter(c => c.tipo === 'despesa' || (c.tipo === 'receita' && c.descricao.trim().startsWith('( - )')));
+    setPlanoContas(contas);
+    
+    const orcs = store.getOrcamentosMensais(eId);
+    const atual = orcs.find(o => o.mes === comp);
+    if (atual) {
+      setOrcamento(atual);
+      setLimites(atual.categorias);
     } else {
       setOrcamento(null);
-      setValores({});
+      setLimites({});
     }
 
-    // Load historical month logic for averages
-    const [y, m] = mes.split('-');
-    const baseDate = new Date(Number(y), Number(m)-1, 1);
-    
-    const dHist = new Date(baseDate); dHist.setMonth(dHist.getMonth() - qtdMeses);
-    const mHist = `${dHist.getFullYear()}-${String(dHist.getMonth()+1).padStart(2,'0')}`;
-    const allLancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
-    const lHist = allLancs.filter(l => l.data >= mHist && l.data < mes);
-    setLancsHistorico(lHist);
+    const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado' && l.data.startsWith(comp));
+    setLancamentos(lancs);
 
   }, []);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved, mesSelecionado, mesesMedia);
-    const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado, mesesMedia);
+    load(saved, competencia);
+
+    const handler = (e: Event) => load((e as CustomEvent).detail, competencia);
     const dataChangeHandler = () => {
       const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-      load(current, mesSelecionado, mesesMedia);
+      load(current, competencia);
     };
+    
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);
     return () => {
       window.removeEventListener('empresaChange', handler);
       window.removeEventListener('cfDataChange', dataChangeHandler);
     };
-  }, [load, mesSelecionado, mesesMedia]);
+  }, [load, competencia]);
 
-  const calcMedia = (pcId: string) => {
-    const sum = lancsHistorico.filter(l => l.planoContaId === pcId).reduce((a, l) => a + l.valor, 0);
-    return sum / mesesMedia;
+  const handleCompetenciaChange = (c: string) => {
+    setCompetencia(c);
+    load(empresaId, c);
+  };
+
+  const setLimite = (contaId: string, val: number) => {
+    setLimites(prev => ({ ...prev, [contaId]: val }));
   };
 
   const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      let currentMonthStr = mesSelecionado;
-      let monthsToSave = replicarFuturo ? 12 : 1;
-      
-      for (let i = 0; i < monthsToSave; i++) {
-        // Find existing for this month
-        const existing = store.getOrcamentos(empresaId).find(o => o.mes === currentMonthStr);
-        const o: OrcamentoMensal = {
-          id: existing?.id || uid(),
-          empresaId,
-          mes: currentMonthStr,
-          categorias: valores,
-        };
-        store.saveOrcamento(o);
-        if (i === 0) setOrcamento(o);
-
-        // increment month
-        const [yy, mm] = currentMonthStr.split('-');
-        let nY = Number(yy); let nM = Number(mm) + 1;
-        if (nM > 12) { nM = 1; nY++; }
-        currentMonthStr = `${nY}-${String(nM).padStart(2, '0')}`;
-      }
-      
-      setSaving(false);
-      setReplicarFuturo(false);
-      toast.success(replicarFuturo ? 'Orçamento salvo e replicado para os próximos 11 meses!' : 'Orçamento salvo com sucesso!');
-    }, 400);
+    if (!empresaId) return;
+    const orc: OrcamentoMensal = {
+      id: orcamento?.id || uid(),
+      empresaId,
+      mes: competencia,
+      categorias: limites
+    };
+    store.saveOrcamentoMensal(orc);
+    setOrcamento(orc);
+    store.logAudit(empresaId, 'UPDATE', `Config · Definiu/Atualizou orçamento de ${competencia}`);
+    toast.success('Orçamento salvo com sucesso!');
   };
 
-  const setValor = (id: string, val: number) => {
-    setValores(v => ({ ...v, [id]: val }));
-  };
+  const resumoContas = useMemo(() => {
+    const result: { id: string; codigo: string; descricao: string; orcado: number; realizado: number; burnRate: number }[] = [];
+    let totalOrcado = 0;
+    let totalRealizado = 0;
 
-  const mesesOptions: string[] = [];
-  const hoje = new Date();
-  for (let i = -1; i <= 6; i++) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
-    mesesOptions.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-  }
+    planoContas.forEach(pc => {
+       const orcado = limites[pc.id] || 0;
+       const realizado = lancamentos.filter(l => l.planoContaId === pc.id).reduce((a, l) => a + l.valor, 0);
+       
+       totalOrcado += orcado;
+       totalRealizado += realizado;
 
-  const recSum = planoContas.filter(p => p.tipo === 'receita').reduce((a, p) => a + (valores[p.id] || 0), 0);
-  const despSum = planoContas.filter(p => p.tipo === 'despesa').reduce((a, p) => a + (valores[p.id] || 0), 0);
+       if (orcado > 0 || realizado > 0) {
+         result.push({
+           id: pc.id,
+           codigo: pc.codigo,
+           descricao: pc.descricao,
+           orcado,
+           realizado,
+           burnRate: orcado > 0 ? (realizado / orcado) * 100 : (realizado > 0 ? 100 : 0)
+         });
+       }
+    });
+
+    result.sort((a,b) => a.codigo.localeCompare(b.codigo));
+
+    return { linhas: result, totalOrcado, totalRealizado, burnRateGlobal: totalOrcado > 0 ? (totalRealizado / totalOrcado) * 100 : 0 };
+  }, [planoContas, limites, lancamentos]);
+
+  const [anoLabel, mesLabel] = competencia.split('-');
+  const mesAtualLabel = new Date(Number(anoLabel), Number(mesLabel)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header glass-header" style={{
+        background: 'rgba(255, 255, 255, 0.4)',
+        backdropFilter: 'blur(24px)',
+        borderBottom: '1px solid rgba(255,255,255,0.3)',
+      }}>
         <div>
-          <div className="page-title">Orçamento Mensal</div>
-          <div className="page-subtitle">{empresa?.razaoSocial} — Planejamento Financeiro baseado no Fluxo de Caixa</div>
+          <div className="page-title">Plano Orçamentário (Budget)</div>
+          <div className="page-subtitle">{empresa?.nomeFantasia || empresa?.razaoSocial} — Tetos de gastos operacionais e acompanhamento</div>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: 12 }}>
-          <select 
-            className="form-control" 
-            value={mesSelecionado} 
-            onChange={e => setMesSelecionado(e.target.value)}
-            style={{ width: 160 }}
-          >
-            {mesesOptions.map(m => {
-              const [y, mo] = m.split('-');
-              const d = new Date(Number(y), Number(mo)-1, 1);
-              return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
-            })}
-          </select>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: 'var(--bg-card)', padding: '0 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-            <label style={{ color: 'var(--text-secondary)' }}>Média base: </label>
-            <select 
-              value={mesesMedia} 
-              onChange={e => setMesesMedia(Number(e.target.value))}
-              style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: 'var(--text-primary)' }}
-            >
-              {[1, 2, 3, 4, 6, 12, 24].map(n => (
-                <option key={n} value={n}>{n} {n === 1 ? 'mês' : 'meses'}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: 'var(--bg-card)', padding: '0 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-            <input type="checkbox" id="rep" checked={replicarFuturo} onChange={e => setReplicarFuturo(e.target.checked)} />
-            <label htmlFor="rep">Replicar para os próximos 11 meses</label>
-          </div>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '⏳ Salvando...' : '✓ Salvar Orçamento'}
+        <div className="header-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <input
+            type="month"
+            className="form-control"
+            value={competencia}
+            onChange={e => handleCompetenciaChange(e.target.value)}
+            style={{ width: 170, fontWeight: 600 }}
+          />
+          <button className="btn btn-primary" onClick={handleSave}>
+            💾 Salvar Orçamento
           </button>
         </div>
       </div>
 
       <div className="page-body">
-        <div className="stat-grid" style={{ marginBottom: 24 }}>
-          <div className="stat-card green">
-            <div className="stat-icon green">↑</div>
-            <div className="stat-label">Receitas (Orçadas)</div>
-            <div className="stat-value">{fmt.currency(recSum)}</div>
+        
+        {/* Painel Burn Rate Macro */}
+        <div className="glass-card animate-slide-up" style={{
+          marginBottom: 32, padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
+        }}>
+          <div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <Target size={18} color="var(--accent)" />
+                <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--text-secondary)', fontWeight: 700 }}>Meta de Gastos: {mesAtualLabel}</div>
+             </div>
+             <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>
+                {fmt.currency(resumoContas.totalRealizado)} <span style={{ fontSize: 20, color: 'var(--text-muted)', fontWeight: 600 }}>/ {fmt.currency(resumoContas.totalOrcado)}</span>
+             </div>
           </div>
-          <div className="stat-card red">
-            <div className="stat-icon red">↓</div>
-            <div className="stat-label">Despesas (Orçadas)</div>
-            <div className="stat-value">{fmt.currency(despSum)}</div>
-          </div>
-          <div className={`stat-card ${recSum - despSum >= 0 ? 'blue' : 'red'}`}>
-            <div className={`stat-icon ${recSum - despSum >= 0 ? 'blue' : 'red'}`}>≈</div>
-            <div className="stat-label">Resultado Projetado</div>
-            <div className="stat-value" style={{ color: recSum - despSum >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {fmt.currency(recSum - despSum)}
-            </div>
+          
+          <div style={{ minWidth: 250 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, fontWeight: 700 }}>
+                 <span style={{ color: 'var(--text-secondary)' }}>Burn Rate (Mensal)</span>
+                 <span style={{ color: resumoContas.burnRateGlobal > 100 ? 'var(--red)' : resumoContas.burnRateGlobal > 85 ? 'var(--yellow)' : 'var(--green)' }}>
+                   {resumoContas.burnRateGlobal.toFixed(1)}%
+                 </span>
+             </div>
+             <div style={{ height: 10, background: 'var(--bg-hover)', borderRadius: 10, overflow: 'hidden' }}>
+                 <div style={{ 
+                     height: '100%', 
+                     width: `${Math.min(resumoContas.burnRateGlobal, 100)}%`, 
+                     background: resumoContas.burnRateGlobal > 100 ? 'var(--red)' : resumoContas.burnRateGlobal > 85 ? 'var(--amber)' : 'var(--green)',
+                     transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)'
+                 }} />
+             </div>
+             {resumoContas.burnRateGlobal > 100 && (
+               <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                 <AlertTriangle size={12} /> Orçamento Geral Estourado
+               </div>
+             )}
           </div>
         </div>
 
         <div className="card">
           <div className="card-header">
-            <div className="card-title">Categorias e Contas Analíticas</div>
+            <div className="card-title">Definição Limite por Categoria</div>
           </div>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Plano de Contas</th>
-                  <th>Tipo</th>
-                  <th style={{ textAlign: 'right' }}>Média ({mesesMedia} {mesesMedia === 1 ? 'Mês' : 'Meses'})</th>
-                  <th style={{ width: 200, textAlign: 'right' }}>Valor Orçado (R$)</th>
+                  <th style={{ width: 80 }}>Código</th>
+                  <th>Categoria de Gasto</th>
+                  <th style={{ textAlign: 'right', width: 200 }}>Orçado (Teto Máximo)</th>
+                  <th style={{ textAlign: 'right', width: 150 }}>Realizado Hoje</th>
+                  <th style={{ width: 250 }}>Status (Burn Rate)</th>
                 </tr>
               </thead>
               <tbody>
-                {planoContas.map(pc => {
-                  const media = calcMedia(pc.id);
-                  return (
+                {planoContas.filter(pc => pc.nivel >= 3).sort((a,b) => a.codigo.localeCompare(b.codigo)).map(pc => {
+                   const orcado = limites[pc.id] || 0;
+                   const realizado = resumoContas.linhas.find(r => r.id === pc.id)?.realizado || 0;
+                   const burn = orcado > 0 ? (realizado / orcado) * 100 : (realizado > 0 ? 100 : 0);
+                   const exceeds = burn > 100;
+                   
+                   return (
                     <tr key={pc.id}>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{pc.codigo}</td>
                       <td style={{ fontWeight: 500 }}>{pc.descricao}</td>
-                      <td>
-                        <span className={`badge ${pc.tipo === 'receita' ? 'badge-blue' : 'badge-red'}`}>
-                          {pc.tipo === 'receita' ? 'Receita' : 'Despesa'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
-                        {fmt.currency(media)}
-                      </td>
                       <td style={{ textAlign: 'right' }}>
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          className="form-control" 
-                          style={{ textAlign: 'right', width: '100%' }}
-                          value={valores[pc.id] || ''}
-                          placeholder="0.00"
-                          onChange={e => setValor(pc.id, Number(e.target.value))}
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="form-control"
+                          style={{ textAlign: 'right', padding: '6px 12px', height: 32 }}
+                          value={limites[pc.id] || ''}
+                          placeholder="0,00"
+                          onChange={e => setLimite(pc.id, Number(e.target.value))}
                         />
                       </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: exceeds ? 'var(--red)' : 'var(--text-main)' }}>
+                         {fmt.currency(realizado)}
+                      </td>
+                      <td>
+                        {orcado > 0 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                             <div style={{ flex: 1, height: 6, background: 'var(--bg-hover)', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ 
+                                  height: '100%', 
+                                  width: `${Math.min(burn, 100)}%`, 
+                                  background: exceeds ? 'var(--red)' : burn > 80 ? 'var(--amber)' : 'var(--green)'
+                                }} />
+                             </div>
+                             <div style={{ fontSize: 12, fontWeight: 700, width: 45, color: exceeds ? 'var(--red)' : 'var(--text-secondary)' }}>
+                                {burn.toFixed(0)}%
+                             </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Não orçado</span>
+                        )}
+                      </td>
                     </tr>
-                  );
+                   );
                 })}
               </tbody>
             </table>
           </div>
         </div>
+
       </div>
     </>
   );

@@ -120,7 +120,7 @@ export default function ReportBoardPage() {
         <div style={{ borderBottom: '2px solid var(--accent)', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ marginBottom: 12 }}>
-              <img src="/logo.png" alt="Privilege Logo" style={{ height: 42, width: 'auto' }} crossOrigin="anonymous" />
+              <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Privilege Logo" style={{ height: 45, width: 165, display: 'block' }} crossOrigin="anonymous" />
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: '#030712', margin: '8px 0 4px 0', letterSpacing: '-0.5px' }}>Finance Report & Analytics</h1>
             <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>Período de Análise: <span style={{ fontWeight: 700, color: '#030712' }}>{mesExtenso}</span></div>

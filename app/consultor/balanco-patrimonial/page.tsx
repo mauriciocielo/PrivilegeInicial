@@ -5,6 +5,7 @@ import { fmt } from '../../../lib/reports';
 import { gerarPdfBalancoPatrimonial } from '../../../lib/balanco-pdf';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import GeminiTips from '../../../components/GeminiTips';
 
 const GRUPO_LABELS: Record<GrupoContaBalanco, string> = {
   ativo_circulante: 'Ativo Circulante',
@@ -96,6 +97,94 @@ export default function BalancoPatrimonialPage() {
 
   const setValor = (contaId: string, val: number) => {
     setValores(v => ({ ...v, [contaId]: val }));
+  };
+
+  const handleAutoFill = async () => {
+    if (!(await confirmAsync('Substituir os valores atuais com saldos calculados do sistema para este mês?'))) return;
+    
+    const newValores = { ...valores };
+    const [y, m] = competencia.split('-');
+    const dataLimiteDate = new Date(Number(y), Number(m), 0); // último dia do mês
+    const dataLimite = dataLimiteDate.toISOString().split('T')[0];
+    const dataLimiteFull = `${dataLimite}T23:59:59`;
+
+    // 1. Portadores e Resultado Financeiro acumulado
+    const lancamentos = store.getLancamentos(empresaId).filter(l => l.status === 'realizado' && l.data <= dataLimite);
+    
+    const ports = store.getPortadores(empresaId);
+    let vCaixa = 0, vBanco = 0, vAplic = 0;
+    ports.forEach(p => {
+       let saldo = p.saldoInicial || 0;
+       if (p.saldoInicialData && p.saldoInicialData > dataLimite) saldo = 0; // Se o saldo inicial foi depois do limite
+       
+       lancamentos.filter(l => l.portadorId === p.id).forEach(l => {
+         // Se for conta tipo redutora, inverte o fluxo logicamente num CAIXA REAL (mas assumindo fluxo padrão)
+         if (l.tipo === 'receita') saldo += l.valor; else saldo -= l.valor;
+       });
+       
+       if (p.tipo === 'caixa') vCaixa += saldo;
+       else if (['poupanca', 'aplicacao'].includes(p.tipo)) vAplic += saldo;
+       else vBanco += saldo;
+    });
+
+    const ccCaixa = contas.find(c => c.codigo === '1.1.01');
+    const ccBanco = contas.find(c => c.codigo === '1.1.02');
+    const ccAplic = contas.find(c => c.codigo === '1.1.03');
+    if (ccCaixa) newValores[ccCaixa.id] = vCaixa >= 0 ? vCaixa : 0;
+    if (ccBanco) newValores[ccBanco.id] = vBanco >= 0 ? vBanco : 0;
+    if (ccAplic) newValores[ccAplic.id] = vAplic >= 0 ? vAplic : 0;
+
+    // 2. Imobilizado Histórico
+    const imobs = store.getImobilizados(empresaId);
+    let vImobCusto = 0, vImobDep = 0;
+    imobs.forEach(i => {
+       if (i.dataAquisicao <= dataLimite) {
+         vImobCusto += i.valorAquisicao;
+         const d1 = new Date(i.dataAquisicao + 'T12:00:00');
+         let months = (dataLimiteDate.getFullYear() - d1.getFullYear()) * 12 + (dataLimiteDate.getMonth() - d1.getMonth());
+         if (months > 0) {
+           let depAcum = ((i.valorAquisicao * (i.taxaDepreciacao / 100)) / 12) * months;
+           if (depAcum > i.valorAquisicao) depAcum = i.valorAquisicao;
+           vImobDep += depAcum;
+         }
+       }
+    });
+    // Vamos inserir o custo em 'Máquinas e Equipamentos' ou a primeira de Imobilizado
+    const ccImob = contas.find(c => c.codigo === '1.2.3.03') || contas.find(c => c.subgrupo === 'Imobilizado');
+    const ccDep = contas.find(c => c.codigo === '1.2.3.05');
+    if (ccImob) newValores[ccImob.id] = vImobCusto;
+    if (ccDep) newValores[ccDep.id] = -vImobDep;
+
+    // 3. Endividamentos
+    const endivs = store.getEndividamentos(empresaId);
+    let vCurto = 0, vLongo = 0;
+    endivs.forEach(e => {
+       // @ts-ignore
+       let hist = e.historicoSaldos || [];
+       // @ts-ignore
+       const match = hist.slice().reverse().find(s => s.mes <= competencia);
+       const saldo = match ? match.saldo : (e.valorAPagar || 0);
+       
+       if (e.parcelasFaltantes <= 12) vCurto += saldo; else vLongo += saldo;
+    });
+    const cpCurto = contas.find(c => c.codigo === '2.1.02');
+    const cpLongo = contas.find(c => c.codigo === '2.2.01');
+    if (cpCurto) newValores[cpCurto.id] = vCurto;
+    if (cpLongo) newValores[cpLongo.id] = vLongo;
+
+    // 4. Lucros / Resultado (Receitas vs Despesas)
+    let totalRec = 0, totalDesp = 0;
+    lancamentos.forEach(l => {
+       // Não considera transferências no resultado (exceto se houver bug na config, mas tipo 'transferencia' não tem aqui pois lancamentos são 'receita' ou 'despesa')
+       if (l.tipo === 'receita') totalRec += l.valor; 
+       else totalDesp += l.valor;
+    });
+    const result = totalRec - totalDesp; // Resultado líquido global simulado
+    const ccLucro = contas.find(c => c.codigo === '2.3.04') || contas.find(c => c.codigo === '2.3.05');
+    if (ccLucro) newValores[ccLucro.id] = result;
+
+    setValores(newValores);
+    toast.success(`Informações até ${formatCompetencia(competencia)} extraídas!`);
   };
 
   const totalAtivo = useMemo(() =>
@@ -310,16 +399,25 @@ export default function BalancoPatrimonialPage() {
             onChange={e => handleCompetenciaChange(e.target.value)}
             style={{ width: 170 }}
           />
+          <button className="btn btn-primary" style={{ backgroundColor: 'var(--amber)', color: '#000' }} onClick={handleAutoFill}>
+             ✨ Auto-Preencher
+          </button>
           <button className="btn btn-secondary" onClick={handleExportPdf} disabled={exportando || !empresaId}>
-            {exportando ? '⏳ Gerando...' : '📄 Exportar PDF'}
+            {exportando ? '⏳ Gerando...' : '📄 PDF'}
           </button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving || !empresaId}>
-            {saving ? '⏳ Salvando...' : balancoId ? '💾 Atualizar Balanço' : '💾 Salvar Balanço'}
+            {saving ? '⏳ Salvando...' : balancoId ? '💾 Atualizar' : '💾 Salvar'}
           </button>
         </div>
       </div>
 
       <div className="page-body">
+        <GeminiTips 
+          empresaId={empresaId} 
+          dataIni={`${competencia}-01`} 
+          dataFim={`${competencia}-31`} 
+          contextKey={competencia} 
+        />
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
             <div className="stat-icon blue">Σ</div>

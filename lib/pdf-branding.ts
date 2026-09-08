@@ -16,8 +16,35 @@ export const PDF_RED: [number, number, number] = [185, 28, 28];
 
 export const PDF_BRAND_NAME = 'Privilege Contabilidade e Consultoria';
 
-const LOGO_BOX = 26;
-const LOGO_PAD = 2;
+// A logo do escritório é larga (1024x442 ≈ 2,32:1). A placa precisa acompanhar
+// essa proporção — encaixá-la num quadrado espremia a marca horizontalmente.
+const LOGO_PLATE_W = 44;
+const LOGO_PLATE_H = 20;
+const LOGO_PAD = 2.5;
+const EMPRESA_PLATE_W = 32;
+const EMPRESA_PLATE_H = 18;
+
+/**
+ * Calcula o retângulo que encaixa a imagem dentro da placa SEM distorcer,
+ * centralizando o que sobrar. Antes as imagens eram esticadas para preencher
+ * a caixa inteira, o que deformava tanto a logo do escritório quanto a do cliente.
+ */
+function fitPreservingRatio(
+  doc: any, imgData: string,
+  boxX: number, boxY: number, boxW: number, boxH: number, fallbackRatio: number
+): { x: number; y: number; w: number; h: number } {
+  let ratio = fallbackRatio;
+  try {
+    const p = doc.getImageProperties(imgData);
+    if (p?.width && p?.height) ratio = p.width / p.height;
+  } catch {
+    /* jsPDF não conseguiu ler as dimensões — usa a proporção conhecida */
+  }
+  let w = boxW;
+  let h = w / ratio;
+  if (h > boxH) { h = boxH; w = h * ratio; }
+  return { x: boxX + (boxW - w) / 2, y: boxY + (boxH - h) / 2, w, h };
+}
 
 let officeLogoCache: string | null | undefined; // undefined = ainda não tentou buscar
 
@@ -66,11 +93,19 @@ export function drawPdfHeaderBand(
   doc.setFillColor(...PDF_ACCENT);
   doc.rect(0, 0, W, headerHeight, 'F');
 
+  const plateY = Math.max(4, (headerHeight - LOGO_PLATE_H) / 2);
+
   if (officeLogoBase64) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(M, 7, LOGO_BOX, LOGO_BOX, 2, 2, 'F');
+    doc.roundedRect(M, plateY, LOGO_PLATE_W, LOGO_PLATE_H, 2, 2, 'F');
     try {
-      doc.addImage(officeLogoBase64, 'PNG', M + LOGO_PAD, 7 + LOGO_PAD, LOGO_BOX - LOGO_PAD * 2, LOGO_BOX - LOGO_PAD * 2, undefined, 'FAST');
+      const r = fitPreservingRatio(
+        doc, officeLogoBase64,
+        M + LOGO_PAD, plateY + LOGO_PAD,
+        LOGO_PLATE_W - LOGO_PAD * 2, LOGO_PLATE_H - LOGO_PAD * 2,
+        1024 / 442
+      );
+      doc.addImage(officeLogoBase64, 'PNG', r.x, r.y, r.w, r.h, undefined, 'FAST');
     } catch {
       /* logo do escritório inválida — segue só com a placa branca */
     }
@@ -79,15 +114,23 @@ export function drawPdfHeaderBand(
   if (empresaLogoData) {
     try {
       const tipo = empresaLogoData.includes('image/png') ? 'PNG' : 'JPEG';
+      const px = W - M - EMPRESA_PLATE_W;
+      const py = Math.max(4, (headerHeight - EMPRESA_PLATE_H) / 2);
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(W - M - 30, 7, 30, 18, 2, 2, 'F');
-      doc.addImage(empresaLogoData, tipo, W - M - 29, 8, 28, 16, undefined, 'FAST');
+      doc.roundedRect(px, py, EMPRESA_PLATE_W, EMPRESA_PLATE_H, 2, 2, 'F');
+      const r = fitPreservingRatio(
+        doc, empresaLogoData,
+        px + LOGO_PAD, py + LOGO_PAD,
+        EMPRESA_PLATE_W - LOGO_PAD * 2, EMPRESA_PLATE_H - LOGO_PAD * 2,
+        16 / 9
+      );
+      doc.addImage(empresaLogoData, tipo, r.x, r.y, r.w, r.h, undefined, 'FAST');
     } catch {
       /* logo do cliente inválida — segue sem imagem */
     }
   }
 
-  return { textX: M + LOGO_BOX + 8 };
+  return { textX: M + LOGO_PLATE_W + 8 };
 }
 
 /** Rodapé padrão (nome do escritório + aviso de confidencialidade + página X de Y) em todas as páginas do documento. */

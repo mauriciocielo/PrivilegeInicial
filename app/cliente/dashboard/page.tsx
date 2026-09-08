@@ -20,6 +20,7 @@ export default function ClienteDashboard() {
   const [portadoresList, setPortadoresList] = useState<{ nome: string; saldo: number; tipo: string }[]>([]);
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
+  const [valuation, setValuation] = useState({ ebitdaMedio: 0, mult: 5, divida: 0, valor: 0 });
   const [userName, setUserName] = useState('');
   
   const [mesSelecionado, setMesSelecionado] = useState(() => {
@@ -105,6 +106,18 @@ export default function ClienteDashboard() {
       Object.entries(despCats).sort((a,b)=>b[1]-a[1]).slice(0,6)
         .map(([name,value],i)=>({ name, value, color: COLORS[i % COLORS.length] }))
     );
+
+    // Motor de Valuation Estimativa no Dashboard do Cliente
+    const ebitdas = r.map(m => m.receitas - m.despesas);
+    const ebitdaMedio = ebitdas.reduce((acc, cur) => acc + cur, 0) / Math.max(ebitdas.length, 1);
+    
+    // Calcula divida do Endividamento
+    const endivs = store.getEndividamentos(eId);
+    const totalDiv = endivs.reduce((acc, e) => acc + Math.max(0, e.valorAPagar - e.pagamentoMes), 0);
+    
+    const valor = (ebitdaMedio * 12 * 5) - totalDiv;
+    setValuation({ ebitdaMedio, mult: 5, divida: totalDiv, valor: valor > 0 ? valor : 0 });
+
   }, []);
 
   useEffect(() => {
@@ -175,7 +188,7 @@ export default function ClienteDashboard() {
             onChange={e => setMesSelecionado(e.target.value)}
             style={{ 
               width: '200px', 
-              background: 'rgba(255,255,255,0.7)', 
+              background: 'rgba(255,255,255,0.96)', 
               borderRadius: '12px',
               border: '1px solid rgba(0,0,0,0.1)',
               fontWeight: 600,
@@ -206,7 +219,7 @@ export default function ClienteDashboard() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 100%)',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.3) 100%)',
           border: '1px solid rgba(255,255,255,0.8)',
           boxShadow: '0 8px 32px rgba(140, 26, 34, 0.05)',
           position: 'relative',
@@ -246,6 +259,35 @@ export default function ClienteDashboard() {
           dataFim={dataFim} 
           contextKey={mesSelecionado} 
         />
+
+        {/* Valuation Module (Elite CFO) */}
+        <div className="glass-card card-dynamic animate-slide-up" style={{
+          marginBottom: 32, padding: '32px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: 'linear-gradient(135deg, #FDF9F1 0%, #E8DCC4 100%)', border: '1px solid #D4C3A3', boxShadow: '0 20px 50px rgba(0,0,0,0.08)', animationDelay: '200ms'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 24 }}>💎</span>
+              <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 2, color: '#977A42', fontWeight: 800 }}>Valuation do Negócio (Estimativa Base)</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#4A3B18', letterSpacing: '-1px' }}>
+              <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
+            </div>
+            <div style={{ fontSize: 13, color: '#73603C', marginTop: 8, display: 'flex', alignItems: 'center' }}>
+              <span>O quanto a sua empresa vale construindo um EBITDA consistente de&nbsp;</span>
+              <strong><AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} /></strong>
+              <span>&nbsp;/mês.</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 32, textAlign: 'right' }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#73603C', textTransform: 'uppercase', letterSpacing: 1 }}>Múltiplo Projetado</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#4A3B18' }}>
+                 <AnimatedCounter target={valuation.mult} suffix="x" decimals={0} />
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Painel de IA / Inteligência */}
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
@@ -295,7 +337,7 @@ export default function ClienteDashboard() {
 
         {/* Charts */}
         <div className="grid-21" style={{ marginBottom: 24 }}>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.6)', animationDelay: '1000ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.96)', background: 'rgba(255,255,255,0.94)', animationDelay: '1000ms' }}>
             <div className="card-header">
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '20px', fontWeight: 800 }}>Evolução Financeira</div>
@@ -330,7 +372,7 @@ export default function ClienteDashboard() {
             </div>
           </div>
 
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.45)', animationDelay: '1100ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.96)', background: 'rgba(255,255,255,0.45)', animationDelay: '1100ms' }}>
             <div className="card-header">
               <div className="card-title" style={{ fontSize: '18px', fontWeight: 800 }}>Distribuição de Despesas</div>
             </div>
@@ -355,7 +397,7 @@ export default function ClienteDashboard() {
 
         {/* Área de Central de Relatórios + portadores */}
         <div className="grid-21">
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)', animationDelay: '800ms', display: 'flex', flexDirection: 'column' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)', animationDelay: '800ms', display: 'flex', flexDirection: 'column' }}>
             <div className="card-header" style={{ marginBottom: 24 }}>
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Sua Central Financeira</div>
