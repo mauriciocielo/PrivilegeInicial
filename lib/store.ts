@@ -968,11 +968,26 @@ class DataStore {
   setCurrentUser(user: User | null) {
     if (typeof window === 'undefined') return;
     if (user) {
-      localStorage.setItem('cf_current_user', JSON.stringify(user));
+      const payload = JSON.stringify(user);
+      try {
+        localStorage.setItem('cf_current_user', payload);
+      } catch {
+        // localStorage cheio (QuotaExceededError): o login não pode falhar por
+        // causa disso. Sem este fallback, a sessão nunca era persistida e o
+        // layout devolvia o usuário para a tela de login. getCurrentUser() já
+        // lê do sessionStorage quando não acha no localStorage.
+        try {
+          sessionStorage.setItem('cf_current_user', payload);
+        } catch {
+          console.error('Não foi possível persistir a sessão: armazenamento do navegador cheio.');
+        }
+      }
     } else {
       localStorage.removeItem('cf_current_user');
       localStorage.removeItem('cf_empresa_sel');
       localStorage.removeItem('cf_app_mode');
+      // Também limpa a cópia de fallback — senão o logout não desloga de fato.
+      try { sessionStorage.removeItem('cf_current_user'); } catch { }
     }
   }
 

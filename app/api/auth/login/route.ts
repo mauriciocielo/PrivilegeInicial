@@ -55,6 +55,16 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Erro no login:', error);
     captureError(error);
+    // Erro de configuração do servidor é a causa mais comum aqui (ex: deploy sem
+    // SESSION_SECRET). Sem distinguir, tudo virava um 500 genérico impossível de
+    // diagnosticar pela tela de login.
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.includes('SESSION_SECRET')) {
+      return NextResponse.json(
+        { error: 'Configuração do servidor incompleta: SESSION_SECRET não definida. Avise o administrador.' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: 'Erro ao processar login.' }, { status: 500 });
   }
 }

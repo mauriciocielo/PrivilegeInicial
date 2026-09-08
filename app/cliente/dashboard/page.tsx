@@ -371,7 +371,7 @@ export default function ClienteDashboard() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Fluxo de Caixa Mensal</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas e Saídas Efetivas (Despesas Pagas e Receitas Recebidas)</div>
                   </div>
-                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3b82f6', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-></div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3b82f6', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
 
                 <a href={`/cliente/relatorios?empresaId=${empresaId}&tab=dre&mes=${mesSelecionado}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px', background: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)', textDecoration: 'none', color: 'inherit', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s' }} className="card-dynamic">
@@ -382,7 +382,7 @@ export default function ClienteDashboard() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>DRE Gerencial</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Saúde Financeira pela Competência e Indicadores de Capacidade</div>
                   </div>
-                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-></div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
 
                 <a href={`/cliente/relatorios?empresaId=${empresaId}&tab=balanco&mes=${mesSelecionado}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px', background: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid rgba(245, 158, 11, 0.2)', textDecoration: 'none', color: 'inherit', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s' }} className="card-dynamic">
@@ -393,7 +393,7 @@ export default function ClienteDashboard() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Balanço Patrimonial</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Controle do Capital de Giro, Contas, Passivos e Valuation Estimado</div>
                   </div>
-                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f59e0b', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-></div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f59e0b', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
             </div>
           </div>
