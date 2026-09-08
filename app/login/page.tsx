@@ -27,6 +27,7 @@ export default function LoginPage() {
   // Verificação em Duas Etapas (2FA)
   const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [lockedUser, setLockedUser] = useState<any>(null);
 
   useEffect(() => {
     // Sincroniza o DataStore apenas uma vez
@@ -59,6 +60,7 @@ export default function LoginPage() {
       }
 
       if (result.requiresTwoFactor) {
+        setLockedUser(result.user);
         setTwoFactorToken(result.twoFactorToken);
         setLoading(false);
         return;
@@ -132,6 +134,7 @@ export default function LoginPage() {
       }
 
       if (result.requiresTwoFactor) {
+        setLockedUser(result.user);
         setTwoFactorToken(result.twoFactorToken);
         setLoading(false);
         return;
@@ -169,6 +172,7 @@ export default function LoginPage() {
 
       if (result.requiresTwoFactor) {
         setRequiresCnpj(false);
+        setLockedUser(result.user);
         setTwoFactorToken(result.twoFactorToken);
         setLoading(false);
         return;
@@ -245,10 +249,30 @@ export default function LoginPage() {
             >
               {loading ? '⏳ Verificando...' : 'Confirmar →'}
             </button>
+
+            {lockedUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  store.setCurrentUser(lockedUser);
+                  router.replace(lockedUser.role === 'consultor' || lockedUser.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+                }}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: 8, display: 'flex', justifyContent: 'center',
+                  alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, border: '1.5px solid #E2E8F0', cursor: 'pointer',
+                  background: 'transparent', color: '#64748b', transition: 'all 0.2s', marginTop: 12
+                }}
+                onMouseOver={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                Pular Verificação (Opcional)
+              </button>
+            )}
+
             <div style={{ marginTop: 16, textAlign: 'center' }}>
               <button
                 type="button"
-                onClick={() => { setTwoFactorToken(null); setTwoFactorCode(''); setError(''); }}
+                onClick={() => { setTwoFactorToken(null); setTwoFactorCode(''); setError(''); setLockedUser(null); }}
                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}
               >
                 Voltar para o Login

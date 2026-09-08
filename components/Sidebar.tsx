@@ -632,16 +632,16 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               className="dropdown-anim-up"
               style={{
                 position: 'absolute',
-                bottom: '100%',
-                left: isSidebarCompact ? '50px' : '0',
+                top: '100%',
+                right: '0',
                 width: '220px',
                 background: '#1f2540',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '12px',
-                boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.6)',
+                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)',
                 padding: '14px',
                 zIndex: 1001,
-                marginBottom: '8px'
+                marginTop: '8px'
               }}
             >
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{user?.name}</div>

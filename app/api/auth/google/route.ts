@@ -94,11 +94,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não foi possível localizar ou criar o usuário.' }, { status: 500 });
     }
 
-    if (user.twoFactorEnabled) {
-      const twoFactorToken = createTwoFactorPendingToken(user.id);
-      return NextResponse.json({ requiresTwoFactor: true, twoFactorToken });
-    }
-
     const token = createSessionToken({
       userId: user.id,
       email: user.email,
@@ -107,6 +102,18 @@ export async function POST(request: Request) {
     });
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = user;
+
+    if (user.twoFactorEnabled) {
+      const twoFactorToken = createTwoFactorPendingToken(user.id);
+      const response = NextResponse.json({ 
+        requiresTwoFactor: true, 
+        twoFactorToken,
+        user: userWithoutPassword
+      });
+      response.headers.set('Set-Cookie', sessionCookieHeader(token));
+      return response;
+    }
+
     const response = NextResponse.json({ success: true, user: userWithoutPassword });
     response.headers.set('Set-Cookie', sessionCookieHeader(token));
     return response;

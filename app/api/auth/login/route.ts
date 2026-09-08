@@ -34,13 +34,6 @@ export async function POST(request: Request) {
       finalUser = await db.user.update({ where: { id: user.id }, data: { password: hashPassword(password) } });
     }
 
-    if (finalUser.twoFactorEnabled) {
-      // Senha confirmada, mas a sessão só é emitida após o código TOTP —
-      // este token de 5 minutos só serve para provar que a senha já foi validada.
-      const twoFactorToken = createTwoFactorPendingToken(finalUser.id);
-      return NextResponse.json({ requiresTwoFactor: true, twoFactorToken });
-    }
-
     const token = createSessionToken({
       userId: finalUser.id,
       email: finalUser.email,
@@ -49,6 +42,20 @@ export async function POST(request: Request) {
     });
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = finalUser;
+
+    if (finalUser.twoFactorEnabled) {
+      // 2FA tornou-se opcional: entregamos o cookie de sessão normalmente,
+      // mas sinalizamos a UI para exibir a tela de 2FA onde o usuário pode optar por pular.
+      const twoFactorToken = createTwoFactorPendingToken(finalUser.id);
+      const response = NextResponse.json({ 
+        requiresTwoFactor: true, 
+        twoFactorToken,
+        user: userWithoutPassword
+      });
+      response.headers.set('Set-Cookie', sessionCookieHeader(token));
+      return response;
+    }
+
     const response = NextResponse.json({ success: true, user: userWithoutPassword });
     response.headers.set('Set-Cookie', sessionCookieHeader(token));
     return response;

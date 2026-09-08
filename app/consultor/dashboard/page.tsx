@@ -1,16 +1,25 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { store, Empresa, Lancamento, Portador, PlanoConta } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
-import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus, LogOut } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 export default function ConsultorDashboard() {
+  const router = useRouter();
+  const [showLogout, setShowLogout] = useState(false);
+  const handleLogout = () => {
+    store.setCurrentUser(null);
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    router.push('/');
+  };
+
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [empresaId, setEmpresaId] = useState('e1');
   const [resumo, setResumo] = useState<ReturnType<typeof store.getResumoMensal>>([]);
@@ -186,9 +195,25 @@ export default function ConsultorDashboard() {
           <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span className="text-gradient" style={{ fontSize: '22px', fontWeight: 800 }}>Painel de Controle — Consultoria</span>
             {userName && (
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                Consultor: {userName}
-              </span>
+              <div style={{ position: 'relative' }}>
+                <div 
+                  onClick={() => setShowLogout(!showLogout)}
+                  style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  Consultor: {userName}
+                </div>
+                {showLogout && (
+                  <div style={{ position: 'absolute', top: '110%', right: '0', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', padding: '8px', zIndex: 100 }}>
+                    <button 
+                      onClick={handleLogout}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', whiteSpace: 'nowrap' }}
+                    >
+                      <LogOut size={14} /> Sair do Sistema
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="page-subtitle" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)' }}>
