@@ -1,21 +1,24 @@
-const isDev = process.env.NODE_ENV === 'development';
+// @ts-check
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // Reativado — os erros de tipo acumulados (14x updatedAt, conferido, cache
-    // stale) foram corrigidos. Deixar isso como `true` escondia regressões reais.
     ignoreBuildErrors: false,
   },
-  turbopack: {},
 };
 
-if (!isDev) {
-  const withPWA = require('next-pwa')({
+module.exports = (phase) => {
+  if (phase === PHASE_DEVELOPMENT_SERVER) {
+    return nextConfig;
+  }
+
+  const withPWA = require('@ducanh2912/next-pwa').default({
     dest: 'public',
     register: true,
     skipWaiting: true,
+    disable: false,
   });
-  module.exports = withPWA(nextConfig);
-} else {
-  module.exports = nextConfig;
-}
+
+  return withPWA(nextConfig);
+};
