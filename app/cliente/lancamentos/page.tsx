@@ -5,6 +5,9 @@ import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import DateRangeFilter from '../../../components/DateRangeFilter';
 import LancamentosInsights from '../../../components/LancamentosInsights';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
+import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 
 type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
@@ -97,7 +100,7 @@ export default function LancamentosPage() {
       // Dispatch event to update references elsewhere if needed
       window.dispatchEvent(new CustomEvent('lancamentoChange'));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     } finally {
       cancelInlineEdit();
     }
@@ -108,6 +111,8 @@ export default function LancamentosPage() {
     setInlineEditField(null);
     setInlineValue('');
   };
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showReclassModal, setShowReclassModal] = useState(false);
   const [bulkMode, setBulkMode] = useState<'reclassificar' | 'transferir'>('reclassificar');
@@ -146,7 +151,7 @@ export default function LancamentosPage() {
     });
 
     if (duvidosos.length === 0) {
-      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para exportar.');
+      toast.success('Nenhum lançamento duvidoso (sem plano de contas) encontrado para exportar.');
       return;
     }
 
@@ -187,7 +192,7 @@ export default function LancamentosPage() {
     });
 
     if (list.length === 0) {
-      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para imprimir.');
+      toast.success('Nenhum lançamento duvidoso (sem plano de contas) encontrado para imprimir.');
       return;
     }
 
@@ -278,6 +283,15 @@ export default function LancamentosPage() {
     }).sort((a, b) => b.data.localeCompare(a.data));
   }, [lancamentos, filtros, planoContas]);
 
+  // Paginação — evita renderizar milhares de linhas de uma vez (lento e desnecessário).
+  useEffect(() => { setPage(1); }, [filtros, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => filtered.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [filtered, pageSafe, pageSize]
+  );
+
   const totRec = useMemo(() => filtered.filter(l => {
     if (l.planoContaId === 'transf') return false;
     const pc = planoContas.find(p => p.id === l.planoContaId);
@@ -346,11 +360,11 @@ export default function LancamentosPage() {
   const handleSave = async () => {
     if (form.tipoTransacao === 'transferencia') {
       if (!form.descricao || !form.valor || !form.portadorId || !form.portadorDestinoId || !form.data) {
-        alert('Preencha todos os campos da transferência.');
+        toast.error('Preencha todos os campos da transferência.');
         return;
       }
       if (form.portadorId === form.portadorDestinoId) {
-        alert('Os portadores de origem e destino devem ser diferentes.');
+        toast.success('Os portadores de origem e destino devem ser diferentes.');
         return;
       }
       setSaving(true);
@@ -392,14 +406,14 @@ export default function LancamentosPage() {
         setLancamentos(store.getLancamentos(empresaId));
         setShowModal(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast.error((e as Error).message);
       } finally {
         setSaving(false);
       }
 
     } else {
       if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
-        alert('Preencha todos os campos obrigatórios.');
+        toast.error('Preencha todos os campos obrigatórios.');
         return;
       }
       setSaving(true);
@@ -442,32 +456,32 @@ export default function LancamentosPage() {
         setLancamentos(store.getLancamentos(empresaId));
         setShowModal(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast.error((e as Error).message);
       } finally {
         setSaving(false);
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Deseja excluir este lançamento?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Deseja excluir este lançamento?'))) return;
     try {
       store.deleteLancamento(id);
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds(prev => prev.filter(x => x !== id));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
-  const handleBulkDelete = () => {
-    if (!confirm(`Deseja excluir os ${selectedIds.length} lançamentos selecionados?`)) return;
+  const handleBulkDelete = async () => {
+    if (!(await confirmAsync(`Deseja excluir os ${selectedIds.length} lançamentos selecionados?`))) return;
     try {
       selectedIds.forEach(id => store.deleteLancamento(id));
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds([]);
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
@@ -481,7 +495,7 @@ export default function LancamentosPage() {
       store.saveLancamento(updated);
       setLancamentos(store.getLancamentos(empresaId));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
@@ -650,7 +664,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         }
       } catch (err) {
         console.error(err);
-        alert('Erro ao processar PDF com a IA. Verifique se o arquivo não é muito grande ou tente converter para Excel.');
+        toast.error('Erro ao processar PDF com a IA. Verifique se o arquivo não é muito grande ou tente converter para Excel.');
       } finally {
         setCardImporting(false);
       }
@@ -703,12 +717,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
   };
 
   const handleCardImport = async () => {
-    if (!cardPortadorId) { alert('Selecione o portador do cartão.'); return; }
+    if (!cardPortadorId) { toast.error('Selecione o portador do cartão.'); return; }
     const rowsToImport = cardImportRows.filter(row => cardSelectedIds.includes(row.id));
-    if (rowsToImport.length === 0) { alert('Nenhum lançamento selecionado.'); return; }
+    if (rowsToImport.length === 0) { toast.success('Nenhum lançamento selecionado.'); return; }
 
     const missingCategory = rowsToImport.some(row => !cardCatMap[row.id]);
-    if (missingCategory && !confirm('Alguns lançamentos estão sem plano de contas. Deseja importar mesmo assim?')) return;
+    if (missingCategory && !(await confirmAsync('Alguns lançamentos estão sem plano de contas. Deseja importar mesmo assim?'))) return;
 
     setCardImporting(true);
     const now = new Date().toISOString();
@@ -751,7 +765,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
   const handleBulkReclassify = () => {
     if (bulkMode === 'transferir') {
-      if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
+      if (!reclassPortadorId) { toast.error('Selecione o portador destino.'); return; }
       const ts = new Date().toISOString();
 
       lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
@@ -813,7 +827,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       return;
     }
 
-    if (!reclassContaId && !reclassPortadorId) { alert('Selecione uma conta ou um portador.'); return; }
+    if (!reclassContaId && !reclassPortadorId) { toast.error('Selecione uma conta ou um portador.'); return; }
     const updatedItems = lancamentos
       .filter(l => selectedIds.includes(l.id))
       .map(l => ({
@@ -862,7 +876,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       XLSX.writeFile(workbook, `Lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
-      alert('Erro ao exportar para Excel. Certifique-se que a biblioteca xlsx foi instalada.');
+      toast.error('Erro ao exportar para Excel. Certifique-se que a biblioteca xlsx foi instalada.');
     }
   };
 
@@ -1133,7 +1147,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <p>Ajuste os filtros ou adicione um novo lançamento.</p>
                     </div>
                   </td></tr>
-                ) : filtered.map(l => {
+                ) : paginated.map(l => {
                   const pc = planoContas.find(p => p.id === l.planoContaId);
                   const port = portadores.find(p => p.id === l.portadorId);
                   return (
@@ -1306,6 +1320,43 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </tbody>
             </table>
           </div>
+
+          {filtered.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, filtered.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong>
+                {selectedIds.length > 0 && ` · ${selectedIds.length} selecionados`}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <select
+                  className="form-control form-control-sm"
+                  value={pageSize}
+                  onChange={e => setPageSize(Number(e.target.value))}
+                  style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                  title="Itens por página"
+                >
+                  {[25, 50, 100, 200].map(n => <option key={n} value={n}>{n} / página</option>)}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(1)} title="Primeira página">
+                    <ChevronsLeft size={14} />
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} title="Página anterior">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
+                    Página {pageSafe} de {totalPages}
+                  </span>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} title="Próxima página">
+                    <ChevronRight size={14} />
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(totalPages)} title="Última página">
+                    <ChevronsRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

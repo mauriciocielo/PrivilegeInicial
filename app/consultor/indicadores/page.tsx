@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { store, Empresa, IndicadorMensal } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function IndicadoresPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -48,11 +50,11 @@ export default function IndicadoresPage() {
   };
 
   const handleSave = () => {
-    if (!form.mes) { alert('Informe o mês.'); return; }
+    if (!form.mes) { toast.error('Informe o mês.'); return; }
     
     // Check if month already exists and we are not editing it
     if (!edit && indicadores.some(i => i.mes === form.mes)) {
-      alert('Já existe um registro de indicadores para este mês.');
+      toast.success('Já existe um registro de indicadores para este mês.');
       return;
     }
 
@@ -69,8 +71,8 @@ export default function IndicadoresPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Deseja excluir este registro?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Deseja excluir este registro?'))) return;
     store.deleteIndicador(id);
     load(empresaId);
   };

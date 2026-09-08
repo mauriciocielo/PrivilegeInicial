@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { captureError } from '../../../lib/sentry-helper';
+import { requireAuth } from '../../../lib/api-auth';
 
 export async function POST(request: Request) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
   try {
     const { phone, message } = await request.json();
 
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Erro ao enviar mensagem de WhatsApp:', error);
+    captureError(error);
     return NextResponse.json({ error: (error as Error).message || 'Erro interno' }, { status: 500 });
   }
 }

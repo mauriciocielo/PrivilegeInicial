@@ -2,7 +2,9 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    // Reativado — os erros de tipo acumulados (14x updatedAt, conferido, cache
+    // stale) foram corrigidos. Deixar isso como `true` escondia regressões reais.
+    ignoreBuildErrors: false,
   },
   turbopack: {},
 };

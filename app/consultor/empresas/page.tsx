@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import ImageCropper from '../../../components/ImageCropper';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
@@ -62,7 +64,7 @@ export default function EmpresasPage() {
   const fetchCnpjData = async () => {
     const rawCnpj = form.cnpj?.replace(/\D/g, '');
     if (!rawCnpj || rawCnpj.length !== 14) {
-      alert('Por favor, insira um CNPJ válido com 14 dígitos (apenas números) para consultar.');
+      toast.error('Por favor, insira um CNPJ válido com 14 dígitos (apenas números) para consultar.');
       return;
     }
     setFetchingCnpj(true);
@@ -90,7 +92,7 @@ export default function EmpresasPage() {
       }));
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Erro inesperado ao buscar dados do CNPJ.');
+      toast.error(err instanceof Error ? err.message : 'Erro inesperado ao buscar dados do CNPJ.');
     } finally {
       setFetchingCnpj(false);
     }
@@ -144,7 +146,7 @@ export default function EmpresasPage() {
   };
 
   const handleSave = () => {
-    if (!form.razaoSocial || !form.cnpj) { alert('Preencha Razão Social e CNPJ.'); return; }
+    if (!form.razaoSocial || !form.cnpj) { toast.error('Preencha Razão Social e CNPJ.'); return; }
     const emp: Empresa = {
       id: edit?.id || uid(),
       razaoSocial: form.razaoSocial!,
@@ -178,20 +180,20 @@ export default function EmpresasPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir esta empresa? Todos os dados relacionados serão afetados.')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir esta empresa? Todos os dados relacionados serão afetados.'))) return;
     store.deleteEmpresa(id);
     const updated = store.getEmpresas();
     setList(updated);
   };
 
-  const handleImportarPlano = (e: Empresa) => {
+  const handleImportarPlano = async (e: Empresa) => {
     const jaTemPlano = store.getPlanoContas(e.id).length > 0;
     if (jaTemPlano) {
-      if (!confirm(`A empresa "${e.nomeFantasia || e.razaoSocial}" já possui ${store.getPlanoContas(e.id).length} contas. Deseja ADICIONAR o plano padrão mesmo assim? Isso pode criar duplicatas.`)) return;
+      if (!(await confirmAsync(`A empresa "${e.nomeFantasia || e.razaoSocial}" já possui ${store.getPlanoContas(e.id).length} contas. Deseja ADICIONAR o plano padrão mesmo assim? Isso pode criar duplicatas.`))) return;
     }
     const result = store.seedPlanoContasForEmpresa(e.id);
-    alert(`✅ Plano de contas importado com sucesso!
+    toast.success(`✅ Plano de contas importado com sucesso!
 ${result.planosAdded} contas adicionadas
 ${result.portadoresAdded} portadores criados`);
     // Atualiza estado
@@ -202,7 +204,7 @@ ${result.portadoresAdded} portadores criados`);
 
   const handleGerarPlanoModal = () => {
     if (!planoEmpresaId) {
-      alert('Selecione uma empresa.');
+      toast.error('Selecione uma empresa.');
       return;
     }
     const e = list.find(x => x.id === planoEmpresaId);

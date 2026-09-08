@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 interface AtividadeLog {
   id: string;
@@ -58,12 +60,9 @@ export default function AtividadesTempoPage() {
   }, []);
 
   const loadFromLocal = () => {
-    const savedLogs = localStorage.getItem('cf_atividades_log');
-    if (savedLogs) {
-      try {
-        setAtividades(JSON.parse(savedLogs));
-      } catch (e) {}
-    }
+    try {
+      setAtividades(store.getAtividadesLog());
+    } catch (e) {}
 
     const savedTasks = localStorage.getItem('cf_agenda_semanal');
     if (savedTasks) {
@@ -106,15 +105,50 @@ export default function AtividadesTempoPage() {
     return () => window.removeEventListener('cfDataChange', loadFromLocal);
   }, []);
 
+  // --- BACKGROUND TIMER REFACTOR ---
+  const [startTimeMs, setStartTimeMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Restaurar estado do timer no carregamento
+    const savedState = localStorage.getItem('cf_user_timer_state');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.isRunning && state.startTimeMs) {
+          setStartTimeMs(state.startTimeMs);
+          setSelectedEmpresaId(state.empresaId || '');
+          setAtividadeDesc(state.descricao || '');
+          if (state.fotoInicio) setFotoInicio(state.fotoInicio);
+          setIsRunning(true);
+          setTimePassed(Math.floor((Date.now() - state.startTimeMs) / 1000));
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTimePassed(t => t + 1);
-      }, 1000);
+    
+    const syncTime = () => {
+      if (isRunning && startTimeMs) {
+        setTimePassed(Math.floor((Date.now() - startTimeMs) / 1000));
+      }
+    };
+
+    if (isRunning && startTimeMs) {
+      syncTime(); // Sincroniza de imediato
+      interval = setInterval(syncTime, 1000);
+      
+      // Quando dispositivo móvel "acordar" tela ou sair de minimização
+      document.addEventListener('visibilitychange', syncTime);
     }
-    return () => clearInterval(interval);
-  }, [isRunning]);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', syncTime);
+    };
+  }, [isRunning, startTimeMs]);
+  // ---------------------------------
 
   const handleSelectAgendaTask = (taskId: string) => {
     const task = agendaTasks.find(t => t.id === taskId);
@@ -189,52 +223,70 @@ export default function AtividadesTempoPage() {
 
   const handleStart = () => {
     if (!fotoInicio) {
-      alert('Bloqueado: É obrigatório anexar a Foto de Início para comprovar sua presença antes de iniciar a tarefa.');
+      toast.error('Bloqueado: É obrigatório anexar a Foto de Início para comprovar sua presença antes de iniciar a tarefa.');
       return;
     }
     if (!selectedEmpresaId) {
-      alert('Selecione uma empresa antes de iniciar o tempo.');
+      toast.error('Selecione uma empresa antes de iniciar o tempo.');
       return;
     }
+    
+    // Background Persistency setup
+    const now = Date.now();
+    setStartTimeMs(now);
+    setTimePassed(0);
     setIsRunning(true);
+    
+    localStorage.setItem('cf_user_timer_state', JSON.stringify({
+      isRunning: true,
+      startTimeMs: now,
+      empresaId: selectedEmpresaId,
+      descricao: atividadeDesc,
+      fotoInicio: fotoInicio
+    }));
+
     updateEstadoEmAndamento(true);
   };
   
-  const handlePause = () => {
+  const handleStopOperation = () => {
     setIsRunning(false);
+    localStorage.removeItem('cf_user_timer_state'); 
     updateEstadoEmAndamento(false);
   };
   
-  const handleReset = () => {
-    if (confirm('Deseja realmente zerar o cronômetro e remover as fotos?')) {
+  const handleReset = async () => {
+    if ((await confirmAsync('Deseja realmente zerar o cronômetro e remover as fotos?'))) {
       setIsRunning(false);
       setTimePassed(0);
+      setStartTimeMs(null);
       setFotoInicio(null);
       setFotoFim(null);
       setSelectedAgendaTaskId(null);
+      localStorage.removeItem('cf_user_timer_state');
       updateEstadoEmAndamento(false);
     }
   };
 
   const handleStopAndSave = () => {
     if (!atividadeDesc.trim()) {
-      alert('Por favor, informe a descrição da atividade antes de salvar.');
+      toast.error('Por favor, informe a descrição da atividade antes de salvar.');
       return;
     }
     if (!selectedEmpresaId) {
-      alert('Por favor, selecione uma empresa.');
+      toast.error('Por favor, selecione uma empresa.');
       return;
     }
     if (timePassed === 0) {
-      alert('O tempo registrado está zerado.');
+      toast.success('O tempo registrado está zerado.');
       return;
     }
     if (!fotoFim) {
-      alert('Bloqueado: É obrigatório anexar a Foto de Fim para comprovar a conclusão antes de salvar a tarefa.');
+      toast.error('Bloqueado: É obrigatório anexar a Foto de Fim para comprovar a conclusão antes de salvar a tarefa.');
       return;
     }
     
     setIsRunning(false);
+    localStorage.removeItem('cf_user_timer_state');
     updateEstadoEmAndamento(false);
     
     const novaAtividade: AtividadeLog = {
@@ -267,9 +319,8 @@ export default function AtividadesTempoPage() {
       }
     }
     
-    const updated = [novaAtividade, ...atividades];
-    setAtividades(updated);
-    localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
+    store.saveAtividadeLog(novaAtividade);
+    setAtividades(store.getAtividadesLog());
     window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
 
     setAtividadeDesc('');
@@ -279,14 +330,14 @@ export default function AtividadesTempoPage() {
     setFotoFim(null);
     setSelectedAgendaTaskId(null);
     
-    alert('✅ Atividade registrada com sucesso!');
+    toast.success('✅ Atividade registrada com sucesso!');
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Deseja excluir este registro de atividade?')) {
-      const updated = atividades.filter(a => a.id !== id);
-      setAtividades(updated);
-      localStorage.setItem('cf_atividades_log', JSON.stringify(updated));
+  const handleDelete = async (id: string) => {
+    if ((await confirmAsync('Deseja excluir este registro de atividade?'))) {
+      const arr = store.getAtividadesLog().filter(a => a.id !== id);
+      localStorage.setItem('cf_atividades_log', JSON.stringify(arr));
+      setAtividades(arr);
       window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
     }
   };
@@ -298,13 +349,13 @@ export default function AtividadesTempoPage() {
   return (
     <>
       <style>{`
-        @keyframes clockSpin {
+        @keyframes handSpin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        .clock-icon-spin {
-          display: inline-block;
-          animation: clockSpin 2s linear infinite;
+        .clock-hand-spin {
+          transform-origin: 12px 12px;
+          animation: handSpin 1.5s linear infinite;
         }
         .atividades-layout {
           display: grid;
@@ -360,11 +411,13 @@ export default function AtividadesTempoPage() {
           .btn-mobile-full {
             width: 100% !important;
             flex: none !important;
-            padding: 16px !important;
-            font-size: 16px !important;
+            padding: 24px !important;
+            font-size: 18px !important;
+            border-radius: 12px;
           }
           .time-display {
-            font-size: 48px !important;
+            font-size: 56px !important;
+            margin-bottom: 8px;
           }
           .history-item {
             flex-direction: column !important;
@@ -422,13 +475,52 @@ export default function AtividadesTempoPage() {
                 ⏱️ Tracker de Tempo
               </h3>
               
-              <div style={{ background: isRunning ? 'var(--accent-glow)' : 'var(--bg-body)', padding: '36px', borderRadius: '16px', textAlign: 'center', marginBottom: '24px', border: isRunning ? '2px solid var(--accent)' : '1px solid var(--border-light)', transition: 'all 0.3s ease', cursor: 'pointer', boxShadow: isRunning ? '0 10px 40px var(--accent-glow)' : 'none' }}>
-                <div className="time-display" style={{ fontSize: '72px', fontWeight: 900, fontFamily: 'monospace', color: isRunning ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '2px', textShadow: isRunning ? '0 0 20px var(--accent)' : 'none', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                  {isRunning && <span className="clock-icon-spin" style={{ fontSize: '56px' }}>🕐</span>}
-                  {formatTime(timePassed)}
+              <div style={{ 
+                background: isRunning ? '#0f172a' : 'var(--bg-body)', 
+                padding: '48px 24px', 
+                borderRadius: '24px', 
+                textAlign: 'center', 
+                marginBottom: '32px', 
+                color: isRunning ? '#fff' : 'var(--text-primary)',
+                boxShadow: isRunning ? '0 20px 50px rgba(59, 130, 246, 0.4)' : 'inset 0 4px 20px rgba(0,0,0,0.05)',
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                border: isRunning ? '1px solid #1e293b' : '1px solid var(--border-light)'
+              }}>
+                <div className="time-display" style={{ 
+                   fontSize: '84px', 
+                   fontWeight: 900, 
+                   fontFamily: '"SF Mono", "Roboto Mono", monospace', 
+                   letterSpacing: '2px', 
+                   textShadow: isRunning ? '0 0 40px #3b82f6' : 'none', 
+                   lineHeight: 1,
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   gap: 16
+                }}>
+                   {isRunning && (
+                     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ overflow: 'visible' }}>
+                       {/* Clock Body */}
+                       <circle cx="12" cy="12" r="10" stroke="#3b82f6" fill="rgba(59, 130, 246, 0.1)"></circle>
+                       <circle cx="12" cy="12" r="1" fill="#60a5fa" stroke="none"></circle>
+                       {/* Top Button / StopWatch visual components */}
+                       <line x1="12" y1="2" x2="12" y2="0" stroke="#3b82f6" strokeWidth="3"></line>
+                       <line x1="16.24" y1="3.76" x2="18" y2="2" stroke="#3b82f6"></line>
+                       {/* Spinning Minute Hand */}
+                       <line x1="12" y1="12" x2="12" y2="6" className="clock-hand-spin"></line>
+                     </svg>
+                   )}
+                   {formatTime(timePassed)}
                 </div>
-                {isRunning && <div style={{ fontSize: 14, color: 'var(--accent)', marginTop: 12, fontWeight: 700 }} className="pulse-glow">🔵 EM ANDAMENTO - GRAVANDO LOCALIZAÇÃO</div>}
-                {!isRunning && timePassed > 0 && <div style={{ fontSize: 14, color: 'var(--red)', marginTop: 12, fontWeight: 700 }}>⏸ PAUSADO</div>}
+                {isRunning ? (
+                  <div style={{ fontSize: 14, color: '#60a5fa', marginTop: 24, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }} className="pulse-glow">
+                    🔵 GRAVANDO TEMPO DE CONSULTORIA
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 24, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+                    SISTEMA EM MODO DE ESPERA
+                  </div>
+                )}
               </div>
 
               {(!isRunning && timePassed === 0) ? (
@@ -502,16 +594,6 @@ export default function AtividadesTempoPage() {
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo? *</label>
-                        <textarea 
-                          className="form-control form-control-lg"
-                          rows={2} 
-                          placeholder="Ex: Auditoria de fluxo de caixa, Treinamento com equipe..." 
-                          value={atividadeDesc} 
-                          onChange={e => setAtividadeDesc(e.target.value)}
-                        />
-                      </div>
                     </div>
                   )}
                 </>
@@ -531,12 +613,13 @@ export default function AtividadesTempoPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 600 }}>O que você está fazendo?</label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Resumo da Atividade Concluída *</label>
                     <textarea 
                       className="form-control form-control-lg"
-                      rows={2} 
+                      rows={3} 
+                      placeholder="Descreva o que foi feito nesta operação..."
                       value={atividadeDesc} 
-                      disabled
+                      onChange={e => setAtividadeDesc(e.target.value)}
                     />
                   </div>
                 </div>
@@ -586,26 +669,31 @@ export default function AtividadesTempoPage() {
               </div>
 
               <div className="btn-group-timer">
-                {!isRunning ? (
-                  <button className="btn btn-primary btn-lg btn-mobile-full" onClick={handleStart} style={{ fontWeight: 700 }}>
-                    ▶ INICIAR TAREFA
+                {(!isRunning && timePassed === 0) ? (
+                  <button 
+                    className="btn btn-primary btn-lg btn-mobile-full pulse-bg" 
+                    onClick={handleStart} 
+                    style={{ fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', background: '#3b82f6', border: 'none', color: '#fff', boxShadow: '0 8px 30px rgba(59, 130, 246, 0.4)', transition: 'all 0.3s' }}
+                  >
+                    ▶ INICIAR OPERAÇÃO AGORA
+                  </button>
+                ) : isRunning ? (
+                  <button 
+                    className="btn btn-danger btn-lg btn-mobile-full" 
+                    onClick={handleStopOperation} 
+                    style={{ background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(239, 68, 68, 0.4)', transition: 'all 0.3s' }}
+                  >
+                    ⏹ PARAR O TEMPO E ENCERRAR
                   </button>
                 ) : (
-                  <button className="btn btn-danger btn-lg btn-mobile-full" onClick={handlePause} style={{ fontWeight: 700, background: 'var(--red)', border: 'none' }}>
-                    ⏸ PAUSAR TAREFA
+                  <button 
+                    className="btn btn-success btn-lg btn-mobile-full" 
+                    onClick={handleStopAndSave} 
+                    style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(16, 185, 129, 0.4)', transition: 'all 0.3s' }}
+                  >
+                    💾 FINALIZAR CHECK-OUT E SALVAR
                   </button>
                 )}
-                <button className="btn btn-secondary btn-lg btn-mobile-full" onClick={handleReset} disabled={timePassed === 0 && !fotoInicio && !fotoFim}>
-                  🔄 ZERAR
-                </button>
-                <button 
-                  className="btn btn-success btn-lg btn-mobile-full" 
-                  onClick={handleStopAndSave} 
-                  disabled={timePassed === 0}
-                  style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 700 }}
-                >
-                  💾 SALVAR E CONCLUIR
-                </button>
               </div>
             </div>
 

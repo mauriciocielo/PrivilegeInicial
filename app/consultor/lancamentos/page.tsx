@@ -5,6 +5,8 @@ import { fmt } from '../../../lib/reports';
 import GeminiQuickEntry from '../../../components/GeminiQuickEntry';
 import DateRangeFilter from '../../../components/DateRangeFilter';
 import LancamentosInsights from '../../../components/LancamentosInsights';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Copy, Search, X,
   TrendingUp, TrendingDown, Activity, Hash, ListFilter, Target, RefreshCw,
@@ -114,7 +116,7 @@ export default function LancamentosPage() {
       setLancamentos(store.getLancamentos(empresaId));
       window.dispatchEvent(new CustomEvent('lancamentoChange'));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     } finally {
       if (!keepEditing) cancelInlineEdit();
     }
@@ -164,7 +166,7 @@ export default function LancamentosPage() {
     });
 
     if (duvidosos.length === 0) {
-      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para exportar.');
+      toast.success('Nenhum lançamento duvidoso (sem plano de contas) encontrado para exportar.');
       return;
     }
 
@@ -205,7 +207,7 @@ export default function LancamentosPage() {
     });
 
     if (list.length === 0) {
-      alert('Nenhum lançamento duvidoso (sem plano de contas) encontrado para imprimir.');
+      toast.success('Nenhum lançamento duvidoso (sem plano de contas) encontrado para imprimir.');
       return;
     }
 
@@ -390,11 +392,11 @@ export default function LancamentosPage() {
   const handleSave = async () => {
     if (form.tipoTransacao === 'transferencia') {
       if (!form.descricao || !form.valor || !form.portadorId || !form.portadorDestinoId || !form.data) {
-        alert('Preencha todos os campos da transferência.');
+        toast.error('Preencha todos os campos da transferência.');
         return;
       }
       if (form.portadorId === form.portadorDestinoId) {
-        alert('Os portadores de origem e destino devem ser diferentes.');
+        toast.success('Os portadores de origem e destino devem ser diferentes.');
         return;
       }
       setSaving(true);
@@ -436,14 +438,14 @@ export default function LancamentosPage() {
         setLancamentos(store.getLancamentos(empresaId));
         setShowModal(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast.error((e as Error).message);
       } finally {
         setSaving(false);
       }
 
     } else {
       if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
-        alert('Preencha todos os campos obrigatórios.');
+        toast.error('Preencha todos os campos obrigatórios.');
         return;
       }
       setSaving(true);
@@ -503,32 +505,32 @@ export default function LancamentosPage() {
         setLancamentos(store.getLancamentos(empresaId));
         setShowModal(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast.error((e as Error).message);
       } finally {
         setSaving(false);
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Deseja excluir este lançamento?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Deseja excluir este lançamento?'))) return;
     try {
       store.deleteLancamento(id);
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds(prev => prev.filter(x => x !== id));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
-  const handleBulkDelete = () => {
-    if (!confirm(`Deseja excluir os ${selectedIds.length} lançamentos selecionados?`)) return;
+  const handleBulkDelete = async () => {
+    if (!(await confirmAsync(`Deseja excluir os ${selectedIds.length} lançamentos selecionados?`))) return;
     try {
       selectedIds.forEach(id => store.deleteLancamento(id));
       setLancamentos(store.getLancamentos(empresaId));
       setSelectedIds([]);
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
@@ -542,7 +544,7 @@ export default function LancamentosPage() {
       store.saveLancamento(updated);
       setLancamentos(store.getLancamentos(empresaId));
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
@@ -711,7 +713,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         }
       } catch (err) {
         console.error(err);
-        alert('Erro ao processar PDF com a IA. Verifique se o arquivo não é muito grande ou tente converter para Excel.');
+        toast.error('Erro ao processar PDF com a IA. Verifique se o arquivo não é muito grande ou tente converter para Excel.');
       } finally {
         setCardImporting(false);
       }
@@ -764,12 +766,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
   };
 
   const handleCardImport = async () => {
-    if (!cardPortadorId) { alert('Selecione o portador do cartão.'); return; }
+    if (!cardPortadorId) { toast.error('Selecione o portador do cartão.'); return; }
     const rowsToImport = cardImportRows.filter(row => cardSelectedIds.includes(row.id));
-    if (rowsToImport.length === 0) { alert('Nenhum lançamento selecionado.'); return; }
+    if (rowsToImport.length === 0) { toast.success('Nenhum lançamento selecionado.'); return; }
 
     const missingCategory = rowsToImport.some(row => !cardCatMap[row.id]);
-    if (missingCategory && !confirm('Alguns lançamentos estão sem plano de contas. Deseja importar mesmo assim?')) return;
+    if (missingCategory && !(await confirmAsync('Alguns lançamentos estão sem plano de contas. Deseja importar mesmo assim?'))) return;
 
     setCardImporting(true);
     const now = new Date().toISOString();
@@ -812,7 +814,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
   const handleBulkReclassify = () => {
     if (bulkMode === 'transferir') {
-      if (!reclassPortadorId) { alert('Selecione o portador destino.'); return; }
+      if (!reclassPortadorId) { toast.error('Selecione o portador destino.'); return; }
       const ts = new Date().toISOString();
 
       lancamentos.filter(l => selectedIds.includes(l.id)).forEach(l => {
@@ -874,7 +876,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       return;
     }
 
-    if (!reclassContaId && !reclassPortadorId) { alert('Selecione uma conta ou um portador.'); return; }
+    if (!reclassContaId && !reclassPortadorId) { toast.error('Selecione uma conta ou um portador.'); return; }
     const updatedItems = lancamentos
       .filter(l => selectedIds.includes(l.id))
       .map(l => ({
@@ -923,7 +925,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       XLSX.writeFile(workbook, `Lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
-      alert('Erro ao exportar para Excel. Certifique-se que a biblioteca xlsx foi instalada.');
+      toast.error('Erro ao exportar para Excel. Certifique-se que a biblioteca xlsx foi instalada.');
     }
   };
 

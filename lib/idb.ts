@@ -54,20 +54,17 @@ export async function idbGetAllLancamentos(): Promise<any[]> {
 }
 
 export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
-  console.log('[DEBUG_IDB] Starting idbSaveAllLancamentos with', lancamentos.length, 'items.');
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_LANCAMENTOS, 'readwrite');
       const store = tx.objectStore(STORE_LANCAMENTOS);
       
-      console.log('[DEBUG_IDB] Transaction created. Clearing store...');
       // Limpa e regrava tudo na mesma tick do event loop para evitar TransactionInactiveError
       store.clear();
       
       let pending = lancamentos.length;
       if (pending === 0) { 
-        console.log('[DEBUG_IDB] No items to save. Resolving immediately.');
         resolve(); 
         return; 
       }
@@ -80,7 +77,6 @@ export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
           putReq.onsuccess = () => { 
             count++;
             if (!hasError && --pending === 0) {
-              console.log('[DEBUG_IDB] All', count, 'items saved successfully. Resolving.');
               resolve(); 
             }
           };
@@ -101,7 +97,6 @@ export async function idbSaveAllLancamentos(lancamentos: any[]): Promise<void> {
     console.warn('[DEBUG_IDB] Fatal error in IDB save, falling back to localStorage:', err);
     try {
       localStorage.setItem('cf_lancamentos', JSON.stringify(lancamentos));
-      console.log('[DEBUG_IDB] Fallback to localStorage SUCCESSFUL.');
     } catch (lsErr) {
       console.error('[DEBUG_IDB] localStorage fallback ALSO FAILED:', lsErr);
       throw lsErr;

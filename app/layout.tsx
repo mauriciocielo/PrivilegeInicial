@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
-import { Montserrat } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import TransitionProvider from '../components/TransitionProvider';
+import ConfirmProvider from '../components/ConfirmProvider';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-const montserrat = Montserrat({
+const fontMain = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800'],
 });
 
 export const metadata: Metadata = {
@@ -16,11 +18,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={montserrat.className} suppressHydrationWarning>
-        <Toaster position="top-right" richColors />
-        <TransitionProvider>{children}</TransitionProvider>
+      <body className={fontMain.className} suppressHydrationWarning>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <Toaster position="top-right" richColors />
+          <ConfirmProvider />
+          <TransitionProvider>{children}</TransitionProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

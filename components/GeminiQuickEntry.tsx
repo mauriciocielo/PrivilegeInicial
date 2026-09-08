@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { store, type PlanoConta, type Portador, type Lancamento, uid } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { toast } from 'sonner';
 
 interface GeminiQuickEntryProps {
   empresaId: string;
@@ -34,7 +35,7 @@ export default function GeminiQuickEntry({ empresaId, onSuccess }: GeminiQuickEn
 
   const toggleListening = () => {
     if (!SpeechRecognition) {
-      alert('Seu navegador não suporta reconhecimento de voz. Experimente no Google Chrome ou Edge.');
+      toast.success('Seu navegador não suporta reconhecimento de voz. Experimente no Google Chrome ou Edge.');
       return;
     }
     
@@ -181,7 +182,7 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
       }
     } catch (err) {
       console.error(err);
-      alert('Erro ao processar o arquivo/texto com o Gemini AI. Verifique se o arquivo não é muito grande ou se está em formato válido.');
+      toast.error('Erro ao processar o arquivo/texto com o Gemini AI. Verifique se o arquivo não é muito grande ou se está em formato válido.');
     } finally {
       setLoading(false);
     }

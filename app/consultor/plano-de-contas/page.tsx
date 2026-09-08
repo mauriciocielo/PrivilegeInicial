@@ -1,7 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, PlanoConta, type TransactionPattern } from '../../../lib/store';
 import { uid } from '../../../lib/store';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
+import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 
 export default function PlanoContasPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -22,6 +25,10 @@ export default function PlanoContasPage() {
   const [regras, setRegras] = useState<TransactionPattern[]>([]);
   const [showRegraModal, setShowRegraModal] = useState(false);
   const [regraForm, setRegraForm] = useState<Partial<TransactionPattern>>({});
+
+  // Paginação — pagina por grupo principal (nível 1), preservando cada subárvore inteira.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Estado de Árvore Retrátil
   const [collapsedKeys, setCollapsedKeys] = useState<Record<string, boolean>>({});
@@ -56,7 +63,7 @@ export default function PlanoContasPage() {
 
   const handleSaveRegra = () => {
     if (!regraForm.pattern || !regraForm.categoryId) {
-      alert('Preencha o termo da regra e selecione a categoria.');
+      toast.error('Preencha o termo da regra e selecione a categoria.');
       return;
     }
     const pt: TransactionPattern = {
@@ -71,8 +78,8 @@ export default function PlanoContasPage() {
     setRegraForm({});
   };
 
-  const handleDeleteRegra = (id: string) => {
-    if (!confirm('Deseja excluir esta regra de classificação automática?')) return;
+  const handleDeleteRegra = async (id: string) => {
+    if (!(await confirmAsync('Deseja excluir esta regra de classificação automática?'))) return;
     store.deleteTransactionPattern(id);
     setRegras(store.getTransactionPatterns(empresaId));
   };
@@ -81,7 +88,7 @@ export default function PlanoContasPage() {
     e.dataTransfer.setData('pc_sourceId', id);
   };
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     const sourceId = e.dataTransfer.getData('pc_sourceId');
     if (!sourceId || sourceId === targetId) return;
@@ -91,7 +98,7 @@ export default function PlanoContasPage() {
     const tgt = strList.find(p => p.id === targetId);
 
     if (src && tgt && src.nivel === tgt.nivel && src.parentId === tgt.parentId) {
-      if (!confirm(`Deseja alterar a ordem de [${src.codigo}] e [${tgt.codigo}]?`)) return;
+      if (!(await confirmAsync(`Deseja alterar a ordem de [${src.codigo}] e [${tgt.codigo}]?`))) return;
 
       const codeSrc = src.codigo;
       const codeTgt = tgt.codigo;
@@ -108,7 +115,7 @@ export default function PlanoContasPage() {
       updatedList.forEach(p => store.savePlanoConta(p));
       setPlano(store.getPlanoContas(empresaId));
     } else {
-      alert('Só é possível reordenar contas do mesmo nível e grupo pai.');
+      toast.success('Só é possível reordenar contas do mesmo nível e grupo pai.');
     }
   };
 
@@ -134,7 +141,7 @@ export default function PlanoContasPage() {
   };
 
   const handleSave = () => {
-    if (!form.codigo || !form.descricao) { alert('Preencha código e descrição.'); return; }
+    if (!form.codigo || !form.descricao) { toast.error('Preencha código e descrição.'); return; }
     const pc: PlanoConta = {
       id: edit?.id || uid(),
       codigo: form.codigo!,
@@ -151,16 +158,16 @@ export default function PlanoContasPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const children = plano.filter(p => p.parentId === id);
-    if (children.length > 0) { alert('Não é possível excluir uma conta com subcategorias.'); return; }
+    if (children.length > 0) { toast.error('Não é possível excluir uma conta com subcategorias.'); return; }
     
     // Check if there are transactions associated
     const lancamentosDaConta = store.getLancamentos(empresaId).filter(l => l.planoContaId === id);
     if (lancamentosDaConta.length > 0) {
-      if (!confirm(`Existem ${lancamentosDaConta.length} lançamentos vinculados a esta conta. Se você excluí-la sem mesclar, os lançamentos ficarão órfãos. Deseja realmente excluir assim mesmo? (É recomendável usar o botão 🔄 Mesclar em vez disso)`)) return;
+      if (!(await confirmAsync(`Existem ${lancamentosDaConta.length} lançamentos vinculados a esta conta. Se você excluí-la sem mesclar, os lançamentos ficarão órfãos. Deseja realmente excluir assim mesmo? (É recomendável usar o botão 🔄 Mesclar em vez disso)`))) return;
     } else {
-      if (!confirm('Excluir esta conta?')) return;
+      if (!(await confirmAsync('Excluir esta conta?'))) return;
     }
 
     store.deletePlanoConta(id);
@@ -173,15 +180,15 @@ export default function PlanoContasPage() {
     setShowMergeModal(true);
   };
 
-  const handleMerge = () => {
+  const handleMerge = async () => {
     if (!mergeSource) return;
-    if (!mergeTargetId) { alert('Selecione para qual conta deseja transferir os lançamentos.'); return; }
-    if (mergeSource.id === mergeTargetId) { alert('A conta destino não pode ser a mesma que a conta de origem.'); return; }
+    if (!mergeTargetId) { toast.error('Selecione para qual conta deseja transferir os lançamentos.'); return; }
+    if (mergeSource.id === mergeTargetId) { toast.error('A conta destino não pode ser a mesma que a conta de origem.'); return; }
 
     const targetAccount = plano.find(p => p.id === mergeTargetId);
     if (!targetAccount) return;
 
-    if (!confirm(`Você está prestes a transferir todos os lançamentos vinculados a "${mergeSource.codigo} - ${mergeSource.descricao}" para "${targetAccount.codigo} - ${targetAccount.descricao}".\n\nA conta original "${mergeSource.descricao}" será EXCLUÍDA permanentemente após a transferência.\n\nDeseja continuar?`)) return;
+    if (!(await confirmAsync(`Você está prestes a transferir todos os lançamentos vinculados a "${mergeSource.codigo} - ${mergeSource.descricao}" para "${targetAccount.codigo} - ${targetAccount.descricao}".\n\nA conta original "${mergeSource.descricao}" será EXCLUÍDA permanentemente após a transferência.\n\nDeseja continuar?`))) return;
 
     store.mergePlanoContas(empresaId, mergeSource.id, mergeTargetId);
     setPlano(store.getPlanoContas(empresaId));
@@ -189,13 +196,13 @@ export default function PlanoContasPage() {
     setMergeSource(null);
   };
 
-  const handleDeleteAll = () => {
-    if (!confirm('ATENÇÃO: Você está prestes a excluir TODO o plano de contas desta empresa. Esta ação não pode ser desfeita e pode causar inconsistências se houver lançamentos vinculados. Deseja realmente excluir tudo?')) return;
+  const handleDeleteAll = async () => {
+    if (!(await confirmAsync('ATENÇÃO: Você está prestes a excluir TODO o plano de contas desta empresa. Esta ação não pode ser desfeita e pode causar inconsistências se houver lançamentos vinculados. Deseja realmente excluir tudo?'))) return;
     store.deleteAllPlanoContas(empresaId);
     setPlano(store.getPlanoContas(empresaId));
   };
 
-  const handleAutoDeduplicate = () => {
+  const handleAutoDeduplicate = async () => {
     const grouped = plano.reduce((acc, pc) => {
       const key = `${pc.tipo}-${pc.descricao.trim().toLowerCase()}`;
       if (!acc[key]) acc[key] = [];
@@ -206,11 +213,11 @@ export default function PlanoContasPage() {
     const duplicates = Object.values(grouped).filter(g => g.length > 1);
     
     if (duplicates.length === 0) {
-      alert('Nenhuma duplicata exata foi encontrada (contas com o exato mesmo nome e tipo).');
+      toast.success('Nenhuma duplicata exata foi encontrada (contas com o exato mesmo nome e tipo).');
       return;
     }
     
-    if (!confirm(`Foram encontrados ${duplicates.length} grupos de categorias com nomes exatamente iguais. O sistema irá reclassificar todos os lançamentos para a versão original da categoria e excluir automaticamente as cópias duplicadas com trilha de auditoria. Deseja prosseguir com a correção profunda?`)) return;
+    if (!(await confirmAsync(`Foram encontrados ${duplicates.length} grupos de categorias com nomes exatamente iguais. O sistema irá reclassificar todos os lançamentos para a versão original da categoria e excluir automaticamente as cópias duplicadas com trilha de auditoria. Deseja prosseguir com a correção profunda?`))) return;
 
     duplicates.forEach(group => {
       const sorted = group.sort((a,b) => a.id.localeCompare(b.id)); 
@@ -221,7 +228,7 @@ export default function PlanoContasPage() {
     });
 
     setPlano(store.getPlanoContas(empresaId));
-    alert('✔ Limpeza automática concluída! As contas foram desduplicadas e os lançamentos reagrupados.');
+    toast.success('✔ Limpeza automática concluída! As contas foram desduplicadas e os lançamentos reagrupados.');
   };
 
   const toggleAtivo = (pc: PlanoConta) => {
@@ -234,6 +241,34 @@ export default function PlanoContasPage() {
     if (search && !p.descricao.toLowerCase().includes(search.toLowerCase()) && !p.codigo.includes(search)) return false;
     return true;
   }).sort((a, b) => a.codigo.localeCompare(b.codigo));
+
+  // Paginação por grupo principal — cada página mostra N grupos (nível 1) com toda a subárvore,
+  // evitando renderizar milhares de linhas de uma vez sem quebrar a hierarquia pai/filho.
+  const rootCodeOf = (codigo: string) => codigo.split('.')[0];
+  const allRoots = useMemo(
+    () => plano.filter(p => p.nivel === 1).sort((a, b) => a.codigo.localeCompare(b.codigo)),
+    [plano]
+  );
+  const matchingRootCodes = useMemo(() => {
+    const s = new Set<string>();
+    filtered.forEach(pc => s.add(rootCodeOf(pc.codigo)));
+    return s;
+  }, [filtered]);
+  const visibleRoots = useMemo(
+    () => allRoots.filter(r => matchingRootCodes.has(r.codigo)),
+    [allRoots, matchingRootCodes]
+  );
+  useEffect(() => { setPage(1); }, [filtroTipo, search, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(visibleRoots.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedRootCodes = useMemo(
+    () => new Set(visibleRoots.slice((pageSafe - 1) * pageSize, pageSafe * pageSize).map(r => r.codigo)),
+    [visibleRoots, pageSafe, pageSize]
+  );
+  const paginated = useMemo(
+    () => filtered.filter(pc => pagedRootCodes.has(rootCodeOf(pc.codigo))),
+    [filtered, pagedRootCodes]
+  );
 
   const getNivelStyle = (nivel: number) => ({
     paddingLeft: `${(nivel - 1) * 20}px`,
@@ -306,7 +341,7 @@ export default function PlanoContasPage() {
                       // Let's look at the top of the file to see how we define states.
                       // We will use standard React state defined at the top. Let's add expandedState tracker.
                       // We can check if any parent is collapsed to hide a child row.
-                      return filtered.map(pc => {
+                      return paginated.map(pc => {
                         // Check if parent is collapsed
                         const parentCollapsed = plano.some(p => {
                           if (p.nivel < pc.nivel && pc.codigo.startsWith(p.codigo + '.')) {
@@ -392,6 +427,42 @@ export default function PlanoContasPage() {
                   </tbody>
                 </table>
               </div>
+
+              {visibleRoots.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, visibleRoots.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{visibleRoots.length}</strong> grupos principais
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                    <select
+                      className="form-control form-control-sm"
+                      value={pageSize}
+                      onChange={e => setPageSize(Number(e.target.value))}
+                      style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                      title="Grupos principais por página"
+                    >
+                      {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n} grupos / página</option>)}
+                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(1)} title="Primeira página">
+                        <ChevronsLeft size={14} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} title="Página anterior">
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
+                        Página {pageSafe} de {totalPages}
+                      </span>
+                      <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} title="Próxima página">
+                        <ChevronRight size={14} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(totalPages)} title="Última página">
+                        <ChevronsRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

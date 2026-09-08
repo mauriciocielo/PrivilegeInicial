@@ -138,10 +138,26 @@ export default function TransitionProvider({ children }: { children: React.React
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'syncing' }));
 
         // Timeout de 12s: se o banco demorar mais que isso, libera o sistema com dados locais
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
-        const fetchPromise = fetch('/api/migrate-backup').then(res => res.ok ? res.json() : null).catch(() => null);
+        const timeoutPromise = new Promise<null | 'unauthorized'>((resolve) => setTimeout(() => resolve(null), 12000));
+        const fetchPromise = fetch('/api/migrate-backup')
+          .then(res => {
+            if (res.status === 401) return 'unauthorized' as const;
+            return res.ok ? res.json() : null;
+          })
+          .catch(() => null);
 
         const backup = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (backup === 'unauthorized') {
+          // Sessão ausente/expirada no servidor (ex: cookie venceu, ou é uma
+          // aba que ficou logada "visualmente" de antes deste recurso existir)
+          // — a tela local achava que estava logada, mas a API já não confia
+          // mais nela. Força novo login em vez de deixar tudo em branco.
+          console.warn('🔒 Sessão inválida ou expirada — redirecionando para o login.');
+          store.setCurrentUser(null);
+          window.location.href = '/login';
+          return;
+        }
 
         if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
           store.importBackup(JSON.stringify(backup));

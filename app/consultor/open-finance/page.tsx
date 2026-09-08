@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador } from '../../../lib/store';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export default function OpenFinancePage() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function OpenFinancePage() {
       setStep(3); // Success
       setTimeout(() => {
         setShowConnectModal(false);
-        alert(`O Banco ${selectedBank?.name} foi sincronizado com sucesso! A partir de hoje, 100% dos lançamentos serão importados no painel de OFX automaticamente de madrugada.`);
+        toast.success(`O Banco ${selectedBank?.name} foi sincronizado com sucesso! A partir de hoje, 100% dos lançamentos serão importados no painel de OFX automaticamente de madrugada.`);
       }, 3000);
     }, 4000);
   };
@@ -101,7 +102,7 @@ export default function OpenFinancePage() {
                     </div>
 
                     {isConnected ? (
-                       <button className="btn btn-secondary" style={{ width: '100%', border: '1px solid var(--border)' }} onClick={() => alert('Sincronização já está ativa para esta instituição e os logs estão normais.')}>
+                       <button className="btn btn-secondary" style={{ width: '100%', border: '1px solid var(--border)' }} onClick={() => toast.success('Sincronização já está ativa para esta instituição e os logs estão normais.')}>
                           Gerenciar Credenciais
                        </button>
                     ) : (

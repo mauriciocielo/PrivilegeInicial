@@ -5,6 +5,8 @@ import { store, type Empresa, type Unidade, type Lancamento, type PlanoConta, ty
 import { fmt } from '../../../lib/reports';
 import { uid } from '../../../lib/store';
 import dynamic from 'next/dynamic';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 // Recharts dynamically imported without SSR to prevent Next.js hydration errors
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -74,7 +76,7 @@ export default function CondominioHubPage() {
 
   const handleSaveFinLanc = () => {
     if (!finForm.descricao || !finForm.valor || !finForm.planoContaId || !finForm.portadorId || !finForm.data) {
-      alert('Preencha todos os campos obrigatórios.');
+      toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
     setFinSaving(true);
@@ -100,8 +102,8 @@ export default function CondominioHubPage() {
     setShowFinModal(false);
   };
 
-  const handleDeleteFinLanc = (id: string) => {
-    if (!confirm('Deseja realmente excluir este lançamento financeiro?')) return;
+  const handleDeleteFinLanc = async (id: string) => {
+    if (!(await confirmAsync('Deseja realmente excluir este lançamento financeiro?'))) return;
     store.deleteLancamento(id);
     load(condoId);
   };
@@ -113,7 +115,7 @@ export default function CondominioHubPage() {
     };
     store.saveLancamento(updated);
     load(condoId);
-    alert(`${lanc.tipo === 'receita' ? 'Receita recebida' : 'Despesa paga'} com sucesso!`);
+    toast.error(`${lanc.tipo === 'receita' ? 'Receita recebida' : 'Despesa paga'} com sucesso!`);
   };
 
   const handleOpenBoleto = (l: Lancamento) => {
@@ -264,7 +266,7 @@ export default function CondominioHubPage() {
 
   const handleSaveUnidade = () => {
     if (!uniForm.identificacao || !uniForm.proprietario) {
-      alert('Identificação e Proprietário são obrigatórios.');
+      toast.error('Identificação e Proprietário são obrigatórios.');
       return;
     }
     const uni: Unidade = {
@@ -286,8 +288,8 @@ export default function CondominioHubPage() {
     setShowUniModal(false);
   };
 
-  const handleDeleteUnidade = (id: string) => {
-    if (!confirm('Excluir esta unidade? Todos os lançamentos do condomínio continuarão existindo.')) return;
+  const handleDeleteUnidade = async (id: string) => {
+    if (!(await confirmAsync('Excluir esta unidade? Todos os lançamentos do condomínio continuarão existindo.'))) return;
     store.deleteUnidade(id);
     setUnidades(store.getUnidades(condoId));
   };
@@ -295,7 +297,7 @@ export default function CondominioHubPage() {
   // --- ABA 3: GERAR TAXAS ---
   const handleGerarTaxas = () => {
     if (unidades.length === 0) {
-      alert('Cadastre unidades primeiro para poder faturar as taxas.');
+      toast.error('Cadastre unidades primeiro para poder faturar as taxas.');
       return;
     }
     
@@ -305,7 +307,7 @@ export default function CondominioHubPage() {
     const mainPortador = store.getPortadores(condoId).find(p => p.tipo === 'conta_corrente');
     
     if (!mainPortador) {
-      alert('Cadastre um portador do tipo Conta Corrente para receber as taxas.');
+      toast.error('Cadastre um portador do tipo Conta Corrente para receber as taxas.');
       return;
     }
 
@@ -367,10 +369,10 @@ export default function CondominioHubPage() {
     });
 
     if (count > 0) {
-      alert(`${count} lançamentos de taxas condominiais gerados para o mês ${mesCobranca}!`);
+      toast.success(`${count} lançamentos de taxas condominiais gerados para o mês ${mesCobranca}!`);
       load(condoId);
     } else {
-      alert('As taxas ordinárias deste mês já foram geradas para todas as unidades cadastradas.');
+      toast.error('As taxas ordinárias deste mês já foram geradas para todas as unidades cadastradas.');
     }
   };
 

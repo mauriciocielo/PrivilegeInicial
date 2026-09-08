@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { captureError } from '../../../lib/sentry-helper';
 
 export async function POST(request: Request) {
   try {
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Erro ao enviar e-mail de contato:', error);
+    captureError(error);
     return NextResponse.json({ error: (error as Error).message || 'Erro interno do servidor' }, { status: 500 });
   }
 }

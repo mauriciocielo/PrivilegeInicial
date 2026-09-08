@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { store, CentroCusto, Empresa } from '../../../lib/store';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function CentrosCustoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -41,7 +43,7 @@ export default function CentrosCustoPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nome) {
-      alert('Nome do centro de custo é obrigatório.');
+      toast.error('Nome do centro de custo é obrigatório.');
       return;
     }
 
@@ -58,8 +60,8 @@ export default function CentrosCustoPage() {
     load(empresaId);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Excluir este centro de custo? Isso não alterará os lançamentos que já o utilizaram.')) {
+  const handleDelete = async (id: string) => {
+    if ((await confirmAsync('Excluir este centro de custo? Isso não alterará os lançamentos que já o utilizaram.'))) {
       store.deleteCentroCusto(id);
       load(empresaId);
     }

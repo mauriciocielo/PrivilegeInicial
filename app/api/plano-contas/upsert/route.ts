@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/prisma';
+import { captureError } from '../../../../lib/sentry-helper';
+import { requireAuth } from '../../../../lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,6 +12,8 @@ export const revalidate = 0;
  * Evita o Inactivity Timeout do Vercel Free (10s).
  */
 export async function POST(req: Request) {
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const pc = await req.json();
 
@@ -21,6 +25,9 @@ export async function POST(req: Request) {
 
     // Garante que a empresa existe
     const empresaExists = await db.empresa.findUnique({ where: { id: empresaId }, select: { id: true } });
+    if (empresaExists && auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(empresaId)) {
+      return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
+    }
     if (!empresaExists) {
       await db.empresa.upsert({
         where: { id: empresaId },
@@ -140,6 +147,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, id: pc.id, parentSaved: savedWithParent });
   } catch (err: any) {
     console.error('Erro ao salvar PlanoConta:', err);
+    captureError(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

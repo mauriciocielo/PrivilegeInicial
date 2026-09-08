@@ -155,17 +155,32 @@ export default function ClienteDashboard() {
 
   return (
     <>
-      <div className="page-header glass-header">
+      <div className="page-header glass-header" style={{
+        background: 'rgba(255, 255, 255, 0.4)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: '1px solid rgba(255,255,255,0.3)',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.05)'
+      }}>
         <div>
-          <div className="page-title text-gradient">Painel Executivo — {empresa?.nomeFantasia}</div>
-          <div className="page-subtitle">{mesAtualLabel} • Resumo direto ao ponto</div>
+          <div className="page-title text-gradient" style={{ fontSize: '22px', fontWeight: 800 }}>Painel Executivo — {empresa?.nomeFantasia}</div>
+          <div className="page-subtitle" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            Evolução Mensal • {mesAtualLabel}
+          </div>
         </div>
         <div className="header-actions">
           <select 
             className="form-control" 
             value={mesSelecionado} 
             onChange={e => setMesSelecionado(e.target.value)}
-            style={{ width: '200px', background: 'var(--bg-card)', borderRadius: '20px' }}
+            style={{ 
+              width: '200px', 
+              background: 'rgba(255,255,255,0.7)', 
+              borderRadius: '12px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              fontWeight: 600,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+            }}
           >
             {meses.map(m => {
               const [y, mo] = m.split('-');
@@ -180,26 +195,46 @@ export default function ClienteDashboard() {
         </div>
       </div>
 
-      <div className="page-body">
-        {/* Welcome Banner */}
-        <div className="glass-card" style={{
-          padding: '28px 32px',
+      <div className="page-body" style={{
+        backgroundImage: 'radial-gradient(circle at 15% 10%, rgba(140, 26, 34, 0.04) 0%, transparent 40%), radial-gradient(circle at 85% 90%, rgba(199, 167, 92, 0.05) 0%, transparent 40%)',
+        minHeight: '100%',
+      }}>
+        {/* Welcome Banner Premium */}
+        <div className="glass-card animate-slide-up" style={{
+          padding: '32px 40px',
           marginBottom: 32,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 100%)',
+          border: '1px solid rgba(255,255,255,0.8)',
+          boxShadow: '0 8px 32px rgba(140, 26, 34, 0.05)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
-              Olá, <span className="text-gradient">{userName}</span>! 👋
+          {/* Decoração de Fundo no Banner */}
+          <div style={{ position: 'absolute', right: '-10%', top: '-50%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(140,26,34,0.06) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%' }} />
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+              Olá, <span className="text-gradient" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #d4af37 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{userName}</span>! 👋
             </div>
-            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Aqui está o pulso financeiro da <strong>{empresa?.razaoSocial}</strong>.
+            <div style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 500 }}>
+              Aqui está o pulso financeiro em tempo real da <strong>{empresa?.razaoSocial}</strong>.
             </div>
           </div>
-          <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.5)', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Saldo Atual em Caixa</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
+          <div style={{ 
+            textAlign: 'right', 
+            background: 'rgba(255,255,255,0.8)', 
+            padding: '20px 28px', 
+            borderRadius: '20px', 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.04)',
+            border: '1px solid rgba(255,255,255,0.9)',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>Saldo Disponível (Contas)</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4, letterSpacing: '-1px' }}>
               <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
             </div>
           </div>
@@ -216,41 +251,41 @@ export default function ClienteDashboard() {
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
 
         {/* Foco na Semana */}
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Esta Semana (Sobrevivência)</h3>
+        <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '200ms' }}>Esta Semana (Sobrevivência)</h3>
         <div className="grid-2" style={{ marginBottom: 32 }}>
-           <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--green)' }}>
+           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px', borderLeft: '4px solid var(--green)', animationDelay: '300ms' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Entradas da Semana</div>
              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}><AnimatedCounter target={entradasSemana} prefix="R$ " decimals={2} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que está previsto para entrar até sábado.</div>
            </div>
-           <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--red)' }}>
+           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px', borderLeft: '4px solid var(--red)', animationDelay: '400ms' }}>
              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Saídas da Semana</div>
              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}><AnimatedCounter target={saidasSemana} prefix="R$ " decimals={2} /></div>
              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que precisa ser pago até sábado.</div>
            </div>
         </div>
 
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)' }}>Resumo do Mês ({mesAtualLabel})</h3>
+        <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '500ms' }}>Resumo do Mês ({mesAtualLabel})</h3>
         <div className="stat-grid" style={{ marginBottom: 32 }}>
-          <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon green"><TrendingUp size={20} /></div>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '600ms' }}>
+            <div className="stat-icon green animate-float"><TrendingUp size={20} /></div>
             <div className="stat-label">Entradas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
           </div>
-          <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon red"><TrendingDown size={20} /></div>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '700ms' }}>
+            <div className="stat-icon red animate-float"><TrendingDown size={20} /></div>
             <div className="stat-label">Saídas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
           </div>
-          <div className="glass-card" style={{ padding: '20px' }}>
-            <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '800ms' }}>
+            <div className={`stat-icon animate-float ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
             <div className="stat-label">O que Sobrou (Fôlego)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
           </div>
-          <div className="glass-card" style={{ padding: '20px' }}>
-            <div className="stat-icon purple"><Percent size={20} /></div>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '900ms' }}>
+            <div className="stat-icon purple animate-float"><Percent size={20} /></div>
             <div className="stat-label">Margem Limpa</div>
             <div className="stat-value" style={{ color: margem >= 20 ? 'var(--green)' : margem >= 0 ? 'var(--yellow)' : 'var(--red)' }}>
               {margem.toFixed(1)}%
@@ -260,71 +295,106 @@ export default function ClienteDashboard() {
 
         {/* Charts */}
         <div className="grid-21" style={{ marginBottom: 24 }}>
-          <div className="card">
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.6)', animationDelay: '1000ms' }}>
             <div className="card-header">
               <div>
-                <div className="card-title text-gradient" style={{ fontSize: '18px' }}>Evolução Financeira</div>
-                <div className="card-subtitle">Receitas, despesas e resultado líquido mensal</div>
+                <div className="card-title text-gradient" style={{ fontSize: '20px', fontWeight: 800 }}>Evolução Financeira</div>
+                <div className="card-subtitle" style={{ fontSize: '13px' }}>Receitas, despesas e resultado líquido mensal</div>
               </div>
             </div>
-            <div className="chart-container">
+            <div className="chart-container" style={{ paddingTop: '12px' }}>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={resumo} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip contentStyle={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', borderRadius: 8 }} formatter={(v: any) => fmt.currency(Number(v || 0))} />
-                  <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }} />
-                  <Bar dataKey="receitas" name="Receitas" fill="var(--green)" radius={[4,4,0,0]} />
-                  <Bar dataKey="despesas" name="Despesas" fill="var(--red)" radius={[4,4,0,0]} />
+                  <Tooltip 
+                    contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.8)', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+                    formatter={(v: any) => fmt.currency(Number(v || 0))} 
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }} />
+                  <Bar dataKey="receitas" name="Receitas" fill="url(#colorRec)" radius={[6,6,0,0]} />
+                  <Bar dataKey="despesas" name="Despesas" fill="url(#colorDesp)" radius={[6,6,0,0]} />
+                  <defs>
+                    <linearGradient id="colorRec" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorDesp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.6}/>
+                    </linearGradient>
+                  </defs>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="card">
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.45)', animationDelay: '1100ms' }}>
             <div className="card-header">
-              <div className="card-title">Distribuição de Despesas</div>
+              <div className="card-title" style={{ fontSize: '18px', fontWeight: 800 }}>Distribuição de Despesas</div>
             </div>
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height={280}>
+            <div className="chart-container" style={{ position: 'relative' }}>
+              {/* Glow center */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100px', height: '100px', background: 'rgba(255,255,255,0.8)', filter: 'blur(20px)', borderRadius: '50%', zIndex: 0 }} />
+              <ResponsiveContainer width="100%" height={280} style={{ zIndex: 1, position: 'relative' }}>
                 <PieChart>
-                  <Pie data={categorias} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">
-                    {categorias.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  <Pie data={categorias} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
+                    {categorias.map((entry, i) => <Cell key={i} fill={entry.color} style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))' }} />)}
                   </Pie>
-                  <Tooltip formatter={(v: any) => fmt.currency(Number(v || 0))} contentStyle={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', borderRadius: 8 }} />
-                  <Legend wrapperStyle={{ fontSize: 10, color: 'var(--text-secondary)' }} />
+                  <Tooltip 
+                    formatter={(v: any) => fmt.currency(Number(v || 0))} 
+                    contentStyle={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} 
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* Área de saldo + portadores */}
+        {/* Área de Central de Relatórios + portadores */}
         <div className="grid-21">
-          <div className="card">
-            <div className="card-header">
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)', animationDelay: '800ms', display: 'flex', flexDirection: 'column' }}>
+            <div className="card-header" style={{ marginBottom: 24 }}>
               <div>
-                <div className="card-title text-gradient" style={{ fontSize: '18px' }}>Crescimento & Sobrevivência (Margem)</div>
-                <div className="card-subtitle">Resultado líquido mensal e fôlego em caixa</div>
+                <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Sua Central Financeira</div>
+                <div className="card-subtitle" style={{ fontSize: '13px' }}>Acesse rapidamente os demonstrativos completos</div>
               </div>
             </div>
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={tendencia}>
-                  <defs>
-                    <linearGradient id="gradPos" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: any) => fmt.currency(Number(v || 0))} contentStyle={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', borderRadius: 8 }} />
-                  <Area type="monotone" dataKey="saldo" name="Resultado Líquido" stroke="#22c55e" fill="url(#gradPos)" strokeWidth={4} style={{ filter: 'drop-shadow(0 0 10px rgba(34,197,94,0.3))' }} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', flex: 1 }}>
+                <a href={`/cliente/relatorios?empresaId=${empresaId}&tab=fluxo&mes=${mesSelecionado}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px', background: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)', textDecoration: 'none', color: 'inherit', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s' }} className="card-dynamic">
+                  <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '12px' }}>
+                    <Activity size={24} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Fluxo de Caixa Mensal</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas e Saídas Efetivas (Despesas Pagas e Receitas Recebidas)</div>
+                  </div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3b82f6', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
+                </a>
+
+                <a href={`/cliente/relatorios?empresaId=${empresaId}&tab=dre&mes=${mesSelecionado}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px', background: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)', textDecoration: 'none', color: 'inherit', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s' }} className="card-dynamic">
+                  <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '12px' }}>
+                    <TrendingUp size={24} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>DRE Gerencial</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Saúde Financeira pela Competência e Indicadores de Capacidade</div>
+                  </div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
+                </a>
+
+                <a href={`/cliente/relatorios?empresaId=${empresaId}&tab=balanco&mes=${mesSelecionado}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px', background: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid rgba(245, 158, 11, 0.2)', textDecoration: 'none', color: 'inherit', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', transition: 'all 0.3s' }} className="card-dynamic">
+                  <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderRadius: '12px' }}>
+                    <Scale size={24} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Balanço Patrimonial</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Controle do Capital de Giro, Contas, Passivos e Valuation Estimado</div>
+                  </div>
+                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f59e0b', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
+                </a>
             </div>
           </div>
 
@@ -351,6 +421,8 @@ export default function ClienteDashboard() {
                 </div>
               );
             })}
+
+            </div>
 
             {/* Políticas e Diretrizes Estratégicas */}
             {(empresa?.politicaReceberName || empresa?.politicaComprasName || empresa?.politicaCobrancaName) && (

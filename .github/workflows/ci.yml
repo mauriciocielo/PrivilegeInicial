@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # URL fake só para o Prisma Client conseguir ser gerado e o build compilar —
+    # nenhuma etapa aqui precisa de um banco de dados real.
+    env:
+      DATABASE_URL: "postgresql://user:password@localhost:5432/ci_placeholder"
+      SESSION_SECRET: "ci-only-placeholder-secret-nao-usar-em-producao"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

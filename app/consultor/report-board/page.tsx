@@ -5,6 +5,7 @@ import { store, Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
+import { toast } from 'sonner';
 
 // Ocultamos o Header padrão e Sidebar no globals.css via print helpers
 export default function ReportBoardPage() {
@@ -62,13 +63,13 @@ export default function ReportBoardPage() {
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
+        scale: 4, // Ultra-high resolution
         useCORS: true,
         backgroundColor: '#F9FAFB',
         windowWidth: 794 // A4 width at 96 DPI
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 1.0); // Maximum quality JPEG instead of PNG for smaller file size with better colors
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'px',
@@ -78,11 +79,11 @@ export default function ReportBoardPage() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Privilege_Finance_${empresa.nomeFantasia.replace(/\s+/g,'_')}_${mesSelecionado}.pdf`);
     } catch (e) {
       console.error(e);
-      alert('Erro ao gerar relatório.');
+      toast.error('Erro ao gerar relatório.');
     }
   };
 
@@ -118,11 +119,11 @@ export default function ReportBoardPage() {
         {/* Cabecalho Premium */}
         <div style={{ borderBottom: '2px solid var(--accent)', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2 }}>
-              Privilege Consultoria
+            <div style={{ marginBottom: 12 }}>
+              <img src="/logo.png" alt="Privilege Logo" style={{ height: 42, width: 'auto' }} crossOrigin="anonymous" />
             </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#030712', margin: '8px 0 4px 0' }}>Finance Report</h1>
-            <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>Mês de Analise: {mesExtenso}</div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#030712', margin: '8px 0 4px 0', letterSpacing: '-0.5px' }}>Finance Report & Analytics</h1>
+            <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>Período de Análise: <span style={{ fontWeight: 700, color: '#030712' }}>{mesExtenso}</span></div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{empresa.nomeFantasia}</div>

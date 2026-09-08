@@ -1,13 +1,20 @@
 // Forçar refresh HMR
 import { NextResponse } from 'next/server';
 import db from '@/lib/prisma';
+import { captureError } from '../../../../lib/sentry-helper';
+import { requireAuth } from '../../../../lib/api-auth';
 
 export async function POST(req: Request) {
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const { empresaId, sourceId, targetId } = await req.json();
 
     if (!empresaId || !sourceId || !targetId) {
       return NextResponse.json({ error: 'Parâmetros insuficientes' }, { status: 400 });
+    }
+    if (auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(empresaId)) {
+      return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
     }
 
     // Transferir Lançamentos e guardar auditoria
@@ -33,6 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Erro no merge de contas:', error);
+    captureError(error);
     return NextResponse.json({ error: 'Erro no pool do BD' }, { status: 500 });
   }
 }

@@ -2,6 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { store, type Cliente, type Lancamento, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 type Tab = 'lista' | 'historico';
 type TipoFiltro = '' | 'cliente' | 'fornecedor' | 'ambos';
@@ -65,7 +67,7 @@ export default function ClientesPage() {
   // Busca dados por CNPJ na Receita Federal
   const fetchCnpj = async () => {
     const raw = (form.cpfCnpj || '').replace(/\D/g, '');
-    if (raw.length !== 14) { alert('Informe um CNPJ válido (14 dígitos) para consultar.'); return; }
+    if (raw.length !== 14) { toast.error('Informe um CNPJ válido (14 dígitos) para consultar.'); return; }
     setFetchingDoc(true);
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${raw}`);
@@ -84,7 +86,7 @@ export default function ClientesPage() {
         cpfCnpj: raw.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'),
       }));
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erro ao consultar CNPJ.');
+      toast.error(e instanceof Error ? e.message : 'Erro ao consultar CNPJ.');
     } finally { setFetchingDoc(false); }
   };
 
@@ -106,7 +108,7 @@ export default function ClientesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.nome || !form.cpfCnpj) { alert('Preencha Nome e CPF/CNPJ.'); return; }
+    if (!form.nome || !form.cpfCnpj) { toast.error('Preencha Nome e CPF/CNPJ.'); return; }
     setSaving(true);
     await new Promise(r => setTimeout(r, 250));
     const cliente: Cliente = {
@@ -135,8 +137,8 @@ export default function ClientesPage() {
     setSaving(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir este cadastro? Os lançamentos vinculados não serão excluídos.')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir este cadastro? Os lançamentos vinculados não serão excluídos.'))) return;
     store.deleteCliente(id);
     setClientes(store.getClientes(empresaId));
     if (selectedCliente?.id === id) { setSelectedCliente(null); setTab('lista'); }

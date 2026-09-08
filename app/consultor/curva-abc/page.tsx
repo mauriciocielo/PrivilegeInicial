@@ -5,6 +5,7 @@ import { store, Empresa, CurvaAbc, CurvaAbcConfig, uid } from '../../../lib/stor
 import { parseCurvaAbcFile, classificarAbc } from '../../../lib/curva-abc-parser';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const BADGE_CLASSE: Record<string, string> = {
   A: 'badge-green',
@@ -128,8 +129,8 @@ export default function CurvaAbcPage() {
 
   const handleAbrir = (curva: CurvaAbc) => setCurvaAtual(curva);
 
-  const handleExcluir = (curva: CurvaAbc) => {
-    if (!confirm(`Excluir a Curva ABC "${curva.nome}"?`)) return;
+  const handleExcluir = async (curva: CurvaAbc) => {
+    if (!(await confirmAsync(`Excluir a Curva ABC "${curva.nome}"?`))) return;
     store.deleteCurvaAbc(curva.id);
     const lista = store.getCurvasAbc(empresaId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     setCurvas(lista);

@@ -16,6 +16,7 @@ import {
     type Letra,
 } from '../../../lib/diagnostico360';
 import { gerarPdfDiagnostico360, type FinanceiroSnapshot } from '../../../lib/diagnostico360-pdf';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 type Aba = 'identificacao' | AreaKey | 'resultado';
 
@@ -171,22 +172,22 @@ export default function Diagnostico360Page() {
         toast.success('Diagnóstico salvo.');
     };
 
-    const handleNovo = () => {
-        if (dirty && !confirm('Há alterações não salvas. Iniciar um novo diagnóstico mesmo assim?')) return;
+    const handleNovo = async () => {
+        if (dirty && !(await confirmAsync('Há alterações não salvas. Iniciar um novo diagnóstico mesmo assim?'))) return;
         setDiagnostico(novoDiagnostico(empresaId, empresa));
         setDirty(false);
         setAba('identificacao');
     };
 
-    const handleCarregar = (item: Diagnostico360) => {
-        if (dirty && !confirm('Há alterações não salvas. Carregar outro diagnóstico mesmo assim?')) return;
+    const handleCarregar = async (item: Diagnostico360) => {
+        if (dirty && !(await confirmAsync('Há alterações não salvas. Carregar outro diagnóstico mesmo assim?'))) return;
         setDiagnostico({ ...item });
         setDirty(false);
         setAba('resultado');
     };
 
-    const handleExcluir = (id: string) => {
-        if (!confirm('Excluir este diagnóstico?')) return;
+    const handleExcluir = async (id: string) => {
+        if (!(await confirmAsync('Excluir este diagnóstico?'))) return;
         diagnostico360Store.delete(id);
         const restantes = diagnostico360Store.getAll(empresaId);
         setHistorico(restantes);

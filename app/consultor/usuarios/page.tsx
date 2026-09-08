@@ -2,7 +2,10 @@
 import { useState, useEffect } from 'react';
 import { store, User, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
+import { hashPassword } from '../../../lib/auth-hash';
 import ImageCropper from '../../../components/ImageCropper';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
@@ -42,6 +45,7 @@ const AVAILABLE_CLIENT_SCREENS = [
   { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },
   { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
   { label: '📝 Lançamentos', route: '/cliente/lancamentos' },
+  { label: '📂 Importar OFX', route: '/cliente/importar-ofx' },
   { label: '📈 Relatórios', route: '/cliente/relatorios' },
   { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
   { label: '📋 Políticas Financeiras', route: '/cliente/politicas' },
@@ -104,14 +108,14 @@ export default function UsuariosPage() {
   };
 
   const handleSave = () => {
-    if (!form.name || !form.email) { alert('Preencha nome e e-mail.'); return; }
-    if (!edit && !form.newPassword) { alert('Informe uma senha para o novo usuário.'); return; }
+    if (!form.name || !form.email) { toast.error('Preencha nome e e-mail.'); return; }
+    if (!edit && !form.newPassword) { toast.error('Informe uma senha para o novo usuário.'); return; }
     
     const u: User = {
       id: edit?.id || uid(),
       name: form.name!,
       email: form.email!,
-      password: form.newPassword || edit?.password || '123456',
+      password: form.newPassword ? hashPassword(form.newPassword) : (edit?.password || hashPassword('123456')),
       role: (form.role || 'cliente') as any,
       empresaIds: form.role === 'administrador' ? [] : (form.empresaIds || []),
       receberEmailDiario: !!form.receberEmailDiario,
@@ -125,8 +129,8 @@ export default function UsuariosPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir este usuário?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir este usuário?'))) return;
     store.deleteUser(id);
     setUsers(store.getUsers());
   };

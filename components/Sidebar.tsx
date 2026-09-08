@@ -3,13 +3,14 @@ import { useRouter, usePathname } from 'next/navigation';
 import { store, User, Empresa } from '../lib/store';
 import { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
+import TwoFactorModal from './TwoFactorModal';
 import {
   Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, type LucideIcon,
 } from 'lucide-react';
 
 const getAvatarGradient = (name: string) => {
@@ -35,21 +36,47 @@ interface NavItem {
 
 const consultorNav: { section: string; items: NavItem[] }[] = [
   {
-    section: 'Principal',
+    section: 'Painel',
     items: [
-      { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
       { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
-      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
-      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
-      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
-      { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
-      { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
+      { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
+    ],
+  },
+  {
+    section: 'Operação Diária',
+    items: [
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: NotebookPen },
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
-      { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
-      { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
+      { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
+      { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
+    ],
+  },
+  {
+    section: 'Inteligência & Diagnóstico',
+    items: [
+      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
+      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
+      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
+    ],
+  },
+  {
+    section: 'Auditoria & C-Level',
+    items: [
+      { label: 'Valuation & Real-Value', href: '/consultor/valuation', icon: Calculator },
+      { label: 'Budget & Orçamento', href: '/consultor/controle-orcamentario', icon: Presentation },
+      { label: 'Benchmarking Cloud', href: '/consultor/benchmarking', icon: Activity },
+      { label: 'Malha Fina & Risco', href: '/consultor/risco-fiscal', icon: AlertTriangle },
+      { label: 'Simulador de Cenários', href: '/consultor/simulador-cenarios', icon: Sliders },
+    ]
+  },
+  {
+    section: 'Planejamento & Indicadores',
+    items: [
       { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
+      { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
+      { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
       { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
+      { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
     ],
   },
   {
@@ -60,7 +87,6 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
-      { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
   },
@@ -101,6 +127,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
       { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
       { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },
+      { label: 'Importar OFX', href: '/cliente/importar-ofx', icon: FolderInput },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: FileText },
       { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: ClipboardList },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
@@ -175,9 +202,32 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   // Estados customizados para Premium UI
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
+  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
   const [isSidebarCompact, setIsSidebarCompact] = useState(false);
   const [searchEmpresa, setSearchEmpresa] = useState('');
   const [recentEmpresas, setRecentEmpresas] = useState<string[]>([]);
+
+  // Submenus recolhíveis — por padrão só o "Painel" começa aberto (menu
+  // limpo). Lembra o que o usuário abriu/fechou, e sempre mantém visível a
+  // seção da página atual (nunca esconde onde você está).
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean> | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cf_sidebar_expanded_sections');
+      setExpandedSections(saved ? JSON.parse(saved) : { 'Painel': true });
+    } catch {
+      setExpandedSections({ 'Painel': true });
+    }
+  }, []);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const next = { ...(prev || {}), [section]: !(prev?.[section]) };
+      try { localStorage.setItem('cf_sidebar_expanded_sections', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const savedRecents = localStorage.getItem('cf_recent_empresas');
@@ -356,6 +406,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const handleLogout = () => {
     store.setCurrentUser(null);
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     router.push('/');
   };
 
@@ -406,275 +457,56 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const initials = user?.name?.split(' ').map(w => w[0]).slice(0, 2).join('') || 'U';
 
   return (
-    <aside className={`sidebar ${isSidebarCompact ? 'compact' : ''}`} style={{ width: isSidebarCompact ? '70px' : 'var(--sidebar-w)' }}>
+    <header className="sidebar">
       <div 
         className="sidebar-logo" 
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '12px', 
-          cursor: 'pointer',
-          justifyContent: isSidebarCompact ? 'center' : 'space-between'
+          cursor: 'pointer'
         }}
+        onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}
       >
-        {!isSidebarCompact && (
-          <div onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}>
-            <BrandLogo size={36} subtitle={isConsultorOrAdmin ? 'Portal do Consultor' : 'Portal do Cliente'} />
-          </div>
-        )}
-        {isSidebarCompact && (
-          <div
-            className="logo-icon"
-            style={{ cursor: 'pointer' }}
-            onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}
-          >
-            <Landmark size={18} color="#fff" strokeWidth={2.2} />
-          </div>
-        )}
-        <button
-          onClick={toggleCompact}
-          className="sidebar-collapse-btn"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            padding: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          title={isSidebarCompact ? "Expandir Menu" : "Recolher Menu"}
-        >
-          {isSidebarCompact ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-        </button>
+        <BrandLogo size={64} subtitle={isConsultorOrAdmin ? 'Portal do Consultor' : 'Portal do Cliente'} />
       </div>
 
 
 
-      {/* Switcher customizado Premium e Grupo Econômico */}
-      {selectableEmpresas.length > 0 && !isSidebarCompact && (
-        <div className="sidebar-empresa" style={{ position: 'relative', padding: '10px 12px', borderRadius: '10px', margin: '0 12px 12px 12px' }}>
-          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-sidebar)', fontWeight: 700, display: 'block', marginBottom: '6px', letterSpacing: '1px' }}>
-            {appMode === 'condominio' ? 'Condomínio / Grupo Ativo' : 'Empresa / Grupo Ativo'}
-          </label>
-          <div 
-            onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '7px 10px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-sidebar)', minHeight: '36px', transition: 'all 0.15s' }}
-          >
-            {activeEmpresa?.logoData ? (
-              <img
-                src={activeEmpresa.logoData}
-                alt="Logo"
-                style={{ height: '20px', width: '20px', objectFit: 'contain', borderRadius: '4px' }}
-              />
-            ) : (
-              <Building2 size={14} color="var(--text-sidebar)" />
-            )}
-            <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-sidebar-title)' }}>
-              {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial}
-            </span>
-            <ChevronDown
-              size={13}
-              color="var(--text-sidebar)"
-              style={{ transition: 'transform var(--dur-base) var(--ease-out)', transform: showCompanyDropdown ? 'rotate(180deg)' : 'none' }}
-            />
-          </div>
+      {/* Switcher de empresa movido para o Painel Administrativo de acordo com a solicitação */}
 
-          {showCompanyDropdown && (
-            <div className="dropdown-anim-down" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-sidebar)', borderRadius: '10px', zIndex: 1000, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)', marginTop: '6px', maxHeight: '340px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '8px', borderBottom: '1px solid var(--border-sidebar)', position: 'relative' }}>
-                <Search size={13} color="var(--text-sidebar)" style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={searchEmpresa}
-                  onChange={e => setSearchEmpresa(e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', padding: '7px 10px 7px 28px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-sidebar)', background: 'var(--bg-sidebar-hover)', color: 'var(--text-sidebar-title)' }}
-                />
+      <nav className="sidebar-nav">
+        {nav.map(section => {
+          const containsActive = section.items.some(item => item.href === pathname);
+          return (
+            <div key={section.section}>
+              <div className="nav-section">
+                <span className="nav-section-label">
+                  {section.section}
+                  <ChevronDown size={14} style={{ opacity: 0.6 }} />
+                </span>
               </div>
-              <div style={{ overflowY: 'auto', padding: '6px', flex: 1 }}>
-              {(() => {
-                const searchLower = searchEmpresa.toLowerCase();
-                const filteredGrupos = gruposEconomicos.filter(g => g.toLowerCase().includes(searchLower));
-                const filteredEmpresas = selectableEmpresas.filter(e => 
-                  e.tipo !== 'condominio' && e.tipo !== 'cooperativa' &&
-                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
-                );
-                const filteredCondominios = selectableEmpresas.filter(e => 
-                  e.tipo === 'condominio' &&
-                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
-                );
-                const filteredCooperativas = selectableEmpresas.filter(e => 
-                  e.tipo === 'cooperativa' &&
-                  (e.razaoSocial.toLowerCase().includes(searchLower) || (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(searchLower)))
-                );
-
-                const recentsObjs = searchEmpresa === '' ? recentEmpresas
-                  .map(id => id.startsWith('grupo:') ? { id, razaoSocial: `Grupo Consolidado - ${id.split(':')[1]}`, nomeFantasia: `Grupo ${id.split(':')[1]}`, isGroup: true } : selectableEmpresas.find(e => e.id === id))
-                  .filter(Boolean) as any[] : [];
-
-                return (
-                  <>
-                    {searchEmpresa === '' && recentsObjs.length > 0 && (
-                      <>
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Clock size={11} /> Recentes</div>
-                        {recentsObjs.map((e, idx) => (
-                          <div
-                            key={`recent:${e.id}:${idx}`}
-                            onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', transition: 'background 0.1s', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
-                            className="company-select-item"
-                          >
-                            {e.isGroup ? <Globe size={14} /> : e.logoData ? (
-                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                            ) : (
-                              e.tipo === 'condominio' ? <Building size={14} /> : e.tipo === 'cooperativa' ? <Handshake size={14} /> : <Building2 size={14} />
-                            )}
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: e.isGroup ? 600 : 400 }}>
-                              {e.nomeFantasia || e.razaoSocial}
-                            </span>
-                          </div>
-                        ))}
-                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                      </>
-                    )}
-
-                    {filteredGrupos.length > 0 && (
-                      <>
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupos Econômicos</div>
-                        {filteredGrupos.map(g => (
-                          <div 
-                            key={`grupo:${g}`}
-                            onClick={() => handleEmpresaChange(`grupo:${g}`)}
-                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === `grupo:${g}` ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === `grupo:${g}` ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === `grupo:${g}` ? 700 : 600 }}
-                            className="company-select-item"
-                          >
-                            <Globe size={14} />
-                            <span>Grupo {g} (Consolidado)</span>
-                          </div>
-                        ))}
-                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                      </>
-                    )}
-                    
-                    {/* Empresas Group */}
-                    {filteredEmpresas.length > 0 && (
-                      <>
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</div>
-                        {filteredEmpresas.map(e => (
-                          <div 
-                            key={e.id}
-                            onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '7px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', transition: 'background 0.1s', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
-                            className="company-select-item"
-                          >
-                            {e.logoData ? (
-                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                            ) : (
-                              <Building2 size={14} />
-                            )}
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {/* Cooperativas Group */}
-                    {filteredCooperativas.length > 0 && (
-                      <>
-                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Handshake size={11} /> Cooperativas</div>
-                        {filteredCooperativas.map(e => (
-                          <div
-                            key={e.id}
-                            onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
-                            className="company-select-item"
-                          >
-                            {e.logoData ? (
-                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                            ) : (
-                              <Handshake size={14} />
-                            )}
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {/* Condomínios Group */}
-                    {filteredCondominios.length > 0 && (
-                      <>
-                        <div style={{ height: '1px', background: 'var(--border-light)', margin: '6px 0' }} />
-                        <div style={{ padding: '6px 8px', fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}><Building size={11} /> Condomínios</div>
-                        {filteredCondominios.map(e => (
-                          <div
-                            key={e.id}
-                            onClick={() => handleEmpresaChange(e.id)}
-                            style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', cursor: 'pointer', background: selectedEmpresa === e.id ? 'rgba(140,26,34,0.1)' : 'transparent', color: selectedEmpresa === e.id ? '#8c1a22' : 'var(--text-sidebar-title)', fontSize: '13px', fontWeight: selectedEmpresa === e.id ? 700 : 500 }}
-                            className="company-select-item"
-                          >
-                            {e.logoData ? (
-                              <img src={e.logoData} alt="" style={{ height: '16px', width: '16px', objectFit: 'contain', borderRadius: '3px' }} />
-                            ) : (
-                              <Building size={14} />
-                            )}
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.nomeFantasia || e.razaoSocial}</span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {filteredGrupos.length === 0 && filteredEmpresas.length === 0 && filteredCondominios.length === 0 && filteredCooperativas.length === 0 && (
-                      <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '11px' }}>
-                        Nenhum resultado encontrado.
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+              
+              <div className="dropdown-menu-wrapper">
+                {section.items.map(item => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className={`nav-item ${isActive ? 'active' : ''}`}
+                      onClick={e => { e.preventDefault(); router.push(item.href); }}
+                    >
+                      <span className="nav-icon">
+                        <item.icon size={16} strokeWidth={2.2} />
+                      </span>
+                      {item.label}
+                    </a>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      <nav className="sidebar-nav" style={{ flex: 1, padding: isSidebarCompact ? '0 8px' : '0 10px' }}>
-        {nav.map(section => (
-          <div key={section.section}>
-            {!isSidebarCompact && (
-              <div className="nav-section">
-                <span className="nav-section-label">{section.section}</span>
-              </div>
-            )}
-            {section.items.map(item => {
-              const isActive = pathname === item.href;
-              return (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                  onClick={e => { e.preventDefault(); router.push(item.href); }}
-                  title={isSidebarCompact ? item.label : ''}
-                  style={{
-                    justifyContent: isSidebarCompact ? 'center' : 'flex-start',
-                    padding: isSidebarCompact ? '10px 0' : '9px 12px 9px 14px',
-                    borderRadius: '9px',
-                    margin: '1px 0',
-                    fontSize: '13px',
-                  }}
-                >
-                  <span className="nav-icon">
-                    <item.icon size={17} strokeWidth={2.1} />
-                  </span>
-                  {!isSidebarCompact && item.label}
-                </a>
-              );
-            })}
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer" style={{ padding: isSidebarCompact ? '12px' : '16px' }}>
@@ -827,6 +659,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                     {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}
                   </button>
                 </div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }}
+                  onClick={() => { setShowProfilePopover(false); setShowTwoFactorModal(true); }}
+                >
+                  <ShieldCheck size={13} /> {user?.twoFactorEnabled ? 'Verificação em 2 Etapas (Ativa)' : 'Ativar Verificação em 2 Etapas'}
+                </button>
                 <button className="btn btn-secondary btn-sm" style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={handleLogout}>
                   <LogOut size={13} /> Sair da Conta
                 </button>
@@ -835,6 +674,18 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           )}
         </div>
       </div>
-    </aside>
+
+      <TwoFactorModal
+        open={showTwoFactorModal}
+        enabled={!!user?.twoFactorEnabled}
+        onClose={() => setShowTwoFactorModal(false)}
+        onChanged={(enabled) => {
+          if (!user) return;
+          const updated = { ...user, twoFactorEnabled: enabled };
+          setUser(updated);
+          store.setCurrentUser(updated);
+        }}
+      />
+    </header>
   );
 }

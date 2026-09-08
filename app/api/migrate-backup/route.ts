@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 import crypto from 'crypto';
 import { SYNC_COLLECTION_KEYS } from '../../../lib/sync-registry';
+import { captureError } from '../../../lib/sentry-helper';
+import { requireAuth } from '../../../lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -98,6 +100,7 @@ async function migrateEmpresas(empresas: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Empresa (ID: ${e.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -129,6 +132,7 @@ async function migrateAuditLogs(logs: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Log de Auditoria (ID: ${log.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -179,6 +183,7 @@ async function migrateCentrosCusto(centros: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Centro de Custo (ID: ${cc.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -235,6 +240,7 @@ async function migrateAgendaTasks(tasks: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Tarefa da Agenda (ID: ${t.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -263,6 +269,7 @@ async function migrateInteligenciaDocs(docs: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Documento de Inteligência (ID: ${d.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -323,6 +330,7 @@ async function migrateAtividades(atividades: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Atividade (ID: ${at.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -390,6 +398,7 @@ async function migrateUsers(users: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Usuário (Email: ${u.email}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -455,6 +464,7 @@ async function migrateUnidades(unidades: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Unidade (ID: ${uni.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -546,6 +556,7 @@ async function migratePlanoContas(planoContas: any[]) {
         console.warn(`⚠️ PlanoConta ${pc.id}: salvo SEM parentId (FK inválido para parentId=${pc.parentId}). Ignorando hierarquia.`);
       } catch (fallbackErr) {
         console.error(`Erro no PlanoConta (ID: ${pc.id}), pulando este item e continuando o lote:`, fallbackErr);
+        captureError(fallbackErr);
       }
     }
   }
@@ -607,6 +618,7 @@ async function migratePortadores(portadores: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Portador (ID: ${p.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -682,6 +694,7 @@ async function migrateClientes(clientes: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Cliente (ID: ${c.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -824,6 +837,7 @@ async function migrateLancamentos(lancamentos: any[]) {
           clienteId: l.clienteId ? String(l.clienteId) : null,
           attachmentName: l.attachmentName ? String(l.attachmentName) : (existing?.attachmentName || null),
           attachmentData: l.attachmentData && l.attachmentData !== '__PRUNED_IN_LOCAL_STAGE__' ? String(l.attachmentData) : (existing?.attachmentData || null),
+          conferido: l.conferido === undefined ? Boolean(existing?.conferido) : Boolean(l.conferido),
         },
         create: {
           id: String(l.id),
@@ -843,6 +857,7 @@ async function migrateLancamentos(lancamentos: any[]) {
           clienteId: l.clienteId ? String(l.clienteId) : null,
           attachmentName: l.attachmentName ? String(l.attachmentName) : null,
           attachmentData: l.attachmentData ? String(l.attachmentData) : null,
+          conferido: Boolean(l.conferido),
         }
       });
 
@@ -889,6 +904,7 @@ async function migrateLancamentos(lancamentos: any[]) {
       // cliente re-sincronizar do zero, apagando localmente o que tinha sido
       // importado) quando só um item tinha um problema. Pula só o item ruim.
       console.error(`Erro no Lançamento (ID: ${l.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
     }
   }
 }
@@ -979,6 +995,7 @@ async function migrateEndividamentos(endividamentos: any[]) {
       }
     } catch (err) {
       console.error(`Erro no Endividamento (ID: ${end.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1034,6 +1051,7 @@ async function migrateAtas(atas: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Ata (ID: ${ata.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1087,6 +1105,7 @@ async function migrateIndicadores(indicadores: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Indicador (ID: ${ind.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1171,6 +1190,7 @@ async function migrateOrcamentos(orcamentos: any[]) {
       }
     } catch (err) {
       console.error(`Erro no Orçamento (ID: ${orc.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1228,6 +1248,7 @@ async function migrateContasBalanco(contas: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Conta de Balanço (ID: ${c.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1299,6 +1320,7 @@ async function migrateBalancosPatrimoniais(balancos: any[]) {
       }
     } catch (err) {
       console.error(`Erro no Balanço Patrimonial (ID: ${b.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1356,6 +1378,7 @@ async function migrateDiagnosticos360(diagnosticos: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Diagnóstico 360º (ID: ${d.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1404,6 +1427,7 @@ async function migrateCurvaAbcConfig(configs: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Configuração de Curva ABC (Empresa: ${c.empresaId}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1477,6 +1501,7 @@ async function migrateCurvasAbc(curvas: any[]) {
       }
     } catch (err) {
       console.error(`Erro na Curva ABC (ID: ${cv.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1602,6 +1627,7 @@ async function migrateNfse(nfse: any[]) {
       });
     } catch (err) {
       console.error(`Erro na NFS-e (ID: ${n.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1653,6 +1679,7 @@ async function migrateSituacaoFiscal(situacaoFiscal: any[]) {
       });
     } catch (err) {
       console.error(`Erro na Situação Fiscal (ID: ${sf.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1724,6 +1751,7 @@ async function migrateTransactionPatterns(patterns: any[]) {
       });
     } catch (err) {
       console.error(`Erro no Padrão de Transação (ID: ${tp.id}), pulando este item e continuando o lote:`, err);
+      captureError(err);
       continue;
     }
   }
@@ -1768,10 +1796,19 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
   cf_inteligencia_docs: migrateInteligenciaDocs,
 };
 
-type CollectionQuery = () => Promise<any>;
+// `scope` = lista de empresaIds que o usuário logado pode ver, ou `null` para
+// administrador (sem restrição). Nunca `undefined` — cada query abaixo decide
+// explicitamente o que fazer com `scope`, então não tem como uma coleção nova
+// "esquecer" o filtro silenciosamente.
+type EmpresaScope = string[] | null;
+type CollectionQuery = (scope: EmpresaScope, role: string) => Promise<any>;
+
+const empresaWhere = (scope: EmpresaScope, field = 'empresaId') =>
+  scope ? { [field]: { in: scope } } : {};
 
 const QUERIES: Record<string, CollectionQuery> = {
-  cf_empresas: () => db.empresa.findMany({
+  cf_empresas: (scope) => db.empresa.findMany({
+    where: scope ? { id: { in: scope } } : {},
     select: {
       id: true,
       razaoSocial: true,
@@ -1797,12 +1834,18 @@ const QUERIES: Record<string, CollectionQuery> = {
       politicaCobrancaName: true,
     }
   }),
-  cf_users: () => db.user.findMany(),
-  cf_unidades: () => db.unidade.findMany(),
-  cf_plano_contas: () => db.planoConta.findMany(),
-  cf_portadores: () => db.portador.findMany(),
-  cf_clientes: () => db.cliente.findMany(),
-  cf_lancamentos: () => db.lancamento.findMany({
+  // Usuários são sensíveis (inclui hash de senha) — usuário comum só vê o
+  // próprio registro; administrador vê todos; consultor vê os usuários das
+  // empresas que ele atende (mais o próprio registro).
+  cf_users: (scope) => db.user.findMany({
+    where: scope ? { OR: [{ empresaIds: { hasSome: scope } }] } : {},
+  }),
+  cf_unidades: (scope) => db.unidade.findMany({ where: empresaWhere(scope, 'condominioId') }),
+  cf_plano_contas: (scope) => db.planoConta.findMany({ where: empresaWhere(scope) }),
+  cf_portadores: (scope) => db.portador.findMany({ where: empresaWhere(scope) }),
+  cf_clientes: (scope) => db.cliente.findMany({ where: empresaWhere(scope) }),
+  cf_lancamentos: (scope) => db.lancamento.findMany({
+    where: empresaWhere(scope),
     select: {
       id: true,
       empresaId: true,
@@ -1820,6 +1863,7 @@ const QUERIES: Record<string, CollectionQuery> = {
       unidadeId: true,
       clienteId: true,
       attachmentName: true,
+      conferido: true,
       createdAt: true,
     },
     orderBy: [
@@ -1827,8 +1871,8 @@ const QUERIES: Record<string, CollectionQuery> = {
       { createdAt: 'desc' }
     ]
   }),
-  cf_endividamentos: async () => {
-    const raw = await db.endividamento.findMany({ include: { pagamentos: true } });
+  cf_endividamentos: async (scope) => {
+    const raw = await db.endividamento.findMany({ where: empresaWhere(scope), include: { pagamentos: true } });
     return raw.map(e => ({
       id: e.id,
       empresaId: e.empresaId,
@@ -1855,29 +1899,29 @@ const QUERIES: Record<string, CollectionQuery> = {
       }))
     }));
   },
-  cf_atas: () => db.ataAtendimento.findMany(),
-  cf_indicadores: () => db.indicadorMensal.findMany(),
-  cf_orcamentos: async () => {
-    const raw = await db.orcamentoMensal.findMany({ include: { valores: true } });
+  cf_atas: (scope) => db.ataAtendimento.findMany({ where: empresaWhere(scope) }),
+  cf_indicadores: (scope) => db.indicadorMensal.findMany({ where: empresaWhere(scope) }),
+  cf_orcamentos: async (scope) => {
+    const raw = await db.orcamentoMensal.findMany({ where: empresaWhere(scope), include: { valores: true } });
     return raw.map(orc => {
       const categorias: Record<string, number> = {};
       orc.valores.forEach(v => { categorias[v.planoContaId] = v.valor; });
       return { id: orc.id, empresaId: orc.empresaId, mes: orc.mes, categorias };
     });
   },
-  cf_contas_balanco: () => db.contaBalanco.findMany(),
-  cf_balancos_patrimoniais: async () => {
-    const raw = await db.balancoPatrimonial.findMany({ include: { valores: true } });
+  cf_contas_balanco: (scope) => db.contaBalanco.findMany({ where: empresaWhere(scope) }),
+  cf_balancos_patrimoniais: async (scope) => {
+    const raw = await db.balancoPatrimonial.findMany({ where: empresaWhere(scope), include: { valores: true } });
     return raw.map(b => {
       const valores: Record<string, number> = {};
       b.valores.forEach(v => { valores[v.contaBalancoId] = v.valor; });
       return { id: b.id, empresaId: b.empresaId, competencia: b.competencia, observacao: b.observacao, valores };
     });
   },
-  cf_diagnosticos_360: () => db.diagnostico360.findMany(),
-  cf_curva_abc_config: () => db.curvaAbcConfig.findMany(),
-  cf_curvas_abc: async () => {
-    const raw = await db.curvaAbc.findMany({ include: { itens: true } });
+  cf_diagnosticos_360: (scope) => db.diagnostico360.findMany({ where: empresaWhere(scope) }),
+  cf_curva_abc_config: (scope) => db.curvaAbcConfig.findMany({ where: empresaWhere(scope) }),
+  cf_curvas_abc: async (scope) => {
+    const raw = await db.curvaAbc.findMany({ where: empresaWhere(scope), include: { itens: true } });
     return raw.map(cv => ({
       id: cv.id,
       empresaId: cv.empresaId,
@@ -1900,20 +1944,23 @@ const QUERIES: Record<string, CollectionQuery> = {
         }))
     }));
   },
-  cf_nfse: () => db.nfsE.findMany(),
-  cf_situacao_fiscal: () => db.situacaoFiscal.findMany(),
-  cf_transaction_patterns: () => db.transactionPattern.findMany(),
-  cf_atividades_log: async () => {
-    const raw = await db.atividade.findMany();
+  cf_nfse: (scope) => db.nfsE.findMany({ where: empresaWhere(scope) }),
+  cf_situacao_fiscal: (scope) => db.situacaoFiscal.findMany({ where: empresaWhere(scope) }),
+  cf_transaction_patterns: (scope) => db.transactionPattern.findMany({ where: empresaWhere(scope) }),
+  cf_atividades_log: async (scope) => {
+    const raw = await db.atividade.findMany({ where: empresaWhere(scope) });
     return raw.map(a => ({
       ...a,
       localizacao: (a.lat && a.lng) ? { lat: a.lat, lng: a.lng } : null
     }));
   },
-  cf_audit_logs: () => db.auditLog.findMany({ orderBy: { timestamp: 'desc' }, take: 1000 }),
-  cf_centros_custo: () => db.centroCusto.findMany(),
-  cf_agenda_semanal: () => db.agendaTask.findMany(),
-  cf_inteligencia_docs: () => db.inteligenciaDoc.findMany(),
+  cf_audit_logs: (scope) => db.auditLog.findMany({ where: empresaWhere(scope), orderBy: { timestamp: 'desc' }, take: 1000 }),
+  cf_centros_custo: (scope) => db.centroCusto.findMany({ where: empresaWhere(scope) }),
+  cf_agenda_semanal: (scope) => db.agendaTask.findMany({ where: empresaWhere(scope) }),
+  // Sem campo empresaId no schema — é uma base de conhecimento interna, não
+  // por empresa. Bloqueada para o papel "cliente" (não é conteúdo pra eles);
+  // administrador e consultor continuam vendo tudo.
+  cf_inteligencia_docs: (_scope, role) => (role === 'cliente' ? Promise.resolve([]) : db.inteligenciaDoc.findMany()),
 };
 
 // Checagem de consistência em tempo de execução: se uma coleção for adicionada
@@ -1926,7 +1973,14 @@ for (const key of SYNC_COLLECTION_KEYS) {
 }
 
 export async function GET(request: Request) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
   try {
+    // administrador enxerga tudo (scope null); qualquer outro papel só vê as
+    // empresas atribuídas a ele na sessão — nunca o banco inteiro.
+    const scope: EmpresaScope = auth.session.role === 'administrador' ? null : auth.session.empresaIds;
+    const role = auth.session.role;
+
     const { searchParams } = new URL(request.url);
     const requestedCollection = searchParams.get('collection');
 
@@ -1935,7 +1989,7 @@ export async function GET(request: Request) {
       if (!query) {
         return NextResponse.json({ error: `Coleção desconhecida: ${requestedCollection}` }, { status: 400 });
       }
-      const collectionData = await query();
+      const collectionData = await query(scope, role);
       return NextResponse.json({
         version: '7',
         isPartial: true,
@@ -1947,7 +2001,7 @@ export async function GET(request: Request) {
     // Sem "collection" na query string: busca tudo de uma vez (usado no sync
     // inicial ao carregar o site e na inicialização de banco vazio).
     const entries = Object.entries(QUERIES);
-    const results = await Promise.all(entries.map(([, fn]) => fn()));
+    const results = await Promise.all(entries.map(([, fn]) => fn(scope, role)));
     const backupData = Object.fromEntries(entries.map(([key], i) => [key, results[i]]));
 
     return NextResponse.json({
@@ -1957,11 +2011,14 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Erro ao buscar backup do PostgreSQL:', error);
+    captureError(error);
     return NextResponse.json({ error: (error as Error).message || 'Erro ao carregar dados' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const collection = body.collection;
@@ -1999,6 +2056,7 @@ export async function POST(request: Request) {
           }
         } catch(e) {
           console.error('Falha ao excluir ' + record.id, e);
+          captureError(e);
         }
       }
       return NextResponse.json({ success: true });
@@ -2023,6 +2081,7 @@ export async function POST(request: Request) {
             // Os clientes têm sistema próprio de Polling para verificar atualizações, então não necessita broadcast de toda a tabela.
         } catch (wsErr) {
           console.error(`Erro no processamento WebSocket silencioso de ${collection}:`, wsErr);
+          captureError(wsErr);
         }
       }
 
@@ -2039,6 +2098,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error('Erro na migração:', error);
+    captureError(error);
     return NextResponse.json({ error: (error as Error).message || 'Erro desconhecido' }, { status: 500 });
   }
 }

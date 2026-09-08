@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, type Cliente, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
 
@@ -122,8 +124,8 @@ export default function ContasReceberPage() {
     }
   };
 
-  const marcarRecebidoLote = () => {
-    if (!confirm(`Marcar ${selectedIds.length} conta(s) como RECEBIDAS?`)) return;
+  const marcarRecebidoLote = async () => {
+    if (!(await confirmAsync(`Marcar ${selectedIds.length} conta(s) como RECEBIDAS?`))) return;
     selectedIds.forEach(id => {
       const all = store.getLancamentos();
       const idx = all.findIndex(l => l.id === id);
@@ -133,8 +135,8 @@ export default function ContasReceberPage() {
     load(empresaId);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir este lançamento?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir este lançamento?'))) return;
     store.deleteLancamento(id);
     load(empresaId);
     setSelectedIds(prev => prev.filter(x => x !== id));
@@ -168,7 +170,7 @@ export default function ContasReceberPage() {
 
   const handleSave = async () => {
     if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
-      alert('Preencha todos os campos obrigatórios.');
+      toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
     setSaving(true);
@@ -236,8 +238,8 @@ export default function ContasReceberPage() {
               <button className="btn btn-primary" onClick={marcarRecebidoLote}>
                 ✅ Receber {selectedIds.length} Selecionado(s)
               </button>
-              <button className="btn btn-danger btn-sm" onClick={() => {
-                if (!confirm(`Excluir ${selectedIds.length} lançamento(s)?`)) return;
+              <button className="btn btn-danger btn-sm" onClick={async () => {
+                if (!(await confirmAsync(`Excluir ${selectedIds.length} lançamento(s)?`))) return;
                 selectedIds.forEach(id => store.deleteLancamento(id));
                 setSelectedIds([]);
                 load(empresaId);

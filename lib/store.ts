@@ -19,6 +19,7 @@ export interface User {
   allowedRoutes?: string[];
   createdAt: string;
   updatedAt?: string;
+  twoFactorEnabled?: boolean;
 }
 
 export interface Empresa {
@@ -156,6 +157,18 @@ export interface AtaAtendimento {
   conteudo: string;
   participantes: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AtividadeLog {
+  id: string;
+  empresaId: string;
+  descricao: string;
+  tempoSegundos: number;
+  data: string;
+  localizacao: { lat: number; lng: number } | null;
+  fotoInicio?: string | null;
+  fotoFim?: string | null;
   updatedAt?: string;
 }
 
@@ -663,29 +676,23 @@ class DataStore {
 
   /** Garante que o cache de lançamentos está carregado */
   private async ensureLancamentosCache(): Promise<void> {
-    console.log('[DEBUG_STORE] Calling ensureLancamentosCache');
     // Se a Promise já foi iniciada, aguardamos ela terminar.
     if (this._lancamentosReady) {
-      console.log('[DEBUG_STORE] ensureLancamentosCache returning existing promise');
       return this._lancamentosReady;
     }
 
     this._lancamentosReady = (async () => {
-      console.log('[DEBUG_STORE] ensureLancamentosCache starting async block');
       try {
         await migrateFromLocalStorage();
         const all = await idbGetAllLancamentos();
-        console.log('[DEBUG_STORE] ensureLancamentosCache loaded', all.length, 'from IDB');
         this._lancamentosCache = all as Lancamento[];
       } catch (err) {
         console.warn('[DEBUG_STORE] ensureLancamentosCache IDB error:', err);
         const raw = localStorage.getItem('cf_lancamentos');
         this._lancamentosCache = raw ? JSON.parse(raw) : [];
-        console.log('[DEBUG_STORE] ensureLancamentosCache fallback loaded', this._lancamentosCache?.length, 'from localStorage');
       }
       
       // Sempre que termina a carga do banco real (IDB), notifica a UI
-      console.log('[DEBUG_STORE] ensureLancamentosCache finished, dispatching cfDataChange');
       window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_lancamentos' } }));
     })();
     return this._lancamentosReady;
@@ -939,7 +946,7 @@ class DataStore {
     this.syncCollection('cf_plano_contas', DEFAULT_PLANO_CONTAS);
     this.syncCollection('cf_portadores', DEFAULT_PORTADORES);
 
-    const users = this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
+    const users = this.get<User[]>('cf_users', DEFAULT_USERS);
     this.set('cf_users', users);
 
     // Migrações removidas (Coopercab e afins já não são padrão)
@@ -948,33 +955,7 @@ class DataStore {
     this.set(STORAGE_VERSION_KEY, STORAGE_VERSION);
   }
 
-  private withMauricioPassword(users: User[]): User[] {
-    let changed = false;
-    const updatedUsers = users.map(user => {
-      const userText = `${user.name} ${user.email}`
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
 
-      if (userText.includes('mauricio') && user.password !== '123456') {
-        changed = true;
-        return { ...user, password: '123456' };
-      }
-
-      return user;
-    });
-
-    // Não dispara evento aqui para evitar loop infinito em componentes que ouvem cfDataChange
-    if (changed) this.set('cf_users', updatedUsers, true);
-    return updatedUsers;
-  }
-
-  // Auth
-  login(email: string, password: string): User | null {
-    this.init();
-    const users = this.getUsers();
-    return users.find(u => u.email === email && u.password === password) || null;
-  }
 
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') return null;
@@ -998,7 +979,7 @@ class DataStore {
   // Users
   getUsers(): User[] {
     this.init();
-    return this.withMauricioPassword(this.get<User[]>('cf_users', DEFAULT_USERS));
+    return this.get<User[]>('cf_users', DEFAULT_USERS);
   }
   saveUser(user: User) {
     if (user && typeof user === "object") user.updatedAt = new Date().toISOString();
@@ -1232,6 +1213,21 @@ class DataStore {
     this.set("cf_portadores", this.getPortadores().filter(p => p.id !== id));
   }
 
+  getAtividadesLog(empresaId?: string): AtividadeLog[] {
+    this.init();
+    const arr = this.get<AtividadeLog[]>("cf_atividades_log", []);
+    return empresaId ? arr.filter(a => a.empresaId === empresaId) : arr;
+  }
+
+  saveAtividadeLog(atividade: AtividadeLog) {
+    if (atividade && typeof atividade === "object") atividade.updatedAt = new Date().toISOString();
+    const list = this.getAtividadesLog();
+    const idx = list.findIndex(a => a.id === atividade.id);
+    if (idx >= 0) list[idx] = atividade;
+    else list.push(atividade);
+    this.set("cf_atividades_log", list);
+  }
+
   pruneLancamentosAttachmentData() {
     this.init();
     if (!this._lancamentosCache) return;
@@ -1329,11 +1325,9 @@ class DataStore {
     this.init();
     // Se o cache ainda não foi carregado, tenta ler do localStorage como fallback síncrono
     if (this._lancamentosCache === null) {
-      console.log('[DEBUG_STORE] getLancamentos: cache is null, reading fallback');
       try {
         const raw = localStorage.getItem('cf_lancamentos');
         this._lancamentosCache = raw ? JSON.parse(raw) : [];
-        console.log('[DEBUG_STORE] getLancamentos: fallback returned', this._lancamentosCache?.length, 'items');
       } catch (err) {
         console.warn('[DEBUG_STORE] getLancamentos: fallback error', err);
         this._lancamentosCache = [];
@@ -1342,7 +1336,6 @@ class DataStore {
       this.ensureLancamentosCache().catch(() => { });
     }
     const all = this._lancamentosCache as Lancamento[];
-    console.log(`[DEBUG_STORE] getLancamentos(${empresaId || 'all'}) returning ${empresaId ? all.filter(l => l.empresaId === empresaId).length : all.length} items`);
     return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
   }
 
@@ -1659,7 +1652,6 @@ class DataStore {
       acc[l.empresaId] = (acc[l.empresaId] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    console.log('[DEBUG_STORE] saveLancamentos creating newList with empresaIds:', empresaStats);
     
     
     if (typeof window !== 'undefined' && processed.length > 0) {
@@ -2146,7 +2138,8 @@ class DataStore {
     const keys = [
       'cf_users', 'cf_empresas', 'cf_plano_contas', 'cf_portadores',
       'cf_lancamentos', 'cf_endividamentos', 'cf_indicadores', 'cf_orcamentos',
-      'cf_atas', 'cf_situacao_fiscal', 'cf_transaction_patterns', 'cf_clientes', 'cf_nfse'
+      'cf_atas', 'cf_situacao_fiscal', 'cf_transaction_patterns', 'cf_clientes', 'cf_nfse',
+      'cf_atividades_log'
     ];
     const data: Record<string, unknown> = {};
     if (typeof window !== 'undefined') {

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Empresa, OrcamentoMensal, PlanoConta, Lancamento } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
 
 export default function OrcamentoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -98,7 +99,7 @@ export default function OrcamentoPage() {
       
       setSaving(false);
       setReplicarFuturo(false);
-      alert(replicarFuturo ? 'Orçamento salvo e replicado para os próximos 11 meses!' : 'Orçamento salvo com sucesso!');
+      toast.success(replicarFuturo ? 'Orçamento salvo e replicado para os próximos 11 meses!' : 'Orçamento salvo com sucesso!');
     }, 400);
   };
 

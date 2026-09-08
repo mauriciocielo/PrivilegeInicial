@@ -4,6 +4,7 @@ import { store, Empresa, ContaBalanco, BalancoPatrimonial, GrupoContaBalanco, ui
 import { fmt } from '../../../lib/reports';
 import { gerarPdfBalancoPatrimonial } from '../../../lib/balanco-pdf';
 import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const GRUPO_LABELS: Record<GrupoContaBalanco, string> = {
   ativo_circulante: 'Ativo Circulante',
@@ -171,8 +172,8 @@ export default function BalancoPatrimonialPage() {
     }
   };
 
-  const handleDeleteHistorico = (bp: BalancoPatrimonial) => {
-    if (!confirm(`Excluir o Balanço Patrimonial de ${formatCompetencia(bp.competencia)}?`)) return;
+  const handleDeleteHistorico = async (bp: BalancoPatrimonial) => {
+    if (!(await confirmAsync(`Excluir o Balanço Patrimonial de ${formatCompetencia(bp.competencia)}?`))) return;
     store.deleteBalancoPatrimonial(bp.id);
     const newHist = store.getBalancosPatrimoniais(empresaId).sort((a, b) => b.competencia.localeCompare(a.competencia));
     setHistorico(newHist);
@@ -183,8 +184,8 @@ export default function BalancoPatrimonialPage() {
     }
   };
 
-  const handleDeleteConta = (conta: ContaBalanco) => {
-    if (!confirm(`Remover a conta "${conta.descricao}" da estrutura do balanço?`)) return;
+  const handleDeleteConta = async (conta: ContaBalanco) => {
+    if (!(await confirmAsync(`Remover a conta "${conta.descricao}" da estrutura do balanço?`))) return;
     store.deleteContaBalanco(conta.id);
     setContas(store.getContasBalanco(empresaId));
   };

@@ -4,6 +4,8 @@ import {
   store, type NfsE, type Cliente, type Empresa, type Portador, type PlanoConta, uid,
 } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 // Lista de serviços LC 116/2003 (principais)
 const LISTA_SERVICOS = [
@@ -322,7 +324,7 @@ export default function NfsePage() {
 
     setNfseList(store.getNfsE(empresaId));
     setImportingNotes(false);
-    alert(`Importação concluída! 2 NFS-e encontradas no Portal e importadas com sucesso para o CNPJ ${cnpjToUse}.`);
+    toast.success(`Importação concluída! 2 NFS-e encontradas no Portal e importadas com sucesso para o CNPJ ${cnpjToUse}.`);
   };
 
   // Salvar configuração do Portal
@@ -334,19 +336,19 @@ export default function NfsePage() {
     if (portalCnpj) {
       await handleImportFromPortal(portalCnpj);
     } else {
-      alert('Configurações do Portal Nacional salvas.');
+      toast.success('Configurações do Portal Nacional salvas.');
     }
   };
 
   const handleSave = async (emitir: boolean) => {
     if (!form.discriminacao || !form.codigoServico) {
-      alert('Preencha a discriminação e o código do serviço.'); return;
+      toast.error('Preencha a discriminação e o código do serviço.'); return;
     }
     if (!form.tomadorCnpjCpf || !form.tomadorRazaoSocial) {
-      alert('Preencha os dados do tomador (cliente).'); return;
+      toast.error('Preencha os dados do tomador (cliente).'); return;
     }
     if (!Number(form.valorServicos)) {
-      alert('Informe o valor dos serviços.'); return;
+      toast.error('Informe o valor dos serviços.'); return;
     }
 
     const draftItem: NfsE = {
@@ -531,7 +533,7 @@ export default function NfsePage() {
 
   const handleCancelar = () => {
     if (!cancelModal) return;
-    if (!motivoCancel.trim()) { alert('Informe o motivo do cancelamento.'); return; }
+    if (!motivoCancel.trim()) { toast.error('Informe o motivo do cancelamento.'); return; }
     store.saveNfsE({ ...cancelModal, status: 'cancelada', motivoCancelamento: motivoCancel });
     if (cancelModal.lancamentoId) {
       const all = store.getLancamentos();
@@ -545,8 +547,8 @@ export default function NfsePage() {
     setMotivoCancel('');
   };
 
-  const handleClearAllNfse = () => {
-    if (!confirm('Deseja realmente excluir TODAS as NFS-e desta empresa e seus respectivos lançamentos de contas a receber vinculados?')) return;
+  const handleClearAllNfse = async () => {
+    if (!(await confirmAsync('Deseja realmente excluir TODAS as NFS-e desta empresa e seus respectivos lançamentos de contas a receber vinculados?'))) return;
     const allNfse = store.getNfsE(empresaId);
     allNfse.forEach(n => {
       if (n.lancamentoId) {
@@ -555,7 +557,7 @@ export default function NfsePage() {
       store.deleteNfsE(n.id);
     });
     setNfseList([]);
-    alert('Todas as NFS-e e lançamentos vinculados foram excluídos com sucesso.');
+    toast.success('Todas as NFS-e e lançamentos vinculados foram excluídos com sucesso.');
   };
 
   const servicosFiltrados = useMemo(() => {

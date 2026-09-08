@@ -1,10 +1,24 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { store, Empresa, Lancamento, User, StoreAuditLog, InteligenciaDoc } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { syncBackupInChunks } from '../../../lib/sync-helper';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
+
+type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup';
+
+const ADMIN_TABS: { key: AdminTab; label: string }[] = [
+  { key: 'visao-geral', label: '📊 Visão Geral' },
+  { key: 'agenda', label: '📅 Agenda' },
+  { key: 'auditoria', label: '🛡️ Auditoria & Fechamento' },
+  { key: 'equipe', label: '🗺️ Equipe em Campo' },
+  { key: 'inteligencia', label: '🧠 Inteligência' },
+  { key: 'backup', label: '📦 Backup & Integrações' },
+];
 
 export default function AdministrativoPage() {
+  const [activeTab, setActiveTab] = useState<AdminTab>('visao-geral');
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -32,9 +46,10 @@ export default function AdministrativoPage() {
   const [calendarSearch, setCalendarSearch] = useState('');
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [worklog, setWorklog] = useState<any[]>([]);
+  const [activeActivities, setActiveActivities] = useState<any[]>([]);
 
   const handleMigrateToPostgres = async () => {
-    if (!confirm('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?')) return;
+    if (!(await confirmAsync('Deseja enviar todos os seus dados locais (empresas, lançamentos, contas, etc.) para o banco de dados PostgreSQL no Railway?'))) return;
     setMigrating(true);
     setMigrationProgress('Preparando dados (removendo anexos pesados para sincronização)...');
     try {
@@ -44,12 +59,12 @@ export default function AdministrativoPage() {
         setMigrationProgress(msg);
       });
       if (result.success) {
-        alert('🎉 Migração concluída com sucesso! Todos os dados locais foram salvos no PostgreSQL no Railway.');
+        toast.success('🎉 Migração concluída com sucesso! Todos os dados locais foram salvos no PostgreSQL no Railway.');
       } else {
-        alert('❌ Erro na migração: ' + result.error);
+        toast.error('❌ Erro na migração: ' + result.error);
       }
     } catch (e) {
-      alert('❌ Erro de rede na migração: ' + (e as Error).message);
+      toast.error('❌ Erro de rede na migração: ' + (e as Error).message);
     } finally {
       setMigrating(false);
       setMigrationProgress('');
@@ -75,7 +90,7 @@ export default function AdministrativoPage() {
       setAuditLogs(store.getAuditLogs(targetEmpId));
     }
     try {
-      setWorklog(JSON.parse(localStorage.getItem('cf_atividades_log') || '[]'));
+      setWorklog(store.getAtividadesLog());
     } catch(e){}
   }, [selectedAuditEmpresaId]);
 
@@ -87,11 +102,32 @@ export default function AdministrativoPage() {
       const updated = { ...emp, fechamentoData: fechamentoDateInput };
       store.saveEmpresa(updated);
       store.logAction(selectedAuditEmpresaId, 'Bloqueio', `Definiu limite de fechamento de caixa para ${fechamentoDateInput ? fmt.date(fechamentoDateInput) : 'nenhuma data'}`);
-      alert('Período de fechamento de caixa atualizado com sucesso!');
+      toast.success('Período de fechamento de caixa atualizado com sucesso!');
       load();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
+  };
+
+  const handleGerarRelatorioHoras = () => {
+    if (worklog.length === 0) {
+      toast.error('Não há atividades no histórico gerar relatório.');
+      return;
+    }
+    const header = "Data,Consultor,Atividade,Duracao(Segundos),Duracao(Minutos)\n";
+    const rows = worklog.map(a => {
+      // Procurar nome do consultor se tivessemos mapeado na criação da atividade, ou "Desconhecido". No `worklog` original eles usavam `consultorNome`.
+      // Na refatoração chamamos `AtividadeLog`
+      const consultorName = a.consultorNome || 'Equipe'; 
+      return `${new Date(a.data).toLocaleDateString('pt-BR')},"${consultorName}","${a.descricao.replace(/"/g, '""')}",${a.tempoSegundos},${Math.floor(a.tempoSegundos / 60)}`;
+    }).join("\n");
+    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Relatorio_Horas_Entregues_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    toast.success('Relatório gerado e baixado!');
   };
 
   const handleClearFechamento = () => {
@@ -103,10 +139,10 @@ export default function AdministrativoPage() {
       store.saveEmpresa(updated);
       store.logAction(selectedAuditEmpresaId, 'Bloqueio', 'Removeu limite de fechamento de caixa (período totalmente desbloqueado).');
       setFechamentoDateInput('');
-      alert('Período de fechamento de caixa totalmente liberado!');
+      toast.success('Período de fechamento de caixa totalmente liberado!');
       load();
     } catch (e) {
-      alert((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
@@ -142,6 +178,8 @@ export default function AdministrativoPage() {
   }, []);
 
   // Mapa de Geolocalização (Leaflet via CDN para rastreamento da equipe)
+  const mapInstanceRef = useRef<any>(null);
+
   useEffect(() => {
     let mapInstance: any = null;
     let markersLayer: any = null;
@@ -158,6 +196,7 @@ export default function AdministrativoPage() {
          container.innerHTML = '';
          container.setAttribute('data-loaded', 'true');
          mapInstance = L.map('admin-map').setView([-15.7801, -47.9292], 4);
+         mapInstanceRef.current = mapInstance;
          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
            attribution: '© OpenStreetMap'
          }).addTo(mapInstance);
@@ -170,6 +209,7 @@ export default function AdministrativoPage() {
         try { 
           list = JSON.parse(localStorage.getItem('cf_atividades_ativas') || '[]'); 
         } catch(e) {}
+        setActiveActivities(list);
         
         markersLayer.clearLayers();
         const emps = store.getEmpresas();
@@ -244,6 +284,15 @@ export default function AdministrativoPage() {
     };
   }, []);
 
+  // O mapa é inicializado com o container ainda escondido (aba "Equipe em
+  // Campo" não é a padrão) — Leaflet calcula tamanho errado nesse caso e some
+  // até um recálculo. Força esse recálculo assim que a aba é aberta.
+  useEffect(() => {
+    if (activeTab === 'equipe' && mapInstanceRef.current) {
+      setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+    }
+  }, [activeTab]);
+
   // Carrega dinamicamente o script do Google Identity Services
   useEffect(() => {
     const script = document.createElement('script');
@@ -287,7 +336,7 @@ export default function AdministrativoPage() {
       };
 
       store.saveInteligenciaDoc(newDoc);
-      alert('Documento de inteligência financeira enviado com sucesso!');
+      toast.success('Documento de inteligência financeira enviado com sucesso!');
       load();
     };
 
@@ -299,8 +348,8 @@ export default function AdministrativoPage() {
     e.target.value = '';
   };
 
-  const handleIntelDocDelete = (id: string) => {
-    if (!confirm('Deseja excluir este documento da base de inteligência financeira?')) return;
+  const handleIntelDocDelete = async (id: string) => {
+    if (!(await confirmAsync('Deseja excluir este documento da base de inteligência financeira?'))) return;
     store.deleteInteligenciaDoc(id);
     load();
   };
@@ -319,15 +368,15 @@ export default function AdministrativoPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
-      alert('Erro ao exportar backup: ' + (e as Error).message);
+      toast.error('Erro ao exportar backup: ' + (e as Error).message);
     }
   };
 
-  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('Atenção: Ao restaurar este backup, TODOS OS DADOS ATUAIS do sistema serão substituídos pelos dados do arquivo. Deseja continuar?')) {
+    if (!(await confirmAsync('Atenção: Ao restaurar este backup, TODOS OS DADOS ATUAIS do sistema serão substituídos pelos dados do arquivo. Deseja continuar?'))) {
       e.target.value = '';
       return;
     }
@@ -337,10 +386,10 @@ export default function AdministrativoPage() {
       const text = event.target?.result as string;
       const res = store.importBackup(text);
       if (res.success) {
-        alert('Backup restaurado com sucesso! Os dados foram atualizados.');
+        toast.success('Backup restaurado com sucesso! Os dados foram atualizados.');
         load();
       } else {
-        alert('Erro ao restaurar backup: ' + res.error);
+        toast.error('Erro ao restaurar backup: ' + res.error);
       }
     };
     reader.readAsText(file);
@@ -408,13 +457,13 @@ export default function AdministrativoPage() {
 
   const handleConnectGDrive = () => {
     if (!clientId) {
-      alert('Por favor, informe seu Google Client ID nas configurações de backup para conectar.');
+      toast.error('Por favor, informe seu Google Client ID nas configurações de backup para conectar.');
       return;
     }
     try {
       const win = window as any;
       if (!win.google?.accounts?.oauth2) {
-        alert('O SDK do Google ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        toast.success('O SDK do Google ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
         return;
       }
       const client = win.google.accounts.oauth2.initTokenClient({
@@ -424,17 +473,17 @@ export default function AdministrativoPage() {
           if (response.access_token) {
             setGdriveToken(response.access_token);
             sessionStorage.setItem('cf_gdrive_token', response.access_token);
-            alert('Google Drive conectado com sucesso!');
+            toast.success('Google Drive conectado com sucesso!');
             triggerGDriveBackup(response.access_token);
           } else {
-            alert('Falha na autenticação do Google Drive.');
+            toast.error('Falha na autenticação do Google Drive.');
           }
         },
       });
       client.requestAccessToken();
     } catch (err) {
       console.error(err);
-      alert('Erro ao iniciar fluxo do Google Drive. Verifique se o Client ID está correto.');
+      toast.error('Erro ao iniciar fluxo do Google Drive. Verifique se o Client ID está correto.');
     }
   };
 
@@ -487,13 +536,13 @@ export default function AdministrativoPage() {
 
   const handleConnectGCal = () => {
     if (!clientId) {
-      alert('Por favor, informe seu Google Client ID nas configurações de backup para conectar.');
+      toast.error('Por favor, informe seu Google Client ID nas configurações de backup para conectar.');
       return;
     }
     try {
       const win = window as any;
       if (!win.google?.accounts?.oauth2) {
-        alert('O SDK do Google ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        toast.success('O SDK do Google ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
         return;
       }
       const client = win.google.accounts.oauth2.initTokenClient({
@@ -503,16 +552,16 @@ export default function AdministrativoPage() {
           if (response.access_token) {
             setGcalToken(response.access_token);
             sessionStorage.setItem('cf_gcal_token', response.access_token);
-            alert('Google Calendar conectado com sucesso!');
+            toast.success('Google Calendar conectado com sucesso!');
           } else {
-            alert('Falha na autenticação do Google Calendar.');
+            toast.error('Falha na autenticação do Google Calendar.');
           }
         },
       });
       client.requestAccessToken();
     } catch (err) {
       console.error(err);
-      alert('Erro ao iniciar fluxo do Google Calendar. Verifique se o Client ID está correto.');
+      toast.error('Erro ao iniciar fluxo do Google Calendar. Verifique se o Client ID está correto.');
     }
   };
 
@@ -609,16 +658,126 @@ export default function AdministrativoPage() {
     return { receitas, despesas, resultado: receitas - despesas, dividaTotal, portadoresTotal, porEmpresa, atividades };
   }, [empresas, lancamentos]);
 
+  // Varre todas as empresas do consultor em busca de sinais de que algo
+  // precisa de atenção — economiza ter que entrar empresa por empresa só pra
+  // conferir se está tudo em dia.
+  const empresasAtencao = useMemo(() => {
+    const hoje = new Date();
+    const mesAtual = hoje.toISOString().slice(0, 7);
+    const dQuinzeDiasAtras = new Date(hoje.getTime() - 15 * 24 * 60 * 60 * 1000);
+    const dMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const mesAnterior = `${dMesAnterior.getFullYear()}-${String(dMesAnterior.getMonth() + 1).padStart(2, '0')}`;
+
+    return empresas
+      .filter(e => e.tipo !== 'condominio')
+      .map(empresa => {
+        const motivos: string[] = [];
+
+        const pendConciliacao = store.getPortadores(empresa.id)
+          .reduce((acc, p) => acc + store.getOfxPendingTransactions(p.id, empresa.id).length, 0);
+        if (pendConciliacao > 0) {
+          motivos.push(`${pendConciliacao} transaç${pendConciliacao === 1 ? 'ão' : 'ões'} de OFX sem conciliar`);
+        }
+
+        const balancos = store.getBalancosPatrimoniais(empresa.id);
+        const temBalancoRecente = balancos.some(b => b.competencia === mesAtual || b.competencia === mesAnterior);
+        if (!temBalancoRecente) {
+          motivos.push('Sem Balanço Patrimonial nos últimos 2 meses');
+        }
+
+        const lancsEmpresa = lancamentos.filter(l => l.empresaId === empresa.id && l.status === 'realizado');
+        const temMovimentoRecente = lancsEmpresa.some(l => new Date(l.data) >= dQuinzeDiasAtras);
+        if (lancsEmpresa.length > 0 && !temMovimentoRecente) {
+          motivos.push('Nenhum lançamento realizado nos últimos 15 dias');
+        }
+
+        return { empresa, motivos };
+      })
+      .filter(item => item.motivos.length > 0);
+  }, [empresas, lancamentos]);
+
   return (
     <>
       <div className="page-header">
-        <div>
-          <div className="page-title">Painel Administrativo</div>
-          <div className="page-subtitle">Visão global do escritório e da carteira de clientes</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div>
+            <div className="page-title">Painel Administrativo</div>
+            <div className="page-subtitle">Visão global do escritório e controle de ambiente</div>
+          </div>
         </div>
       </div>
 
       <div className="page-body">
+        {/* Abas — cada seção fica sempre montada (só a visibilidade muda), pra
+            não quebrar efeitos que dependem do DOM já existir no mount, como
+            o mapa Leaflet do Radar da Equipe. */}
+        <div className="tabs">
+          {ADMIN_TABS.map(t => (
+            <button
+              key={t.key}
+              className={`tab ${activeTab === t.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Seletor Global de Empresa do Sistema */}
+        <div className="card" style={{ marginBottom: 24, padding: '24px 28px', background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 100%)', border: '1px solid var(--accent-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-glow)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🏢</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Empresa / Ambiente Ativo</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>Selecione o ambiente de trabalho atual. Esta configuração afeta todas as outras telas do sistema.</p>
+            </div>
+            <div style={{ minWidth: 320 }}>
+              <select 
+                className="form-control" 
+                style={{ fontSize: 15, fontWeight: 700, padding: '12px 16px', background: '#fff', border: '2px solid var(--border)', borderRadius: 10, cursor: 'pointer', height: 'auto' }}
+                value={typeof window !== 'undefined' ? (sessionStorage.getItem('cf_empresa_sel') || '') : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  sessionStorage.setItem('cf_empresa_sel', val);
+                  
+                  const isGrp = val.startsWith('grupo:');
+                  let nextMode = 'empresarial';
+                  if(!isGrp) {
+                     const emp = empresas.find(x => x.id === val);
+                     if (emp && emp.tipo === 'condominio') nextMode = 'condominio';
+                  }
+                  sessionStorage.setItem('cf_app_mode', nextMode);
+                  window.dispatchEvent(new CustomEvent('empresaChange', { detail: val }));
+                  toast.success('Ambiente de trabalho alterado com sucesso!');
+                  load();
+                }}
+              >
+                <option value="" disabled>Selecione um ambiente...</option>
+                <optgroup label="Empresas">
+                  {empresas.filter(e => e.tipo !== 'condominio' && e.tipo !== 'cooperativa').map(e => (
+                    <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Condomínios">
+                  {empresas.filter(e => e.tipo === 'condominio').map(e => (
+                    <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Cooperativas">
+                  {empresas.filter(e => e.tipo === 'cooperativa').map(e => (
+                    <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Grupos Econômicos">
+                  {Array.from(new Set(empresas.map(e => e.grupoEconomico).filter(Boolean))).map((g: any) => (
+                    <option key={`grupo:${g}`} value={`grupo:${g}`}>Grupo Consolidado - {g}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
             <div className="stat-icon blue">🏢</div>
@@ -654,7 +813,35 @@ export default function AdministrativoPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'visao-geral' ? undefined : 'none', borderLeft: empresasAtencao.length > 0 ? '3px solid var(--yellow)' : undefined }}>
+              <h3 style={{ fontSize: 15, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                ⚠️ Empresas que Precisam de Atenção
+                {empresasAtencao.length > 0 && (
+                  <span className="badge badge-yellow">{empresasAtencao.length}</span>
+                )}
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                Varredura automática: conciliação OFX pendente, Balanço Patrimonial desatualizado e empresas sem lançamentos recentes.
+              </p>
+              {empresasAtencao.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--green)', fontSize: 13, fontWeight: 600 }}>
+                  ✅ Tudo em dia — nenhuma empresa com pendências no momento.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {empresasAtencao.map(({ empresa, motivos }) => (
+                    <div key={empresa.id} style={{ padding: '10px 12px', background: 'var(--yellow-bg)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{empresa.nomeFantasia || empresa.razaoSocial}</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)' }}>
+                        {motivos.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="card" style={{ display: activeTab === 'visao-geral' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>Ranking de Empresas no Mês</h3>
               <div className="table-wrap">
                 <table>
@@ -685,7 +872,7 @@ export default function AdministrativoPage() {
             </div>
 
             {/* Agenda do Google Calendar */}
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'agenda' ? undefined : 'none' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                   📅 Agenda de Compromissos (Google Calendar)
@@ -842,7 +1029,7 @@ export default function AdministrativoPage() {
             </div>
 
             {/* Card de Auditoria e Fechamento de Caixa */}
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'auditoria' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 🛡️ Controle de Fechamento & Auditoria
               </h3>
@@ -946,22 +1133,60 @@ export default function AdministrativoPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: 16, borderBottom: '1px solid var(--border-light)' }}>
-                <h3 style={{ fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>🗺️ Radar da Equipe em Campo</h3>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Monitoramento de geolocalização e atividades (tempo real)</p>
-              </div>
-              <div id="admin-map" style={{ width: '100%', height: '350px', background: '#e5e7eb' }}>
-                <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', paddingTop: '140px' }}>Carregando mapa...</div>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Tab: Equipe em Campo */}
+            <div style={{ display: activeTab === 'equipe' ? 'flex' : 'none', flexDirection: 'column', gap: 24 }}>
+                  
+                  {/* Container Principal do Mapa */}
+                  <div style={{ 
+                    borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', 
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)', background: 'var(--bg-card)',
+                    position: 'relative'
+                  }}>
+                    <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-light)', zIndex: 10, position: 'relative', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}>
+                       <h3 style={{ fontSize: 17, margin: 0, fontWeight: 800, color: 'var(--text-primary)' }}>
+                          📍 Radar Global de Operações
+                       </h3>
+                       <div style={{ background: 'var(--bg-body)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
+                          <span className="pulse-glow" style={{ width: 8, height: 8, borderRadius: '50%', background: activeActivities.length > 0 ? 'var(--green)' : 'var(--text-muted)' }} />
+                          {activeActivities.length} consultores rastreados ativamente
+                       </div>
+                    </div>
+                    {/* O Mapa ocupa a largura total */}
+                    <div id="admin-map" style={{ width: '100%', height: '550px', background: '#e2e8f0', zIndex: 1 }}></div>
+                  </div>
+
+                  {/* Bandeja de Atividades - Horizontal Scroll */}
+                  {activeActivities.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <h4 style={{ fontSize: 14, margin: '8px 0 0 0', color: 'var(--text-secondary)' }}>Operações em Tempo Real:</h4>
+                      <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12 }}>
+                        {activeActivities.map(ativ => {
+                          const emp = empresas.find(e => e.id === ativ.empresaId);
+                          return (
+                             <div key={ativ.consultorId} style={{ minWidth: 320, maxWidth: 350 }}>
+                                <RealTimeActivityCard ativ={ativ} emp={emp} />
+                             </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
             </div>
 
-            <div className="card">
-              <h3 style={{ fontSize: 15, marginBottom: 16 }}>📋 Worklog da Equipe</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
-                Histórico detalhado de todas as atividades realizadas pelos consultores.
-              </p>
+            <div className="card" style={{ display: activeTab === 'equipe' ? undefined : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ fontSize: 16, marginBottom: 6, marginTop: 0 }}>Histórico de Atividades Diárias (Worklog)</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                    Histórico detalhado de todas as atividades realizadas e horas entregues.
+                  </p>
+                </div>
+                <button className="btn btn-primary btn-sm" onClick={handleGerarRelatorioHoras} style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 600 }}>
+                  📊 Relatório de Horas
+                </button>
+              </div>
               
               <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
                 <table style={{ fontSize: 11.5 }}>
@@ -977,13 +1202,14 @@ export default function AdministrativoPage() {
                   <tbody>
                     {worklog.slice().reverse().map((l: any) => {
                       const emp = empresas.find(e => e.id === l.empresaId);
+                      const min = Math.floor((l.tempoSegundos || 0) / 60);
                       return (
                         <tr key={l.id}>
-                          <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{new Date(l.dataFim || l.dataInicio).toLocaleString('pt-BR')}</td>
-                          <td style={{ fontWeight: 600 }}>{l.consultorNome}</td>
+                          <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{new Date(l.data).toLocaleString('pt-BR')}</td>
+                          <td style={{ fontWeight: 600 }}>{l.consultorNome || 'Logado'}</td>
                           <td>{emp?.nomeFantasia || emp?.razaoSocial || 'N/A'}</td>
                           <td>{l.descricao}</td>
-                          <td style={{ fontWeight: 500, color: 'var(--accent)' }}>{l.duracaoMinutos ? `${l.duracaoMinutos} min` : '-'}</td>
+                          <td style={{ fontWeight: 500, color: 'var(--accent)' }}>{min} min</td>
                         </tr>
                       );
                     })}
@@ -999,7 +1225,7 @@ export default function AdministrativoPage() {
               </div>
             </div>
 
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'visao-geral' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>Carteira por Atividade</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {Object.entries(data.atividades).map(([atividade, total]) => (
@@ -1015,7 +1241,7 @@ export default function AdministrativoPage() {
               </div>
             </div>
 
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'inteligencia' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>🧠 Base de Conhecimento Copilot</h3>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
                 Suba documentos contábeis, estratégias ou planilhas (TXT, PDF, JSON). Eles serão analisados pelo robô Privilege AI Copilot para inteligência avançada.
@@ -1093,7 +1319,7 @@ export default function AdministrativoPage() {
               )}
             </div>
 
-            <div className="card">
+            <div className="card" style={{ display: activeTab === 'backup' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>📦 Backup e Restauração</h3>
       <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
                 Salve e restaure uma cópia dos seus dados localmente ou ative a sincronização com o Google Drive.
@@ -1222,9 +1448,51 @@ export default function AdministrativoPage() {
                 </div>
               </div>
             </div>
+            
+            <div style={{ marginTop: 24, fontSize: 13, color: 'var(--text-muted)' }}>
+              <strong>Ambiente Sandbox:</strong> Configurações temporárias que afetam apenas o cliente/empresa selecionada pelo consultor na sua máquina. Sincronização Serverless em teste.
+            </div>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// Componente para computar em tempo real o tempo rodando para o administrador
+function RealTimeActivityCard({ ativ, emp }: { ativ: any; emp: any }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!ativ.dataInicio) return;
+    const startMs = new Date(ativ.dataInicio).getTime();
+    
+    // Calcula imediatamente
+    setElapsed(Math.floor((Date.now() - startMs) / 1000));
+    
+    // Segue computando a cada segundo em segundo plano (na visão do administrador)
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startMs) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [ativ.dataInicio]);
+
+  const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+  const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+  const s = (elapsed % 60).toString().padStart(2, '0');
+
+  return (
+    <div style={{ padding: '16px', background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', background: 'var(--accent)' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>👤 {ativ.consultorNome}</strong>
+        <span style={{ background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+          Em Execução: {h}:{m}:{s}
+        </span>
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>🏢 {emp?.nomeFantasia || emp?.razaoSocial || 'Cliente Desconhecido'}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '4px' }}>📋 {ativ.descricao}</div>
+    </div>
   );
 }

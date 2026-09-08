@@ -15,6 +15,7 @@ import {
 } from '../../../lib/ncm-database';
 import { store, type Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell,
@@ -191,7 +192,7 @@ export default function InteligenciaTributariaPage() {
   }, [ncmQuery, ncmSetor, ncmTratamento]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!empresaId) { alert('Selecione uma empresa antes.'); return; }
+    if (!empresaId) { toast.error('Selecione uma empresa antes.'); return; }
     setProcessing(true);
     const file = acceptedFiles[0];
     const reader = new FileReader();
@@ -223,7 +224,7 @@ export default function InteligenciaTributariaPage() {
         fileData.status = 'erro';
         tributarioStore.updateFile(fileData);
         loadData(empresaId);
-        alert(`Erro: ${(err as Error).message}`);
+        toast.error(`Erro: ${(err as Error).message}`);
       } finally { setProcessing(false); }
     };
     reader.readAsText(file, 'latin1');

@@ -1,0 +1,60 @@
+import { NextResponse } from 'next/server';
+import db from '../../../../lib/prisma';
+import { verifyPassword, isHashed, hashPassword } from '../../../../lib/auth-hash';
+import { createSessionToken, createTwoFactorPendingToken, sessionCookieHeader } from '../../../../lib/session';
+import { checkRateLimit, getClientKey } from '../../../../lib/rate-limit';
+import { captureError } from '../../../../lib/sentry-helper';
+
+export async function POST(request: Request) {
+  try {
+    const rate = checkRateLimit(`login:${getClientKey(request)}`, 10, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: `Muitas tentativas. Tente novamente em ${Math.ceil(rate.retryAfterSeconds / 60)} minuto(s).` },
+        { status: 429 }
+      );
+    }
+
+    const { email, password } = await request.json();
+    if (!email || !password) {
+      return NextResponse.json({ error: 'E-mail e senha são obrigatórios.' }, { status: 400 });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await db.user.findFirst({ where: { email: cleanEmail } });
+
+    // Mensagem genérica de propósito — não revela se o e-mail existe ou não.
+    if (!user || !verifyPassword(password, user.password)) {
+      return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 401 });
+    }
+
+    // Upgrade lazy: conta antiga com senha em texto puro vira hash no primeiro login OK.
+    let finalUser = user;
+    if (!isHashed(user.password)) {
+      finalUser = await db.user.update({ where: { id: user.id }, data: { password: hashPassword(password) } });
+    }
+
+    if (finalUser.twoFactorEnabled) {
+      // Senha confirmada, mas a sessão só é emitida após o código TOTP —
+      // este token de 5 minutos só serve para provar que a senha já foi validada.
+      const twoFactorToken = createTwoFactorPendingToken(finalUser.id);
+      return NextResponse.json({ requiresTwoFactor: true, twoFactorToken });
+    }
+
+    const token = createSessionToken({
+      userId: finalUser.id,
+      email: finalUser.email,
+      role: finalUser.role,
+      empresaIds: finalUser.empresaIds,
+    });
+
+    const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = finalUser;
+    const response = NextResponse.json({ success: true, user: userWithoutPassword });
+    response.headers.set('Set-Cookie', sessionCookieHeader(token));
+    return response;
+  } catch (error) {
+    console.error('Erro no login:', error);
+    captureError(error);
+    return NextResponse.json({ error: 'Erro ao processar login.' }, { status: 500 });
+  }
+}

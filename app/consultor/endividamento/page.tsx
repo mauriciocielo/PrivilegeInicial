@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Endividamento, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function EndividamentoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -158,7 +160,7 @@ export default function EndividamentoPage() {
   };
 
   const handleSave = () => {
-    if (!form.banco || !form.contrato) { alert('Preencha pelo menos Banco e Contrato.'); return; }
+    if (!form.banco || !form.contrato) { toast.error('Preencha pelo menos Banco e Contrato.'); return; }
 
     const e: Endividamento = {
       id: edit?.id || uid(),
@@ -185,14 +187,14 @@ export default function EndividamentoPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir este endividamento?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir este endividamento?'))) return;
     store.deleteEndividamento(id);
     setEndividamentos(store.getEndividamentos(empresaId));
   };
 
   const handleSavePagamento = () => {
-    if (!pagamentoForm.id) { alert('Selecione um contrato.'); return; }
+    if (!pagamentoForm.id) { toast.error('Selecione um contrato.'); return; }
     const endiv = endividamentos.find(e => e.id === pagamentoForm.id);
     if (!endiv) return;
 

@@ -5,27 +5,37 @@
   "scripts": {
     "dev": "node server.js",
     "build": "prisma generate && next build",
-    "start": "node server.js",
-    "postinstall": "prisma generate"
+    "start": "prisma migrate deploy && node server.js",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1107.0",
     "@aws-sdk/s3-request-presigner": "^3.1107.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@react-oauth/google": "^0.13.5",
+    "@sentry/nextjs": "^10.73.0",
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
+    "google-auth-library": "^11.0.2",
     "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "mysql2": "^3.22.4",
     "next": "16.2.6",
     "next-pwa": "^5.6.0",
     "nodemailer": "^8.0.10",
+    "otplib": "^12.0.1",
     "pdfjs-dist": "^4.10.38",
     "pg": "^8.21.0",
     "prisma": "^7.8.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-dropzone": "^20.1.0",
@@ -36,10 +46,14 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-dropzone": "^4.2.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { captureError } from '../../../lib/sentry-helper';
 
 export async function GET() {
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
@@ -60,6 +61,7 @@ export async function GET() {
     return NextResponse.json({ data: fallbackPosts, isMock: true });
   } catch (error) {
     console.error("Failed to fetch Instagram feed:", error);
+    captureError(error);
     return NextResponse.json({ data: fallbackPosts, isMock: true });
   }
 }

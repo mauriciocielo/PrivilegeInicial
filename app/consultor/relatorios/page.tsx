@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { fmt, generatePDF, generateXLS, buildFluxoCaixaData } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const isContaRedutoraReceita = (descricao: string) => descricao.trim().startsWith('( - )');
 
@@ -533,7 +535,7 @@ export default function RelatoriosPage() {
 
   const handleWhatsAppSend = async () => {
     if (!whatsappPhone || !whatsappMessage) {
-      alert('Por favor, informe o telefone e a mensagem.');
+      toast.error('Por favor, informe o telefone e a mensagem.');
       return;
     }
     setSendingWhatsApp(true);
@@ -545,10 +547,10 @@ export default function RelatoriosPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('Relatório enviado com sucesso via WhatsApp!');
+        toast.success('Relatório enviado com sucesso via WhatsApp!');
         setShowWhatsAppModal(false);
       } else {
-        const confirmFallback = confirm(
+        const confirmFallback = await confirmAsync(
           `Falha ao enviar pelo Zappfy.\nErro: ${data.details || data.error || 'Desconhecido'}\n\nDeseja abrir o WhatsApp Web/App para enviar manualmente?`
         );
         if (confirmFallback) {
@@ -560,9 +562,9 @@ export default function RelatoriosPage() {
       }
     } catch (err) {
       console.error(err);
-      const confirmFallback = confirm(
+      const confirmFallback = (await confirmAsync(
         'Falha de rede ao conectar com o servidor. Deseja abrir o WhatsApp para enviar manualmente?'
-      );
+      ));
       if (confirmFallback) {
         const cleanPhone = whatsappPhone.replace(/\D/g, '');
         const encodedText = encodeURIComponent(whatsappMessage);

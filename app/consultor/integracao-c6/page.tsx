@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador, Lancamento } from '../../../lib/store';
+import { toast } from 'sonner';
 
 export default function IntegracaoC6Page() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -90,7 +91,7 @@ export default function IntegracaoC6Page() {
 
   const handleSaveConfig = () => {
     if (!clientId || !clientSecret) {
-      alert('Por favor, preencha as credenciais da API C6.');
+      toast.error('Por favor, preencha as credenciais da API C6.');
       return;
     }
     const config = { clientId, clientSecret, sandbox, certName };
@@ -130,7 +131,7 @@ export default function IntegracaoC6Page() {
 
   const generateCnab240 = () => {
     if (!startDate || !endDate) {
-      alert('Selecione as datas de início e fim para a busca.');
+      toast.error('Selecione as datas de início e fim para a busca.');
       return;
     }
 
@@ -144,7 +145,7 @@ export default function IntegracaoC6Page() {
     });
 
     if (filtered.length === 0) {
-      alert('Nenhum lançamento a receber encontrado no período selecionado.');
+      toast.success('Nenhum lançamento a receber encontrado no período selecionado.');
       return;
     }
 

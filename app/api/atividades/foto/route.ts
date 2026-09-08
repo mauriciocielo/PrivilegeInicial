@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
+import { captureError } from '../../../../lib/sentry-helper';
+import { requireAuth } from '../../../../lib/api-auth';
 
 export async function GET(request: Request) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const tipo = searchParams.get('tipo');
@@ -46,6 +50,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Erro ao buscar foto da atividade:', error);
+    captureError(error);
     return NextResponse.json({ error: 'Erro interno ao buscar foto' }, { status: 500 });
   }
 }

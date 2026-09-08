@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { store, Empresa, InteligenciaDoc } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
 
 type PolicyType = 'receber' | 'cobranca' | 'compras' | 'pagamentos' | 'credito';
 
@@ -104,7 +105,7 @@ export default function PoliticasFinanceirasPage() {
     if (empresaId) {
       store.logAction(empresaId, 'Edição', `Atualizou a ${POLICY_INFO[activeTab].title} (Global)`);
     }
-    alert('Política salva com sucesso!');
+    toast.success('Política salva com sucesso!');
   };
 
   const handleGenerateAI = async () => {
@@ -164,7 +165,7 @@ REGRAS DE FORMATAÇÃO E ESTRUTURA:
         if (text) {
           setAiDraft(text.trim());
         } else {
-          alert('Não foi possível obter uma resposta estruturada do Gemini AI.');
+          toast.error('Não foi possível obter uma resposta estruturada do Gemini AI.');
         }
       } else {
         throw new Error('Erro na chamada da API');

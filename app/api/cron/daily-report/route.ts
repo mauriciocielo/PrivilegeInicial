@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import nodemailer from 'nodemailer';
+import { captureError } from '../../../../lib/sentry-helper';
 
 export async function GET(request: Request) {
   try {
@@ -208,6 +209,7 @@ export async function GET(request: Request) {
           emailResults.push(`E-mail enviado com sucesso para ${user.email}`);
         } catch (mailErr) {
           console.error(`Erro ao enviar e-mail diário para ${user.email}:`, mailErr);
+          captureError(mailErr);
           emailResults.push(`Falha no envio de e-mail para ${user.email}: ${(mailErr as Error).message}`);
         }
       } else {
@@ -279,6 +281,7 @@ export async function GET(request: Request) {
           }
         } catch (wsErr) {
           console.error(`Erro ao enviar WhatsApp diário para o número ${user.phone}:`, wsErr);
+          captureError(wsErr);
           whatsappResults.push(`Falha no WhatsApp para ${user.phone}: ${(wsErr as Error).message}`);
         }
       } else {
@@ -295,6 +298,7 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error('Erro na execução do Cron diário:', error);
+    captureError(error);
     return NextResponse.json({ error: (error as Error).message || 'Erro interno' }, { status: 500 });
   }
 }

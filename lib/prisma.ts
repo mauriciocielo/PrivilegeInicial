@@ -20,9 +20,12 @@ if (typeof window === 'undefined') {
     globalThis.pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: isProduction ? { rejectUnauthorized: false } : undefined,
-      max: 10,                      // Define um pool menor para Serverless (ex: Vercel/Railway)
+      // server.js roda como processo Node único e persistente (não serverless) — um
+      // pool de 10 já estourava ("timeout exceeded when trying to connect") sob carga
+      // normal (migração grande + várias abas fazendo polling ao mesmo tempo).
+      max: 20,
       idleTimeoutMillis: 10000,     // Encerra clientes inativos rapidamente (10s)
-      connectionTimeoutMillis: 15000, 
+      connectionTimeoutMillis: 15000,
       allowExitOnIdle: true,
     });
   }

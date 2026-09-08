@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Empresa, StoreAuditLog, User } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
 
 type AbaAtiva = 'cofre' | 'auditoria';
 
@@ -53,7 +54,7 @@ export default function ConfiguracoesAvancadasPage() {
     if (!empresa) return;
     
     if (fechamentoData && fechamentoConfirmText.toLowerCase() !== 'bloquear') {
-      alert('Digite "bloquear" na caixa de confirmação para poder fechar o período!');
+      toast.success('Digite "bloquear" na caixa de confirmação para poder fechar o período!');
       return;
     }
 
@@ -67,7 +68,7 @@ export default function ConfiguracoesAvancadasPage() {
 
     setFechamentoConfirmText('');
     loadData(empresaId);
-    alert('Configuração de Cofre Mensal atualizada com sucesso!');
+    toast.success('Configuração de Cofre Mensal atualizada com sucesso!');
   };
 
   if (currentUser?.role === 'cliente') {

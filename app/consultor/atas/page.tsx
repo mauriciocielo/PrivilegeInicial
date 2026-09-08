@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AtaAtendimento, Empresa, store, uid, User } from '../../../lib/store';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function AtasConsultorPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -61,7 +63,7 @@ export default function AtasConsultorPage() {
 
   const handleSave = () => {
     if (!form.titulo || !form.data || !form.conteudo) {
-      alert('Preencha data, título e conteúdo da ata.');
+      toast.error('Preencha data, título e conteúdo da ata.');
       return;
     }
 
@@ -80,8 +82,8 @@ export default function AtasConsultorPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir esta ata de atendimento?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir esta ata de atendimento?'))) return;
     store.deleteAta(id);
     setAtas(store.getAtas(empresaId));
   };
@@ -132,7 +134,7 @@ export default function AtasConsultorPage() {
       pdf.save(`Ata_${viewAta?.id.slice(-6)}.pdf`);
     } catch (e) {
       console.error(e);
-      alert('Erro ao gerar o PDF da ata.');
+      toast.error('Erro ao gerar o PDF da ata.');
     } finally {
       setIsGeneratingPdf(false);
     }

@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { store, Portador } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { toast } from 'sonner';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const TIPO_LABELS: Record<string, string> = {
   conta_corrente: '🏦 Conta Corrente',
@@ -76,7 +78,7 @@ export default function PortadoresPage() {
   const openEdit = (p: Portador) => { setEdit(p); setForm({ ...p, saldoInicialData: p.saldoInicialData || new Date().toISOString().split('T')[0] }); setShowModal(true); }; // Ensure date is set for existing
 
   const handleSave = () => {
-    if (!form.nome) { alert('Informe o nome do portador.'); return; }
+    if (!form.nome) { toast.error('Informe o nome do portador.'); return; }
     const p: Portador = {
       id: edit?.id || uid(),
       nome: form.nome!,
@@ -94,8 +96,8 @@ export default function PortadoresPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Excluir este portador?')) return;
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAsync('Excluir este portador?'))) return;
     store.deletePortador(id);
     setPortadores(store.getPortadores(empresaId));
   };
