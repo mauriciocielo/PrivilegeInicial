@@ -488,7 +488,6 @@ export default function ClienteDashboard() {
                 </div>
               </div>
             )}
-            </div>
           </div>
         </div>
       </div>
