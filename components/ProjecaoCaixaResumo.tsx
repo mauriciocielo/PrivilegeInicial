@@ -51,7 +51,7 @@ export default function ProjecaoCaixaResumo({
   const temPrevistos = proj.meses.some(m => m.entradas > 0 || m.saidasOperacionais > 0);
 
   return (
-    <div className="card" style={{ marginBottom: 32 }}>
+    <div className="card glass-card card-dynamic animate-slide-up" style={{ marginBottom: 32, animationDelay: '150ms' }}>
       <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div className="card-title">Projeção de caixa — próximos {meses} meses</div>
         {href && (

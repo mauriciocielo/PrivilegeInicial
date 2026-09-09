@@ -132,7 +132,7 @@ export default function ProjecaoCaixaPage() {
 
         {/* Alerta de aperto */}
         {atual.primeiroMesNegativo && (
-          <div className="card" style={{ marginBottom: 24, borderLeft: '4px solid var(--red)' }}>
+          <div className="card animate-slide-up" style={{ marginBottom: 24, borderLeft: '4px solid var(--red)', animationDelay: '200ms' }}>
             <div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 6 }}>
               ⚠️ O caixa fica negativo em {atual.meses.find(m => m.competencia === atual.primeiroMesNegativo)?.label}
             </div>
@@ -145,7 +145,7 @@ export default function ProjecaoCaixaPage() {
         )}
 
         {/* Simulador */}
-        <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card animate-slide-up" style={{ marginBottom: 24, animationDelay: '300ms' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="card-title">Simular novo financiamento</div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
@@ -205,14 +205,14 @@ export default function ProjecaoCaixaPage() {
         </div>
 
         {/* Curva */}
-        <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card animate-slide-up" style={{ marginBottom: 24, animationDelay: '400ms' }}>
           <div className="card-header"><div className="card-title">Evolução do saldo de caixa</div></div>
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={dadosGrafico} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
               <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => fmt.currency(Number(v))} />
+              <Tooltip formatter={(v: any) => fmt.currency(Number(v))} cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Legend />
               <ReferenceLine y={0} stroke="var(--red)" strokeDasharray="4 4" />
               <Area type="monotone" dataKey="Sem financiamento" stroke="#3b82f6" fill="rgba(59,130,246,0.15)" strokeWidth={2} />
@@ -224,7 +224,7 @@ export default function ProjecaoCaixaPage() {
         </div>
 
         {/* Tabela mês a mês */}
-        <div className="card">
+        <div className="card animate-slide-up" style={{ animationDelay: '500ms' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="card-title">Detalhamento mensal</div>
             <button className={`btn btn-sm ${editandoPrevisao ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEditandoPrevisao(!editandoPrevisao)}>
