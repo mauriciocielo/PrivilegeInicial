@@ -54,6 +54,24 @@ export default function TransitionProvider({ children }: { children: React.React
     hasPendingChangesRef.current = readPendingKeys().length > 0;
   }, []);
 
+  // Armazenamento do navegador cheio: sem este aviso a gravação falhava calada,
+  // o usuário seguia trabalhando e só descobria a perda quando o dado não
+  // aparecia em outro aparelho. Alerta uma única vez por sessão.
+  useEffect(() => {
+    let avisado = false;
+    const onStorageFull = () => {
+      if (avisado) return;
+      avisado = true;
+      toast.error(
+        'O armazenamento do navegador está cheio. As últimas alterações podem não ter sido salvas — '
+        + 'sincronize agora e recarregue a página.',
+        { duration: 15000 }
+      );
+    };
+    window.addEventListener('cfStorageFull', onStorageFull);
+    return () => window.removeEventListener('cfStorageFull', onStorageFull);
+  }, []);
+
   // Envio de última chance ao sair/trocar de app: o auto-salvamento normal espera
   // ~1s (debounce) antes de tentar enviar — se o usuário fechar a aba, trocar de
   // app no celular ou bloquear a tela nesse meio tempo, a alteração fica só local

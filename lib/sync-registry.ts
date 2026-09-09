@@ -57,6 +57,10 @@ export const SYNC_COLLECTIONS: SyncCollectionConfig[] = [
   { key: 'cf_diagnosticos_360', label: 'Diagnósticos 360º', chunkSize: 10, autoSync: true, pagePaths: ['/diagnostico-360'] },
   { key: 'cf_curva_abc_config', label: 'Configuração Curva ABC', chunkSize: 25, autoSync: true, pagePaths: ['/curva-abc'] },
   { key: 'cf_curvas_abc', label: 'Curvas ABC', chunkSize: 10, autoSync: true, pagePaths: ['/curva-abc'] },
+  // Estava fora do registro: a tela de Imobilizado salvava só no navegador, e o
+  // Balanço Patrimonial, que consome esses bens, via dados que nunca subiam.
+  { key: 'cf_imobilizados', label: 'Imobilizado', chunkSize: 25, autoSync: true, pagePaths: ['/imobilizado', '/balanco-patrimonial'] },
+  { key: 'cf_politicas_globais', label: 'Politicas Financeiras', chunkSize: 10, autoSync: true, pagePaths: ['/politicas'] },
   { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 25, autoSync: true, pagePaths: ['/nfse'] },
   { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 25, autoSync: true },
   { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 25, autoSync: true },

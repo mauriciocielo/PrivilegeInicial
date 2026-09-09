@@ -184,6 +184,13 @@ export interface AtaAtendimento {
   assinaturaEnviadaEm?: string;
 }
 
+/** Política financeira global do escritório, compartilhada com os clientes. */
+export interface PoliticaGlobal {
+  id: string;
+  texto: string;
+  updatedAt?: string;
+}
+
 export interface Imobilizado {
   id: string;
   empresaId: string;
@@ -775,8 +782,64 @@ class DataStore {
   private set(key: string, value: unknown, silent = false) {
     if (typeof window === 'undefined') return;
     this.cache[key] = value;
-    localStorage.setItem(key, JSON.stringify(value));
+
+    // Toda gravação local passa por aqui. Sem tratamento, um localStorage cheio
+    // (QuotaExceededError) derrubava a operação no meio: a tela achava que
+    // salvou, o dado não se firmava e nunca chegava ao banco na sincronização.
+    // Agora tenta liberar espaço descartando o que é reconstruível e repete.
+    const payload = JSON.stringify(value);
+    try {
+      localStorage.setItem(key, payload);
+    } catch {
+      const liberou = this.liberarEspacoLocal(key);
+      try {
+        localStorage.setItem(key, payload);
+        if (liberou) {
+          console.warn(`[store] Armazenamento estava cheio; espaço liberado para gravar "${key}".`);
+        }
+      } catch {
+        // Persistiu cheio mesmo após a limpeza: é preciso avisar, senão o
+        // usuário segue trabalhando e perde o que julga ter salvo.
+        console.error(
+          `[store] Não foi possível gravar "${key}": armazenamento do navegador cheio.`
+        );
+        window.dispatchEvent(new CustomEvent('cfStorageFull', { detail: { key } }));
+      }
+    }
+
     if (!silent) window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key } }));
+  }
+
+  /**
+   * Descarta, em ordem de menor prejuízo, o que ocupa espaço e pode ser
+   * reconstruído a partir do servidor. Retorna true se algo foi liberado.
+   */
+  private liberarEspacoLocal(exceto: string): boolean {
+    let liberou = false;
+
+    // 1) Fotos das atividades em base64 — o maior consumidor isolado.
+    try {
+      const antes = localStorage.getItem('cf_atividades_log')?.length ?? 0;
+      this.pruneAtividadesFotos();
+      const depois = localStorage.getItem('cf_atividades_log')?.length ?? 0;
+      if (depois < antes) liberou = true;
+    } catch { /* segue para as próximas estratégias */ }
+
+    // 2) Log de auditoria: mantém os registros recentes, descarta a cauda.
+    if (exceto !== 'cf_audit_logs') {
+      try {
+        const raw = localStorage.getItem('cf_audit_logs');
+        if (raw) {
+          const logs = JSON.parse(raw);
+          if (Array.isArray(logs) && logs.length > 200) {
+            localStorage.setItem('cf_audit_logs', JSON.stringify(logs.slice(0, 200)));
+            liberou = true;
+          }
+        }
+      } catch { /* ignora log corrompido */ }
+    }
+
+    return liberou;
   }
 
   private init() {
@@ -1054,21 +1117,52 @@ class DataStore {
   }
 
   // Políticas Financeiras Globais
-  getGlobalPolicies(): Record<string, string> {
+  //
+  // Guardadas como lista de registros ({ id, texto }) e não como objeto: o
+  // sincronizador só envia coleções em array (Array.isArray), então no formato
+  // antigo a política escrita pelo consultor nunca saía do navegador dele — e a
+  // tela do cliente, que lê daqui, mostrava vazio.
+  private readonly POLITICAS_PADRAO = [
+    'politicaReceberTexto', 'politicaCobrancaTexto', 'politicaComprasTexto',
+    'politicaPagamentosTexto', 'politicaCreditoTexto',
+  ];
+
+  getPoliticasGlobaisLista(): PoliticaGlobal[] {
     this.init();
-    return this.get<Record<string, string>>('cf_politicas_globais', {
-      politicaReceberTexto: '',
-      politicaCobrancaTexto: '',
-      politicaComprasTexto: '',
-      politicaPagamentosTexto: '',
-      politicaCreditoTexto: '',
-    });
+    this.migrarPoliticasGlobaisLegado();
+    return this.get<PoliticaGlobal[]>('cf_politicas_globais', []);
+  }
+
+  getGlobalPolicies(): Record<string, string> {
+    const base: Record<string, string> = {};
+    for (const campo of this.POLITICAS_PADRAO) base[campo] = '';
+    for (const p of this.getPoliticasGlobaisLista()) base[p.id] = p.texto || '';
+    return base;
   }
 
   saveGlobalPolicy(field: string, text: string) {
-    const current = this.getGlobalPolicies();
-    current[field] = text;
-    this.set('cf_politicas_globais', current);
+    const lista = this.getPoliticasGlobaisLista();
+    const idx = lista.findIndex(p => p.id === field);
+    const registro: PoliticaGlobal = { id: field, texto: text, updatedAt: new Date().toISOString() };
+    if (idx >= 0) lista[idx] = registro; else lista.push(registro);
+    this.set('cf_politicas_globais', lista);
+  }
+
+  /** Converte o formato antigo (objeto) para a lista sincronizável, uma vez. */
+  private migrarPoliticasGlobaisLegado() {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem('cf_politicas_globais');
+    if (!raw) return;
+    try {
+      const atual = JSON.parse(raw);
+      if (Array.isArray(atual)) return; // já migrado
+      const lista: PoliticaGlobal[] = Object.entries(atual || {})
+        .filter(([, v]) => typeof v === 'string')
+        .map(([id, texto]) => ({ id, texto: texto as string, updatedAt: new Date().toISOString() }));
+      this.set('cf_politicas_globais', lista, true);
+    } catch {
+      this.set('cf_politicas_globais', [], true);
+    }
   }
 
   // Empresas
@@ -2353,22 +2447,48 @@ class DataStore {
   }
 
   // --- ORÇAMENTOS MENSAIS ---
+  // Existiam duas coleções com a MESMA forma: 'cf_orcamentos' (sincronizada com
+  // o Postgres) e 'cf_orcamentos_mensais' (nunca sincronizada). A tela de
+  // Orçamento usava a segunda, então tudo que era salvo ali ficava preso ao
+  // navegador. Estes métodos agora operam sobre a coleção sincronizada, e o que
+  // sobrou na antiga é incorporado uma única vez por migrateOrcamentosLegado().
   getOrcamentosMensais(empresaId?: string): OrcamentoMensal[] {
-    this.init();
-    const all = this.get<OrcamentoMensal[]>('cf_orcamentos_mensais', []);
-    return empresaId ? all.filter(o => o.empresaId === empresaId) : all;
+    this.migrateOrcamentosLegado();
+    return this.getOrcamentos(empresaId);
   }
 
   saveOrcamentoMensal(orc: OrcamentoMensal) {
-    if (orc && typeof orc === "object") orc.updatedAt = new Date().toISOString();
-    const list = this.getOrcamentosMensais();
-    const idx = list.findIndex(o => o.id === orc.id);
-    if (idx >= 0) list[idx] = orc; else list.push(orc);
-    this.set('cf_orcamentos_mensais', list);
+    this.migrateOrcamentosLegado();
+    this.saveOrcamento(orc);
   }
 
   deleteOrcamentoMensal(id: string) {
-    this.set('cf_orcamentos_mensais', this.getOrcamentosMensais().filter(o => o.id !== id));
+    // Antes não registrava a exclusão, então o registro voltava na
+    // sincronização seguinte, vindo do servidor.
+    this.deleteOrcamento(id);
+  }
+
+  /** Move o conteúdo da coleção antiga para a sincronizada, uma única vez. */
+  private migrateOrcamentosLegado() {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem('cf_orcamentos_mensais');
+    if (!raw) return;
+    try {
+      const antigos: OrcamentoMensal[] = JSON.parse(raw);
+      if (Array.isArray(antigos) && antigos.length) {
+        const atuais = this.getOrcamentos();
+        const porId = new Map(atuais.map(o => [o.id, o]));
+        for (const o of antigos) {
+          const existente = porId.get(o.id);
+          // Na dúvida, prevalece o mais recente.
+          if (!existente || (o.updatedAt || '') > (existente.updatedAt || '')) porId.set(o.id, o);
+        }
+        this.set('cf_orcamentos', [...porId.values()]);
+      }
+    } catch {
+      /* coleção antiga ilegível — descartada abaixo */
+    }
+    localStorage.removeItem('cf_orcamentos_mensais');
   }
 
   // --- AUDITORIA DE ELITE ---

@@ -20,6 +20,53 @@ async function runInBatches<T>(
   }
 }
 
+/**
+ * Políticas financeiras do escritório. Não pertencem a uma empresa: são as
+ * mesmas para todos os clientes, por isso ficam fora do filtro por empresa.
+ */
+async function migratePoliticasGlobais(politicas: any[]) {
+  console.log(`Migrando ${politicas.length} políticas globais...`);
+  for (const p of politicas) {
+    if (!p.id) continue;
+    try {
+      const texto = String(p.texto ?? '');
+      await db.politicaGlobal.upsert({
+        where: { id: String(p.id) },
+        update: { texto },
+        create: { id: String(p.id), texto },
+      });
+    } catch (err) {
+      console.error('Falha ao migrar política ' + p.id, err);
+      captureError(err);
+    }
+  }
+}
+
+/** Bens do imobilizado — ficavam apenas no navegador até esta rota existir. */
+async function migrateImobilizados(itens: any[]) {
+  console.log(`Migrando ${itens.length} itens do imobilizado...`);
+  for (const i of itens) {
+    if (!i.id || !i.empresaId) continue;
+    try {
+      const dados = {
+        empresaId: String(i.empresaId),
+        nome: String(i.nome || ''),
+        dataAquisicao: String(i.dataAquisicao || ''),
+        valorAquisicao: Number(i.valorAquisicao) || 0,
+        taxaDepreciacao: Number(i.taxaDepreciacao) || 0,
+      };
+      await db.imobilizado.upsert({
+        where: { id: String(i.id) },
+        update: dados,
+        create: { id: String(i.id), ...dados },
+      });
+    } catch (err) {
+      console.error('Falha ao migrar imobilizado ' + i.id, err);
+      captureError(err);
+    }
+  }
+}
+
 async function migrateEmpresas(empresas: any[]) {
   console.log(`Migrando ${empresas.length} empresas...`);
   for (const e of empresas) {
@@ -70,6 +117,22 @@ async function migrateEmpresas(empresas: any[]) {
           politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : (existing?.politicaComprasData || null),
           politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : (existing?.politicaCobrancaName || null),
           politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : (existing?.politicaCobrancaData || null),
+          // Endereço e termos do contrato: sem estas linhas os campos existem no
+          // banco e na tela, mas nunca são gravados — a tela salva, o servidor
+          // ignora, e na recarga seguinte o dado "some".
+          endereco: e.endereco ? String(e.endereco) : (existing?.endereco || null),
+          cep: e.cep ? String(e.cep) : (existing?.cep || null),
+          cidade: e.cidade ? String(e.cidade) : (existing?.cidade || null),
+          uf: e.uf ? String(e.uf) : (existing?.uf || null),
+          contratoValorTotal: e.contratoValorTotal !== undefined ? Number(e.contratoValorTotal) : null,
+          contratoValorEntrada: e.contratoValorEntrada !== undefined ? Number(e.contratoValorEntrada) : null,
+          contratoParcelas: e.contratoParcelas !== undefined ? Number(e.contratoParcelas) : null,
+          contratoDiaVencimento: e.contratoDiaVencimento !== undefined ? Number(e.contratoDiaVencimento) : null,
+          contratoPrimeiroVencimento: e.contratoPrimeiroVencimento ? String(e.contratoPrimeiroVencimento) : null,
+          contratoInicioServicos: e.contratoInicioServicos ? String(e.contratoInicioServicos) : null,
+          contratoDuracaoMeses: e.contratoDuracaoMeses !== undefined ? Number(e.contratoDuracaoMeses) : null,
+          contratoHorasSemanais: e.contratoHorasSemanais !== undefined ? Number(e.contratoHorasSemanais) : null,
+          contratoServicos: e.contratoServicos ? String(e.contratoServicos) : (existing?.contratoServicos || null),
         },
         create: {
           id: String(e.id),
@@ -96,6 +159,19 @@ async function migrateEmpresas(empresas: any[]) {
           politicaComprasData: e.politicaComprasData ? String(e.politicaComprasData) : null,
           politicaCobrancaName: e.politicaCobrancaName ? String(e.politicaCobrancaName) : null,
           politicaCobrancaData: e.politicaCobrancaData ? String(e.politicaCobrancaData) : null,
+          endereco: e.endereco ? String(e.endereco) : null,
+          cep: e.cep ? String(e.cep) : null,
+          cidade: e.cidade ? String(e.cidade) : null,
+          uf: e.uf ? String(e.uf) : null,
+          contratoValorTotal: e.contratoValorTotal !== undefined ? Number(e.contratoValorTotal) : null,
+          contratoValorEntrada: e.contratoValorEntrada !== undefined ? Number(e.contratoValorEntrada) : null,
+          contratoParcelas: e.contratoParcelas !== undefined ? Number(e.contratoParcelas) : null,
+          contratoDiaVencimento: e.contratoDiaVencimento !== undefined ? Number(e.contratoDiaVencimento) : null,
+          contratoPrimeiroVencimento: e.contratoPrimeiroVencimento ? String(e.contratoPrimeiroVencimento) : null,
+          contratoInicioServicos: e.contratoInicioServicos ? String(e.contratoInicioServicos) : null,
+          contratoDuracaoMeses: e.contratoDuracaoMeses !== undefined ? Number(e.contratoDuracaoMeses) : null,
+          contratoHorasSemanais: e.contratoHorasSemanais !== undefined ? Number(e.contratoHorasSemanais) : null,
+          contratoServicos: e.contratoServicos ? String(e.contratoServicos) : null,
         }
       });
     } catch (err) {
@@ -1794,6 +1870,8 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
   cf_diagnosticos_360: migrateDiagnosticos360,
   cf_curva_abc_config: migrateCurvaAbcConfig,
   cf_curvas_abc: migrateCurvasAbc,
+  cf_imobilizados: migrateImobilizados,
+  cf_politicas_globais: migratePoliticasGlobais,
   cf_nfse: migrateNfse,
   cf_situacao_fiscal: migrateSituacaoFiscal,
   cf_transaction_patterns: migrateTransactionPatterns,
@@ -1927,6 +2005,9 @@ const QUERIES: Record<string, CollectionQuery> = {
     });
   },
   cf_diagnosticos_360: (scope) => db.diagnostico360.findMany({ where: empresaWhere(scope) }),
+  cf_imobilizados: (scope) => db.imobilizado.findMany({ where: empresaWhere(scope) }),
+  // Globais: iguais para todos, sem recorte por empresa.
+  cf_politicas_globais: () => db.politicaGlobal.findMany(),
   cf_curva_abc_config: (scope) => db.curvaAbcConfig.findMany({ where: empresaWhere(scope) }),
   cf_curvas_abc: async (scope) => {
     const raw = await db.curvaAbc.findMany({ where: empresaWhere(scope), include: { itens: true } });
@@ -2061,6 +2142,7 @@ export async function POST(request: Request) {
             case 'cf_agenda_semanal': await db.agendaTask.deleteMany({ where: { id: record.id } }); break;
             case 'cf_inteligencia_docs': await db.inteligenciaDoc.deleteMany({ where: { id: record.id } }); break;
             case 'cf_unidades': await db.unidade.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_imobilizados': await db.imobilizado.deleteMany({ where: { id: record.id } }); break;
           }
         } catch(e) {
           console.error('Falha ao excluir ' + record.id, e);
