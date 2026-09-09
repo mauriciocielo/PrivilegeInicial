@@ -506,3 +506,10 @@ model Imobilizado {
 
   @@index([empresaId])
 }
+
+/// Politicas financeiras do escritorio, compartilhadas com todos os clientes.
+model PoliticaGlobal {
+  id        String   @id
+  texto     String
+  updatedAt DateTime @updatedAt @default(now())
+}
