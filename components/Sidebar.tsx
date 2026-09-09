@@ -75,6 +75,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
       { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
       { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
+      { label: 'Projeção de Caixa', href: '/consultor/projecao-caixa', icon: Activity },
       { label: 'Imobilizado', href: '/consultor/imobilizado', icon: Building },
       { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
       { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },

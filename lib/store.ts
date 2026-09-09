@@ -148,10 +148,29 @@ export interface PagamentoEndividamento {
   valorAmortizacao: number;
 }
 
+/**
+ * Naturezas de dívida. Cada uma se comporta de forma diferente no caixa:
+ * parcelamento tributário costuma ter indexador próprio (Selic), consórcio tem
+ * reajuste anual pelo bem, e dívida particular normalmente não tem contrato
+ * formal nem garantia registrada — mas precisa aparecer no fluxo, senão a
+ * projeção de caixa mente.
+ */
+export type TipoEndividamento =
+  | 'bancario' | 'tributario' | 'consorcio' | 'particular' | 'fornecedor' | 'outro';
+
+export const TIPOS_ENDIVIDAMENTO: { valor: TipoEndividamento; label: string }[] = [
+  { valor: 'bancario', label: 'Bancário (empréstimo/financiamento)' },
+  { valor: 'tributario', label: 'Tributário (parcelamento de impostos)' },
+  { valor: 'consorcio', label: 'Consórcio' },
+  { valor: 'particular', label: 'Particular / terceiros' },
+  { valor: 'fornecedor', label: 'Fornecedor (renegociação)' },
+  { valor: 'outro', label: 'Outro' },
+];
+
 export interface Endividamento {
   id: string;
   empresaId: string;
-  tipo: 'bancario' | 'tributario';
+  tipo: TipoEndividamento;
   banco: string;
   conta: string;
   contrato: string;
@@ -182,6 +201,39 @@ export interface AtaAtendimento {
   /** Id do documento no Autentique, quando enviado para assinatura eletrônica. */
   assinaturaId?: string;
   assinaturaEnviadaEm?: string;
+}
+
+/**
+ * Faturamento e despesas previstos por competência, informados pelo consultor.
+ * Existem porque a projeção de caixa dependia só de lançamentos com status
+ * "previsto" — e empresas que registram apenas o realizado geravam uma curva
+ * achatada, sem valor de decisão. Quando informado, este valor substitui as
+ * receitas/despesas previstas daquele mês (não soma, para não duplicar).
+ */
+export interface ProjecaoFaturamento {
+  id: string;
+  empresaId: string;
+  /** YYYY-MM */
+  competencia: string;
+  faturamento: number;
+  despesas: number;
+  observacao?: string;
+  updatedAt?: string;
+}
+
+/** Compromisso da agenda semanal do consultor. */
+export interface AgendaTask {
+  id: string;
+  title: string;
+  empresaId: string;
+  consultorId: string;
+  horario: string;
+  /** YYYY-MM-DD */
+  dateStr: string;
+  completed?: boolean;
+  recurrent?: boolean;
+  location?: string;
+  updatedAt?: string;
 }
 
 /** Política financeira global do escritório, compartilhada com os clientes. */
@@ -1116,6 +1168,46 @@ class DataStore {
     this.set("cf_users", this.getUsers().filter(u => u.id !== id));
   }
 
+  // Projeção de Faturamento
+  getProjecoesFaturamento(empresaId?: string): ProjecaoFaturamento[] {
+    this.init();
+    const all = this.get<ProjecaoFaturamento[]>('cf_projecao_faturamento', []);
+    const lista = empresaId ? all.filter(p => p.empresaId === empresaId) : all;
+    return lista.sort((a, b) => a.competencia.localeCompare(b.competencia));
+  }
+
+  saveProjecaoFaturamento(proj: ProjecaoFaturamento) {
+    proj.updatedAt = new Date().toISOString();
+    const all = this.get<ProjecaoFaturamento[]>('cf_projecao_faturamento', []);
+    // A chave de negócio é empresa + competência: salvar duas vezes o mesmo mês
+    // deve atualizar, não duplicar a linha.
+    const idx = all.findIndex(p => p.empresaId === proj.empresaId && p.competencia === proj.competencia);
+    if (idx >= 0) all[idx] = { ...proj, id: all[idx].id };
+    else all.push(proj);
+    this.set('cf_projecao_faturamento', all);
+  }
+
+  deleteProjecaoFaturamento(id: string) {
+    this.addDeletedRecord(id, 'cf_projecao_faturamento');
+    const all = this.get<ProjecaoFaturamento[]>('cf_projecao_faturamento', []);
+    this.set('cf_projecao_faturamento', all.filter(p => p.id !== id));
+  }
+
+  // Agenda Semanal
+  //
+  // A tela gravava direto no localStorage, contornando este store. Isso tinha
+  // dois efeitos: a gravação escapava da proteção contra armazenamento cheio e,
+  // como não disparava o evento 'cfDataChange', o envio automático nunca era
+  // acionado — a coleção estava registrada para sincronizar, mas nada avisava.
+  getAgendaTasks(): AgendaTask[] {
+    this.init();
+    return this.get<AgendaTask[]>('cf_agenda_semanal', []);
+  }
+
+  saveAgendaTasks(tasks: AgendaTask[]) {
+    this.set('cf_agenda_semanal', tasks);
+  }
+
   // Políticas Financeiras Globais
   //
   // Guardadas como lista de registros ({ id, texto }) e não como objeto: o
@@ -1398,6 +1490,12 @@ class DataStore {
     if (idx >= 0) list[idx] = atividade;
     else list.push(atividade);
     this.set("cf_atividades_log", list);
+  }
+
+  /** Exclui um registro de atividade, marcando para remoção também no servidor. */
+  deleteAtividadeLog(id: string) {
+    this.addDeletedRecord(id, 'cf_atividades_log');
+    this.set('cf_atividades_log', this.getAtividadesLog().filter(a => a.id !== id));
   }
 
   pruneLancamentosAttachmentData() {

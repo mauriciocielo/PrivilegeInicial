@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { store, type Endividamento, uid } from '../../../lib/store';
+import { store, type Endividamento, type TipoEndividamento, TIPOS_ENDIVIDAMENTO, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import { toast } from 'sonner';
@@ -366,10 +366,49 @@ export default function EndividamentoPage() {
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
 
+            {/* O tipo já existia no modelo, mas ficava fixo em "bancário" por
+                falta de campo — impostos parcelados, consórcio e dívida com
+                terceiros não tinham como ser classificados. */}
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Banco / Instituição *</label>
-                <input className="form-control" placeholder="Ex: Cresol, Bradesco..." value={form.banco || ''} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} />
+                <label className="form-label">Natureza da dívida *</label>
+                <select
+                  className="form-control"
+                  value={form.tipo || 'bancario'}
+                  onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoEndividamento }))}
+                >
+                  {TIPOS_ENDIVIDAMENTO.map(t => (
+                    <option key={t.valor} value={t.valor}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Dia do vencimento</label>
+                <input
+                  className="form-control" type="number" min={1} max={31} placeholder="Ex: 10"
+                  value={form.pagamentoMes || ''}
+                  onChange={e => setForm(f => ({ ...f, pagamentoMes: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">
+                  {form.tipo === 'tributario' ? 'Órgão / Fisco *'
+                    : form.tipo === 'particular' ? 'Credor *'
+                    : form.tipo === 'consorcio' ? 'Administradora *'
+                    : 'Banco / Instituição *'}
+                </label>
+                <input
+                  className="form-control"
+                  placeholder={form.tipo === 'tributario' ? 'Ex: Receita Federal, SEFAZ-PR'
+                    : form.tipo === 'particular' ? 'Nome do credor'
+                    : form.tipo === 'consorcio' ? 'Ex: Consórcio Magalu'
+                    : 'Ex: Cresol, Bradesco...'}
+                  value={form.banco || ''}
+                  onChange={e => setForm(f => ({ ...f, banco: e.target.value }))}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">C/C</label>

@@ -6,6 +6,7 @@ import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
+import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
 import { TrendingUp, TrendingDown, Activity, Percent, Scale } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -293,6 +294,10 @@ export default function ClienteDashboard() {
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
 
         {/* Foco na Semana */}
+        {/* O cliente não tem a tela dedicada de projeção; aqui é onde ele vê
+            para onde o caixa caminha. */}
+        <ProjecaoCaixaResumo empresaId={empresaId} meses={6} href={null} />
+
         <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '200ms' }}>Esta Semana (Sobrevivência)</h3>
         <div className="grid-2" style={{ marginBottom: 32 }}>
            <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px', borderLeft: '4px solid var(--green)', animationDelay: '300ms' }}>

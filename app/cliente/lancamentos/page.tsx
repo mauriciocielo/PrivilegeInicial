@@ -269,7 +269,20 @@ export default function LancamentosPage() {
       if (filtros.tipo && l.tipo !== filtros.tipo) return false;
       if (filtros.status && l.status !== filtros.status) return false;
       if (filtros.portadorId && l.portadorId !== filtros.portadorId) return false;
-      if (filtros.search && !l.descricao.toLowerCase().includes(filtros.search.toLowerCase())) return false;
+      if (filtros.search) {
+        const term = filtros.search.toLowerCase();
+        const numTerm = parseMoney(filtros.search);
+        
+        const pc = planoContas.find(p => p.id === l.planoContaId);
+        const pcName = pc ? `${pc.codigo} ${pc.descricao}`.toLowerCase() : '';
+        const isTransf = l.planoContaId === 'transf';
+        const pcMatch = isTransf ? 'transferencia'.includes(term) : pcName.includes(term);
+
+        const descMatch = l.descricao.toLowerCase().includes(term);
+        const valMatch = l.valor.toString().includes(term) || (numTerm > 0 && l.valor === numTerm) || l.valor.toFixed(2).includes(term) || l.valor.toFixed(2).replace('.', ',').includes(term);
+        
+        if (!descMatch && !pcMatch && !valMatch) return false;
+      }
       if (filtros.mes && !l.data.startsWith(filtros.mes)) return false;
       if (filtros.dataIni && l.data < filtros.dataIni) return false;
       if (filtros.dataFim && l.data > filtros.dataFim) return false;
@@ -1038,7 +1051,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             <div className="search-bar" style={{ position: 'relative' }}>
               <span>🔍</span>
               <input
-                placeholder="Buscar descrição..."
+                placeholder="Busca: desc., valor ou conta..."
                 value={filtros.search}
                 onChange={e => setFiltros(f => ({ ...f, search: e.target.value }))}
                 style={{ paddingRight: filtros.search ? '32px' : undefined }}

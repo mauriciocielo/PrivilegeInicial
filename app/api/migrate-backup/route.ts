@@ -42,6 +42,31 @@ async function migratePoliticasGlobais(politicas: any[]) {
   }
 }
 
+/** Projeção de faturamento informada pelo consultor, por competência. */
+async function migrateProjecaoFaturamento(itens: any[]) {
+  console.log(`Migrando ${itens.length} projeções de faturamento...`);
+  for (const p of itens) {
+    if (!p.id || !p.empresaId || !p.competencia) continue;
+    try {
+      const dados = {
+        empresaId: String(p.empresaId),
+        competencia: String(p.competencia),
+        faturamento: Number(p.faturamento) || 0,
+        despesas: Number(p.despesas) || 0,
+        observacao: p.observacao ? String(p.observacao) : null,
+      };
+      await db.projecaoFaturamento.upsert({
+        where: { id: String(p.id) },
+        update: dados,
+        create: { id: String(p.id), ...dados },
+      });
+    } catch (err) {
+      console.error('Falha ao migrar projeção ' + p.id, err);
+      captureError(err);
+    }
+  }
+}
+
 /** Bens do imobilizado — ficavam apenas no navegador até esta rota existir. */
 async function migrateImobilizados(itens: any[]) {
   console.log(`Migrando ${itens.length} itens do imobilizado...`);
@@ -1871,6 +1896,7 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
   cf_curva_abc_config: migrateCurvaAbcConfig,
   cf_curvas_abc: migrateCurvasAbc,
   cf_imobilizados: migrateImobilizados,
+  cf_projecao_faturamento: migrateProjecaoFaturamento,
   cf_politicas_globais: migratePoliticasGlobais,
   cf_nfse: migrateNfse,
   cf_situacao_fiscal: migrateSituacaoFiscal,
@@ -2006,6 +2032,7 @@ const QUERIES: Record<string, CollectionQuery> = {
   },
   cf_diagnosticos_360: (scope) => db.diagnostico360.findMany({ where: empresaWhere(scope) }),
   cf_imobilizados: (scope) => db.imobilizado.findMany({ where: empresaWhere(scope) }),
+  cf_projecao_faturamento: (scope) => db.projecaoFaturamento.findMany({ where: empresaWhere(scope) }),
   // Globais: iguais para todos, sem recorte por empresa.
   cf_politicas_globais: () => db.politicaGlobal.findMany(),
   cf_curva_abc_config: (scope) => db.curvaAbcConfig.findMany({ where: empresaWhere(scope) }),
@@ -2143,6 +2170,7 @@ export async function POST(request: Request) {
             case 'cf_inteligencia_docs': await db.inteligenciaDoc.deleteMany({ where: { id: record.id } }); break;
             case 'cf_unidades': await db.unidade.deleteMany({ where: { id: record.id } }); break;
             case 'cf_imobilizados': await db.imobilizado.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_projecao_faturamento': await db.projecaoFaturamento.deleteMany({ where: { id: record.id } }); break;
           }
         } catch(e) {
           console.error('Falha ao excluir ' + record.id, e);

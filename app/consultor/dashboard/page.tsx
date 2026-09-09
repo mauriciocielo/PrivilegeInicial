@@ -5,6 +5,7 @@ import { store, Empresa, Lancamento, Portador, PlanoConta } from '../../../lib/s
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
+import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
 import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus, LogOut } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -332,6 +333,9 @@ export default function ConsultorDashboard() {
              <div className="stat-value" style={{ fontSize: 28, color: '#b45309' }}><AnimatedCounter target={totalDivida} prefix="R$ " decimals={2} /></div>
           </div>
         </div>
+
+        {/* Leitura rápida do caixa futuro — o detalhamento fica na tela dedicada */}
+        <ProjecaoCaixaResumo empresaId={empresaId} meses={6} />
 
         {/* Valuation Module (Elite CFO) */}
         <div className="glass-card card-dynamic animate-slide-up" style={{

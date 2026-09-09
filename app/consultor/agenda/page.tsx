@@ -1,21 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { store, Empresa, User } from '../../../lib/store';
+import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
 
-interface AgendaTask {
-  id: string;
-  title: string;
-  empresaId: string;
-  consultorId: string;
-  horario: string;
-  dateStr: string; // Formato YYYY-MM-DD
-  completed: boolean;
-  recurrent?: boolean;
-  location?: string;
-}
+// A interface vive em lib/store.ts, junto com os métodos que persistem a agenda
+// — manter uma cópia local aqui já causou divergência de tipos entre as duas.
 
 export default function AgendaPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -69,29 +60,38 @@ export default function AgendaPage() {
       const data = await res.json();
       
       if (data.items) {
+        // O cálculo acontece FORA do atualizador de estado. Antes, a mesclagem
+        // e um localStorage.setItem rodavam dentro de setTasks(prev => ...) —
+        // o React pode executar o atualizador mais de uma vez durante a
+        // renderização, e uma exceção ali (armazenamento cheio) derruba a página
+        // inteira, sem chance de recuperação. Era a tela "This page couldn't load".
+        const map = new Map(store.getAgendaTasks().map(t => [t.id, t]));
         let imported = 0;
-        setTasks(prev => {
-          const map = new Map(prev.map(t => [t.id, t]));
-          data.items.forEach((ev: any) => {
-             const start = new Date(ev.start.dateTime || ev.start.date);
-             const hr = String(start.getHours()).padStart(2, '0');
-             const mn = String(start.getMinutes()).padStart(2, '0');
-             const evIso = start.toISOString().split('T')[0];
-             const myId = `gcal-${ev.id}`;
-             if (!map.has(myId)) {
-               map.set(myId, {
-                 id: myId, title: `📅 ${ev.summary}`, empresaId: '', consultorId: '',
-                 horario: `${hr}:${mn}`, dateStr: evIso, completed: false, recurrent: false,
-                 location: ev.location || 'Remoto / Online'
-               });
-               imported++;
-             }
-          });
-          const newArr = Array.from(map.values());
-          localStorage.setItem('cf_agenda_semanal', JSON.stringify(newArr));
-          return newArr;
+
+        data.items.forEach((ev: any) => {
+          if (!ev?.start) return;
+          const start = new Date(ev.start.dateTime || ev.start.date);
+          if (isNaN(start.getTime())) return;
+          const hr = String(start.getHours()).padStart(2, '0');
+          const mn = String(start.getMinutes()).padStart(2, '0');
+          const evIso = start.toISOString().split('T')[0];
+          const myId = `gcal-${ev.id}`;
+          if (!map.has(myId)) {
+            map.set(myId, {
+              id: myId, title: `📅 ${ev.summary || 'Sem título'}`, empresaId: '', consultorId: '',
+              horario: `${hr}:${mn}`, dateStr: evIso, completed: false, recurrent: false,
+              location: ev.location || 'Remoto / Online'
+            });
+            imported++;
+          }
         });
-        if (imported > 0) toast.success(`${imported} novos eventos sincronizados do Google!`);
+
+        if (imported > 0) {
+          const newArr = Array.from(map.values());
+          store.saveAgendaTasks(newArr);
+          setTasks(newArr);
+          toast.success(`${imported} novos eventos sincronizados do Google!`);
+        }
       }
     } catch(err) {
       console.warn("Auto-sync failed", err);
@@ -137,7 +137,9 @@ export default function AgendaPage() {
 
   const saveTasks = (updated: AgendaTask[]) => {
     setTasks(updated);
-    localStorage.setItem('cf_agenda_semanal', JSON.stringify(updated));
+    // Via store: ganha a proteção contra armazenamento cheio e dispara o
+    // evento que aciona o envio automático ao servidor.
+    store.saveAgendaTasks(updated);
   };
 
   const handleSaveTask = () => {

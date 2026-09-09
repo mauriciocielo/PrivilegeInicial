@@ -312,8 +312,7 @@ export default function AtividadesTempoPage() {
             }
             return t;
           });
-          localStorage.setItem('cf_agenda_semanal', JSON.stringify(updatedTasks));
-          window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_agenda_semanal' } }));
+          store.saveAgendaTasks(updatedTasks);
           setAgendaTasks(agendaTasks.filter(t => t.id !== selectedAgendaTaskId));
         } catch (e) {}
       }
@@ -335,10 +334,11 @@ export default function AtividadesTempoPage() {
 
   const handleDelete = async (id: string) => {
     if ((await confirmAsync('Deseja excluir este registro de atividade?'))) {
-      const arr = store.getAtividadesLog().filter(a => a.id !== id);
-      localStorage.setItem('cf_atividades_log', JSON.stringify(arr));
-      setAtividades(arr);
-      window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
+      // Pelo store: além da proteção contra armazenamento cheio, registra a
+      // exclusão para o servidor — antes o item era apagado só aqui e voltava
+      // na sincronização seguinte, vindo do banco.
+      store.deleteAtividadeLog(id);
+      setAtividades(store.getAtividadesLog());
     }
   };
 

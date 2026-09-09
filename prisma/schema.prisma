@@ -513,3 +513,18 @@ model PoliticaGlobal {
   texto     String
   updatedAt DateTime @updatedAt @default(now())
 }
+
+/// Faturamento e despesas previstos pelo consultor, por competencia.
+/// Alimentam a projecao de caixa quando nao ha lancamentos previstos suficientes.
+model ProjecaoFaturamento {
+  id          String   @id
+  empresaId   String
+  competencia String
+  faturamento Float
+  despesas    Float
+  observacao  String?
+  updatedAt   DateTime @updatedAt @default(now())
+
+  @@unique([empresaId, competencia])
+  @@index([empresaId])
+}

@@ -61,6 +61,7 @@ export const SYNC_COLLECTIONS: SyncCollectionConfig[] = [
   // Balanço Patrimonial, que consome esses bens, via dados que nunca subiam.
   { key: 'cf_imobilizados', label: 'Imobilizado', chunkSize: 25, autoSync: true, pagePaths: ['/imobilizado', '/balanco-patrimonial'] },
   { key: 'cf_politicas_globais', label: 'Politicas Financeiras', chunkSize: 10, autoSync: true, pagePaths: ['/politicas'] },
+  { key: 'cf_projecao_faturamento', label: 'Projecao de Faturamento', chunkSize: 25, autoSync: true, pagePaths: ['/projecao-caixa'] },
   { key: 'cf_nfse', label: 'Notas Fiscais (NFS-e)', chunkSize: 25, autoSync: true, pagePaths: ['/nfse'] },
   { key: 'cf_situacao_fiscal', label: 'Situação Fiscal', chunkSize: 25, autoSync: true },
   { key: 'cf_transaction_patterns', label: 'Padrões de Transação', chunkSize: 25, autoSync: true },
