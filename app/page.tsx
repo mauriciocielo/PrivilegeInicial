@@ -4,8 +4,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Instrument_Serif, Inter } from 'next/font/google';
+import {
+  Building2, FileText, Users, TrendingUp, CircleDollarSign, ShieldCheck,
+  BarChart2, PieChart, Scale, Landmark, type LucideIcon,
+} from 'lucide-react';
 import { store } from '../lib/store';
 import { services, cnds, integrations, faqs, legalDocs } from './pageData';
+
+// Mapa string→componente: pageData guarda só o nome (serializável, sem JSX),
+// o mapeamento pro ícone real fica aqui, perto de quem renderiza.
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  Building: Building2, FileText, Users, TrendingUp, DollarSign: CircleDollarSign,
+  Shield: ShieldCheck, BarChart2, PieChart, Scale, Landmark,
+};
 
 // Serifada de alto contraste no display — o registro editorial/institucional que
 // distingue escritório estabelecido de template de startup.
@@ -284,7 +295,7 @@ export default function Home() {
 
         /* ── Áreas de atuação ── */
         .lp .pract{border-top:1px solid var(--rule);}
-        .lp .pract-row{display:grid;grid-template-columns:56px 1fr 1.15fr;gap:28px;align-items:baseline;padding:26px 4px;border-bottom:1px solid var(--rule-soft);position:relative;
+        .lp .pract-row{display:grid;grid-template-columns:40px 42px 1fr 1.15fr;gap:22px;align-items:center;padding:24px 4px;border-bottom:1px solid var(--rule-soft);position:relative;
           opacity:0;transform:translateY(18px);transition:opacity .75s var(--ease),transform .75s var(--ease),background .4s,padding-left .5s var(--ease);}
         .lp .in .pract-row{opacity:1;transform:none;}
         /* Faixa bordô que varre a linha da esquerda para a direita no hover */
@@ -292,13 +303,18 @@ export default function Home() {
         .lp .pract-row:hover::before{transform:scaleX(1);}
         .lp .pract-row:hover{padding-left:18px;}
         .lp .pract-row>*{position:relative;z-index:1;}
-        .lp .pract-n{font-size:11px;letter-spacing:.14em;color:var(--muted);font-variant-numeric:tabular-nums;transition:color .4s;}
+        .lp .pract-ic{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--bone-deep);color:var(--wine);flex-shrink:0;transition:background .4s,color .4s,transform .4s var(--ease);align-self:center;}
+        .lp .pract-row:hover .pract-ic{background:var(--wine);color:#fff;transform:scale(1.06);}
+        .lp .pract-n{font-size:11px;letter-spacing:.14em;color:var(--muted);font-variant-numeric:tabular-nums;transition:color .4s;align-self:baseline;}
         .lp .pract-row:hover .pract-n{color:var(--wine);}
-        .lp .pract-t{font-size:19px;color:var(--ink);font-family:${display.style.fontFamily};line-height:1.2;}
-        .lp .pract-d{font-size:14.5px;line-height:1.68;color:var(--ink-soft);}
+        .lp .pract-t{font-size:19px;color:var(--ink);font-family:${display.style.fontFamily};line-height:1.2;align-self:baseline;}
+        .lp .pract-d{font-size:14.5px;line-height:1.68;color:var(--ink-soft);align-self:baseline;}
 
-        /* ── Método: seção invertida, dá respiro e contraste ao percurso ── */
-        .lp .sec-dark{background:var(--ink);color:rgba(255,255,255,.62);}
+        /* ── Método: seção invertida, dá respiro e contraste ao percurso ──
+           Vem logo depois da faixa de foto (também escura) — usar um bordô
+           bem profundo em vez do mesmo preto evita o efeito de "dois pretos
+           empilhados" e mantém a seção ligada à cor da marca. */
+        .lp .sec-dark{background:linear-gradient(165deg,var(--wine-deep) 0%,var(--ink) 62%);color:rgba(255,255,255,.62);border-top:1px solid rgba(169,139,93,.28);}
         .lp .sec-dark h2,.lp .sec-dark h3{color:#fff;}
         .lp .sec-dark .sec-head p{color:rgba(255,255,255,.62);}
         .lp .sec-dark .mark-l{color:rgba(255,255,255,.44);}
@@ -347,6 +363,16 @@ export default function Home() {
         .lp .band-meta div{color:rgba(255,255,255,.72);font-size:13px;letter-spacing:.04em;}
         .lp .band-meta b{display:block;font-family:${display.style.fontFamily};font-size:26px;color:#fff;font-weight:400;margin-bottom:3px;}
 
+        /* ── CTA intermediário: bordô sólido, terceiro ponto de contraste
+           sem repetir o preto do band/método ── */
+        .lp .cta-mid{background:var(--wine);padding:56px 0;}
+        .lp .cta-mid-box{display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;}
+        .lp .cta-mid-box p{font-size:clamp(21px,2.6vw,30px);color:#fff;line-height:1.28;max-width:44ch;}
+        .lp .cta-mid .btn-p{background:#fff;color:var(--wine);flex-shrink:0;}
+        .lp .cta-mid .btn-p::before{background:var(--ink);}
+        .lp .cta-mid .btn-p:hover{color:#fff;}
+        @media (max-width:760px){ .lp .cta-mid-box{gap:22px;} }
+
         /* ── Declaração tipográfica: o respiro grande entre blocos densos ── */
         .lp .statement{padding:clamp(90px,13vw,170px) 0;background:var(--bone-deep);}
         .lp .statement p{font-family:${display.style.fontFamily};font-size:clamp(30px,6vw,86px);line-height:1.06;color:var(--ink);letter-spacing:-.025em;}
@@ -361,6 +387,8 @@ export default function Home() {
         .lp .marquee-i{display:flex;align-items:center;gap:54px;padding-right:54px;font-family:${display.style.fontFamily};font-size:clamp(30px,3.6vw,44px);color:var(--ink);white-space:nowrap;}
         .lp .marquee-i>span{display:inline-flex;align-items:flex-start;gap:12px;}
         .lp .marquee-i b{font-family:${sans.style.fontFamily};font-size:9.5px;font-weight:500;letter-spacing:.2em;color:var(--wine);margin-top:9px;}
+        /* Ponto na cor real de cada marca — dá identidade sem depender de logos oficiais */
+        .lp .marquee-dot{width:8px;height:8px;border-radius:50%;align-self:center;flex-shrink:0;box-shadow:0 0 0 3px rgba(20,17,15,.05);}
         /* Losango separador entre os nomes */
         .lp .marquee-i>span::after{content:'';width:5px;height:5px;background:var(--gold);transform:rotate(45deg);align-self:center;margin-left:42px;}
         @keyframes slide{to{transform:translateX(-50%)}}
@@ -442,8 +470,9 @@ export default function Home() {
           .lp .hero-grid,.lp .sec-head,.lp .about-grid,.lp .contact-grid{grid-template-columns:1fr;gap:44px;}
           .lp .sec-head{align-items:start;}
           .lp .steps{grid-template-columns:1fr;gap:38px;}
-          .lp .pract-row{grid-template-columns:44px 1fr;gap:16px;row-gap:10px;}
-          .lp .pract-d{grid-column:2;}
+          .lp .pract-row{grid-template-columns:34px 28px 1fr;gap:14px;row-gap:8px;}
+          .lp .pract-d{grid-column:3;}
+          .lp .pract-ic{width:34px;height:34px;}
         }
         @media (max-width:760px){
           .lp .c{padding:0 22px;}
@@ -587,13 +616,17 @@ export default function Home() {
             </p>
           </div>
           <div className="pract">
-            {services.map((s, i) => (
-              <div key={s.title} className="pract-row" style={{ transitionDelay: `${0.06 * i}s` }}>
-                <span className="pract-n">{String(i + 1).padStart(2, '0')}</span>
-                <span className="pract-t">{s.title}</span>
-                <span className="pract-d">{s.desc}</span>
-              </div>
-            ))}
+            {services.map((s, i) => {
+              const Icon = SERVICE_ICONS[s.icon] ?? Building2;
+              return (
+                <div key={s.title} className="pract-row" style={{ transitionDelay: `${0.06 * i}s` }}>
+                  <span className="pract-ic" aria-hidden="true"><Icon size={18} strokeWidth={1.5} /></span>
+                  <span className="pract-n">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="pract-t">{s.title}</span>
+                  <span className="pract-d">{s.desc}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </Reveal>
@@ -716,9 +749,11 @@ export default function Home() {
           <div className="marquee-track">
             {[0, 1].map(dup => (
               <div className="marquee-i" key={dup} aria-hidden={dup === 1}>
-                {integrations.map(({ name }, i) => (
-                  <span key={name} style={{ display: 'inline-flex', gap: 10 }}>
-                    <b>{String(i + 1).padStart(2, '0')}</b>{name}
+                {integrations.map(({ name, color }, i) => (
+                  <span key={name} style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline' }}>
+                    <b>{String(i + 1).padStart(2, '0')}</b>
+                    <span className="marquee-dot" style={{ background: color }} aria-hidden="true" />
+                    {name}
                   </span>
                 ))}
               </div>
@@ -745,6 +780,19 @@ export default function Home() {
                 <span className="cnd-arrow">&#8599;</span>
               </a>
             ))}
+          </div>
+        </div>
+      </Reveal>
+
+      {/* ── CTA INTERMEDIÁRIO ──
+          Entre o header/hero e o formulário final vão 5 seções longas sem
+          nenhum convite direto — este reforço fica logo após "Utilidades",
+          quando quem leu até aqui já entendeu a oferta. */}
+      <Reveal className="cta-mid">
+        <div className="c">
+          <div className="cta-mid-box">
+            <p className="serif">Pronto para ver isso funcionando na sua empresa?</p>
+            <a href="#contato" className="btn btn-p btn-lg"><span>Agendar diagnóstico</span><span className="arw">&rarr;</span></a>
           </div>
         </div>
       </Reveal>
