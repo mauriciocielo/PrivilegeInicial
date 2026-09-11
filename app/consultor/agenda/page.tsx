@@ -1,100 +1,139 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X } from 'lucide-react';
 
-// A interface vive em lib/store.ts, junto com os métodos que persistem a agenda
-// — manter uma cópia local aqui já causou divergência de tipos entre as duas.
+// A interface AgendaTask vive em lib/store.ts, junto com os métodos que
+// persistem a agenda — manter uma cópia local aqui já causou divergência de
+// tipos entre as duas.
+
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+const DIAS_SEMANA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+/**
+ * Data local no formato YYYY-MM-DD. Nunca usar `toISOString()` para isso —
+ * ela converte pra UTC, e no fuso do Brasil (UTC-3) isso pode devolver o dia
+ * seguinte perto da meia-noite, desalinhando "hoje" e os cliques no calendário.
+ */
+const toIsoLocal = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const hojeIso = () => toIsoLocal(new Date());
+
+interface DiaGrade {
+  date: Date;
+  iso: string;
+  noMes: boolean;
+  isHoje: boolean;
+}
+
+function gerarGradeDoMes(base: Date): DiaGrade[] {
+  const ano = base.getFullYear();
+  const mes = base.getMonth();
+  const primeiroDoMes = new Date(ano, mes, 1);
+  const inicioGrade = new Date(ano, mes, 1 - primeiroDoMes.getDay());
+  const hoje = hojeIso();
+  const dias: DiaGrade[] = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(inicioGrade.getFullYear(), inicioGrade.getMonth(), inicioGrade.getDate() + i);
+    const iso = toIsoLocal(d);
+    dias.push({ date: d, iso, noMes: d.getMonth() === mes, isHoje: iso === hoje });
+  }
+  return dias;
+}
+
+function gerarGradeDaSemana(base: Date): DiaGrade[] {
+  const inicio = new Date(base);
+  inicio.setDate(inicio.getDate() - inicio.getDay());
+  const hoje = hojeIso();
+  const dias: DiaGrade[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+    const iso = toIsoLocal(d);
+    dias.push({ date: d, iso, noMes: true, isHoje: iso === hoje });
+  }
+  return dias;
+}
 
 export default function AgendaPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<AgendaTask[]>([]);
-  
-  // Navigation State
+  const [mounted, setMounted] = useState(false);
+
+  const [view, setView] = useState<'month' | 'week'>('month');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
-  
-  // Modal State
+  const [selectedDayIso, setSelectedDayIso] = useState<string | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState<Partial<AgendaTask>>({
-    title: '',
-    empresaId: '',
-    consultorId: '',
-    horario: '09:00',
-    dateStr: new Date().toISOString().split('T')[0],
-    recurrent: false
+    title: '', empresaId: '', consultorId: '', horario: '09:00', dateStr: hojeIso(), recurrent: false,
   });
 
-  const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const getWeekData = (date: Date) => {
-    const jsDate = new Date(date);
-    const dow = jsDate.getDay();
-    const diff = jsDate.getDate() - dow + (dow === 0 ? -6 : 1);
-    const mon = new Date(jsDate.setDate(diff));
-    
-    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
-    return days.map((name, i) => {
-      const dt = new Date(mon);
-      dt.setDate(mon.getDate() + i);
-      const iso = dt.toISOString().split('T')[0];
-      const brStr = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth()+1).padStart(2, '0')}`;
-      return { name, iso, brStr, raw: new Date(dt) };
-    });
-  };
+  useEffect(() => {
+    const load = () => {
+      setEmpresas(store.getEmpresas());
+      setUsers(store.getUsers().filter(u => u.role !== 'cliente'));
+      setTasks(store.getAgendaTasks());
+    };
+    load();
+    window.addEventListener('cfDataChange', load);
+    return () => window.removeEventListener('cfDataChange', load);
+  }, []);
 
-  const currentWeekInfo = getWeekData(baseDate);
-
-  const syncGoogleSilently = async (token: string) => {
+  const syncGoogleSilently = async (token: string, ref: Date) => {
     try {
-      // Sync a window (like baseDate -2 weeks to +2 weeks)
-      const min = new Date(baseDate); min.setDate(min.getDate() - 14);
-      const max = new Date(baseDate); max.setDate(max.getDate() + 14);
-      
-      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${min.toISOString()}&timeMax=${max.toISOString()}&singleEvents=true&orderBy=startTime`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const min = new Date(ref); min.setDate(min.getDate() - 31);
+      const max = new Date(ref); max.setDate(max.getDate() + 31);
+
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${min.toISOString()}&timeMax=${max.toISOString()}&singleEvents=true&orderBy=startTime`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) return; // token expirado/revogado — falha silenciosa, não derruba a página
       const data = await res.json();
-      
-      if (data.items) {
-        // O cálculo acontece FORA do atualizador de estado. Antes, a mesclagem
-        // e um localStorage.setItem rodavam dentro de setTasks(prev => ...) —
-        // o React pode executar o atualizador mais de uma vez durante a
-        // renderização, e uma exceção ali (armazenamento cheio) derruba a página
-        // inteira, sem chance de recuperação. Era a tela "This page couldn't load".
-        const map = new Map(store.getAgendaTasks().map(t => [t.id, t]));
-        let imported = 0;
+      if (!data.items) return;
 
-        data.items.forEach((ev: any) => {
-          if (!ev?.start) return;
-          const start = new Date(ev.start.dateTime || ev.start.date);
-          if (isNaN(start.getTime())) return;
-          const hr = String(start.getHours()).padStart(2, '0');
-          const mn = String(start.getMinutes()).padStart(2, '0');
-          const evIso = start.toISOString().split('T')[0];
-          const myId = `gcal-${ev.id}`;
-          if (!map.has(myId)) {
-            map.set(myId, {
-              id: myId, title: `📅 ${ev.summary || 'Sem título'}`, empresaId: '', consultorId: '',
-              horario: `${hr}:${mn}`, dateStr: evIso, completed: false, recurrent: false,
-              location: ev.location || 'Remoto / Online'
-            });
-            imported++;
-          }
+      // O cálculo acontece FORA do atualizador de estado — o React pode
+      // executar o atualizador mais de uma vez durante a renderização, e uma
+      // exceção ali (ex.: armazenamento cheio) derrubava a página inteira
+      // sem chance de recuperação ("This page couldn't load").
+      const map = new Map(store.getAgendaTasks().map(t => [t.id, t]));
+      let importados = 0;
+
+      for (const ev of data.items) {
+        if (!ev?.start) continue;
+        const start = new Date(ev.start.dateTime || ev.start.date);
+        if (isNaN(start.getTime())) continue;
+        const myId = `gcal-${ev.id}`;
+        if (map.has(myId)) continue;
+        map.set(myId, {
+          id: myId,
+          title: ev.summary || 'Sem título',
+          empresaId: '', consultorId: '',
+          horario: `${pad2(start.getHours())}:${pad2(start.getMinutes())}`,
+          dateStr: toIsoLocal(start),
+          completed: false, recurrent: false,
+          location: ev.location || 'Remoto / Online',
         });
-
-        if (imported > 0) {
-          const newArr = Array.from(map.values());
-          store.saveAgendaTasks(newArr);
-          setTasks(newArr);
-          toast.success(`${imported} novos eventos sincronizados do Google!`);
-        }
+        importados++;
       }
-    } catch(err) {
-      console.warn("Auto-sync failed", err);
+
+      if (importados > 0) {
+        const arr = Array.from(map.values());
+        store.saveAgendaTasks(arr);
+        setTasks(arr);
+        toast.success(`${importados} evento(s) sincronizado(s) do Google Calendar.`);
+      }
+    } catch (err) {
+      console.warn('Sincronização com Google Calendar falhou:', err);
     }
   };
 
@@ -102,236 +141,364 @@ export default function AgendaPage() {
     scope: 'https://www.googleapis.com/auth/calendar.readonly',
     onSuccess: (tokenResponse) => {
       localStorage.setItem('cf_gcal_token', tokenResponse.access_token);
-      toast.info('Credencial Google conectada! Importando base...');
-      syncGoogleSilently(tokenResponse.access_token);
+      toast.info('Conta Google conectada — importando eventos...');
+      syncGoogleSilently(tokenResponse.access_token, baseDate);
     },
     onError: (error) => {
-      console.error('Login Failed:', error);
-      toast.error('Ocorreu um erro ao conectar com o Google Calendar. Verifique os pop-ups do seu navegador.');
-    }
+      console.error('Login Google falhou:', error);
+      toast.error('Erro ao conectar com o Google Calendar. Verifique os pop-ups do navegador.');
+    },
   });
 
+  // Tenta sincronizar sozinho ao trocar de mês/semana, se já houver um token salvo.
   useEffect(() => {
-    const load = () => {
-      setEmpresas(store.getEmpresas());
-      setUsers(store.getUsers().filter(u => u.role !== 'cliente'));
-      
-      const saved = localStorage.getItem('cf_agenda_semanal');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            setTasks(parsed.map((p: any) => ({
-               ...p,
-               dateStr: p.dateStr || p.day || new Date().toISOString().split('T')[0],
-               horario: p.horario || '09:00'
-            })));
-          }
-        } catch (e) {}
-      }
-    };
-    load();
-  }, []);
-
-  // Try auto-sync on load if token exists
-  useEffect(() => {
+    if (!mounted) return;
     const t = localStorage.getItem('cf_gcal_token');
-    if (t) { syncGoogleSilently(t); }
-  }, [baseDate]);
+    if (t) syncGoogleSilently(t, baseDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, baseDate]);
+
+  const tasksPorDia = useMemo(() => {
+    const map = new Map<string, AgendaTask[]>();
+    for (const t of tasks) {
+      const arr = map.get(t.dateStr) || [];
+      arr.push(t);
+      map.set(t.dateStr, arr);
+    }
+    for (const arr of map.values()) arr.sort((a, b) => String(a.horario || '').localeCompare(String(b.horario || '')));
+    return map;
+  }, [tasks]);
+
+  const dias = useMemo(
+    () => (view === 'month' ? gerarGradeDoMes(baseDate) : gerarGradeDaSemana(baseDate)),
+    [view, baseDate]
+  );
 
   const saveTasks = (updated: AgendaTask[]) => {
     setTasks(updated);
-    // Via store: ganha a proteção contra armazenamento cheio e dispara o
-    // evento que aciona o envio automático ao servidor.
     store.saveAgendaTasks(updated);
+  };
+
+  const abrirNovo = (dateStr?: string) => {
+    setNewTask({ title: '', empresaId: '', consultorId: '', horario: '09:00', dateStr: dateStr || selectedDayIso || hojeIso(), recurrent: false });
+    setIsModalOpen(true);
   };
 
   const handleSaveTask = () => {
     if (!newTask.title || !newTask.dateStr || !newTask.horario) {
-      toast.error('Preencha os campos obrigatórios (Título, Data e Horário)!');
+      toast.error('Preencha título, data e horário.');
       return;
     }
-    
     const task: AgendaTask = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).slice(2, 11),
       title: newTask.title,
       empresaId: newTask.empresaId || '',
       consultorId: newTask.consultorId || '',
       horario: newTask.horario,
       dateStr: newTask.dateStr,
       completed: false,
-      recurrent: newTask.recurrent || false
+      recurrent: newTask.recurrent || false,
     };
-
     saveTasks([...tasks, task]);
     setIsModalOpen(false);
-    setNewTask({ title: '', empresaId: '', consultorId: '', horario: '09:00', dateStr: new Date().toISOString().split('T')[0], recurrent: false });
   };
 
-  const moveWeek = (dir: 1 | -1) => {
-    const n = new Date(baseDate);
-    n.setDate(n.getDate() + (dir * 7));
-    setBaseDate(n);
+  const handleDelete = async (task: AgendaTask) => {
+    if (!(await confirmAsync('Excluir este compromisso?'))) return;
+    saveTasks(tasks.filter(t => t.id !== task.id));
   };
 
-  const handleCopyMessage = async (task: AgendaTask, emp: Empresa | undefined, cons: User | undefined, evDate: string) => {
-    const dataFormatada = `${evDate} às ${task.horario}`;
-    const part = cons ? `${cons.name} (Consultoria)` : (task.id.startsWith('gcal') ? 'Participantes do Evento' : 'Equipe Privilege');
-    const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia}` : 'A Combinar / Online');
-    
-    const text = `*Nossa Agenda para essa semana:*\nData: ${dataFormatada}\nLocal: ${loc}\nParticipante: ${part}\n\n_Assunto: ${task.title}_`;
-    
+  const handleToggleComplete = (task: AgendaTask) => {
+    saveTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const handleCopyMessage = async (task: AgendaTask, dataFormatada: string) => {
+    const emp = empresas.find(e => e.id === task.empresaId);
+    const cons = users.find(u => u.id === task.consultorId);
+    const part = cons ? `${cons.name} (Consultoria)` : (task.id.startsWith('gcal') ? 'Participantes do evento' : 'Equipe Privilege');
+    const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia}` : 'A combinar / Online');
+    const text = `*Nossa agenda:*\nData: ${dataFormatada} às ${task.horario}\nLocal: ${loc}\nParticipante: ${part}\n\n_Assunto: ${task.title}_`;
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('Mensagem de agendamento copiada para a área de transferência!');
+      toast.success('Mensagem copiada para a área de transferência.');
     } catch {
       toast.error('Erro ao copiar a mensagem.');
     }
   };
 
-  if (!mounted) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando agenda...</div>;
+  const mover = (dir: 1 | -1) => {
+    const n = new Date(baseDate);
+    if (view === 'month') n.setMonth(n.getMonth() + dir);
+    else n.setDate(n.getDate() + dir * 7);
+    setBaseDate(n);
+  };
+
+  if (!mounted) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando agenda...</div>;
+
+  const tituloTopo = view === 'month'
+    ? `${MESES[baseDate.getMonth()]} de ${baseDate.getFullYear()}`
+    : (() => {
+        const semana = gerarGradeDaSemana(baseDate);
+        const ini = semana[0].date, fim = semana[6].date;
+        return ini.getMonth() === fim.getMonth()
+          ? `${ini.getDate()} – ${fim.getDate()} de ${MESES[ini.getMonth()]}, ${ini.getFullYear()}`
+          : `${ini.getDate()} de ${MESES[ini.getMonth()]} – ${fim.getDate()} de ${MESES[fim.getMonth()]}`;
+      })();
+
+  const diaSelecionado = selectedDayIso ? dias.find(d => d.iso === selectedDayIso) : null;
+  const tarefasDoDiaSelecionado = selectedDayIso ? (tasksPorDia.get(selectedDayIso) || []) : [];
 
   return (
     <>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div className="page-title">Agenda Consultiva Estratégica</div>
-          <div className="page-subtitle">Página mapeada com Google Calendar (Auto-Sync) e Datas Calendário.</div>
+          <div className="page-title">Agenda</div>
+          <div className="page-subtitle">Compromissos da consultoria, com sincronização opcional do Google Calendar.</div>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn btn-secondary btn-lg" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
-             <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style={{ width: 14, height: 14, marginRight: 6 }} />
-             Conectar Conta Google
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="" style={{ width: 14, height: 14, marginRight: 6, verticalAlign: -2 }} />
+            Conectar Google
           </button>
-          <button className="btn btn-primary btn-lg" onClick={() => setIsModalOpen(true)}>
-            ➕ Agendar
+          <button className="btn btn-primary" onClick={() => abrirNovo()}>
+            <Plus size={15} style={{ marginRight: 4, verticalAlign: -3 }} /> Agendar
           </button>
         </div>
       </div>
 
       <div className="page-body">
-        {/* Navigational Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, background: 'var(--bg-card)', padding: '12px 24px', borderRadius: 12, border: '1px solid var(--border)' }}>
-           <div style={{ display: 'flex', gap: 12 }}>
-             <button className="btn btn-secondary" onClick={() => moveWeek(-1)}>← Semana Anterior</button>
-             <button className="btn btn-secondary" onClick={() => setBaseDate(new Date())}>Hoje</button>
-             <button className="btn btn-secondary" onClick={() => moveWeek(1)}>Próxima Semana →</button>
-           </div>
-           
-           <div style={{ fontWeight: 800, fontSize: 16 }}>
-             Mês Vigente: <span style={{ color: 'var(--accent)' }}>{['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][currentWeekInfo[0].raw.getMonth()]} de {currentWeekInfo[0].raw.getFullYear()}</span>
-           </div>
-        </div>
+        {/* Barra estilo Google Calendar: navegação + título do período + troca Mês/Semana */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+          marginBottom: 18, background: 'var(--bg-card)', padding: '12px 18px', borderRadius: 12, border: '1px solid var(--border-light)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setBaseDate(new Date())}>Hoje</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => mover(-1)} title="Anterior" style={{ padding: '4px 8px' }}><ChevronLeft size={18} /></button>
+            <button className="btn btn-ghost btn-sm" onClick={() => mover(1)} title="Próximo" style={{ padding: '4px 8px' }}><ChevronRight size={18} /></button>
+            <div style={{ fontWeight: 800, fontSize: 17, marginLeft: 4, textTransform: 'capitalize' }}>{tituloTopo}</div>
+          </div>
 
-        {/* Dynamic Kanban Board with Current Dates */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', alignItems: 'start', minHeight: '600px', overflowX: 'auto' }}>
-          {currentWeekInfo.map(dayObj => {
-            const dayTasks = tasks.filter(t => t.dateStr === dayObj.iso).sort((a,b) => String(a.horario || '').localeCompare(String(b.horario || '')));
-            const isToday = new Date().toISOString().split('T')[0] === dayObj.iso;
-
-            return (
-              <div 
-                key={dayObj.iso} 
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const taskId = e.dataTransfer.getData('taskId');
-                  if (!taskId) return;
-                  saveTasks(tasks.map(t => t.id === taskId ? { ...t, dateStr: dayObj.iso } : t));
-                }}
-                style={{ 
-                  background: isToday ? 'rgba(59, 130, 246, 0.03)' : 'var(--bg-body)', 
-                  border: isToday ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  borderRadius: '12px', padding: '16px', minHeight: '500px',
-                  display: 'flex', flexDirection: 'column', gap: '12px'
+          <div style={{ display: 'flex', background: 'var(--bg-card2)', borderRadius: 8, padding: 3 }}>
+            {(['month', 'week'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className="btn btn-sm"
+                style={{
+                  border: 'none', padding: '6px 14px',
+                  background: view === v ? 'var(--bg-card)' : 'transparent',
+                  boxShadow: view === v ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                  fontWeight: view === v ? 700 : 500,
+                  color: view === v ? 'var(--text-primary)' : 'var(--text-muted)',
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '8px', borderBottom: isToday ? '2px solid var(--accent)' : '2px solid var(--border)', paddingBottom: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: isToday ? 'var(--accent)' : 'var(--text-primary)' }}>
-                       {dayObj.name}
-                       {isToday && <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--accent)', color: '#fff', padding: '2px 6px', borderRadius: 10 }}>Hoje</span>}
-                    </h3>
-                    <span className="badge badge-gray" style={{ fontSize: '11px' }}>{dayTasks.length}</span>
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4 }}>{dayObj.brStr} ({dayObj.iso})</div>
+                {v === 'month' ? 'Mês' : 'Semana'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Cabeçalho dos dias da semana */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0, marginBottom: 2 }}>
+          {DIAS_SEMANA.map(d => (
+            <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: 'var(--text-muted)', padding: '4px 0' }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Grade do calendário */}
+        <div
+          className="card"
+          style={{
+            display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+            gridAutoRows: view === 'month' ? 'minmax(104px, 1fr)' : 'minmax(320px, 1fr)',
+            gap: 1, padding: 0, overflow: 'hidden', background: 'var(--border-light)',
+          }}
+        >
+          {dias.map(dia => {
+            const doDia = tasksPorDia.get(dia.iso) || [];
+            const visiveis = doDia.slice(0, view === 'month' ? 3 : 20);
+            const resto = doDia.length - visiveis.length;
+
+            return (
+              <div
+                key={dia.iso}
+                onClick={() => setSelectedDayIso(dia.iso)}
+                style={{
+                  background: 'var(--bg-card)', padding: '6px 6px 8px', cursor: 'pointer',
+                  opacity: view === 'month' && !dia.noMes ? 0.45 : 1,
+                  display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0,
+                  transition: 'background .15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+              >
+                <div style={{ display: 'flex', justifyContent: view === 'month' ? 'flex-end' : 'center' }}>
+                  <span style={{
+                    width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '50%', fontSize: 12.5, fontWeight: dia.isHoje ? 800 : 600,
+                    background: dia.isHoje ? 'var(--accent)' : 'transparent',
+                    color: dia.isHoje ? '#fff' : 'var(--text-primary)',
+                  }}>
+                    {dia.date.getDate()}
+                  </span>
                 </div>
 
-                {dayTasks.length === 0 && <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '20px 0' }}>Livre</div>}
-
-                {dayTasks.map(task => {
-                  const emp = empresas.find(e => e.id === task.empresaId);
-                  const cons = users.find(u => u.id === task.consultorId);
-                  const isGoogle = task.id.startsWith('gcal');
-                  const bg = isGoogle ? '#f0f4ff' : 'var(--bg-card)';
-                  
-                  return (
-                    <div 
-                      key={task.id} draggable onDragStart={(e) => e.dataTransfer.setData('taskId', task.id)}
-                      style={{ 
-                        background: task.completed ? 'var(--bg-body)' : bg, padding: '12px', borderRadius: '8px',
-                        border: '1px solid var(--border-light)', borderLeft: task.completed ? '4px solid var(--green)' : (isGoogle ? '4px solid #3b82f6' : '4px solid var(--accent)'),
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'grab', opacity: task.completed ? 0.6 : 1
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textDecoration: task.completed ? 'line-through' : 'none', lineHeight: 1.3 }}>
-                          <span style={{ color: isGoogle ? '#3b82f6' : 'var(--accent)', marginRight: '6px', fontWeight: 900 }}>{task.horario}</span>
-                          {task.title}
-                        </span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button onClick={() => handleCopyMessage(task, emp, cons, dayObj.brStr)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Copiar Mensagem do Agendamento">📋</button>
-                          <button onClick={() => saveTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✅</button>
-                          <button onClick={() => confirmAsync('Excluir?').then(y => y && saveTasks(tasks.filter(t => t.id !== task.id)))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>
-                        </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
+                  {visiveis.map(t => {
+                    const isGoogle = t.id.startsWith('gcal');
+                    return (
+                      <div
+                        key={t.id}
+                        title={`${t.horario} · ${t.title}`}
+                        style={{
+                          fontSize: 10.5, fontWeight: 600, padding: '2px 6px', borderRadius: 5,
+                          background: isGoogle ? 'rgba(59,130,246,0.12)' : 'rgba(140,26,34,0.1)',
+                          color: isGoogle ? '#2563eb' : 'var(--accent)',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          textDecoration: t.completed ? 'line-through' : 'none',
+                          opacity: t.completed ? 0.55 : 1,
+                        }}
+                      >
+                        {t.horario} {t.title}
                       </div>
-                      
-                      {emp && <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.02)', padding: 4, borderRadius: 4 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
-                      {!isGoogle && <div style={{ background: 'var(--bg-body)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 600, color: 'var(--text-muted)', display: 'inline-block' }}>👤 {cons?.name || 'Desconhecido'}</div>}
-                      {isGoogle && <div style={{ fontSize: '10px', color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>🌐 Google Calendar Auto-Sync</div>}
+                    );
+                  })}
+                  {resto > 0 && (
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px' }}>
+                      +{resto} mais
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
+      {/* Painel do dia — lista completa + adicionar, ao clicar numa célula */}
+      {diaSelecionado && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+          onClick={() => setSelectedDayIso(null)}
+        >
+          <div
+            className="card"
+            style={{ width: 380, maxWidth: '92vw', height: '100vh', borderRadius: 0, overflowY: 'auto', padding: 0 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderBottom: '1px solid var(--border-light)' }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  {DIAS_SEMANA[diaSelecionado.date.getDay()]}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>
+                  {diaSelecionado.date.getDate()} de {MESES[diaSelecionado.date.getMonth()]}
+                </div>
+              </div>
+              <button onClick={() => setSelectedDayIso(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 16 }}>
+              <button className="btn btn-primary btn-sm" style={{ width: '100%', marginBottom: 16 }} onClick={() => abrirNovo(diaSelecionado.iso)}>
+                <Plus size={14} style={{ marginRight: 4, verticalAlign: -2 }} /> Novo compromisso neste dia
+              </button>
+
+              {tarefasDoDiaSelecionado.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                  Nenhum compromisso neste dia.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {tarefasDoDiaSelecionado.map(task => {
+                  const emp = empresas.find(e => e.id === task.empresaId);
+                  const cons = users.find(u => u.id === task.consultorId);
+                  const isGoogle = task.id.startsWith('gcal');
+                  return (
+                    <div key={task.id} style={{
+                      padding: 12, borderRadius: 10, border: '1px solid var(--border-light)',
+                      borderLeft: `4px solid ${isGoogle ? '#3b82f6' : 'var(--accent)'}`,
+                      opacity: task.completed ? 0.6 : 1,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.completed ? 'line-through' : 'none' }}>
+                          <span style={{ color: isGoogle ? '#3b82f6' : 'var(--accent)', marginRight: 6 }}>{task.horario}</span>
+                          {task.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button title="Copiar mensagem" onClick={() => handleCopyMessage(task, `${diaSelecionado.date.getDate()}/${pad2(diaSelecionado.date.getMonth() + 1)}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <Copy size={14} />
+                          </button>
+                          <button title={task.completed ? 'Marcar como pendente' : 'Marcar como concluído'} onClick={() => handleToggleComplete(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: task.completed ? 'var(--green)' : 'var(--text-muted)' }}>
+                            <Check size={14} />
+                          </button>
+                          <button title="Excluir" onClick={() => handleDelete(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      {emp && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
+                      {!isGoogle && cons && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>👤 {cons.name}</div>}
+                      {isGoogle && <div style={{ fontSize: 10.5, color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>🌐 Google Calendar</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de criação */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: '450px', background: 'var(--bg-card)', padding: '24px', position: 'relative' }}>
-            <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
-            <h3 style={{ fontSize: 18, marginBottom: 20 }}>Novo Agendamento Estratégico</h3>
-            
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(4px)' }}>
+          <div className="card" style={{ width: 440, maxWidth: '92vw', padding: 24, position: 'relative' }}>
+            <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <h3 style={{ fontSize: 18, marginBottom: 20 }}>Novo compromisso</h3>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Título da Ação</label>
-                <input type="text" className="form-control" placeholder="Dashboard Report DRE" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} autoFocus/>
+                <label className="form-label" style={{ fontWeight: 600 }}>Título</label>
+                <input type="text" className="form-control" placeholder="Reunião de fechamento mensal" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} autoFocus />
               </div>
 
               <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Empresa Audita (Opcional)</label>
-                <select className="form-control" value={newTask.empresaId} onChange={e => setNewTask({...newTask, empresaId: e.target.value})}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Empresa (opcional)</label>
+                <select className="form-control" value={newTask.empresaId} onChange={e => setNewTask({ ...newTask, empresaId: e.target.value })}>
                   <option value="">Selecione...</option>
                   {empresas.map(e => <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>)}
                 </select>
               </div>
 
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Consultor responsável (opcional)</label>
+                <select className="form-control" value={newTask.consultorId} onChange={e => setNewTask({ ...newTask, consultorId: e.target.value })}>
+                  <option value="">Selecione...</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Data Específica</label>
-                  <input type="date" className="form-control" value={newTask.dateStr} onChange={e => setNewTask({...newTask, dateStr: e.target.value})}/>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Data</label>
+                  <input type="date" className="form-control" value={newTask.dateStr} onChange={e => setNewTask({ ...newTask, dateStr: e.target.value })} />
                 </div>
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>Horário</label>
-                  <input type="time" className="form-control" value={newTask.horario} onChange={e => setNewTask({...newTask, horario: e.target.value})}/>
+                  <input type="time" className="form-control" value={newTask.horario} onChange={e => setNewTask({ ...newTask, horario: e.target.value })} />
                 </div>
               </div>
 
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={handleSaveTask}>💾 Criar Registro</button>
+                <button className="btn btn-primary" onClick={handleSaveTask}>Salvar</button>
               </div>
             </div>
           </div>
