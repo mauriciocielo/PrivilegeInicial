@@ -46,6 +46,7 @@ const AVAILABLE_CLIENT_SCREENS = [
   { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
   { label: '📝 Lançamentos', route: '/cliente/lancamentos' },
   { label: '📂 Importar OFX', route: '/cliente/importar-ofx' },
+  { label: '🏦 Contas via ERP', route: '/cliente/contas-erp' },
   { label: '📈 Relatórios', route: '/cliente/relatorios' },
   { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
   { label: '📋 Políticas Financeiras', route: '/cliente/politicas' },

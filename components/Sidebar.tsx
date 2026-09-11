@@ -131,6 +131,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
       { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },
       { label: 'Importar OFX', href: '/cliente/importar-ofx', icon: FolderInput },
+      { label: 'Contas via ERP', href: '/cliente/contas-erp', icon: Landmark },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: FileText },
       { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: ClipboardList },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
