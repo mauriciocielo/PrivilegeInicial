@@ -148,6 +148,22 @@ export default function ConsultorContasErpPage() {
       </div>
 
       <div className="page-body">
+        <div style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20, padding: '12px 16px',
+          background: 'var(--blue-bg, rgba(59,130,246,0.08))', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8,
+        }}>
+          <span style={{ fontSize: 16 }}>💡</span>
+          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Para o dia a dia (dar baixa, conciliar com o extrato bancário), use as telas normais de{' '}
+            <a href="/consultor/contas-receber" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contas a Receber</a>
+            {' '}e <a href="/consultor/contas-pagar" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contas a Pagar</a> — todo
+            título com o selo <span className="badge badge-blue" style={{ fontSize: 9.5 }}>🔌 API</span> veio daqui automaticamente
+            (se a empresa tiver plano de conta/portador padrão configurados em Empresas → Integração via API).
+            Esta tela é o livro-razão exato como o ERP vê — útil para conferência e para dar baixa quando o
+            webhook de pagamento não chegar.
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 10 }}>
           <button className={`btn ${aba === 'receber' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => { setAba('receber'); setBaixando(null); }}>
             ↑ A Receber

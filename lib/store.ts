@@ -369,7 +369,7 @@ export interface Lancamento {
   status: 'previsto' | 'realizado';
   numeroDocumento?: string;
   observacao?: string;
-  origem: 'manual' | 'ofx';
+  origem: 'manual' | 'ofx' | 'api';
   ofxId?: string;
   unidadeId?: string;
   clienteId?: string; // Vincula ao Cliente/Fornecedor cadastrado
@@ -379,6 +379,9 @@ export interface Lancamento {
   attachmentName?: string;
   attachmentData?: string; // Conteúdo em Base64
   conferido?: boolean; // Conciliação manual (OFX/extrato)
+  /** Espelho de um título lançado via API v1 (CP/CR) — ver lib/lancamento-espelho-api.ts. Somente leitura pelo portal. */
+  contaReceberId?: string;
+  contaPagarId?: string;
 }
 
 export interface Cliente {

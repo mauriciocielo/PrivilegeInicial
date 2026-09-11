@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { store, Empresa } from '../../../lib/store';
+import { store, Empresa, PlanoConta, Portador } from '../../../lib/store';
 import { uid } from '../../../lib/store';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
@@ -134,6 +134,50 @@ export default function EmpresasPage() {
   const [nomeNovaChave, setNomeNovaChave] = useState('');
   const [gerandoChave, setGerandoChave] = useState(false);
 
+  // Plano de conta/portador padrão para o lançamento-espelho de títulos
+  // vindos da API v1 — sem isso, o título fica só no livro-razão imutável e
+  // não aparece em Contas a Receber/Pagar.
+  const [planosDaEmpresa, setPlanosDaEmpresa] = useState<PlanoConta[]>([]);
+  const [portadoresDaEmpresa, setPortadoresDaEmpresa] = useState<Portador[]>([]);
+  const [planoContaPadraoId, setPlanoContaPadraoId] = useState('');
+  const [portadorPadraoId, setPortadorPadraoId] = useState('');
+  const [carregandoConfigLancamento, setCarregandoConfigLancamento] = useState(false);
+  const [salvandoConfigLancamento, setSalvandoConfigLancamento] = useState(false);
+
+  const carregarConfigLancamentoApi = async (empresaId: string) => {
+    setPlanosDaEmpresa(store.getPlanoContas(empresaId).filter(p => p.nivel === 3 && p.ativo));
+    setPortadoresDaEmpresa(store.getPortadores(empresaId).filter(p => p.ativo));
+    setCarregandoConfigLancamento(true);
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/config-lancamento-api`);
+      const json = await res.json();
+      if (res.ok) {
+        setPlanoContaPadraoId(json.planoContaId || '');
+        setPortadorPadraoId(json.portadorId || '');
+      }
+    } catch { /* silencioso — os selects ficam vazios se falhar */ }
+    finally { setCarregandoConfigLancamento(false); }
+  };
+
+  const salvarConfigLancamentoApi = async () => {
+    if (!edit) return;
+    setSalvandoConfigLancamento(true);
+    try {
+      const res = await fetch(`/api/empresas/${edit.id}/config-lancamento-api`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planoContaId: planoContaPadraoId || null, portadorId: portadorPadraoId || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error || 'Erro ao salvar.'); return; }
+      toast.success('Configuração salva — próximos títulos da API já aparecem em Contas a Receber/Pagar.');
+    } catch {
+      toast.error('Erro de conexão ao salvar.');
+    } finally {
+      setSalvandoConfigLancamento(false);
+    }
+  };
+
   const carregarApiKeys = async (empresaId: string) => {
     setLoadingApiKeys(true);
     try {
@@ -185,6 +229,7 @@ export default function EmpresasPage() {
     setNovoTokenGerado(null);
     setNomeNovaChave('');
     carregarApiKeys(e.id);
+    carregarConfigLancamentoApi(e.id);
     setShowModal(true);
   };
 
@@ -662,6 +707,46 @@ ${result.portadoresAdded} portadores criados`);
                     O ERP desta empresa usa essas chaves para lançar sacados e contas a pagar/receber
                     direto no sistema. Documentação dos endpoints (POST /api/v1/sacados,
                     /api/v1/contas-receber, /api/v1/contas-pagar) disponível com o time técnico.
+                  </div>
+
+                  <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border-light)' }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>
+                      Destino dos títulos no fluxo clássico
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.6 }}>
+                      Todo título lançado pela API também aparece em Contas a Receber/Pagar,
+                      pronto para dar baixa manual ou conciliar via Importar OFX — igual a um
+                      lançamento normal. Para isso, informe o plano de conta e o portador padrão
+                      que serão usados nesses lançamentos.
+                    </div>
+                    {carregandoConfigLancamento ? (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Carregando...</div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <label className="form-label" style={{ fontSize: 11 }}>Plano de conta padrão</label>
+                          <select className="form-control form-control-sm" value={planoContaPadraoId} onChange={e => setPlanoContaPadraoId(e.target.value)}>
+                            <option value="">— selecione —</option>
+                            {planosDaEmpresa.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <label className="form-label" style={{ fontSize: 11 }}>Portador padrão</label>
+                          <select className="form-control form-control-sm" value={portadorPadraoId} onChange={e => setPortadorPadraoId(e.target.value)}>
+                            <option value="">— selecione —</option>
+                            {portadoresDaEmpresa.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                          </select>
+                        </div>
+                        <button type="button" className="btn btn-secondary btn-sm" disabled={salvandoConfigLancamento} onClick={salvarConfigLancamentoApi}>
+                          {salvandoConfigLancamento ? 'Salvando...' : 'Salvar'}
+                        </button>
+                      </div>
+                    )}
+                    {!carregandoConfigLancamento && (!planoContaPadraoId || !portadorPadraoId) && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--yellow)' }}>
+                        ⚠️ Sem os dois configurados, os títulos da API ficam só na tela "Contas via ERP" (não aparecem em Contas a Receber/Pagar).
+                      </div>
+                    )}
                   </div>
 
                   {novoTokenGerado && (

@@ -5,6 +5,7 @@ import { validarPayloadContaFinanceira } from '../../../../lib/api-v1-validation
 import { registrarAuditoriaApi } from '../../../../lib/api-v1-audit';
 import { checkRateLimit } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
+import { criarLancamentoEspelho } from '../../../../lib/lancamento-espelho-api';
 
 /**
  * POST /api/v1/contas-receber — lança um título a receber vindo do ERP do
@@ -74,10 +75,20 @@ export async function POST(request: Request) {
       },
     });
 
+    const espelho = await criarLancamentoEspelho(db, {
+      empresaId, tipo: 'receita', clienteId: corpo.sacadoId,
+      valor: valorLiquido!, data: conta.dataVencimento,
+      descricao: corpo.descricao || `Título ${corpo.numeroDocumento || conta.id}`,
+      numeroDocumento: corpo.numeroDocumento || null,
+      planoContaIdSugerido: corpo.planoContaId || null,
+      contaReceberId: conta.id,
+    });
+
     status = 201;
     return NextResponse.json({
       id: conta.id, status: conta.status, valorLiquido: conta.valorLiquido,
       dataVencimento: conta.dataVencimento,
+      ...(espelho.criado ? {} : { avisoConfiguracao: espelho.motivo }),
     }, { status });
   } catch (error) {
     console.error('Erro em POST /api/v1/contas-receber:', error);

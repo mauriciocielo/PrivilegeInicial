@@ -388,7 +388,10 @@ export default function ContasReceberPage() {
                         {fmt.date(l.data)}
                       </td>
                       <td style={{ fontWeight: 500, maxWidth: 220 }}>
-                        <div>{l.descricao}</div>
+                        <div>
+                          {l.descricao}
+                          {l.origem === 'api' && <span title="Lançado automaticamente via integração de API" className="badge badge-blue" style={{ marginLeft: 6, fontSize: 9.5 }}>🔌 API</span>}
+                        </div>
                         {l.clienteId && (() => { const c = clientes.find(x => x.id === l.clienteId); return c ? <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2, fontWeight: 600 }}>👤 {c.nomeFantasia || c.nome}</div> : null; })()}
                         {l.observacao && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{l.observacao}</div>}
                       </td>

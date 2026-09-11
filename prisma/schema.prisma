@@ -349,6 +349,14 @@ model Lancamento {
   // Vínculo com Ordem de Serviço — integração "OS Oficina" de outra sessão.
   osNumero        String?
   osParcela       Int?
+  // Espelho de um título lançado via API v1 (contas a pagar/receber) — quando
+  // preenchido, este lançamento "previsto" é o reflexo, no fluxo clássico
+  // (Contas a Receber/Pagar, baixa manual, conciliação OFX), de uma linha do
+  // livro-razão imutável ContaReceber/ContaPagar. Ao marcar este lançamento
+  // como "realizado" (baixa manual ou reconciliação bancária), o sistema dá
+  // baixa automaticamente na conta correspondente — ver app/api/lancamentos.
+  contaReceberId  String?
+  contaPagarId    String?
   cliente         Cliente?   @relation(fields: [clienteId], references: [id])
   empresa         Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   planoConta      PlanoConta @relation(fields: [planoContaId], references: [id])

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '../../../../../lib/prisma';
 import { requireAuth } from '../../../../../lib/api-auth';
 import { registrarBaixaContaFinanceira } from '../../../../../lib/contas-financeiras-baixa';
+import { sincronizarLancamentoEspelhoNaBaixa } from '../../../../../lib/lancamento-espelho-api';
 import { dispararWebhook } from '../../../../../lib/webhook-dispatch';
 import { captureError } from '../../../../../lib/sentry-helper';
 
@@ -41,6 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!r.ok) return NextResponse.json({ error: r.error, ...(r.detalhes ? { detalhes: r.detalhes } : {}) }, { status: r.status });
 
     if (r.liquidandoAgora) {
+      await sincronizarLancamentoEspelhoNaBaixa(db, tipo, id);
       dispararWebhook(contaExistente.empresaId, tipo === 'receber' ? 'conta_receber.liquidada' : 'conta_pagar.liquidada', {
         [tipo === 'receber' ? 'contaReceberId' : 'contaPagarId']: id,
         [tipo === 'receber' ? 'sacadoId' : 'fornecedorId']: r.sacadoOuFornecedorId,

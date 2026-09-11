@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '../../../../../../lib/prisma';
 import { requireApiKey } from '../../../../../../lib/api-v1-auth';
 import { registrarBaixaContaFinanceira } from '../../../../../../lib/contas-financeiras-baixa';
+import { sincronizarLancamentoEspelhoNaBaixa } from '../../../../../../lib/lancamento-espelho-api';
 import { registrarAuditoriaApi } from '../../../../../../lib/api-v1-audit';
 import { dispararWebhook } from '../../../../../../lib/webhook-dispatch';
 import { captureError } from '../../../../../../lib/sentry-helper';
@@ -27,6 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!r.ok) return NextResponse.json({ error: r.error, ...(r.detalhes ? { detalhes: r.detalhes } : {}) }, { status });
 
     if (r.liquidandoAgora) {
+      await sincronizarLancamentoEspelhoNaBaixa(db, 'pagar', id);
       dispararWebhook(empresaId, 'conta_pagar.liquidada', {
         contaPagarId: id, fornecedorId: r.sacadoOuFornecedorId, valorLiquido: r.valorLiquido,
         liquidadoEm: r.conciliadoEm,

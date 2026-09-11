@@ -3,6 +3,8 @@ import db from '../../../lib/prisma';
 import { Lancamento } from '../../../lib/store';
 import { captureError } from '../../../lib/sentry-helper';
 import { requireAuth } from '../../../lib/api-auth';
+import { registrarBaixaContaFinanceira } from '../../../lib/contas-financeiras-baixa';
+import { dispararWebhook } from '../../../lib/webhook-dispatch';
 
 export async function GET(request: Request) {
   const auth = requireAuth(request);
@@ -48,6 +50,8 @@ export async function GET(request: Request) {
                 attachmentName: true,
                 conferido: true,
                 createdAt: true,
+                contaReceberId: true,
+                contaPagarId: true,
             },
             orderBy: [
                 { data: 'desc' },
@@ -163,6 +167,34 @@ export async function POST(request: Request) {
                     conferido: Boolean(l.conferido),
                 }
             });
+
+            // Espelho de um título da API v1 (ver lib/lancamento-espelho-api.ts):
+            // quando o consultor dá baixa manual OU o Importar OFX concilia este
+            // lançamento (os dois caminhos passam por aqui), devolve a baixa para
+            // o livro-razão imutável ContaReceber/ContaPagar automaticamente —
+            // é assim que "dar baixa e conciliação bancária" fecham o título
+            // vindo do ERP sem o consultor precisar saber que ele veio da API.
+            const contaId = existing?.contaReceberId || existing?.contaPagarId;
+            const tipoConta: 'receber' | 'pagar' | null = existing?.contaReceberId ? 'receber' : existing?.contaPagarId ? 'pagar' : null;
+            if (contaId && tipoConta && existing?.status !== 'realizado' && l.status === 'realizado') {
+                const r = await registrarBaixaContaFinanceira(db, tipoConta, contaId, l.empresaId, {
+                    valor: l.valor,
+                    data: l.data,
+                    formaPagamento: l.origem === 'ofx' ? 'Conciliação bancária (OFX)' : 'Baixa manual (portal)',
+                    observacao: `Lançamento ${l.id}`,
+                });
+                if (r.ok && r.liquidandoAgora) {
+                    dispararWebhook(l.empresaId, tipoConta === 'receber' ? 'conta_receber.liquidada' : 'conta_pagar.liquidada', {
+                        [tipoConta === 'receber' ? 'contaReceberId' : 'contaPagarId']: contaId,
+                        valorLiquido: r.valorLiquido,
+                        liquidadoEm: r.conciliadoEm,
+                    }).catch(() => {});
+                }
+                // Falha na baixa não impede salvar o lançamento — o consultor já vê
+                // o "realizado" na tela; a divergência com o livro-razão fica só no
+                // console/Sentry para investigação, não trava o fluxo do dia a dia.
+                if (!r.ok) console.error(`Falha ao espelhar baixa do lançamento ${l.id} na conta ${tipoConta} ${contaId}:`, r.error);
+            }
 
             if ((global as any).io) {
                 if (!existing) {

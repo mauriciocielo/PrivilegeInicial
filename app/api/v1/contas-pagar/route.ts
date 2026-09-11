@@ -5,6 +5,7 @@ import { validarPayloadContaFinanceira } from '../../../../lib/api-v1-validation
 import { registrarAuditoriaApi } from '../../../../lib/api-v1-audit';
 import { checkRateLimit } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
+import { criarLancamentoEspelho } from '../../../../lib/lancamento-espelho-api';
 
 /** POST /api/v1/contas-pagar — espelho de contas-receber, do lado do fornecedor. */
 export async function POST(request: Request) {
@@ -72,9 +73,19 @@ export async function POST(request: Request) {
       },
     });
 
+    const espelho = await criarLancamentoEspelho(db, {
+      empresaId, tipo: 'despesa', clienteId: corpo.fornecedorId,
+      valor: valorLiquido!, data: conta.dataVencimento,
+      descricao: corpo.descricao || `Título ${corpo.numeroDocumento || conta.id}`,
+      numeroDocumento: corpo.numeroDocumento || null,
+      planoContaIdSugerido: corpo.planoContaId || null,
+      contaPagarId: conta.id,
+    });
+
     status = 201;
     return NextResponse.json({
       id: conta.id, status: conta.status, valorLiquido: conta.valorLiquido, dataVencimento: conta.dataVencimento,
+      ...(espelho.criado ? {} : { avisoConfiguracao: espelho.motivo }),
     }, { status });
   } catch (error) {
     console.error('Erro em POST /api/v1/contas-pagar:', error);
