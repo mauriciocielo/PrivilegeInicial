@@ -233,7 +233,11 @@ export interface AgendaTask {
   completed?: boolean;
   recurrent?: boolean;
   location?: string;
+  clienteParticipante?: string;
+  consultoresIds?: string[];
+  googleEventId?: string;
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 /** Política financeira global do escritório, compartilhada com os clientes. */

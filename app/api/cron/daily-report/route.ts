@@ -162,11 +162,55 @@ export async function GET(request: Request) {
                 </td>
               </tr>
             </table>
-          </div>
+
+            <!-- Bloco de Agenda -->
         `;
 
-        // Formatação em texto para o WhatsApp
-        whatsappTextBody += `🏢 *${emp.nomeFantasia || emp.razaoSocial}*\n`;
+        // Buscar agendamentos na Agenda
+        let dataIniAgenda = today;
+        let dataFimAgenda = today;
+        const diaDaSemana = new Date(new Date().getTime() - 3 * 3600 * 1000).getDay();
+        const isDomingo = diaDaSemana === 0;
+
+        if (isDomingo) {
+          // Próximos 7 dias
+          const fim = new Date(new Date().getTime() - 3 * 3600 * 1000);
+          fim.setDate(fim.getDate() + 6);
+          dataFimAgenda = fim.toISOString().split('T')[0];
+        }
+
+        const agendasArray = await db.agendaTask.findMany({
+          where: {
+            empresaId: emp.id,
+            dateStr: { gte: dataIniAgenda, lte: dataFimAgenda },
+            completed: false
+          },
+          orderBy: [
+            { dateStr: 'asc' },
+            { horario: 'asc' }
+          ]
+        });
+
+        if (agendasArray.length > 0) {
+           emailHtmlBody += `
+             <div style="margin-top: 16px; padding: 12px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px;">
+               <h4 style="margin: 0 0 10px 0; color: #1e3a8a; font-size: 13px;">📅 Agendamentos da ${isDomingo ? 'Semana' : 'Data'}</h4>
+               <ul style="margin: 0; padding-left: 20px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+                 ${agendasArray.map(a => `<li style="margin-bottom: 6px;"><strong>${a.dateStr.split('-').reverse().slice(0,2).join('/')} às ${a.horario}</strong>: ${a.title} ${a.clienteParticipante ? `(👤 ${a.clienteParticipante})` : ''} ${a.location ? `(📍 ${a.location})` : ''}</li>`).join('')}
+               </ul>
+             </div>
+           `;
+           whatsappTextBody += `📅 *Agenda da ${isDomingo ? 'Semana' : 'Data'}:*\n`;
+           agendasArray.forEach(a => {
+             whatsappTextBody += `• ${a.dateStr.split('-').reverse().slice(0,2).join('/')} às ${a.horario} - ${a.title} ${a.clienteParticipante ? `(👤 ${a.clienteParticipante})` : ''}\n`;
+           });
+        }
+
+        emailHtmlBody += `</div>`;
+        
+        // Formataçao em texto resumida
+
+
         whatsappTextBody += `• Saldo em Caixa: *R$ ${saldoConsolidatedString(saldoConsolidado)}*\n`;
         whatsappTextBody += `• Receitas Realizadas: R$ ${receitasHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
         whatsappTextBody += `• Despesas Realizadas: R$ ${despesasHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
@@ -195,8 +239,11 @@ export async function GET(request: Request) {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                  <h2 style="color: #1e3a8a; text-transform: uppercase; margin: 0;">Privilege</h2>
-                  <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0 0;">Relatório Consolidado Diário — ${today.split('-').reverse().join('/')}</p>
+                  <h2 style="color: #1e3a8a; text-transform: uppercase; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
+                    <img src="https://privilegecontabilidade.com.br/wp-content/uploads/2023/10/cropped-logo-privilege2-3.png" alt="Privilege Logo" style="height: 30px; object-fit: contain; vertical-align: middle;" onerror="this.style.display='none'" />
+                    PRIVILEGE
+                  </h2>
+                  <p style="color: #6b7280; font-size: 12px; margin: 6px 0 0 0;">Relatório e Agendamentos — ${today.split('-').reverse().join('/')}</p>
                 </div>
                 <p>Olá, <strong>${user.name}</strong>,</p>
                 <p>Aqui está o fechamento financeiro do dia das suas empresas acompanhadas:</p>

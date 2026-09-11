@@ -508,10 +508,14 @@ model AgendaTask {
   title       String
   empresaId   String
   consultorId String
-  horario     String
-  day         String
-  completed   Boolean  @default(false)
-  recurrent   Boolean  @default(false)
+  horario             String
+  dateStr             String   @default("")
+  completed           Boolean  @default(false)
+  recurrent           Boolean  @default(false)
+  clienteParticipante String?
+  consultoresIds      String[]
+  googleEventId       String?
+  location            String?
   createdAt   DateTime @default(now())
 
   @@index([empresaId])

@@ -324,9 +324,13 @@ async function migrateAgendaTasks(tasks: any[]) {
           empresaId: empresaId,
           consultorId: String(t.consultorId || ''),
           horario: String(t.horario || ''),
-          day: String(t.day || ''),
+          dateStr: String(t.dateStr || ''),
           completed: Boolean(t.completed),
           recurrent: Boolean(t.recurrent),
+          clienteParticipante: t.clienteParticipante ? String(t.clienteParticipante) : null,
+          consultoresIds: Array.isArray(t.consultoresIds) ? t.consultoresIds : [],
+          googleEventId: t.googleEventId ? String(t.googleEventId) : null,
+          location: t.location ? String(t.location) : null,
         },
         create: {
           id: String(t.id),
@@ -334,9 +338,13 @@ async function migrateAgendaTasks(tasks: any[]) {
           empresaId: empresaId,
           consultorId: String(t.consultorId || ''),
           horario: String(t.horario || ''),
-          day: String(t.day || ''),
+          dateStr: String(t.dateStr || ''),
           completed: Boolean(t.completed),
           recurrent: Boolean(t.recurrent),
+          clienteParticipante: t.clienteParticipante ? String(t.clienteParticipante) : null,
+          consultoresIds: Array.isArray(t.consultoresIds) ? t.consultoresIds : [],
+          googleEventId: t.googleEventId ? String(t.googleEventId) : null,
+          location: t.location ? String(t.location) : null,
         }
       });
     } catch (err) {
