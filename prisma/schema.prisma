@@ -7,84 +7,96 @@ datasource db {
 }
 
 model User {
-  id                    String   @id @default(uuid())
-  name                  String
-  email                 String   @unique
-  password              String
-  role                  String
-  empresaIds            String[]
-  avatarData            String?
-  receberEmailDiario    Boolean  @default(false)
-  allowedRoutes         String[]
-  createdAt             DateTime @default(now())
-  phone                 String?
-  twoFactorEnabled      Boolean  @default(false)
-  twoFactorSecret       String?
-  twoFactorBackupCodes  String[]
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String   @unique
+  password             String
+  role                 String
+  empresaIds           String[]
+  avatarData           String?
+  receberEmailDiario   Boolean  @default(false)
+  allowedRoutes        String[]
+  createdAt            DateTime @default(now())
+  phone                String?
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[]
 }
 
 model Empresa {
-  id                    String               @id @default(uuid())
-  razaoSocial           String
-  nomeFantasia          String
-  cnpj                  String               @unique
-  responsavel           String
-  email                 String
-  telefone              String
-  atividade             String?
-  tipo                  String               @default("empresa")
-  taxaMensalPadrao      Float?
-  fundoReservaPct       Float?
-  dataInicioContrato    String?
-  grupoEconomico        String?
-  receitaMensalEstimada Float?
-  comprasMensalEstimada Float?
-  logoData              String?
-  bancoBoleto           String               @default("nenhum")
-  politicaReceberName   String?
-  politicaReceberData   String?
-  politicaComprasName   String?
-  politicaComprasData   String?
-  politicaCobrancaName   String?
-  politicaCobrancaData   String?
-  createdAt             DateTime             @default(now())
-  allowedRoutes         String[]
+  id                         String               @id @default(uuid())
+  razaoSocial                String
+  nomeFantasia               String
+  cnpj                       String               @unique
+  responsavel                String
+  email                      String
+  telefone                   String
+  atividade                  String?
+  tipo                       String               @default("empresa")
+  taxaMensalPadrao           Float?
+  fundoReservaPct            Float?
+  dataInicioContrato         String?
+  grupoEconomico             String?
+  receitaMensalEstimada      Float?
+  comprasMensalEstimada      Float?
+  logoData                   String?
+  bancoBoleto                String               @default("nenhum")
+  politicaReceberName        String?
+  politicaReceberData        String?
+  politicaComprasName        String?
+  politicaComprasData        String?
+  politicaCobrancaName       String?
+  politicaCobrancaData       String?
+  createdAt                  DateTime             @default(now())
+  allowedRoutes              String[]
   // Endereço — exigido na qualificação das partes do contrato de prestação
   // de serviços, que antes era digitado manualmente a cada emissão.
-  endereco              String?
-  cep                   String?
-  cidade                String?
-  uf                    String?
+  endereco                   String?
+  cep                        String?
+  cidade                     String?
+  uf                         String?
   // Termos comerciais do contrato, cadastrados uma vez e reaproveitados na
   // emissão do documento.
-  contratoValorTotal        Float?
-  contratoValorEntrada      Float?
-  contratoParcelas          Int?
-  contratoDiaVencimento     Int?
+  contratoValorTotal         Float?
+  contratoValorEntrada       Float?
+  contratoParcelas           Int?
+  contratoDiaVencimento      Int?
   contratoPrimeiroVencimento String?
-  contratoInicioServicos    String?
-  contratoDuracaoMeses      Int?
-  contratoHorasSemanais     Int?
+  contratoInicioServicos     String?
+  contratoDuracaoMeses       Int?
+  contratoHorasSemanais      Int?
   // Descricao dos servicos do Anexo I, editavel por cliente.
-  contratoServicos          String?
-  atas                  AtaAtendimento[]
-  clientes              Cliente[]
-  endividamentos        Endividamento[]
-  indicadores           IndicadorMensal[]
-  lancamentos           Lancamento[]
-  nfsList               NfsE[]
-  orcamentos            OrcamentoMensal[]
-  planoContas           PlanoConta[]
-  portadores            Portador[]
-  situacoesFiscais      SituacaoFiscal[]
-  patterns              TransactionPattern[]
-  unidades              Unidade[]
-  contasBalanco         ContaBalanco[]
-  balancosPatrimoniais  BalancoPatrimonial[]
-  diagnosticos360       Diagnostico360[]
-  imobilizados          Imobilizado[]
-  curvaAbcConfig        CurvaAbcConfig?
-  curvasAbc             CurvaAbc[]
+  contratoServicos           String?
+  // Regime tributário — usado na qualificação da API de CP/CR (relatórios
+  // fiscais dependem dele) e não existia em nenhum campo do cadastro.
+  regimeTributario           String?
+  contasReceber              ContaReceber[]
+  contasPagar                ContaPagar[]
+  // Campos abaixo (os*) e a relação ApiKey pertencem à integração "OS Oficina"
+  // de outra sessão, já aplicados ao banco — preservados tal como estão lá.
+  osPlanoContaPadraoId       String?
+  osPortadorPadraoId         String?
+  osWebhookUrl               String?
+  osWebhookSecret            String?
+  apiKeys                    ApiKey[]
+  atas                       AtaAtendimento[]
+  clientes                   Cliente[]
+  endividamentos             Endividamento[]
+  indicadores                IndicadorMensal[]
+  lancamentos                Lancamento[]
+  nfsList                    NfsE[]
+  orcamentos                 OrcamentoMensal[]
+  planoContas                PlanoConta[]
+  portadores                 Portador[]
+  situacoesFiscais           SituacaoFiscal[]
+  patterns                   TransactionPattern[]
+  unidades                   Unidade[]
+  contasBalanco              ContaBalanco[]
+  balancosPatrimoniais       BalancoPatrimonial[]
+  diagnosticos360            Diagnostico360[]
+  imobilizados               Imobilizado[]
+  curvaAbcConfig             CurvaAbcConfig?
+  curvasAbc                  CurvaAbc[]
 }
 
 model Unidade {
@@ -137,7 +149,7 @@ model Portador {
 }
 
 model Endividamento {
-  id                String                   @id @default(uuid())
+  id                String                        @id @default(uuid())
   empresaId         String
   tipo              String
   banco             String
@@ -153,7 +165,7 @@ model Endividamento {
   valorAPagar       Float
   garantia          String
   pagamentoMes      Int
-  empresa           Empresa                  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa           Empresa                       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   pagamentos        PagamentoEndividamento[]
   historicoSaldos   HistoricoSaldoEndividamento[]
 }
@@ -223,8 +235,8 @@ model OrcamentoValor {
 model ContaBalanco {
   id        String         @id @default(uuid())
   empresaId String
-  grupo     String         // ativo_circulante | ativo_nao_circulante | passivo_circulante | passivo_nao_circulante | patrimonio_liquido
-  subgrupo  String?        // ex: "Imobilizado", "Realizável a Longo Prazo" (subdivisão opcional dentro do grupo)
+  grupo     String // ativo_circulante | ativo_nao_circulante | passivo_circulante | passivo_nao_circulante | patrimonio_liquido
+  subgrupo  String? // ex: "Imobilizado", "Realizável a Longo Prazo" (subdivisão opcional dentro do grupo)
   codigo    String
   descricao String
   ordem     Int            @default(0)
@@ -239,10 +251,10 @@ model ContaBalanco {
 model BalancoPatrimonial {
   id          String         @id @default(uuid())
   empresaId   String
-  competencia String         // YYYY-MM
+  competencia String // YYYY-MM
   observacao  String?
   createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
   empresa     Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   valores     BalancoValor[]
 
@@ -271,7 +283,7 @@ model Diagnostico360 {
   anotacoes   Json
   parecer     String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
   empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
@@ -333,37 +345,44 @@ model Lancamento {
   attachmentData  String?
   conferido       Boolean    @default(false)
   createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+  // Vínculo com Ordem de Serviço — integração "OS Oficina" de outra sessão.
+  osNumero        String?
+  osParcela       Int?
   cliente         Cliente?   @relation(fields: [clienteId], references: [id])
   empresa         Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   planoConta      PlanoConta @relation(fields: [planoContaId], references: [id])
   portador        Portador   @relation(fields: [portadorId], references: [id])
   unidade         Unidade?   @relation(fields: [unidadeId], references: [id])
   nfsList         NfsE[]
+
+  @@unique([empresaId, osNumero, osParcela])
 }
 
 model Cliente {
-  id            String       @id @default(uuid())
-  empresaId     String
-  tipo          String
-  nome          String
-  nomeFantasia  String?
-  cpfCnpj       String
-  email         String?
-  telefone      String?
-  celular       String?
-  endereco      String?
-  cidade        String?
-  estado        String?
-  cep           String?
-  contato       String?
-  observacao    String?
-  limiteCredito Float?
-  ativo         Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  empresa       Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lancamentos   Lancamento[]
-  nfsList       NfsE[]
+  id                        String         @id @default(uuid())
+  empresaId                 String
+  tipo                      String
+  nome                      String
+  nomeFantasia              String?
+  cpfCnpj                   String
+  email                     String?
+  telefone                  String?
+  celular                   String?
+  endereco                  String?
+  cidade                    String?
+  estado                    String?
+  cep                       String?
+  contato                   String?
+  observacao                String?
+  limiteCredito             Float?
+  ativo                     Boolean        @default(true)
+  createdAt                 DateTime       @default(now())
+  empresa                   Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lancamentos               Lancamento[]
+  nfsList                   NfsE[]
+  contasReceberComoSacado   ContaReceber[] @relation("ContasReceberComoSacado")
+  contasPagarComoFornecedor ContaPagar[]   @relation("ContasPagarComoFornecedor")
 }
 
 model NfsE {
@@ -501,7 +520,7 @@ model Imobilizado {
   valorAquisicao  Float
   taxaDepreciacao Float
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   empresa         Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
@@ -511,7 +530,7 @@ model Imobilizado {
 model PoliticaGlobal {
   id        String   @id
   texto     String
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 /// Faturamento e despesas previstos pelo consultor, por competencia.
@@ -523,8 +542,194 @@ model ProjecaoFaturamento {
   faturamento Float
   despesas    Float
   observacao  String?
-  updatedAt   DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@unique([empresaId, competencia])
+  @@index([empresaId])
+}
+
+// ============================================================
+// API v1 — INTEGRAÇÃO COM O ERP DO CLIENTE (CP/CR)
+// ============================================================
+// Livro-razão PRÓPRIO, separado do model Lancamento. O Lancamento é editado
+// livremente em ~20 telas do portal (reclassificado, excluído, corrigido pelo
+// consultor) — não há como impor imutabilidade pós-conciliação nele sem
+// quebrar esses fluxos. Um dado que chega assinado pelo ERP do cliente, via
+// API, precisa da garantia oposta: uma vez conciliado, só se reverte por
+// estorno (lançamento de contrapartida), nunca por edição ou DELETE.
+//
+// Sacado/fornecedor reaproveita o model Cliente já existente (campo `tipo`
+// distingue 'cliente' | 'fornecedor' | 'ambos') — não duplicamos cadastro.
+
+// A credencial de API (ApiKey) já existe no banco — foi criada por outra
+// sessão para a integração "OS Oficina" (id, empresaId, nome, chaveHash,
+// prefixo, ativo, ultimoUsoEm, revokedAt: exatamente o que este módulo
+// precisava). Reaproveitada aqui em vez de duplicar um segundo sistema de
+// chaves; o model ApiKey está declarado mais abaixo, junto dos campos `os*`
+// de Empresa/Lancamento que vieram na mesma migration.
+
+/// Log de auditoria de toda requisição da API v1 que altera dados — obrigação
+/// explícita do escopo, com granularidade diferente do AuditLog interno
+/// (aquele guarda ações do usuário no portal; este guarda o payload bruto e o
+/// IP de cada chamada externa).
+model ApiAuditLog {
+  id         String   @id @default(uuid())
+  empresaId  String?
+  keyId      String?
+  metodo     String
+  endpoint   String
+  ip         String?
+  statusCode Int
+  payload    String?
+  erro       String?
+  criadoEm   DateTime @default(now())
+
+  @@index([empresaId])
+  @@index([criadoEm])
+}
+
+enum StatusContaFinanceira {
+  aberto
+  parcial
+  liquidado
+  cancelado
+}
+
+model ContaReceber {
+  id                 String                @id @default(uuid())
+  empresaId          String
+  sacadoId           String
+  planoContaId       String?
+  numeroDocumento    String?
+  descricao          String?
+  documentoFiscalUrl String?
+  dataEmissao        String
+  dataVencimento     String
+  dataCompetencia    String
+  valorOriginal      Float
+  acrescimos         Float                 @default(0)
+  descontos          Float                 @default(0)
+  valorLiquido       Float
+  status             StatusContaFinanceira @default(aberto)
+  origemApiKeyId     String?
+  conciliadoEm       DateTime?
+  canceladoEm        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now()) @updatedAt
+  empresa            Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  sacado             Cliente               @relation("ContasReceberComoSacado", fields: [sacadoId], references: [id])
+  baixas             ContaReceberBaixa[]
+
+  @@index([empresaId])
+  @@index([sacadoId])
+  @@index([status])
+}
+
+/// Cada baixa é um registro imutável e aditivo (append-only). Uma baixa
+/// incorreta nunca é editada ou apagada — é estornada por outra baixa de
+/// valor negativo com `estornoDeId` apontando para a original.
+model ContaReceberBaixa {
+  id             String       @id @default(uuid())
+  contaReceberId String
+  data           String
+  valor          Float
+  formaPagamento String?
+  observacao     String?
+  estornoDeId    String?
+  createdAt      DateTime     @default(now())
+  contaReceber   ContaReceber @relation(fields: [contaReceberId], references: [id], onDelete: Cascade)
+
+  @@index([contaReceberId])
+}
+
+model ContaPagar {
+  id              String                @id @default(uuid())
+  empresaId       String
+  fornecedorId    String
+  planoContaId    String?
+  centroCustoId   String?
+  numeroDocumento String?
+  descricao       String?
+  dataEmissao     String
+  dataVencimento  String
+  valorOriginal   Float
+  acrescimos      Float                 @default(0)
+  descontos       Float                 @default(0)
+  valorLiquido    Float
+  status          StatusContaFinanceira @default(aberto)
+  origemApiKeyId  String?
+  conciliadoEm    DateTime?
+  canceladoEm     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @default(now()) @updatedAt
+  empresa         Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fornecedor      Cliente               @relation("ContasPagarComoFornecedor", fields: [fornecedorId], references: [id])
+  baixas          ContaPagarBaixa[]
+
+  @@index([empresaId])
+  @@index([fornecedorId])
+  @@index([status])
+}
+
+model ContaPagarBaixa {
+  id             String     @id @default(uuid())
+  contaPagarId   String
+  data           String
+  valor          Float
+  formaPagamento String?
+  observacao     String?
+  estornoDeId    String?
+  createdAt      DateTime   @default(now())
+  contaPagar     ContaPagar @relation(fields: [contaPagarId], references: [id], onDelete: Cascade)
+
+  @@index([contaPagarId])
+}
+
+/// Assinatura de webhook: para onde o BPO notifica o ERP do cliente quando
+/// uma CR é liquidada/conciliada.
+model WebhookSubscription {
+  id        String   @id @default(uuid())
+  empresaId String
+  url       String
+  eventos   String[]
+  segredo   String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([empresaId])
+}
+
+/// Log de entrega — cada tentativa de envio, com o resultado, para permitir
+/// reenvio manual e diagnóstico de integração sem depender do cliente avisar.
+model WebhookDelivery {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  evento         String
+  payload        String
+  statusCode     Int?
+  sucesso        Boolean  @default(false)
+  tentativas     Int      @default(1)
+  criadoEm       DateTime @default(now())
+
+  @@index([subscriptionId])
+}
+
+/// Credencial de API por empresa — criada pela integração "OS Oficina" de
+/// outra sessão, reaproveitada aqui como o único sistema de chaves de API do
+/// produto (evita duas tabelas de credencial fazendo a mesma coisa).
+/// Formato do token exposto ao cliente: "{prefixo}.{secret}" — prefixo é
+/// público e permite localizar a linha em O(1); só o hash do secret é salvo.
+model ApiKey {
+  id          String    @id @default(uuid())
+  empresaId   String
+  nome        String
+  chaveHash   String    @unique
+  prefixo     String
+  ativo       Boolean   @default(true)
+  ultimoUsoEm DateTime?
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
   @@index([empresaId])
 }
