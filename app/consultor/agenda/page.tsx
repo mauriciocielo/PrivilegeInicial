@@ -162,17 +162,22 @@ export default function AgendaPage() {
 
       let exportados = 0;
       const locaisParaExportar = Array.from(map.values()).filter(t => !t.id.startsWith('gcal-') && !(t as any).googleEventId && t.dateStr >= min.toISOString().split('T')[0] && t.dateStr <= max.toISOString().split('T')[0]);
-      
+      const todasEmpresas = store.getEmpresas();
+
       for (const lt of locaisParaExportar) {
         try {
+          const emp = todasEmpresas.find(e => e.id === lt.empresaId);
+          const prefixoEmpresa = emp ? `[${emp.nomeFantasia || emp.razaoSocial}] ` : '';
+          const enderecoEmpresa = emp ? [emp.endereco, emp.cidade, emp.uf].filter(Boolean).join(', ') : '';
+
           // Extraindo HH e MM para gerar o fim (1 hora depois por default)
           const hh = parseInt(lt.horario.split(':')[0]) || 9;
           const mm = lt.horario.split(':')[1] || '00';
           const evData = {
-            summary: lt.title,
+            summary: `${prefixoEmpresa}${lt.title}`,
             start: { dateTime: `${lt.dateStr}T${pad2(hh)}:${mm}:00-03:00` },
             end: { dateTime: `${lt.dateStr}T${pad2(hh + 1)}:${mm}:00-03:00` },
-            location: lt.location || 'Consultoria VIP',
+            location: lt.location || enderecoEmpresa || 'Consultoria / Remoto',
           };
           const postRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
             method: 'POST',
@@ -261,7 +266,7 @@ export default function AgendaPage() {
   };
 
   const abrirNovo = (dateStr?: string) => {
-    setNewTask({ title: '', empresaId: '', consultorId: '', horario: '09:00', dateStr: dateStr || selectedDayIso || hojeIso(), recurrent: false });
+    setNewTask({ title: '', empresaId: '', horario: '09:00', dateStr: dateStr || selectedDayIso || hojeIso(), recurrent: false, consultoresIds: [] } as any);
     setIsModalOpen(true);
   };
 
@@ -274,12 +279,14 @@ export default function AgendaPage() {
       id: Math.random().toString(36).slice(2, 11),
       title: newTask.title,
       empresaId: newTask.empresaId || '',
-      consultorId: newTask.consultorId || '',
+      consultorId: ((newTask as any).consultoresIds || [])[0] || '',
       horario: newTask.horario,
       dateStr: newTask.dateStr,
       completed: false,
       recurrent: newTask.recurrent || false,
-    };
+      clienteParticipante: (newTask as any).clienteParticipante || '',
+      consultoresIds: (newTask as any).consultoresIds || [],
+    } as any;
     saveTasks([...tasks, task]);
     setIsModalOpen(false);
   };
@@ -295,10 +302,24 @@ export default function AgendaPage() {
 
   const handleCopyMessage = async (task: AgendaTask, dataFormatada: string) => {
     const emp = empresas.find(e => e.id === task.empresaId);
-    const cons = users.find(u => u.id === task.consultorId);
-    const part = cons ? `${cons.name} (Consultoria)` : (task.id.startsWith('gcal') ? 'Participantes do evento' : 'Equipe Privilege');
-    const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia}` : 'A combinar / Online');
-    const text = `*Nossa agenda:*\nData: ${dataFormatada} às ${task.horario}\nLocal: ${loc}\nParticipante: ${part}\n\n_Assunto: ${task.title}_`;
+    const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
+    const nomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
+    
+    const partCli = (task as any).clienteParticipante || '';
+    const partCons = nomes ? nomes : 'Equipe Privilege';
+    const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia || emp.razaoSocial}` : 'A combinar / Online');
+
+    const empNome = emp ? (emp.nomeFantasia || emp.razaoSocial) : 'Privilege';
+    
+    let text = `Olá! 🌟 Tudo bem?\nPassando para confirmar nosso compromisso. Aqui estão os detalhes:\n\n`;
+    text += `📅 *Data:* ${dataFormatada}\n`;
+    text += `⏰ *Horário:* ${task.horario}\n`;
+    text += `📍 *Local:* ${loc}\n`;
+    text += `🏢 *Empresa:* ${empNome}\n`;
+    text += `👔 *Consultor:* ${partCons}\n`;
+    if (partCli) text += `🗣️ *Participante(s) do Cliente:* ${partCli}\n`;
+    text += `\n📌 *Assunto:* ${task.title}\n`;
+    text += `\nQualquer imprevisto, é só me avisar. Até lá! 👋`;
     try {
       await navigator.clipboard.writeText(text);
       toast.success('Mensagem copiada para a área de transferência.');
@@ -513,7 +534,8 @@ export default function AgendaPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {tarefasDoDiaSelecionado.map(task => {
                   const emp = empresas.find(e => e.id === task.empresaId);
-                  const cons = users.find(u => u.id === task.consultorId);
+                  const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
+                  const consNomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
                   const isGoogle = task.id.startsWith('gcal');
                   return (
                     <div key={task.id} style={{
@@ -539,7 +561,7 @@ export default function AgendaPage() {
                         </div>
                       </div>
                       {emp && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
-                      {!isGoogle && cons && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>👤 {cons.name}</div>}
+                      {!isGoogle && consNomes && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>👥 {consNomes}</div>}
                       {isGoogle && <div style={{ fontSize: 10.5, color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>🌐 Google Calendar</div>}
                     </div>
                   );
@@ -574,11 +596,28 @@ export default function AgendaPage() {
               </div>
 
               <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Consultor responsável (opcional)</label>
-                <select className="form-control" value={newTask.consultorId} onChange={e => setNewTask({ ...newTask, consultorId: e.target.value })}>
-                  <option value="">Selecione...</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                <label className="form-label" style={{ fontWeight: 600 }}>Equipe Responsável (Selecione um ou mais)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 110, overflowY: 'auto', border: '1px solid var(--border)', padding: '10px 12px', borderRadius: 8 }}>
+                  {users.map(u => (
+                    <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={((newTask as any).consultoresIds || []).includes(u.id)} 
+                        onChange={e => {
+                          const ids = (newTask as any).consultoresIds || [];
+                          if (e.target.checked) setNewTask({ ...newTask, consultoresIds: [...ids, u.id] } as any);
+                          else setNewTask({ ...newTask, consultoresIds: ids.filter((i: string) => i !== u.id) } as any);
+                        }} 
+                      />
+                      {u.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Participantes do Cliente (opcional)</label>
+                <input type="text" className="form-control" placeholder="Quem vai participar? (Ex: João, Financeiro)" value={(newTask as any).clienteParticipante || ''} onChange={e => setNewTask({ ...newTask, clienteParticipante: e.target.value } as any)} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
