@@ -379,7 +379,27 @@ export default function AgendaPage() {
 
   return (
     <>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes springPop { 0% { transform: scale(0.7) translateY(30px); opacity: 0; } 60% { transform: scale(1.04) translateY(-3px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        
+        .calendar-cell { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .calendar-cell:hover { transform: scale(1.06); box-shadow: 0 18px 45px rgba(0,0,0,0.15); z-index: 20; border-radius: 12px; position: relative; border-color: transparent !important; }
+        
+        .event-chip { transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; }
+        .event-chip:hover { transform: translateX(5px) scale(1.03); filter: brightness(0.9); box-shadow: 0 6px 14px rgba(0,0,0,0.12); }
+        
+        .task-card { animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .task-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 28px rgba(0,0,0,0.12); }
+        
+        .modal-overlay { animation: fadeIn 0.3s ease-out; }
+        .modal-slide { animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-create { animation: springPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+      `}</style>
+
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, animation: 'fadeIn 0.5s ease-out' }}>
         <div>
           <div className="page-title">Agenda</div>
           <div className="page-subtitle">Compromissos da consultoria, com sincronização opcional do Google Calendar.</div>
@@ -469,15 +489,15 @@ export default function AgendaPage() {
             return (
               <div
                 key={dia.iso}
+                className="calendar-cell"
                 onClick={() => setSelectedDayIso(dia.iso)}
                 style={{
                   background: 'var(--bg-card)', padding: '6px 6px 8px', cursor: 'pointer',
                   opacity: view === 'month' && !dia.noMes ? 0.45 : 1,
                   display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0,
-                  transition: 'background .15s',
+                  animation: `slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards`,
+                  animationDelay: `${Math.min(20, dia.date.getDate() % 7) * 0.03}s` // staggered animation
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card2)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
               >
                 <div style={{ display: 'flex', justifyContent: view === 'month' ? 'flex-end' : 'center' }}>
                   <span style={{
@@ -496,6 +516,7 @@ export default function AgendaPage() {
                     return (
                       <div
                         key={t.id}
+                        className="event-chip"
                         title={`${t.horario} · ${t.title}`}
                         style={{
                           fontSize: 10.5, fontWeight: 600, padding: '2px 6px', borderRadius: 5,
@@ -504,6 +525,7 @@ export default function AgendaPage() {
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           textDecoration: t.completed ? 'line-through' : 'none',
                           opacity: t.completed ? 0.55 : 1,
+                          animation: 'fadeIn 0.4s ease-out'
                         }}
                       >
                         {t.horario} {t.title}
@@ -525,11 +547,12 @@ export default function AgendaPage() {
       {/* Painel do dia — lista completa + adicionar, ao clicar numa célula */}
       {diaSelecionado && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(3px)' }}
           onClick={() => setSelectedDayIso(null)}
         >
           <div
-            className="card"
+            className="card modal-slide"
             style={{ width: 380, maxWidth: '92vw', height: '100vh', borderRadius: 0, overflowY: 'auto', padding: 0 }}
             onClick={e => e.stopPropagation()}
           >
@@ -559,16 +582,17 @@ export default function AgendaPage() {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {tarefasDoDiaSelecionado.map(task => {
+                {tarefasDoDiaSelecionado.map((task, index) => {
                   const emp = empresas.find(e => e.id === task.empresaId);
                   const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
                   const consNomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
                   const isGoogle = task.id.startsWith('gcal');
                   return (
-                    <div key={task.id} style={{
-                      padding: 12, borderRadius: 10, border: '1px solid var(--border-light)',
-                      borderLeft: `4px solid ${isGoogle ? '#3b82f6' : 'var(--accent)'}`,
+                    <div key={task.id} className="task-card" style={{
+                      padding: 14, borderRadius: 12, border: '1px solid var(--border-light)',
+                      borderLeft: `5px solid ${isGoogle ? '#3b82f6' : 'var(--accent)'}`,
                       opacity: task.completed ? 0.6 : 1,
+                      animationDelay: `${index * 0.08}s`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.completed ? 'line-through' : 'none' }}>
@@ -604,8 +628,8 @@ export default function AgendaPage() {
 
       {/* Modal de criação */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: 440, maxWidth: '92vw', padding: 24, position: 'relative' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}>
+          <div className="card modal-create" style={{ width: 440, maxWidth: '92vw', padding: 24, position: 'relative' }}>
             <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <X size={18} />
             </button>
