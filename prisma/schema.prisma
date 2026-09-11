@@ -24,15 +24,15 @@ model User {
 }
 
 model Empresa {
-  id                         String               @id @default(uuid())
+  id                         String                  @id @default(uuid())
   razaoSocial                String
   nomeFantasia               String
-  cnpj                       String               @unique
+  cnpj                       String                  @unique
   responsavel                String
   email                      String
   telefone                   String
   atividade                  String?
-  tipo                       String               @default("empresa")
+  tipo                       String                  @default("empresa")
   taxaMensalPadrao           Float?
   fundoReservaPct            Float?
   dataInicioContrato         String?
@@ -40,14 +40,14 @@ model Empresa {
   receitaMensalEstimada      Float?
   comprasMensalEstimada      Float?
   logoData                   String?
-  bancoBoleto                String               @default("nenhum")
+  bancoBoleto                String                  @default("nenhum")
   politicaReceberName        String?
   politicaReceberData        String?
   politicaComprasName        String?
   politicaComprasData        String?
   politicaCobrancaName       String?
   politicaCobrancaData       String?
-  createdAt                  DateTime             @default(now())
+  createdAt                  DateTime                @default(now())
   allowedRoutes              String[]
   // Endereço — exigido na qualificação das partes do contrato de prestação
   // de serviços, que antes era digitado manualmente a cada emissão.
@@ -122,20 +122,21 @@ model Unidade {
 }
 
 model PlanoConta {
-  id           String               @id @default(uuid())
-  codigo       String
-  descricao    String
-  tipo         String
-  nivel        Int
-  parentId     String?
-  ativo        Boolean              @default(true)
-  empresaId    String
-  dreCategoria String?
-  lancamentos  Lancamento[]
-  empresa      Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  parent       PlanoConta?          @relation("PlanoContaHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children     PlanoConta[]         @relation("PlanoContaHierarchy")
-  patterns     TransactionPattern[]
+  id                     String                  @id @default(uuid())
+  codigo                 String
+  descricao              String
+  tipo                   String
+  nivel                  Int
+  parentId               String?
+  ativo                  Boolean                 @default(true)
+  empresaId              String
+  dreCategoria           String?
+  lancamentos            Lancamento[]
+  empresa                Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  parent                 PlanoConta?             @relation("PlanoContaHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children               PlanoConta[]            @relation("PlanoContaHierarchy")
+  patterns               TransactionPattern[]
+  regraCategorizacaoOFXs RegraCategorizacaoOFX[]
 }
 
 model Portador {
@@ -609,33 +610,33 @@ enum StatusContaFinanceira {
 }
 
 model ContaReceber {
-  id                 String                @id @default(uuid())
-  empresaId          String
-  sacadoId           String
-  planoContaId       String?
-  numeroDocumento    String?
-  descricao          String?
-  documentoFiscalUrl String?
-  dataEmissao        String
-  dataVencimento     String
-  dataCompetencia    String
-  valorOriginal      Float
-  acrescimos         Float                 @default(0)
-  descontos          Float                 @default(0)
-  valorLiquido       Float
-  status             StatusContaFinanceira @default(aberto)
+  id                     String                @id @default(uuid())
+  empresaId              String
+  sacadoId               String
+  planoContaId           String?
+  numeroDocumento        String?
+  descricao              String?
+  documentoFiscalUrl     String?
+  dataEmissao            String
+  dataVencimento         String
+  dataCompetencia        String
+  valorOriginal          Float
+  acrescimos             Float                 @default(0)
+  descontos              Float                 @default(0)
+  valorLiquido           Float
+  status                 StatusContaFinanceira @default(aberto)
   /// Informativo — como o ERP espera que este título seja pago (ex.: "PIX",
   /// "Cartão de crédito 3x"). Não baixa nada sozinho, só orienta o consultor.
   formaPagamentoPrevista String?
-  origemApiKeyId     String?
-  conciliadoEm       DateTime?
-  canceladoEm        DateTime?
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @default(now()) @updatedAt
-  empresa            Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  sacado             Cliente               @relation("ContasReceberComoSacado", fields: [sacadoId], references: [id])
-  baixas             ContaReceberBaixa[]
-  reguaLogs          ReguaCobrancaLog[]
+  origemApiKeyId         String?
+  conciliadoEm           DateTime?
+  canceladoEm            DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @default(now()) @updatedAt
+  empresa                Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  sacado                 Cliente               @relation("ContasReceberComoSacado", fields: [sacadoId], references: [id])
+  baixas                 ContaReceberBaixa[]
+  reguaLogs              ReguaCobrancaLog[]
 
   @@index([empresaId])
   @@index([sacadoId])
@@ -660,33 +661,33 @@ model ContaReceberBaixa {
 }
 
 model ContaPagar {
-  id              String                @id @default(uuid())
-  empresaId       String
-  fornecedorId    String
-  planoContaId    String?
-  centroCustoId   String?
-  numeroDocumento String?
-  descricao       String?
-  dataEmissao     String
-  dataVencimento  String
-  valorOriginal   Float
-  acrescimos      Float                 @default(0)
-  descontos       Float                 @default(0)
-  valorLiquido    Float
-  status          StatusContaFinanceira @default(aberto)
+  id                     String                @id @default(uuid())
+  empresaId              String
+  fornecedorId           String
+  planoContaId           String?
+  centroCustoId          String?
+  numeroDocumento        String?
+  descricao              String?
+  dataEmissao            String
+  dataVencimento         String
+  valorOriginal          Float
+  acrescimos             Float                 @default(0)
+  descontos              Float                 @default(0)
+  valorLiquido           Float
+  status                 StatusContaFinanceira @default(aberto)
   /// Informativo — como o título será pago (ex.: "Boleto 30 dias"). Não
   /// baixa nada sozinho, só orienta o consultor.
   formaPagamentoPrevista String?
-  origemApiKeyId  String?
-  conciliadoEm    DateTime?
-  canceladoEm     DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @default(now()) @updatedAt
-  empresa         Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  fornecedor      Cliente               @relation("ContasPagarComoFornecedor", fields: [fornecedorId], references: [id])
-  baixas          ContaPagarBaixa[]
-  lotePagamentoId String?
-  lotePagamento   LotePagamento?        @relation(fields: [lotePagamentoId], references: [id])
+  origemApiKeyId         String?
+  conciliadoEm           DateTime?
+  canceladoEm            DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @default(now()) @updatedAt
+  empresa                Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fornecedor             Cliente               @relation("ContasPagarComoFornecedor", fields: [fornecedorId], references: [id])
+  baixas                 ContaPagarBaixa[]
+  lotePagamentoId        String?
+  lotePagamento          LotePagamento?        @relation(fields: [lotePagamentoId], references: [id])
 
   @@index([empresaId])
   @@index([fornecedorId])
@@ -761,29 +762,29 @@ model ApiKey {
 // ============================================================
 
 model RegraCategorizacaoOFX {
-  id             String   @id @default(uuid())
-  empresaId      String
-  condicao       String   // ex: "STARTS_WITH:PGTO VIVO", "CONTAINS:TARIFA BANCARIA"
-  planoContaId   String
-  tipoMovimento  String   // "ENTRADA" | "SAIDA"
-  createdAt      DateTime @default(now())
-  empresa        Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  planoConta     PlanoConta @relation(fields: [planoContaId], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  empresaId     String
+  condicao      String // ex: "STARTS_WITH:PGTO VIVO", "CONTAINS:TARIFA BANCARIA"
+  planoContaId  String
+  tipoMovimento String // "ENTRADA" | "SAIDA"
+  createdAt     DateTime   @default(now())
+  empresa       Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  planoConta    PlanoConta @relation(fields: [planoContaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
 }
 
 model DocumentoEntrada {
-  id               String   @id @default(uuid())
-  empresaId        String
-  arquivoUrl       String
-  tipoDocumento    String   // "XML_NFE" | "PDF_BOLETO" | "RECIBO"
+  id                String   @id @default(uuid())
+  empresaId         String
+  arquivoUrl        String
+  tipoDocumento     String // "XML_NFE" | "PDF_BOLETO" | "RECIBO"
   hashProcessamento String?  @unique
-  lido             Boolean  @default(false)
-  dadosExtraidos   Json?
-  status           String   @default("PENDENTE") // PENDENTE, APROVADO, REJEITADO, ERRO
-  createdAt        DateTime @default(now())
-  empresa          Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lido              Boolean  @default(false)
+  dadosExtraidos    Json?
+  status            String   @default("PENDENTE") // PENDENTE, APROVADO, REJEITADO, ERRO
+  createdAt         DateTime @default(now())
+  empresa           Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
   @@index([status])
@@ -792,9 +793,9 @@ model DocumentoEntrada {
 model LotePagamento {
   id              String       @id @default(uuid())
   empresaId       String
-  dataAgendamento String       // Dia programado para o lote
+  dataAgendamento String // Dia programado para o lote
   status          String       @default("CRIADO") // CRIADO, AGUARDANDO_CLIENTE, APROVADO, EXPORTADO
-  arquivoCnabUrl  String?      
+  arquivoCnabUrl  String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @default(now()) @updatedAt
   empresa         Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -804,39 +805,39 @@ model LotePagamento {
 }
 
 model ReguaCobranca {
-  id               String   @id @default(uuid())
-  empresaId        String
-  nome             String
-  templateAviso    String   // Template de mensagem p/ WhatsApp/Email
-  diasAntesOuDepois Int      // ex: -3 (3 dias antes), 0 (no dia), +5 (5 dias depois)
-  ativo            Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  empresa          Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  empresaId         String
+  nome              String
+  templateAviso     String // Template de mensagem p/ WhatsApp/Email
+  diasAntesOuDepois Int // ex: -3 (3 dias antes), 0 (no dia), +5 (5 dias depois)
+  ativo             Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  empresa           Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
 }
 
 model ReguaCobrancaLog {
-  id               String       @id @default(uuid())
-  contaReceberId   String
-  enviadoEm        DateTime     @default(now())
-  sucesso          Boolean
-  erroDetalhe      String?
-  contaReceber     ContaReceber @relation(fields: [contaReceberId], references: [id], onDelete: Cascade)
+  id             String       @id @default(uuid())
+  contaReceberId String
+  enviadoEm      DateTime     @default(now())
+  sucesso        Boolean
+  erroDetalhe    String?
+  contaReceber   ContaReceber @relation(fields: [contaReceberId], references: [id], onDelete: Cascade)
 
   @@index([contaReceberId])
 }
 
 model SLAFechamento {
-  id                   String   @id @default(uuid())
-  empresaId            String
-  competencia          String   // "2026-09"
-  status               String   @default("ABERTO") // ABERTO, EM_ANDAMENTO, ATRASADO, CONCLUIDO
-  responsavelId        String?
-  percentualProgresso  Int      @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now()) @updatedAt
-  empresa              Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(uuid())
+  empresaId           String
+  competencia         String // "2026-09"
+  status              String   @default("ABERTO") // ABERTO, EM_ANDAMENTO, ATRASADO, CONCLUIDO
+  responsavelId       String?
+  percentualProgresso Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+  empresa             Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@unique([empresaId, competencia])
 }
