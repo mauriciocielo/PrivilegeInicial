@@ -6,6 +6,16 @@ import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 
+interface ApiKeyResumo {
+  id: string;
+  nome: string;
+  prefixo: string;
+  ativo: boolean;
+  ultimoUsoEm: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
 const AVAILABLE_SCREENS = [
   { label: '📊 Dashboard', route: '/consultor/dashboard' },
   { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
@@ -115,15 +125,66 @@ export default function EmpresasPage() {
     return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
-  const openNew = () => { 
-    setEdit(null); 
-    setForm({ allowedRoutes: AVAILABLE_SCREENS.map(s => s.route) }); 
-    setShowModal(true); 
+  // Integração via API (CP/CR) — só existe para empresa já salva (precisa de
+  // um id real para a chave apontar).
+  const [apiKeys, setApiKeys] = useState<ApiKeyResumo[]>([]);
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+  const [novoTokenGerado, setNovoTokenGerado] = useState<string | null>(null);
+  const [nomeNovaChave, setNomeNovaChave] = useState('');
+  const [gerandoChave, setGerandoChave] = useState(false);
+
+  const carregarApiKeys = async (empresaId: string) => {
+    setLoadingApiKeys(true);
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/api-keys`);
+      const json = await res.json();
+      if (res.ok) setApiKeys(json.chaves || []);
+    } catch { /* silencioso — a seção mostra "nenhuma chave" se falhar */ }
+    finally { setLoadingApiKeys(false); }
   };
-  const openEdit = (e: Empresa) => { 
-    setEdit(e); 
-    setForm({ ...e, allowedRoutes: e.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route) }); 
-    setShowModal(true); 
+
+  const gerarNovaChave = async () => {
+    if (!edit) return;
+    setGerandoChave(true);
+    try {
+      const res = await fetch(`/api/empresas/${edit.id}/api-keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nomeNovaChave.trim() || 'Integração ERP' }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error || 'Erro ao gerar a chave.'); return; }
+      setNovoTokenGerado(json.token);
+      setNomeNovaChave('');
+      carregarApiKeys(edit.id);
+    } catch {
+      toast.error('Erro de conexão ao gerar a chave.');
+    } finally {
+      setGerandoChave(false);
+    }
+  };
+
+  const revogarChave = async (keyId: string) => {
+    if (!edit) return;
+    if (!(await confirmAsync('Revogar esta chave? Qualquer integração que a use para de funcionar imediatamente.'))) return;
+    const res = await fetch(`/api/empresas/${edit.id}/api-keys/${keyId}`, { method: 'DELETE' });
+    if (res.ok) { toast.success('Chave revogada.'); carregarApiKeys(edit.id); }
+    else toast.error('Erro ao revogar a chave.');
+  };
+
+  const openNew = () => {
+    setEdit(null);
+    setForm({ allowedRoutes: AVAILABLE_SCREENS.map(s => s.route) });
+    setShowModal(true);
+  };
+  const openEdit = (e: Empresa) => {
+    setEdit(e);
+    setForm({ ...e, allowedRoutes: e.allowedRoutes || AVAILABLE_SCREENS.map(s => s.route) });
+    setApiKeys([]);
+    setNovoTokenGerado(null);
+    setNomeNovaChave('');
+    carregarApiKeys(e.id);
+    setShowModal(true);
   };
 
   const toggleRoute = (route: string) => {
@@ -589,6 +650,101 @@ ${result.portadoresAdded} portadores criados`);
                 })}
               </div>
             </div>
+            {/* Integração via API (CP/CR) — exige empresa já salva */}
+            {edit && (
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  🔌 Integração via API (Contas a Pagar/Receber)
+                </label>
+                <div style={{ padding: 14, background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
+                    O ERP desta empresa usa essas chaves para lançar sacados e contas a pagar/receber
+                    direto no sistema. Documentação dos endpoints (POST /api/v1/sacados,
+                    /api/v1/contas-receber, /api/v1/contas-pagar) disponível com o time técnico.
+                  </div>
+
+                  {novoTokenGerado && (
+                    <div style={{
+                      marginBottom: 14, padding: 12, background: 'var(--yellow-bg)',
+                      border: '1px solid var(--yellow)', borderRadius: 'var(--radius-sm)',
+                    }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, color: 'var(--text-primary)' }}>
+                        ⚠️ Copie agora — este token não será mostrado novamente
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <code style={{
+                          flex: 1, fontSize: 11.5, padding: '8px 10px', background: 'var(--bg-card)',
+                          borderRadius: 6, wordBreak: 'break-all', border: '1px solid var(--border-light)',
+                        }}>
+                          {novoTokenGerado}
+                        </code>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => { navigator.clipboard.writeText(novoTokenGerado); toast.success('Token copiado.'); }}
+                        >
+                          📋 Copiar
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ marginTop: 8, padding: '2px 8px', fontSize: 11 }}
+                        onClick={() => setNovoTokenGerado(null)}
+                      >
+                        Entendi, já salvei
+                      </button>
+                    </div>
+                  )}
+
+                  {loadingApiKeys ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Carregando chaves...</div>
+                  ) : apiKeys.length === 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                      Nenhuma chave gerada para esta empresa ainda.
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 12 }}>
+                      {apiKeys.map(k => (
+                        <div key={k.id} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '8px 10px', borderBottom: '1px solid var(--border-light)', fontSize: 12,
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {k.nome} {!k.ativo && <span style={{ color: 'var(--red)', fontWeight: 500 }}>(revogada)</span>}
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 11 }}>
+                              {k.prefixo}.•••••••• · criada {new Date(k.createdAt).toLocaleDateString('pt-BR')}
+                              {k.ultimoUsoEm && ` · último uso ${new Date(k.ultimoUsoEm).toLocaleDateString('pt-BR')}`}
+                            </div>
+                          </div>
+                          {k.ativo && (
+                            <button type="button" className="btn btn-danger btn-sm" style={{ padding: '3px 8px', fontSize: 11 }}
+                              onClick={() => revogarChave(k.id)}>
+                              Revogar
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      className="form-control" style={{ fontSize: 12 }}
+                      placeholder="Nome da chave (ex: Integração Omie)"
+                      value={nomeNovaChave}
+                      onChange={e => setNomeNovaChave(e.target.value)}
+                    />
+                    <button type="button" className="btn btn-primary btn-sm" onClick={gerarNovaChave} disabled={gerandoChave} style={{ whiteSpace: 'nowrap' }}>
+                      {gerandoChave ? 'Gerando...' : '+ Gerar Chave'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave}>✓ Salvar</button>
