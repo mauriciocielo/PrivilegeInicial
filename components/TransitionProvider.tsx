@@ -481,65 +481,78 @@ export default function TransitionProvider({ children }: { children: React.React
   // ganha polling de fallback automaticamente, sem precisar editar aqui.
   const getCollectionFromPath = getCollectionForPath;
 
-  // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa da página
+  // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa
   useEffect(() => {
     if (pathname === '/login') return;
 
-    const collection = getCollectionFromPath(pathname);
-    if (!collection) return;
-
-    let lastSyncTime = '';
+    // Coleção principal ativada pela rota, se houver
+    const pageCollection = getCollectionFromPath(pathname);
+    
+    let lastSyncTimeLancs = '';
+    let counter = 0;
 
     const tick = async (force = false) => {
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       if (hasPendingChangesRef.current) return;
-      // Checagem durável (sobrevive a refresh): não sobrescreve esta coleção
-      // enquanto houver alterações locais dela ainda não confirmadas no servidor.
-      if (readPendingKeys().includes(collection)) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
-
+      
+      counter++;
+      
       try {
-        if (collection === 'cf_lancamentos') {
-          // Polling de lançamentos via /api/sync-status (muito leve — busca apenas o timestamp)
-          const statusRes = await fetch('/api/sync-status?collection=cf_lancamentos', { cache: 'no-store' });
-          if (!statusRes.ok) return;
+        // 1. POLLING UNIVERSAL DE LANÇAMENTOS (O Pulso do Sistema)
+        // Todos os dashboards e relatórios dependem de Lançamentos. Sincronizamos globalmente.
+        const statusRes = await fetch('/api/sync-status?collection=cf_lancamentos', { cache: 'no-store' });
+        if (statusRes.ok) {
           const statusData = await statusRes.json();
-          
-          if (statusData.lastUpdate && statusData.lastUpdate !== lastSyncTime) {
-            console.log('☁️ Polling [TEMPO REAL]: Detectada alteração remota em lançamentos! Buscando...');
-            lastSyncTime = statusData.lastUpdate;
-            sessionStorage.setItem('cf_last_sync_time', lastSyncTime);
+          if (statusData.lastUpdate && statusData.lastUpdate !== lastSyncTimeLancs) {
+            console.log('☁️ Polling [TEMPO REAL Global]: Detectada alteração remota em lançamentos! Buscando...');
+            lastSyncTimeLancs = statusData.lastUpdate;
+            sessionStorage.setItem('cf_last_sync_time', lastSyncTimeLancs);
 
-            // Busca TODOS os lançamentos sem filtro de empresa
-            // O store filtra por empresa ao renderizar — o cache deve estar completo
-            const res = await fetch(`/api/lancamentos?since=${encodeURIComponent(lastSyncTime)}`, { cache: 'no-store' });
-            if (!res.ok) return;
-            const lancamentos = await res.json();
-            if (Array.isArray(lancamentos) && lancamentos.length > 0) {
-              sessionStorage.setItem('cf_sync_in_progress', 'true');
-              lancamentos.forEach((l: any) => store.importSingleLancamento(l));
-              sessionStorage.setItem('cf_sync_in_progress', 'false');
-              console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem (sem filtro de empresa).`);
+            const res = await fetch(`/api/lancamentos?since=${encodeURIComponent(lastSyncTimeLancs)}`, { cache: 'no-store' });
+            if (res.ok) {
+              const lancamentos = await res.json();
+              if (Array.isArray(lancamentos) && lancamentos.length > 0) {
+                sessionStorage.setItem('cf_sync_in_progress', 'true');
+                lancamentos.forEach((l: any) => store.importSingleLancamento(l));
+                sessionStorage.setItem('cf_sync_in_progress', 'false');
+                console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem.`);
+              }
             }
           }
-        } else {
-          // Ao forçar (ex: aba voltou a ficar visível), não pula o ciclo aleatoriamente.
-          if (!force && Math.random() > 0.2) return; // ~1 a cada 5 ciclos (~15s)
+        }
 
-          const res = await fetch(`/api/migrate-backup?collection=${collection}&t=${Date.now()}`, { cache: 'no-store' });
-          if (!res.ok) return;
+        // 2. POLLING ESPECÍFICO ROTA ou DASHBOARD (Agenda, Empresas, etc)
+        // Só rodamos a cada ~15s (1 em cada 5 ticks) para poupar o banco, a menos que seja forçado
+        if (!force && counter % 5 !== 0) return;
+
+        // Se está no Dashboard (onde pageCollection é null), checamos a Agenda e Empresas
+        const collectionsToPoll: string[] = [];
+        if (pageCollection) {
+          if (pageCollection !== 'cf_lancamentos' && !readPendingKeys().includes(pageCollection)) {
+            collectionsToPoll.push(pageCollection);
+          }
+        } else if (pathname.includes('/dashboard')) {
+          if (!readPendingKeys().includes('cf_agenda_semanal')) collectionsToPoll.push('cf_agenda_semanal');
+          if (!readPendingKeys().includes('cf_empresas')) collectionsToPoll.push('cf_empresas');
+        }
+
+        for (const col of collectionsToPoll) {
+          const res = await fetch(`/api/migrate-backup?collection=${col}&t=${Date.now()}`, { cache: 'no-store' });
+          if (!res.ok) continue;
+          
           const backup = await res.json();
-          if (backup && backup.data) {
+          if (backup && backup.data && backup.data[col]) {
             const localString = store.exportBackup();
             const localParsed = JSON.parse(localString);
-            const remoteStr = JSON.stringify(backup.data[collection] || []);
-            const localStr = JSON.stringify(localParsed.data[collection] || []);
+            const remoteStr = JSON.stringify(backup.data[col] || []);
+            const localStr = JSON.stringify(localParsed.data[col] || []);
             
             if (remoteStr !== localStr) {
-              console.log(`☁️ Polling: Sincronizando ${collection} remotos...`);
-              sessionStorage.setItem('cf_sync_in_progress', 'true');
-              store.importBackup(JSON.stringify(backup));
-              sessionStorage.setItem('cf_sync_in_progress', 'false');
+               console.log(`☁️ Polling: Sincronizando ${col} remotos...`);
+               sessionStorage.setItem('cf_sync_in_progress', 'true');
+               store.importBackup(JSON.stringify(backup));
+               sessionStorage.setItem('cf_sync_in_progress', 'false');
             }
           }
         }

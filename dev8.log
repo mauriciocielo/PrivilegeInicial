@@ -47,3 +47,148 @@
  GET /icon-192x192.png 404 in 726ms (next.js: 235ms, application-code: 491ms)
  GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789096014415 200 in 1348ms (next.js: 326ms, application-code: 1022ms)
  GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789096211416 200 in 2.5s (next.js: 76ms, application-code: 2.5s)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789096811425 200 in 1703ms (next.js: 117ms, application-code: 1585ms)
+🔌 Cliente WebSocket desconectado: WKbJDtBvuRWvDtmkAAAB
+🔌 Cliente WebSocket conectado: uiz3HaFJZHV5hw9EAAAD
+🔌 Cliente WebSocket desconectado: uiz3HaFJZHV5hw9EAAAD
+🔌 Cliente WebSocket conectado: rO6VhXzGGJQcCRiwAAAF
+🔌 Cliente WebSocket desconectado: rO6VhXzGGJQcCRiwAAAF
+🔌 Cliente WebSocket conectado: 6446qoJjMHmYRfbNAAAH
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097046416 200 in 1079ms (next.js: 33ms, application-code: 1046ms)
+✓ Compiled in 1332ms
+🔌 Cliente WebSocket desconectado: 6446qoJjMHmYRfbNAAAH
+🔌 Cliente WebSocket conectado: I2KVXEwRC4dj4BtnAAAJ
+🔌 Cliente WebSocket desconectado: I2KVXEwRC4dj4BtnAAAJ
+🔌 Cliente WebSocket conectado: 7I-xyon0lNnzRua9AAAL
+🔌 Cliente WebSocket desconectado: 7I-xyon0lNnzRua9AAAL
+🔌 Cliente WebSocket conectado: ZeLabbbAGUOip30zAAAN
+🔌 Cliente WebSocket desconectado: ZeLabbbAGUOip30zAAAN
+🔌 Cliente WebSocket conectado: H2ETln0zmhYCj1ESAAAP
+🔌 Cliente WebSocket desconectado: H2ETln0zmhYCj1ESAAAP
+🔌 Cliente WebSocket conectado: _x3kYpJ-QkeDSXGsAAAR
+🔌 Cliente WebSocket desconectado: _x3kYpJ-QkeDSXGsAAAR
+🔌 Cliente WebSocket conectado: ERBobOzpOgp35jkoAAAT
+🔌 Cliente WebSocket desconectado: ERBobOzpOgp35jkoAAAT
+🔌 Cliente WebSocket conectado: kdl1FyS5fhTvmqqHAAAV
+🔌 Cliente WebSocket desconectado: kdl1FyS5fhTvmqqHAAAV
+🔌 Cliente WebSocket conectado: DAxc8bBK9loWgGy1AAAX
+🔌 Cliente WebSocket desconectado: DAxc8bBK9loWgGy1AAAX
+🔌 Cliente WebSocket conectado: AzvuNTXJ99ssVhUTAAAZ
+🔌 Cliente WebSocket desconectado: AzvuNTXJ99ssVhUTAAAZ
+🔌 Cliente WebSocket conectado: FQqYBo6EipTOfboRAAAb
+🔌 Cliente WebSocket desconectado: FQqYBo6EipTOfboRAAAb
+🔌 Cliente WebSocket conectado: mThZy1NDINc9QpDXAAAd
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097468423 200 in 2.4s (next.js: 399ms, application-code: 2.0s)
+🔌 Cliente WebSocket desconectado: mThZy1NDINc9QpDXAAAd
+🔌 Cliente WebSocket conectado: z_FmvuuHX6gYY50tAAAf
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097529422 200 in 1011ms (next.js: 7ms, application-code: 1004ms)
+🔌 Cliente WebSocket desconectado: z_FmvuuHX6gYY50tAAAf
+✓ Compiled in 178ms
+🔌 Cliente WebSocket conectado: hhB8rpHfHRLDoFo-AAAh
+🔌 Cliente WebSocket desconectado: hhB8rpHfHRLDoFo-AAAh
+🔌 Cliente WebSocket conectado: BtrH8vygS0rea1EUAAAj
+✓ Compiled in 215ms
+🔌 Cliente WebSocket desconectado: BtrH8vygS0rea1EUAAAj
+🔌 Cliente WebSocket conectado: uQKt_-jrzS4qvtw_AAAl
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097706426 200 in 1706ms (next.js: 428ms, application-code: 1278ms)
+🔌 Cliente WebSocket desconectado: uQKt_-jrzS4qvtw_AAAl
+🔌 Cliente WebSocket conectado: FqNvuivQq9YaSVz0AAAn
+🔌 Cliente WebSocket desconectado: FqNvuivQq9YaSVz0AAAn
+🔌 Cliente WebSocket conectado: fnMvxdNTz-X761G3AAAp
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097767419 200 in 1085ms (next.js: 28ms, application-code: 1057ms)
+🔌 Cliente WebSocket desconectado: fnMvxdNTz-X761G3AAAp
+🔌 Cliente WebSocket conectado: 8qPQV3ytfC49OQLmAAAr
+🔌 Cliente WebSocket desconectado: 8qPQV3ytfC49OQLmAAAr
+🔌 Cliente WebSocket conectado: Wu6X9vfD0ekPPuXuAAAt
+🔌 Cliente WebSocket desconectado: Wu6X9vfD0ekPPuXuAAAt
+🔌 Cliente WebSocket conectado: d-5nsyQEp0SokeJGAAAv
+🔌 Cliente WebSocket desconectado: d-5nsyQEp0SokeJGAAAv
+🔌 Cliente WebSocket conectado: sbl8JQ3gP5CUCd-iAAAx
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789097889420 200 in 1523ms (next.js: 20ms, application-code: 1504ms)
+🔌 Cliente WebSocket desconectado: sbl8JQ3gP5CUCd-iAAAx
+🔌 Cliente WebSocket conectado: _kyElCrExMINtD4JAAAz
+🔌 Cliente WebSocket desconectado: _kyElCrExMINtD4JAAAz
+🔌 Cliente WebSocket conectado: 5CIfXf81uP2frTSsAAA1
+🔌 Cliente WebSocket desconectado: 5CIfXf81uP2frTSsAAA1
+🔌 Cliente WebSocket conectado: NTA5sorU3CejrD1XAAA3
+🔌 Cliente WebSocket desconectado: NTA5sorU3CejrD1XAAA3
+🔌 Cliente WebSocket conectado: 06KJnnX9BKDZi_IvAAA5
+🔌 Cliente WebSocket desconectado: 06KJnnX9BKDZi_IvAAA5
+🔌 Cliente WebSocket conectado: EfOpBeKprVNT_ebSAAA7
+🔌 Cliente WebSocket desconectado: EfOpBeKprVNT_ebSAAA7
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098061426 200 in 1091ms (next.js: 25ms, application-code: 1066ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098061523 200 in 1019ms (next.js: 7ms, application-code: 1012ms)
+🔌 Cliente WebSocket conectado: -XNxAwKkdUYbK_ZrAAA9
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098096419 200 in 1009ms (next.js: 7ms, application-code: 1002ms)
+✓ Compiled in 398ms
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /consultor/agenda 200 in 302ms (next.js: 178ms, application-code: 124ms)
+ GET /icon-192x192.png 404 in 262ms (next.js: 66ms, application-code: 196ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098205357 200 in 1842ms (next.js: 17ms, application-code: 1825ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098205329 200 in 2.1s (next.js: 242ms, application-code: 1894ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098205381 200 in 1854ms (next.js: 55ms, application-code: 1799ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098207416 200 in 1012ms (next.js: 8ms, application-code: 1004ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098209400 200 in 234ms (next.js: 10ms, application-code: 225ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098209402 200 in 269ms (next.js: 47ms, application-code: 222ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098213417 200 in 222ms (next.js: 11ms, application-code: 212ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098234424 200 in 1000ms (next.js: 15ms, application-code: 985ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098237426 200 in 229ms (next.js: 9ms, application-code: 220ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+✓ Compiled in 2.8s
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /consultor/agenda 200 in 1589ms (next.js: 767ms, application-code: 822ms)
+ GET /consultor/agenda 200 in 262ms (next.js: 133ms, application-code: 129ms)
+ GET /icon-192x192.png 404 in 271ms (next.js: 43ms, application-code: 228ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098371566 200 in 1412ms (next.js: 253ms, application-code: 1159ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+✓ Compiled in 71ms
+ GET /consultor/agenda 200 in 120ms (next.js: 76ms, application-code: 44ms)
+ GET /icon-192x192.png 404 in 212ms (next.js: 26ms, application-code: 186ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098551426 200 in 3.1s (next.js: 501ms, application-code: 2.6s)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098611420 200 in 1080ms (next.js: 17ms, application-code: 1063ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098883265 200 in 1778ms (next.js: 79ms, application-code: 1699ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098883361 200 in 1756ms (next.js: 175ms, application-code: 1581ms)
+○ Compiling /consultor/usuarios ...
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789098891312 200 in 249ms (next.js: 19ms, application-code: 230ms)
+ GET /consultor/usuarios 200 in 11.8s (next.js: 11.6s, application-code: 203ms)
+ GET /icon-192x192.png 404 in 408ms (next.js: 38ms, application-code: 370ms)
+○ Compiling /api/users/avatar ...
+ GET /api/users/avatar?id=u_privilege 200 in 6.4s (next.js: 5.1s, application-code: 1316ms)
+ GET /consultor/usuarios 200 in 769ms (next.js: 68ms, application-code: 700ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098920426 200 in 840ms (next.js: 700ms, application-code: 140ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098919419 200 in 1956ms (next.js: 155ms, application-code: 1801ms)
+🔌 Cliente WebSocket desconectado: -XNxAwKkdUYbK_ZrAAA9
+🔌 Cliente WebSocket conectado: DkKd9W7lzUS6I0YiAAA_
+ GET /api/users/avatar?id=u_privilege 200 in 739ms (next.js: 217ms, application-code: 522ms)
+ GET /icon-192x192.png 404 in 440ms (next.js: 76ms, application-code: 365ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098937419 200 in 1203ms (next.js: 18ms, application-code: 1184ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098940417 200 in 299ms (next.js: 7ms, application-code: 292ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098943418 200 in 347ms (next.js: 7ms, application-code: 339ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098958428 200 in 1130ms (next.js: 5ms, application-code: 1125ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098964427 200 in 292ms (next.js: 6ms, application-code: 286ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789098967422 200 in 306ms (next.js: 8ms, application-code: 298ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099031423 200 in 1214ms (next.js: 25ms, application-code: 1189ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099053394 200 in 1205ms (next.js: 58ms, application-code: 1146ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099053398 200 in 1285ms (next.js: 24ms, application-code: 1261ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099054430 200 in 1883ms (next.js: 22ms, application-code: 1861ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099069426 200 in 1221ms (next.js: 23ms, application-code: 1198ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099081418 200 in 1141ms (next.js: 9ms, application-code: 1132ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099093416 200 in 1134ms (next.js: 5ms, application-code: 1129ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099096424 200 in 301ms (next.js: 10ms, application-code: 291ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099211417 200 in 1599ms (next.js: 8ms, application-code: 1591ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099331426 200 in 1148ms (next.js: 6ms, application-code: 1141ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /consultor/usuarios 200 in 323ms (next.js: 214ms, application-code: 109ms)
+ GET /icon-192x192.png 404 in 580ms (next.js: 85ms, application-code: 495ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099451429 200 in 1305ms (next.js: 170ms, application-code: 1135ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099869861 200 in 3.1s (next.js: 380ms, application-code: 2.7s)
+ GET /api/migrate-backup?collection=cf_users&t=1789099869821 200 in 3.3s (next.js: 307ms, application-code: 3.0s)
+ GET /api/migrate-backup?collection=cf_users&t=1789099873212 200 in 392ms (next.js: 17ms, application-code: 376ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099888423 200 in 1224ms (next.js: 25ms, application-code: 1199ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+✓ Compiled in 1063ms
+ GET /consultor/usuarios 200 in 520ms (next.js: 334ms, application-code: 186ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /icon-192x192.png 404 in 1074ms (next.js: 190ms, application-code: 884ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099921426 200 in 1258ms (next.js: 121ms, application-code: 1136ms)
+ GET /api/migrate-backup?collection=cf_users&t=1789099933416 200 in 1144ms (next.js: 9ms, application-code: 1135ms)
