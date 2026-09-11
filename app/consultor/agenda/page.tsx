@@ -289,6 +289,12 @@ export default function AgendaPage() {
     } as any;
     saveTasks([...tasks, task]);
     setIsModalOpen(false);
+
+    // Auto-sincronizar imediatamente para empurrar pro Google
+    const gToken = localStorage.getItem('cf_gcal_token');
+    if (gToken) {
+      setTimeout(() => syncGoogle(gToken, baseDate, true), 100);
+    }
   };
 
   const handleDelete = async (task: AgendaTask) => {
