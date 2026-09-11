@@ -1,0 +1,299 @@
+○ Compiling instrumentation Node.js ...
+> Ready on http://localhost:3000
+(node:23064) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+○ Compiling /login ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 6.6s (next.js: 5.8s, application-code: 806ms)
+○ Compiling /consultor/agenda ...
+ GET /consultor/agenda 200 in 13.3s (next.js: 12.9s, application-code: 370ms)
+ GET /consultor/agenda 200 in 243ms (next.js: 24ms, application-code: 219ms)
+ GET /consultor/agenda 200 in 320ms (next.js: 18ms, application-code: 301ms)
+ GET /icon-192x192.png 404 in 3.6s (next.js: 3.0s, application-code: 559ms)
+○ Compiling /consultor/dashboard ...
+ GET /consultor/dashboard 200 in 6.1s (next.js: 4.9s, application-code: 1197ms)
+🔌 Cliente WebSocket conectado: yM21uegqlBYmc8vCAAAB
+ GET /icon-192x192.png 404 in 822ms (next.js: 223ms, application-code: 599ms)
+○ Compiling /api/contas-financeiras ...
+ GET /consultor/agenda 200 in 718ms (next.js: 212ms, application-code: 506ms)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 500 in 14.7s (next.js: 11.4s, application-code: 3.3s)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 500 in 15.1s (next.js: 11.4s, application-code: 3.8s)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 500 in 814ms (next.js: 23ms, application-code: 791ms)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 500 in 988ms (next.js: 93ms, application-code: 895ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 16.9s (next.js: 10.3s, application-code: 6.6s)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 16.8s (next.js: 11.5s, application-code: 5.3s)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 500 in 1164ms (next.js: 22ms, application-code: 1142ms)
+Erro em GET /api/contas-financeiras: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany()` invocation in
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\.next\dev\server\chunks\[root-of-the-server]__03vsdrw._.js:523:164
+
+  520         contas
+  521     });
+  522 }
+→ 523 const contas = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].contaPagar.findMany(
+The column `ContaPagar.lotePagamentoId` does not exist in the current database.
+    at <unknown> (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:40)
+    at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+  56 |     }
+  57 |
+> 58 |     const contas = await db.contaPagar.findMany({
+     |                                        ^
+  59 |       where,
+  60 |       orderBy: { dataVencimento: 'asc' },
+  61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+  code: 'P2022',
+  meta: {
+    modelName: 'ContaPagar',
+    driverAdapterError: Error [DriverAdapterError]: ColumnNotFound
+        at async GET (file:\C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system\app\api\contas-financeiras\route.ts:58:20)
+      56 |     }
+      57 |
+    > 58 |     const contas = await db.contaPagar.findMany({
+         |                    ^
+      59 |       where,
+      60 |       orderBy: { dataVencimento: 'asc' },
+      61 |       include: { baixas: { orderBy: { createdAt: 'asc' } }, fornecedor: { select: { id: tr... {
+      [cause]: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 500 in 386ms (next.js: 10ms, application-code: 376ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 1685ms (next.js: 29ms, application-code: 1656ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 1698ms (next.js: 80ms, application-code: 1618ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /icon-192x192.png 404 in 215ms (next.js: 53ms, application-code: 161ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 570ms (next.js: 148ms, application-code: 423ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 430ms (next.js: 11ms, application-code: 420ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094746987 200 in 2.6s (next.js: 2.3s, application-code: 243ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094749985 200 in 229ms (next.js: 13ms, application-code: 216ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094755985 200 in 625ms (next.js: 18ms, application-code: 608ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094765428 200 in 249ms (next.js: 41ms, application-code: 208ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094774591 200 in 261ms (next.js: 30ms, application-code: 231ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094774605 200 in 1028ms (next.js: 10ms, application-code: 1018ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094779990 200 in 253ms (next.js: 16ms, application-code: 237ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094785988 200 in 231ms (next.js: 11ms, application-code: 220ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094810421 200 in 984ms (next.js: 5ms, application-code: 979ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094816424 200 in 218ms (next.js: 7ms, application-code: 211ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094822419 200 in 234ms (next.js: 29ms, application-code: 205ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094831427 200 in 215ms (next.js: 9ms, application-code: 207ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094840427 200 in 208ms (next.js: 5ms, application-code: 203ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094882792 200 in 1080ms (next.js: 31ms, application-code: 1049ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094906425 200 in 1030ms (next.js: 13ms, application-code: 1017ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094939427 200 in 1111ms (next.js: 41ms, application-code: 1069ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094993171 200 in 1044ms (next.js: 41ms, application-code: 1003ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789094993167 200 in 1056ms (next.js: 12ms, application-code: 1044ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095020429 200 in 1011ms (next.js: 8ms, application-code: 1003ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095035426 200 in 1005ms (next.js: 8ms, application-code: 997ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095038420 200 in 211ms (next.js: 6ms, application-code: 206ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095050420 200 in 1939ms (next.js: 6ms, application-code: 1933ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095133065 200 in 1077ms (next.js: 67ms, application-code: 1010ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095134952 200 in 252ms (next.js: 21ms, application-code: 230ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095140177 200 in 269ms (next.js: 44ms, application-code: 225ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095151990 200 in 1045ms (next.js: 10ms, application-code: 1035ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095186859 200 in 1063ms (next.js: 53ms, application-code: 1010ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095186862 200 in 1065ms (next.js: 25ms, application-code: 1040ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095187988 200 in 1048ms (next.js: 18ms, application-code: 1031ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095194426 200 in 222ms (next.js: 6ms, application-code: 216ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095200427 200 in 235ms (next.js: 9ms, application-code: 226ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095203426 200 in 248ms (next.js: 29ms, application-code: 219ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095218422 200 in 1014ms (next.js: 8ms, application-code: 1005ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095221415 200 in 226ms (next.js: 11ms, application-code: 214ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095230418 200 in 235ms (next.js: 13ms, application-code: 222ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095245415 200 in 1028ms (next.js: 23ms, application-code: 1004ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095252241 200 in 217ms (next.js: 10ms, application-code: 207ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095252243 200 in 1015ms (next.js: 25ms, application-code: 990ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095257419 200 in 209ms (next.js: 7ms, application-code: 202ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095269787 200 in 1011ms (next.js: 6ms, application-code: 1005ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095277228 200 in 229ms (next.js: 14ms, application-code: 215ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095281429 200 in 290ms (next.js: 34ms, application-code: 256ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095281430 200 in 1088ms (next.js: 96ms, application-code: 992ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095302422 200 in 997ms (next.js: 6ms, application-code: 990ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095308429 200 in 217ms (next.js: 8ms, application-code: 209ms)
+✓ Compiled in 1754ms
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /consultor/agenda 200 in 219ms (next.js: 136ms, application-code: 83ms)
+ GET /icon-192x192.png 404 in 208ms (next.js: 39ms, application-code: 169ms)
+✓ Compiled in 547ms
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /consultor/agenda 200 in 177ms (next.js: 61ms, application-code: 116ms)
+ GET /icon-192x192.png 404 in 196ms (next.js: 22ms, application-code: 173ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+✓ Compiled in 1057ms
+ GET /consultor/agenda 200 in 170ms (next.js: 106ms, application-code: 64ms)
+ GET /icon-192x192.png 404 in 113ms (next.js: 21ms, application-code: 92ms)

@@ -48,13 +48,52 @@ export async function criarLancamentoEspelho(
     select: { osPlanoContaPadraoId: true, osPortadorPadraoId: true },
   });
 
-  const planoContaId = p.planoContaIdSugerido || empresa?.osPlanoContaPadraoId || null;
-  const portadorId = empresa?.osPortadorPadraoId || null;
+  let planoContaId = p.planoContaIdSugerido || empresa?.osPlanoContaPadraoId || null;
+  let portadorId = empresa?.osPortadorPadraoId || null;
+
+  if (!planoContaId) {
+    const defaultPc = await db.planoConta.findFirst({
+      where: { empresaId: p.empresaId, tipo: p.tipo, nivel: 3 },
+      orderBy: { codigo: 'asc' },
+    });
+    if (defaultPc) planoContaId = defaultPc.id;
+    else {
+      // Create a default one if none exists
+      const createdPc = await db.planoConta.create({
+        data: {
+          empresaId: p.empresaId,
+          tipo: p.tipo,
+          codigo: p.tipo === 'receita' ? '1.01.01' : '2.01.01',
+          descricao: 'Recebimentos / Pagamentos Integração',
+          nivel: 3,
+        }
+      });
+      planoContaId = createdPc.id;
+    }
+  }
+
+  if (!portadorId) {
+    const defaultPortador = await db.portador.findFirst({
+      where: { empresaId: p.empresaId, ativo: true },
+    });
+    if (defaultPortador) portadorId = defaultPortador.id;
+    else {
+      const createdPortador = await db.portador.create({
+        data: {
+          empresaId: p.empresaId,
+          nome: 'Conta Integração (API)',
+          tipo: 'outro',
+          saldoInicial: 0,
+        }
+      });
+      portadorId = createdPortador.id;
+    }
+  }
 
   if (!planoContaId || !portadorId) {
     return {
       criado: false,
-      motivo: 'Empresa sem plano de conta/portador padrão configurado para lançamentos via API (Empresas → editar → Integração via API).',
+      motivo: 'Sistema não conseguiu criar nem encontrar plano de conta ou portador padrão.',
     };
   }
 

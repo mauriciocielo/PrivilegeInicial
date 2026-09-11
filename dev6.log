@@ -1,0 +1,14 @@
+> Ready on http://localhost:3000
+(node:1588) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+○ Compiling /login ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 4.6s (next.js: 4.3s, application-code: 260ms)
+ GET /login 200 in 55ms (next.js: 8ms, application-code: 47ms)
+ GET /login 200 in 69ms (next.js: 14ms, application-code: 55ms)
+ GET / 200 in 1138ms (next.js: 934ms, application-code: 204ms)
+ GET /login 200 in 68ms (next.js: 8ms, application-code: 60ms)
+○ Compiling /consultor/dashboard ...
+ GET /consultor/dashboard 200 in 5.9s (next.js: 5.2s, application-code: 605ms)
+ GET /cliente/dashboard 200 in 1723ms (next.js: 1604ms, application-code: 119ms)
+ GET / 200 in 133ms (next.js: 11ms, application-code: 121ms)

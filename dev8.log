@@ -1,0 +1,30 @@
+> Ready on http://localhost:3000
+(node:4300) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+○ Compiling /login ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 4.7s (next.js: 4.2s, application-code: 441ms)
+ GET /consultor/agenda 200 in 3.1s (next.js: 3.0s, application-code: 101ms)
+ GET /consultor/agenda 200 in 200ms (next.js: 36ms, application-code: 164ms)
+🔌 Cliente WebSocket conectado: WKbJDtBvuRWvDtmkAAAB
+ GET /icon-192x192.png 404 in 1599ms (next.js: 1391ms, application-code: 208ms)
+○ Compiling /api/migrate-backup ...
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095588316 200 in 8.1s (next.js: 4.7s, application-code: 3.3s)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095600130 200 in 445ms (next.js: 117ms, application-code: 328ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095600128 200 in 1158ms (next.js: 130ms, application-code: 1028ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095621431 200 in 1055ms (next.js: 19ms, application-code: 1036ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095633421 200 in 1023ms (next.js: 13ms, application-code: 1010ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095634597 200 in 240ms (next.js: 21ms, application-code: 219ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095636316 200 in 244ms (next.js: 16ms, application-code: 228ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095642315 200 in 312ms (next.js: 61ms, application-code: 251ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095654428 200 in 1054ms (next.js: 17ms, application-code: 1037ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095657036 200 in 231ms (next.js: 12ms, application-code: 219ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095657038 200 in 1005ms (next.js: 8ms, application-code: 997ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095663420 200 in 231ms (next.js: 14ms, application-code: 217ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095664111 200 in 226ms (next.js: 12ms, application-code: 214ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095664108 200 in 254ms (next.js: 36ms, application-code: 218ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095674207 200 in 231ms (next.js: 10ms, application-code: 222ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095684423 200 in 224ms (next.js: 10ms, application-code: 214ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095691454 200 in 228ms (next.js: 11ms, application-code: 217ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095691456 200 in 1069ms (next.js: 32ms, application-code: 1036ms)
+ GET /api/migrate-backup?collection=cf_agenda_semanal&t=1789095693326 200 in 225ms (next.js: 9ms, application-code: 216ms)
