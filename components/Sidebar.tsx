@@ -87,6 +87,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
       { label: 'Contas a Pagar', href: '/consultor/contas-pagar', icon: CreditCard },
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
+      { label: 'Contas via ERP', href: '/consultor/contas-erp', icon: Landmark },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },

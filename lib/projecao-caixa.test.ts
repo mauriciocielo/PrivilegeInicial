@@ -121,4 +121,31 @@ describe('projetarCaixa', () => {
     });
     expect(r.coberturaServicoDivida).toBeNull();
   });
+
+  it('soma o saldo em aberto de contas a receber/pagar da API do ERP, pela competência do vencimento', () => {
+    const r = projetarCaixa({
+      meses: 2, saldoInicial: 0, planoContas, lancamentos: [], endividamentos: [], hoje: BASE,
+      contasReceber: [
+        { dataVencimento: '2026-02-05', valorLiquido: 1000, status: 'aberto', baixas: [] },
+        { dataVencimento: '2026-02-20', valorLiquido: 500, status: 'parcial', baixas: [{ valor: 200 }] }, // resta 300
+        { dataVencimento: '2026-03-01', valorLiquido: 900, status: 'liquidado', baixas: [{ valor: 900 }] }, // já pago, não entra
+        { dataVencimento: '2026-03-01', valorLiquido: 400, status: 'cancelado', baixas: [] }, // cancelado, não entra
+      ],
+      contasPagar: [
+        { dataVencimento: '2026-02-10', valorLiquido: 600, status: 'aberto', baixas: [] },
+      ],
+    });
+    expect(r.meses[0].entradas).toBe(1300); // 1000 + 300
+    expect(r.meses[0].saidasOperacionais).toBe(600);
+    expect(r.meses[1].entradas).toBe(0);
+  });
+
+  it('projeção manual substitui também as contas a receber/pagar da API, não soma os dois', () => {
+    const r = projetarCaixa({
+      meses: 1, saldoInicial: 0, planoContas, lancamentos: [], endividamentos: [], hoje: BASE,
+      contasReceber: [{ dataVencimento: '2026-02-05', valorLiquido: 1000, status: 'aberto', baixas: [] }],
+      projecoes: [{ id: 'p1', empresaId: 'e1', competencia: '2026-02', faturamento: 5000, despesas: 0 }],
+    });
+    expect(r.meses[0].entradas).toBe(5000);
+  });
 });

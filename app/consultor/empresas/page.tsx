@@ -37,6 +37,7 @@ const AVAILABLE_SCREENS = [
   { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
   { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
   { label: '🏢 Empresas', route: '/consultor/empresas' },
   { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
   { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },

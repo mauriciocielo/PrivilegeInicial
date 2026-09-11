@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { store, Endividamento, Lancamento, PlanoConta, Portador } from '../lib/store';
 import { fmt } from '../lib/reports';
-import { projetarCaixa } from '../lib/projecao-caixa';
+import { projetarCaixa, type ContaFinanceiraProjetavel } from '../lib/projecao-caixa';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 /**
@@ -21,6 +21,8 @@ export default function ProjecaoCaixaResumo({
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [endividamentos, setEndividamentos] = useState<Endividamento[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
+  const [contasReceber, setContasReceber] = useState<ContaFinanceiraProjetavel[]>([]);
+  const [contasPagar, setContasPagar] = useState<ContaFinanceiraProjetavel[]>([]);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -33,6 +35,14 @@ export default function ProjecaoCaixaResumo({
     carregar();
     window.addEventListener('cfDataChange', carregar);
     return () => window.removeEventListener('cfDataChange', carregar);
+  }, [empresaId]);
+
+  useEffect(() => {
+    if (!empresaId) return;
+    fetch(`/api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasReceber(j.contas || [])).catch(() => setContasReceber([]));
+    fetch(`/api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasPagar(j.contas || [])).catch(() => setContasPagar([]));
   }, [empresaId]);
 
   const saldoInicial = useMemo(() => {

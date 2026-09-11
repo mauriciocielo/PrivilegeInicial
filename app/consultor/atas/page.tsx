@@ -99,6 +99,10 @@ export default function AtasConsultorPage() {
   const [carregandoAssinatura, setCarregandoAssinatura] = useState(false);
   const [enviandoAssinatura, setEnviandoAssinatura] = useState(false);
   const [emailsSignatarios, setEmailsSignatarios] = useState('');
+  // Link do PDF já assinado por todas as partes, devolvido pelo Autentique
+  // (fica null até a assinatura ser concluída — não é algo que eu calculo,
+  // só exibo quando a API já preenche).
+  const [arquivoAssinado, setArquivoAssinado] = useState<string | null>(null);
 
   // Descobre uma única vez se o servidor tem o Autentique configurado — sem
   // isso, a seção de assinatura nem aparece na tela.
@@ -116,6 +120,7 @@ export default function AtasConsultorPage() {
       const json = await res.json();
       if (!res.ok) { toast.error(json.error || 'Não foi possível consultar a assinatura.'); return; }
       setAssinaturas(json?.documento?.assinaturas || []);
+      setArquivoAssinado(json?.documento?.arquivoAssinado || null);
     } catch {
       toast.error('Erro de conexão ao consultar a assinatura.');
     } finally {
@@ -123,13 +128,35 @@ export default function AtasConsultorPage() {
     }
   }, []);
 
+  // O consultor responsável pela ata assina junto, sempre — não é uma opção
+  // que o usuário precise lembrar de marcar toda vez.
+  const consultorAssinante = viewAta ? consultores.find(c => c.id === viewAta.consultorId) : undefined;
+
   const enviarParaAssinatura = async () => {
     if (!viewAta) return;
-    const emails = emailsSignatarios.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
-    if (emails.length === 0) {
-      toast.error('Informe ao menos um e-mail para assinar.');
+    const emailsCliente = emailsSignatarios.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+
+    if (!consultorAssinante?.email) {
+      toast.error('O consultor responsável por esta ata não tem e-mail cadastrado — atualize o cadastro dele antes de enviar.');
       return;
     }
+    if (emailsCliente.length === 0) {
+      toast.error('Informe ao menos um e-mail do lado do cliente para assinar.');
+      return;
+    }
+
+    // O consultor sempre assina junto. Se o e-mail dele por acaso coincidir
+    // com um dos e-mails digitados, não duplica o convite.
+    const vistos = new Set<string>();
+    const signatarios: { email: string; name?: string; action: 'SIGN' }[] = [];
+    const adicionar = (email: string, name?: string) => {
+      const chave = email.toLowerCase();
+      if (vistos.has(chave)) return;
+      vistos.add(chave);
+      signatarios.push({ email, name, action: 'SIGN' });
+    };
+    adicionar(consultorAssinante.email, consultorAssinante.name);
+    emailsCliente.forEach(email => adicionar(email));
 
     setEnviandoAssinatura(true);
     try {
@@ -148,7 +175,7 @@ export default function AtasConsultorPage() {
       fd.append('file', blob, `${nome}.pdf`);
       fd.append('nome', `${viewAta.titulo} — ${empresa?.nomeFantasia || ''}`.trim());
       fd.append('mensagem', 'Segue a ata de atendimento para sua assinatura.');
-      fd.append('signers', JSON.stringify(emails.map(email => ({ email, action: 'SIGN' }))));
+      fd.append('signers', JSON.stringify(signatarios));
 
       const res = await fetch('/api/atas/assinatura', { method: 'POST', body: fd });
       const json = await res.json();
@@ -164,8 +191,9 @@ export default function AtasConsultorPage() {
       setViewAta(atualizada);
       setAtas(store.getAtas(empresaId));
       setAssinaturas(json.documento.assinaturas || []);
+      setArquivoAssinado(null);
       setEmailsSignatarios('');
-      toast.success(`Ata enviada para ${emails.length} signatário(s).`);
+      toast.success(`Ata enviada para ${signatarios.length} signatário(s), incluindo o consultor.`);
     } catch (e) {
       console.error(e);
       toast.error('Erro ao enviar a ata para assinatura.');
@@ -185,6 +213,7 @@ export default function AtasConsultorPage() {
     // Prepara a seção de assinatura: já sugere o e-mail da empresa e busca a
     // situação atual caso a ata tenha sido enviada anteriormente.
     setAssinaturas([]);
+    setArquivoAssinado(null);
     setEmailsSignatarios(empresa?.email || '');
     if (ata.assinaturaId) consultarAssinatura(ata.assinaturaId);
   };
@@ -502,11 +531,20 @@ export default function AtasConsultorPage() {
                       Envie esta ata para assinatura. Cada pessoa recebe o documento por e-mail
                       com um link próprio para assinar.
                     </div>
+                    <div style={{
+                      fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 10,
+                      background: 'var(--bg-card2)', border: '1px solid var(--border-light)',
+                      borderRadius: 8, padding: '8px 12px',
+                    }}>
+                      {consultorAssinante?.email
+                        ? <>✓ O consultor <strong>{consultorAssinante.name}</strong> ({consultorAssinante.email}) assina junto, automaticamente.</>
+                        : <span style={{ color: 'var(--red)' }}>⚠️ O consultor desta ata não tem e-mail cadastrado — atualize o cadastro dele antes de enviar.</span>}
+                    </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <input
                         className="form-control"
                         style={{ flex: 1, minWidth: 260 }}
-                        placeholder="E-mails separados por vírgula"
+                        placeholder="E-mails do cliente, separados por vírgula"
                         value={emailsSignatarios}
                         onChange={e => setEmailsSignatarios(e.target.value)}
                       />
@@ -524,6 +562,19 @@ export default function AtasConsultorPage() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
                       Enviado em {viewAta.assinaturaEnviadaEm ? new Date(viewAta.assinaturaEnviadaEm).toLocaleString('pt-BR') : '—'}
                     </div>
+
+                    {arquivoAssinado && (
+                      <a
+                        href={arquivoAssinado}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, background: 'var(--green)', borderColor: 'var(--green)' }}
+                      >
+                        📄 Baixar PDF assinado (versão final)
+                      </a>
+                    )}
+
                     {assinaturas.length === 0 ? (
                       <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                         {carregandoAssinatura ? 'Consultando o Autentique...' : 'Nenhum signatário retornado.'}

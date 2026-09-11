@@ -12,6 +12,7 @@ import { captureError } from '../../../lib/sentry-helper';
  * foi lançado/baixado do lado de fora.
  *
  * GET /api/contas-financeiras?tipo=receber&status=aberto&empresaId=...
+ * `status` aceita múltiplos valores separados por vírgula (ex.: "aberto,parcial").
  */
 export async function GET(request: Request) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const tipo = url.searchParams.get('tipo') === 'pagar' ? 'pagar' : 'receber';
     const statusFiltro = url.searchParams.get('status');
+    const statusList = statusFiltro ? statusFiltro.split(',').map(s => s.trim()).filter(Boolean) : null;
     const empresaIdParam = url.searchParams.get('empresaId');
 
     // Mesma regra de escopo do resto do sistema: administrador vê tudo,
@@ -39,7 +41,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Informe empresaId.' }, { status: 400 });
     }
 
-    const where = { empresaId, ...(statusFiltro ? { status: statusFiltro as any } : {}) };
+    const where = {
+      empresaId,
+      ...(statusList ? { status: statusList.length === 1 ? (statusList[0] as any) : { in: statusList as any } } : {}),
+    };
 
     if (tipo === 'receber') {
       const contas = await db.contaReceber.findMany({

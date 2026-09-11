@@ -81,6 +81,19 @@ function parcelasNoMes(divida: Endividamento, indiceMes: number): number {
   return indiceMes < divida.parcelasFaltantes ? (divida.parcela || 0) : 0;
 }
 
+/**
+ * Formato mínimo de ContaReceber/ContaPagar (o modelo Prisma alimentado pela
+ * API v1 de integração ERP) necessário para entrar na projeção — evita que
+ * lib/projecao-caixa.ts (puro, sem acesso a rede) precise importar o client
+ * do Prisma.
+ */
+export interface ContaFinanceiraProjetavel {
+  dataVencimento: string;
+  valorLiquido: number;
+  status: 'aberto' | 'parcial' | 'liquidado' | 'cancelado';
+  baixas: { valor: number }[];
+}
+
 export interface ParametrosProjecao {
   meses: number;
   saldoInicial: number;
@@ -93,11 +106,23 @@ export interface ParametrosProjecao {
    * mês — somar os dois contaria a mesma receita duas vezes.
    */
   projecoes?: ProjecaoFaturamento[];
+  /**
+   * Títulos em aberto vindos da API v1 (ERP do cliente) — somados aos
+   * lançamentos previstos pelo saldo ainda não baixado, na competência do
+   * vencimento. Também entram sob a mesma regra de substituição por
+   * `projecoes`, para não contar a mesma receita/despesa duas vezes quando o
+   * consultor já informou uma previsão manual para o mês.
+   */
+  contasReceber?: ContaFinanceiraProjetavel[];
+  contasPagar?: ContaFinanceiraProjetavel[];
   /** Quando informado, simula a contratação de um novo financiamento. */
   simulacao?: NovoFinanciamento | null;
   /** Base de cálculo; default = hoje. Existe para tornar o teste determinístico. */
   hoje?: Date;
 }
+
+const saldoEmAberto = (c: ContaFinanceiraProjetavel) =>
+  Math.max(0, c.valorLiquido - c.baixas.reduce((s, b) => s + b.valor, 0));
 
 export function projetarCaixa(p: ParametrosProjecao): ResultadoProjecao {
   const hoje = p.hoje ? new Date(p.hoje) : new Date();
@@ -139,6 +164,20 @@ export function projetarCaixa(p: ParametrosProjecao): ResultadoProjecao {
         if (ehTransferencia(l)) continue;
         if (l.tipo === 'receita') entradas += l.valor;
         else saidas += l.valor;
+      }
+
+      // Títulos em aberto lançados via API do ERP (fora do lib/store.ts
+      // local-first) — soma o saldo ainda não baixado, na competência do
+      // vencimento.
+      for (const c of p.contasReceber || []) {
+        if (c.status !== 'aberto' && c.status !== 'parcial') continue;
+        if (!c.dataVencimento?.startsWith(competencia)) continue;
+        entradas += saldoEmAberto(c);
+      }
+      for (const c of p.contasPagar || []) {
+        if (c.status !== 'aberto' && c.status !== 'parcial') continue;
+        if (!c.dataVencimento?.startsWith(competencia)) continue;
+        saidas += saldoEmAberto(c);
       }
     }
 
