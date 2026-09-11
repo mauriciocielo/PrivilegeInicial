@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         acrescimos: corpo.acrescimos ?? 0,
         descontos: corpo.descontos ?? 0,
         valorLiquido: valorLiquido!,
+        formaPagamentoPrevista: corpo.formaPagamentoPrevista || null,
         origemApiKeyId: apiKeyId,
       },
     });
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
       numeroDocumento: corpo.numeroDocumento || null,
       planoContaIdSugerido: corpo.planoContaId || null,
       contaPagarId: conta.id,
+      formaPagamentoPrevista: corpo.formaPagamentoPrevista || null,
     });
 
     status = 201;

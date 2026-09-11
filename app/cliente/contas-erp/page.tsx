@@ -24,6 +24,7 @@ interface ContaFinanceira {
   baixas: Baixa[];
   sacado?: { nome: string; cpfCnpj: string };
   fornecedor?: { nome: string; cpfCnpj: string };
+  formaPagamentoPrevista?: string | null;
 }
 
 const STATUS_LABEL: Record<StatusConta, string> = {
@@ -189,7 +190,10 @@ export default function ClienteContasErpPage() {
                       <Fragment key={c.id}>
                         <tr style={{ cursor: c.baixas.length > 0 ? 'pointer' : 'default' }} onClick={() => c.baixas.length > 0 && setExpandido(aberta ? null : c.id)}>
                           <td style={{ fontWeight: 600 }}>{pessoa?.nome || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.numeroDocumento || c.descricao || '—'}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {c.numeroDocumento || c.descricao || '—'}
+                            {c.formaPagamentoPrevista && <div style={{ fontSize: 10.5, color: 'var(--accent)', marginTop: 2 }}>💳 {c.formaPagamentoPrevista}</div>}
+                          </td>
                           <td style={{ whiteSpace: 'nowrap', color: vencida(c) ? 'var(--red)' : undefined, fontWeight: vencida(c) ? 700 : 400 }}>
                             {fmt.date(c.dataVencimento)} {vencida(c) && '⚠️'}
                           </td>

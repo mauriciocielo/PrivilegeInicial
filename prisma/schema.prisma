@@ -97,6 +97,11 @@ model Empresa {
   imobilizados               Imobilizado[]
   curvaAbcConfig             CurvaAbcConfig?
   curvasAbc                  CurvaAbc[]
+  regrasCategorizacao        RegraCategorizacaoOFX[]
+  documentosEntrada          DocumentoEntrada[]
+  lotesPagamento             LotePagamento[]
+  regrasCobranca             ReguaCobranca[]
+  slasFechamento             SLAFechamento[]
 }
 
 model Unidade {
@@ -619,6 +624,9 @@ model ContaReceber {
   descontos          Float                 @default(0)
   valorLiquido       Float
   status             StatusContaFinanceira @default(aberto)
+  /// Informativo — como o ERP espera que este título seja pago (ex.: "PIX",
+  /// "Cartão de crédito 3x"). Não baixa nada sozinho, só orienta o consultor.
+  formaPagamentoPrevista String?
   origemApiKeyId     String?
   conciliadoEm       DateTime?
   canceladoEm        DateTime?
@@ -627,6 +635,7 @@ model ContaReceber {
   empresa            Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   sacado             Cliente               @relation("ContasReceberComoSacado", fields: [sacadoId], references: [id])
   baixas             ContaReceberBaixa[]
+  reguaLogs          ReguaCobrancaLog[]
 
   @@index([empresaId])
   @@index([sacadoId])
@@ -665,6 +674,9 @@ model ContaPagar {
   descontos       Float                 @default(0)
   valorLiquido    Float
   status          StatusContaFinanceira @default(aberto)
+  /// Informativo — como o título será pago (ex.: "Boleto 30 dias"). Não
+  /// baixa nada sozinho, só orienta o consultor.
+  formaPagamentoPrevista String?
   origemApiKeyId  String?
   conciliadoEm    DateTime?
   canceladoEm     DateTime?
@@ -673,6 +685,8 @@ model ContaPagar {
   empresa         Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   fornecedor      Cliente               @relation("ContasPagarComoFornecedor", fields: [fornecedorId], references: [id])
   baixas          ContaPagarBaixa[]
+  lotePagamentoId String?
+  lotePagamento   LotePagamento?        @relation(fields: [lotePagamentoId], references: [id])
 
   @@index([empresaId])
   @@index([fornecedorId])
@@ -740,4 +754,89 @@ model ApiKey {
   empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
+}
+
+// ============================================================
+// MÓDULOS DE AUTOMAÇÃO BPO - CFOaaS
+// ============================================================
+
+model RegraCategorizacaoOFX {
+  id             String   @id @default(uuid())
+  empresaId      String
+  condicao       String   // ex: "STARTS_WITH:PGTO VIVO", "CONTAINS:TARIFA BANCARIA"
+  planoContaId   String
+  tipoMovimento  String   // "ENTRADA" | "SAIDA"
+  createdAt      DateTime @default(now())
+  empresa        Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  planoConta     PlanoConta @relation(fields: [planoContaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
+
+model DocumentoEntrada {
+  id               String   @id @default(uuid())
+  empresaId        String
+  arquivoUrl       String
+  tipoDocumento    String   // "XML_NFE" | "PDF_BOLETO" | "RECIBO"
+  hashProcessamento String?  @unique
+  lido             Boolean  @default(false)
+  dadosExtraidos   Json?
+  status           String   @default("PENDENTE") // PENDENTE, APROVADO, REJEITADO, ERRO
+  createdAt        DateTime @default(now())
+  empresa          Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@index([status])
+}
+
+model LotePagamento {
+  id              String       @id @default(uuid())
+  empresaId       String
+  dataAgendamento String       // Dia programado para o lote
+  status          String       @default("CRIADO") // CRIADO, AGUARDANDO_CLIENTE, APROVADO, EXPORTADO
+  arquivoCnabUrl  String?      
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+  empresa         Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  contasPagar     ContaPagar[] // Relação 1-N
+
+  @@index([empresaId])
+}
+
+model ReguaCobranca {
+  id               String   @id @default(uuid())
+  empresaId        String
+  nome             String
+  templateAviso    String   // Template de mensagem p/ WhatsApp/Email
+  diasAntesOuDepois Int      // ex: -3 (3 dias antes), 0 (no dia), +5 (5 dias depois)
+  ativo            Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  empresa          Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+}
+
+model ReguaCobrancaLog {
+  id               String       @id @default(uuid())
+  contaReceberId   String
+  enviadoEm        DateTime     @default(now())
+  sucesso          Boolean
+  erroDetalhe      String?
+  contaReceber     ContaReceber @relation(fields: [contaReceberId], references: [id], onDelete: Cascade)
+
+  @@index([contaReceberId])
+}
+
+model SLAFechamento {
+  id                   String   @id @default(uuid())
+  empresaId            String
+  competencia          String   // "2026-09"
+  status               String   @default("ABERTO") // ABERTO, EM_ANDAMENTO, ATRASADO, CONCLUIDO
+  responsavelId        String?
+  percentualProgresso  Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+  empresa              Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, competencia])
 }

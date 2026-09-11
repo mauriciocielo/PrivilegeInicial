@@ -120,4 +120,12 @@ describe('validarPayloadContaFinanceira', () => {
     const r = validarPayloadContaFinanceira(resto);
     expect(r.erros.some(e => e.campo === 'sacadoId')).toBe(true);
   });
+  it('aceita formaPagamentoPrevista opcional', () => {
+    const r = validarPayloadContaFinanceira({ ...base, formaPagamentoPrevista: 'PIX' });
+    expect(r.erros).toEqual([]);
+  });
+  it('rejeita formaPagamentoPrevista maior que 60 caracteres', () => {
+    const r = validarPayloadContaFinanceira({ ...base, formaPagamentoPrevista: 'x'.repeat(61) });
+    expect(r.erros.some(e => e.campo === 'formaPagamentoPrevista')).toBe(true);
+  });
 });

@@ -71,10 +71,11 @@ export function getApiDocSecoes(base: string): ApiDocSecao[] {
       blocos: [
         endpoint('POST', '/api/v1/contas-receber'),
         codigo(
-          `{\n  "sacadoId": "44bc2f8e-2f40-417c-a13d-d1ede8d2fabd",\n  "numeroDocumento": "NF-000123",\n  "descricao": "Venda de mercadorias",\n  "dataEmissao": "2026-09-10",\n  "dataVencimento": "2026-10-10",\n  "dataCompetencia": "2026-09-10",\n  "valorOriginal": 1000.00,\n  "acrescimos": 0,\n  "descontos": 0,\n  "documentoFiscalUrl": "https://seu-erp.com/nfe/123.xml"\n}`,
+          `{\n  "sacadoId": "44bc2f8e-2f40-417c-a13d-d1ede8d2fabd",\n  "numeroDocumento": "NF-000123",\n  "descricao": "Venda de mercadorias",\n  "dataEmissao": "2026-09-10",\n  "dataVencimento": "2026-10-10",\n  "dataCompetencia": "2026-09-10",\n  "valorOriginal": 1000.00,\n  "acrescimos": 0,\n  "descontos": 0,\n  "documentoFiscalUrl": "https://seu-erp.com/nfe/123.xml",\n  "formaPagamentoPrevista": "PIX"\n}`,
           `POST ${base}/api/v1/contas-receber`
         ),
         texto('`dataVencimento` no passado é rejeitada por padrão — some `"permitirRetroativo": true` ao payload para autorizar explicitamente (ex.: migração de saldo já vencido). Valores aceitam no máximo 2 casas decimais.'),
+        texto('`formaPagamentoPrevista` é opcional e só informativo (até 60 caracteres, ex.: `"PIX"`, `"Cartão de crédito 3x"`, `"Boleto 30 dias"`) — aparece para o consultor no portal, mas não registra pagamento nenhum sozinho. Para dar baixa de verdade, use o endpoint do item 5.'),
         codigo(
           `{\n  "id": "8ba9b259-c861-47b0-bbe4-12f7fe290bd9",\n  "status": "aberto",\n  "valorLiquido": 1000.00,\n  "dataVencimento": "2026-10-10"\n}`,
           'Resposta — 201'

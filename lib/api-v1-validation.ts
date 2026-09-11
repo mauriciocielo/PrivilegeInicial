@@ -173,6 +173,12 @@ export function validarPayloadContaFinanceira(body: any): { erros: ValidacaoErro
   const descontos = validarValorMonetario(body.descontos ?? 0, { permitirZero: true });
   if (!descontos.valido) erros.push({ campo: 'descontos', mensagem: descontos.erro });
 
+  if (body.formaPagamentoPrevista !== undefined && body.formaPagamentoPrevista !== null) {
+    if (typeof body.formaPagamentoPrevista !== 'string' || body.formaPagamentoPrevista.length > 60) {
+      erros.push({ campo: 'formaPagamentoPrevista', mensagem: 'Deve ser um texto de até 60 caracteres.' });
+    }
+  }
+
   if (erros.length > 0) return { erros };
 
   return {

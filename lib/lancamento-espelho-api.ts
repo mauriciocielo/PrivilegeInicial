@@ -31,6 +31,8 @@ export interface ParametrosLancamentoEspelho {
   planoContaIdSugerido: string | null;
   contaReceberId?: string;
   contaPagarId?: string;
+  /** Informativo — como o ERP espera que este título seja pago. Vai para a observação do lançamento (o modelo Lancamento não tem campo próprio). */
+  formaPagamentoPrevista?: string | null;
 }
 
 export type ResultadoLancamentoEspelho =
@@ -67,6 +69,7 @@ export async function criarLancamentoEspelho(
       portadorId,
       status: 'previsto',
       numeroDocumento: p.numeroDocumento,
+      observacao: p.formaPagamentoPrevista ? `Forma de pagamento prevista: ${p.formaPagamentoPrevista}` : null,
       origem: 'api',
       clienteId: p.clienteId,
       contaReceberId: p.contaReceberId,
