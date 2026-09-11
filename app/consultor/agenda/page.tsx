@@ -160,14 +160,41 @@ export default function AgendaPage() {
         importados++;
       }
 
-      if (importados > 0) {
+      let exportados = 0;
+      const locaisParaExportar = Array.from(map.values()).filter(t => !t.id.startsWith('gcal-') && !(t as any).googleEventId && t.dateStr >= min.toISOString().split('T')[0] && t.dateStr <= max.toISOString().split('T')[0]);
+      
+      for (const lt of locaisParaExportar) {
+        try {
+          // Extraindo HH e MM para gerar o fim (1 hora depois por default)
+          const hh = parseInt(lt.horario.split(':')[0]) || 9;
+          const mm = lt.horario.split(':')[1] || '00';
+          const evData = {
+            summary: lt.title,
+            start: { dateTime: `${lt.dateStr}T${pad2(hh)}:${mm}:00-03:00` },
+            end: { dateTime: `${lt.dateStr}T${pad2(hh + 1)}:${mm}:00-03:00` },
+            location: lt.location || 'Consultoria VIP',
+          };
+          const postRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(evData)
+          });
+          if (postRes.ok) {
+            const novoEv = await postRes.json();
+            (lt as any).googleEventId = novoEv.id;
+            exportados++;
+          }
+        } catch(e) {}
+      }
+
+      if (importados > 0 || exportados > 0) {
         const arr = Array.from(map.values());
         store.saveAgendaTasks(arr);
         setTasks(arr);
-        toast.success(`${importados} evento(s) sincronizado(s) do Google Calendar.`);
+        toast.success(`Google Calendar: ${importados} importado(s), ${exportados} exportado(s).`);
       } else if (!silencioso) {
         toast.info(eventos.length > 0
-          ? 'Nenhum evento novo — os eventos deste período já estavam sincronizados.'
+          ? 'Nenhum evento novo — sincronização bidirecional já atualizada.'
           : 'Nenhum evento encontrado no seu Google Calendar (calendário "primary") para este período.');
       }
     } catch (err) {
@@ -179,7 +206,7 @@ export default function AgendaPage() {
   };
 
   const loginGoogle = useGoogleLogin({
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar.events',
     onSuccess: (tokenResponse) => {
       localStorage.setItem('cf_gcal_token', tokenResponse.access_token);
       setGoogleConectado(true);
