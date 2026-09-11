@@ -4,7 +4,7 @@ import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2 } from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
 // persistem a agenda — manter uma cópia local aqui já causou divergência de
@@ -140,6 +140,7 @@ export default function AgendaPage() {
       // exceção ali (ex.: armazenamento cheio) derrubava a página inteira
       // sem chance de recuperação ("This page couldn't load").
       const map = new Map(store.getAgendaTasks().map(t => [t.id, t]));
+      const existingGoogleIds = new Set(Array.from(map.values()).map(t => (t as any).googleEventId).filter(Boolean));
       let importados = 0;
 
       for (const ev of eventos) {
@@ -147,7 +148,8 @@ export default function AgendaPage() {
         const start = new Date(ev.start.dateTime || ev.start.date);
         if (isNaN(start.getTime())) continue;
         const myId = `gcal-${ev.id}`;
-        if (map.has(myId)) continue;
+        if (map.has(myId) || existingGoogleIds.has(ev.id)) continue;
+        
         map.set(myId, {
           id: myId,
           title: ev.summary || 'Sem título',
@@ -270,13 +272,25 @@ export default function AgendaPage() {
     setIsModalOpen(true);
   };
 
+  const abrirEditar = (task: AgendaTask) => {
+    setNewTask({
+      ...task,
+      consultoresIds: (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []),
+      clienteParticipante: (task as any).clienteParticipante || '',
+    } as any);
+    setIsModalOpen(true);
+  };
+
   const handleSaveTask = () => {
     if (!newTask.title || !newTask.dateStr || !newTask.horario) {
       toast.error('Preencha título, data e horário.');
       return;
     }
+    
+    // Se o newTask já tiver um ID, estamos editando. Senão, cria novo.
+    const isEdit = !!newTask.id;
     const task: AgendaTask = {
-      id: Math.random().toString(36).slice(2, 11),
+      id: newTask.id || Math.random().toString(36).slice(2, 11),
       title: newTask.title,
       empresaId: newTask.empresaId || '',
       consultorId: ((newTask as any).consultoresIds || [])[0] || '',
@@ -287,7 +301,14 @@ export default function AgendaPage() {
       clienteParticipante: (newTask as any).clienteParticipante || '',
       consultoresIds: (newTask as any).consultoresIds || [],
     } as any;
-    saveTasks([...tasks, task]);
+
+    if (isEdit) {
+      saveTasks(tasks.map(t => (t.id === task.id ? task : t)));
+      toast.success('Compromisso atualizado!');
+    } else {
+      saveTasks([...tasks, task]);
+      toast.success('Compromisso criado!');
+    }
     setIsModalOpen(false);
 
     // Auto-sincronizar imediatamente para empurrar pro Google
@@ -555,6 +576,9 @@ export default function AgendaPage() {
                           {task.title}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button title="Editar compromisso" onClick={() => abrirEditar(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <Edit2 size={14} />
+                          </button>
                           <button title="Copiar mensagem" onClick={() => handleCopyMessage(task, `${diaSelecionado.date.getDate()}/${pad2(diaSelecionado.date.getMonth() + 1)}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                             <Copy size={14} />
                           </button>
@@ -585,7 +609,7 @@ export default function AgendaPage() {
             <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <X size={18} />
             </button>
-            <h3 style={{ fontSize: 18, marginBottom: 20 }}>Novo compromisso</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 20 }}>{newTask.id ? 'Editar compromisso' : 'Novo compromisso'}</h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
