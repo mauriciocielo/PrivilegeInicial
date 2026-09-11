@@ -104,6 +104,10 @@ export default function AgendaPage() {
       localStorage.setItem('cf_gcal_token', tokenResponse.access_token);
       toast.info('Credencial Google conectada! Importando base...');
       syncGoogleSilently(tokenResponse.access_token);
+    },
+    onError: (error) => {
+      console.error('Login Failed:', error);
+      toast.error('Ocorreu um erro ao conectar com o Google Calendar. Verifique os pop-ups do seu navegador.');
     }
   });
 

@@ -427,3 +427,70 @@
  GET /login 200 in 134ms (next.js: 14ms, application-code: 120ms)
  GET /login 200 in 65ms (next.js: 14ms, application-code: 51ms)
  GET /icon-192x192.png 404 in 352ms (next.js: 50ms, application-code: 302ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 89ms (next.js: 38ms, application-code: 51ms)
+ GET /icon-192x192.png 404 in 261ms (next.js: 32ms, application-code: 229ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 71ms (next.js: 31ms, application-code: 40ms)
+ GET /icon-192x192.png 404 in 148ms (next.js: 29ms, application-code: 119ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 147ms (next.js: 56ms, application-code: 91ms)
+ GET /icon-192x192.png 404 in 306ms (next.js: 39ms, application-code: 267ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /login 200 in 84ms (next.js: 34ms, application-code: 51ms)
+ GET /icon-192x192.png 404 in 168ms (next.js: 32ms, application-code: 136ms)
+ GET / 200 in 5.6s (next.js: 1350ms, application-code: 4.3s)
+[browser] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. 
+    at _.H (https://accounts.google.com/gsi/client:88:89)
+    at _.dv.na (https://accounts.google.com/gsi/client:361:353)
+    at Object.na (https://accounts.google.com/gsi/client:363:416)
+    at <unknown> (https://accounts.google.com/gsi/client:321:1011) (https://accounts.google.com/gsi/client:88:89)
+🔌 Cliente WebSocket conectado: KNq6yI6AOUkWD_E_AAAB
+ GET /icon-192x192.png 404 in 6.1s (next.js: 426ms, application-code: 5.7s)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 253ms (next.js: 115ms, application-code: 138ms)
+ GET /icon-192x192.png 404 in 408ms (next.js: 82ms, application-code: 326ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 88ms (next.js: 43ms, application-code: 45ms)
+ GET /icon-192x192.png 404 in 526ms (next.js: 113ms, application-code: 413ms)
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 85ms (next.js: 39ms, application-code: 47ms)
+ GET /icon-192x192.png 404 in 198ms (next.js: 35ms, application-code: 162ms)
+ GET /login 200 in 366ms (next.js: 139ms, application-code: 227ms)
+🔌 Cliente WebSocket desconectado: KNq6yI6AOUkWD_E_AAAB
+[browser] [GSI_LOGGER]: FedCM get() rejects with NotAllowedError: Only one navigator.credentials.get request may be outstanding at one time. 
+    at _.H (https://accounts.google.com/gsi/client:88:89)
+    at _.dv.na (https://accounts.google.com/gsi/client:361:353)
+    at Object.na (https://accounts.google.com/gsi/client:363:416)
+    at <unknown> (https://accounts.google.com/gsi/client:321:1011) (https://accounts.google.com/gsi/client:88:89)
+[browser] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. 
+    at _.H (https://accounts.google.com/gsi/client:88:89)
+    at _.dv.na (https://accounts.google.com/gsi/client:361:353)
+    at Object.na (https://accounts.google.com/gsi/client:363:416)
+    at <unknown> (https://accounts.google.com/gsi/client:321:1011) (https://accounts.google.com/gsi/client:88:89)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[browser] [GSI_LOGGER]: google.accounts.id.initialize() is called multiple times. This could cause unexpected behavior and only the last initialized instance will be used. (https://accounts.google.com/gsi/client:87:460)
+ GET /icon-192x192.png 404 in 752ms (next.js: 69ms, application-code: 684ms)
+ POST /api/auth/login 200 in 6.3s (next.js: 3.9s, application-code: 2.3s)
+ GET /consultor/dashboard 200 in 161ms (next.js: 88ms, application-code: 73ms)
+🔌 Cliente WebSocket conectado: HmLiDBE_XXxAzDkzAAAD
+ GET /icon-192x192.png 404 in 316ms (next.js: 41ms, application-code: 275ms)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 200 in 1374ms (next.js: 167ms, application-code: 1208ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 1446ms (next.js: 111ms, application-code: 1335ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 1277ms (next.js: 21ms, application-code: 1255ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 417ms (next.js: 6ms, application-code: 411ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 421ms (next.js: 9ms, application-code: 412ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 424ms (next.js: 11ms, application-code: 413ms)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 2.1s (next.js: 52ms, application-code: 2.0s)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 200 in 1201ms (next.js: 10ms, application-code: 1192ms)
+ GET /api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=e1 200 in 487ms (next.js: 7ms, application-code: 480ms)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=mpwoijc8rv79gnoai5i 200 in 513ms (next.js: 24ms, application-code: 489ms)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 200 in 477ms (next.js: 57ms, application-code: 420ms)
+ GET /api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=e1 200 in 431ms (next.js: 19ms, application-code: 412ms)
+npm notice
+npm notice New major version of npm available! 11.12.1 -> 12.0.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+npm notice To update run: npm install -g npm@12.0.2
+npm notice
+
+C:\Users\Usuario\.gemini\antigravity\scratch\cashflow-system>
