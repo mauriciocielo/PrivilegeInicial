@@ -508,6 +508,21 @@ ${result.portadoresAdded} portadores criados`);
                 <input className="form-control" placeholder="(00) 00000-0000" value={form.telefone || ''} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
               </div>
             </div>
+            {/* NOVO: Campos de Endereço vinculados ao Google Calendar */}
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 2 }}>
+                <label className="form-label">Endereço Completo</label>
+                <input className="form-control" placeholder="Rua XYZ, 100 - Bairro Novo" value={form.endereco || ''} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Cidade</label>
+                <input className="form-control" placeholder="Ex: São Paulo" value={form.cidade || ''} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} />
+              </div>
+              <div className="form-group" style={{ width: 80 }}>
+                <label className="form-label">UF</label>
+                <input className="form-control" placeholder="SP" maxLength={2} style={{ textTransform: 'uppercase' }} value={form.uf || ''} onChange={e => setForm(f => ({ ...f, uf: e.target.value.toUpperCase() }))} />
+              </div>
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Receita Mensal Esperada (R$)</label>

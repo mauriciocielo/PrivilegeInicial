@@ -22,6 +22,7 @@ export default function ClienteDashboard() {
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
   const [valuation, setValuation] = useState({ ebitdaMedio: 0, mult: 5, divida: 0, valor: 0 });
+  const [agendasSemana, setAgendasSemana] = useState<any[]>([]);
   const [userName, setUserName] = useState('');
   
   const [mesSelecionado, setMesSelecionado] = useState(() => {
@@ -118,6 +119,18 @@ export default function ClienteDashboard() {
     
     const valor = (ebitdaMedio * 12 * 5) - totalDiv;
     setValuation({ ebitdaMedio, mult: 5, divida: totalDiv, valor: valor > 0 ? valor : 0 });
+
+    // Agendas da Semana
+    const hj = new Date();
+    const dSemana = hj.getDay();
+    const dtIni = new Date(hj); dtIni.setDate(hj.getDate() - dSemana);
+    const dtFim = new Date(hj); dtFim.setDate(hj.getDate() + (6 - dSemana));
+    const sIni = dtIni.toISOString().split('T')[0];
+    const sFim = dtFim.toISOString().split('T')[0];
+    const tarefas = store.getAgendaTasks()
+      .filter(t => t.empresaId === eId && t.dateStr >= sIni && t.dateStr <= sFim && !t.completed)
+      .sort((a,b) => a.dateStr.localeCompare(b.dateStr) || (a.horario || '').localeCompare(b.horario || ''));
+    setAgendasSemana(tarefas);
 
   }, []);
 
@@ -292,6 +305,32 @@ export default function ClienteDashboard() {
         
         {/* Painel de IA / Inteligência */}
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
+
+        {agendasSemana.length > 0 && (
+          <div className="glass-card card-dynamic animate-slide-up" style={{
+            marginBottom: 32, padding: '24px 32px', borderLeft: '4px solid var(--accent)', animationDelay: '250ms'
+          }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📅 Meus Compromissos da Semana
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+              {agendasSemana.map(ag => {
+                  const arrDt = ag.dateStr.split('-');
+                  const ds = `${arrDt[2]}/${arrDt[1]}`;
+                  return (
+                    <div key={ag.id} style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.6)' }}>
+                       <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 800, marginBottom: 4 }}>
+                          {ds} às {ag.horario}
+                       </div>
+                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{ag.title}</div>
+                       {ag.clienteParticipante && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>👤 {ag.clienteParticipante}</div>}
+                       {ag.location && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {ag.location}</div>}
+                    </div>
+                  );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Foco na Semana */}
         {/* O cliente não tem a tela dedicada de projeção; aqui é onde ele vê
