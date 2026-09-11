@@ -75,7 +75,13 @@ export default function AgendaPage() {
     title: '', empresaId: '', consultorId: '', horario: '09:00', dateStr: hojeIso(), recurrent: false,
   });
 
-  useEffect(() => setMounted(true), []);
+  const [googleConectado, setGoogleConectado] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setGoogleConectado(!!localStorage.getItem('cf_gcal_token'));
+  }, []);
 
   useEffect(() => {
     const load = () => {
@@ -88,7 +94,17 @@ export default function AgendaPage() {
     return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
-  const syncGoogleSilently = async (token: string, ref: Date) => {
+  /**
+   * `silencioso=true` é usado no auto-sync ao trocar de mês (não incomoda o
+   * usuário se falhar); `silencioso=false` é o clique manual em "Sincronizar
+   * agora" — aí o erro real do Google precisa aparecer, porque antes essa
+   * função só dava `return` em qualquer falha (token expirado, Calendar API
+   * desabilitada no projeto do Google Cloud, escopo insuficiente...) sem
+   * avisar nada — parecia que "não sincroniza" quando na verdade a chamada
+   * estava sendo rejeitada silenciosamente.
+   */
+  const syncGoogle = async (token: string, ref: Date, silencioso: boolean) => {
+    if (!silencioso) setSincronizando(true);
     try {
       const min = new Date(ref); min.setDate(min.getDate() - 31);
       const max = new Date(ref); max.setDate(max.getDate() + 31);
@@ -97,9 +113,27 @@ export default function AgendaPage() {
         `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${min.toISOString()}&timeMax=${max.toISOString()}&singleEvents=true&orderBy=startTime`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) return; // token expirado/revogado — falha silenciosa, não derruba a página
+
+      if (!res.ok) {
+        const corpoErro = await res.json().catch(() => null);
+        const msgGoogle: string = corpoErro?.error?.message || '';
+        console.error('Erro ao consultar o Google Calendar:', res.status, corpoErro);
+
+        if (res.status === 401) {
+          // Token expirado/revogado — limpa e pede pra reconectar.
+          localStorage.removeItem('cf_gcal_token');
+          setGoogleConectado(false);
+          if (!silencioso) toast.error('Sua conexão com o Google expirou. Clique em "Conectar Google" de novo.');
+        } else if (res.status === 403 && /Calendar API|disabled|accessNotConfigured/i.test(msgGoogle)) {
+          if (!silencioso) toast.error('A Google Calendar API não está habilitada no projeto do Google Cloud. Ative-a em "APIs e Serviços" e tente de novo.', { duration: 8000 });
+        } else if (!silencioso) {
+          toast.error(`Erro ao sincronizar com o Google (${res.status}): ${msgGoogle || 'motivo não informado'}`);
+        }
+        return;
+      }
+
       const data = await res.json();
-      if (!data.items) return;
+      const eventos = data.items || [];
 
       // O cálculo acontece FORA do atualizador de estado — o React pode
       // executar o atualizador mais de uma vez durante a renderização, e uma
@@ -108,7 +142,7 @@ export default function AgendaPage() {
       const map = new Map(store.getAgendaTasks().map(t => [t.id, t]));
       let importados = 0;
 
-      for (const ev of data.items) {
+      for (const ev of eventos) {
         if (!ev?.start) continue;
         const start = new Date(ev.start.dateTime || ev.start.date);
         if (isNaN(start.getTime())) continue;
@@ -131,9 +165,16 @@ export default function AgendaPage() {
         store.saveAgendaTasks(arr);
         setTasks(arr);
         toast.success(`${importados} evento(s) sincronizado(s) do Google Calendar.`);
+      } else if (!silencioso) {
+        toast.info(eventos.length > 0
+          ? 'Nenhum evento novo — os eventos deste período já estavam sincronizados.'
+          : 'Nenhum evento encontrado no seu Google Calendar (calendário "primary") para este período.');
       }
     } catch (err) {
-      console.warn('Sincronização com Google Calendar falhou:', err);
+      console.error('Sincronização com Google Calendar falhou:', err);
+      if (!silencioso) toast.error('Erro de conexão ao sincronizar com o Google Calendar.');
+    } finally {
+      if (!silencioso) setSincronizando(false);
     }
   };
 
@@ -141,8 +182,9 @@ export default function AgendaPage() {
     scope: 'https://www.googleapis.com/auth/calendar.readonly',
     onSuccess: (tokenResponse) => {
       localStorage.setItem('cf_gcal_token', tokenResponse.access_token);
+      setGoogleConectado(true);
       toast.info('Conta Google conectada — importando eventos...');
-      syncGoogleSilently(tokenResponse.access_token, baseDate);
+      syncGoogle(tokenResponse.access_token, baseDate, false);
     },
     onError: (error) => {
       console.error('Login Google falhou:', error);
@@ -150,11 +192,23 @@ export default function AgendaPage() {
     },
   });
 
+  const sincronizarAgora = () => {
+    const t = localStorage.getItem('cf_gcal_token');
+    if (!t) { toast.error('Conecte sua conta Google primeiro.'); return; }
+    syncGoogle(t, baseDate, false);
+  };
+
+  const desconectarGoogle = () => {
+    localStorage.removeItem('cf_gcal_token');
+    setGoogleConectado(false);
+    toast.success('Conta Google desconectada.');
+  };
+
   // Tenta sincronizar sozinho ao trocar de mês/semana, se já houver um token salvo.
   useEffect(() => {
     if (!mounted) return;
     const t = localStorage.getItem('cf_gcal_token');
-    if (t) syncGoogleSilently(t, baseDate);
+    if (t) syncGoogle(t, baseDate, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, baseDate]);
 
@@ -255,11 +309,26 @@ export default function AgendaPage() {
           <div className="page-title">Agenda</div>
           <div className="page-subtitle">Compromissos da consultoria, com sincronização opcional do Google Calendar.</div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="" style={{ width: 14, height: 14, marginRight: 6, verticalAlign: -2 }} />
-            Conectar Google
-          </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {googleConectado ? (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--green)' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />
+                Google conectado
+              </span>
+              <button className="btn btn-secondary" onClick={sincronizarAgora} disabled={sincronizando} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
+                {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar agora'}
+              </button>
+              <button className="btn btn-ghost" onClick={desconectarGoogle} style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Desconectar
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-secondary" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="" style={{ width: 14, height: 14, marginRight: 6, verticalAlign: -2 }} />
+              Conectar Google
+            </button>
+          )}
           <button className="btn btn-primary" onClick={() => abrirNovo()}>
             <Plus size={15} style={{ marginRight: 4, verticalAlign: -3 }} /> Agendar
           </button>
