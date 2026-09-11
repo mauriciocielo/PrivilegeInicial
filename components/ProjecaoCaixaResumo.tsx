@@ -52,8 +52,8 @@ export default function ProjecaoCaixaResumo({
   }, [portadores, empresaId]);
 
   const proj = useMemo(
-    () => projetarCaixa({ meses, saldoInicial, lancamentos, planoContas, endividamentos }),
-    [meses, saldoInicial, lancamentos, planoContas, endividamentos]
+    () => projetarCaixa({ meses, saldoInicial, lancamentos, planoContas, endividamentos, contasReceber, contasPagar }),
+    [meses, saldoInicial, lancamentos, planoContas, endividamentos, contasReceber, contasPagar]
   );
 
   const dados = proj.meses.map(m => ({ mes: m.label.slice(0, 5), Saldo: Math.round(m.saldoFinal) }));

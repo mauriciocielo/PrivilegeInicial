@@ -30,6 +30,7 @@ export default function ConsultorDashboard() {
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [endividamentos, setEndividamentos] = useState<ReturnType<typeof store.getEndividamentos>>([]);
   const [totalDivida, setTotalDivida] = useState(0);
+  const [titulosErp, setTitulosErp] = useState({ receberAberto: 0, pagarAberto: 0, vencidos: 0 });
   const [indicador, setIndicador] = useState<ReturnType<typeof store.getIndicadores>[0] | null>(null);
   const [valuation, setValuation] = useState({ ebitdaMedio: 0, mult: 5, divida: 0, valor: 0 });
   const [mesSelecionado, setMesSelecionado] = useState(() => {
@@ -183,6 +184,28 @@ export default function ConsultorDashboard() {
     };
   }, [load]);
 
+  // Títulos lançados pelo ERP do cliente via API v1 — fora do sync local-first
+  // (lib/store.ts), então precisam de uma busca própria. Visão consolidada de
+  // grupo econômico fica de fora: a rota é por empresa.
+  useEffect(() => {
+    if (!empresaId || empresaId.startsWith('grupo:')) { setTitulosErp({ receberAberto: 0, pagarAberto: 0, vencidos: 0 }); return; }
+    const hojeIso = new Date().toISOString().split('T')[0];
+    Promise.all([
+      fetch(`/api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=${empresaId}`).then(r => r.ok ? r.json() : { contas: [] }),
+      fetch(`/api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=${empresaId}`).then(r => r.ok ? r.json() : { contas: [] }),
+    ]).then(([rec, pag]) => {
+      const emAberto = (c: any) => c.valorLiquido - c.baixas.reduce((s: number, b: any) => s + b.valor, 0);
+      const contasRec = rec.contas || [];
+      const contasPag = pag.contas || [];
+      const vencidos = [...contasRec, ...contasPag].filter((c: any) => c.dataVencimento < hojeIso).length;
+      setTitulosErp({
+        receberAberto: contasRec.reduce((s: number, c: any) => s + emAberto(c), 0),
+        pagarAberto: contasPag.reduce((s: number, c: any) => s + emAberto(c), 0),
+        vencidos,
+      });
+    }).catch(() => setTitulosErp({ receberAberto: 0, pagarAberto: 0, vencidos: 0 }));
+  }, [empresaId]);
+
   const [anoLabel, mesLabel] = mesSelecionado.split('-');
   const mesAtualLabel = new Date(Number(anoLabel), Number(mesLabel)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
@@ -332,6 +355,17 @@ export default function ConsultorDashboard() {
             <div className="stat-label">Total Endividamento Ativo</div>
              <div className="stat-value" style={{ fontSize: 28, color: '#b45309' }}><AnimatedCounter target={totalDivida} prefix="R$ " decimals={2} /></div>
           </div>
+          <a href="/consultor/contas-erp" className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '500ms', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
+            <div className={`stat-icon animate-float ${titulosErp.vencidos > 0 ? 'red' : 'blue'}`} style={{ background: titulosErp.vencidos > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', color: titulosErp.vencidos > 0 ? '#ef4444' : '#3b82f6' }}>
+              <Scale size={22} />
+            </div>
+            <div className="stat-label">Títulos ERP em aberto {titulosErp.vencidos > 0 && `(${titulosErp.vencidos} vencidos)`}</div>
+            <div className="stat-value" style={{ fontSize: 20 }}>
+              <span style={{ color: 'var(--green)' }}>+{fmt.currency(titulosErp.receberAberto)}</span>
+              {' / '}
+              <span style={{ color: 'var(--red)' }}>-{fmt.currency(titulosErp.pagarAberto)}</span>
+            </div>
+          </a>
         </div>
 
         {/* Leitura rápida do caixa futuro — o detalhamento fica na tela dedicada */}

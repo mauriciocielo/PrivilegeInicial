@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { store, uid, Endividamento, Lancamento, PlanoConta, Portador, ProjecaoFaturamento } from '../../../lib/store';
 import { toast } from 'sonner';
 import { fmt } from '../../../lib/reports';
-import { projetarCaixa, parcelaPrice, type NovoFinanciamento } from '../../../lib/projecao-caixa';
+import { projetarCaixa, parcelaPrice, type NovoFinanciamento, type ContaFinanceiraProjetavel } from '../../../lib/projecao-caixa';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
@@ -15,6 +15,8 @@ export default function ProjecaoCaixaPage() {
   const [endividamentos, setEndividamentos] = useState<Endividamento[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
   const [projecoes, setProjecoes] = useState<ProjecaoFaturamento[]>([]);
+  const [contasReceber, setContasReceber] = useState<ContaFinanceiraProjetavel[]>([]);
+  const [contasPagar, setContasPagar] = useState<ContaFinanceiraProjetavel[]>([]);
   const [horizonte, setHorizonte] = useState(12);
   const [editandoPrevisao, setEditandoPrevisao] = useState(false);
 
@@ -44,6 +46,14 @@ export default function ProjecaoCaixaPage() {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!empresaId) return;
+    fetch(`/api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasReceber(j.contas || [])).catch(() => setContasReceber([]));
+    fetch(`/api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasPagar(j.contas || [])).catch(() => setContasPagar([]));
+  }, [empresaId]);
+
   // Ponto de partida: o dinheiro que existe hoje nas contas.
   const saldoInicial = useMemo(() => {
     const hoje = new Date().toISOString().split('T')[0];
@@ -62,15 +72,15 @@ export default function ProjecaoCaixaPage() {
   }, [simulando, sim]);
 
   const base = useMemo(
-    () => projetarCaixa({ meses: horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes }),
-    [horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes]
+    () => projetarCaixa({ meses: horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes, contasReceber, contasPagar }),
+    [horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes, contasReceber, contasPagar]
   );
 
   const comEmprestimo = useMemo(
     () => (simulacao
-      ? projetarCaixa({ meses: horizonte, saldoInicial, lancamentos, planoContas, endividamentos, simulacao, projecoes })
+      ? projetarCaixa({ meses: horizonte, saldoInicial, lancamentos, planoContas, endividamentos, simulacao, projecoes, contasReceber, contasPagar })
       : null),
-    [simulacao, horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes]
+    [simulacao, horizonte, saldoInicial, lancamentos, planoContas, endividamentos, projecoes, contasReceber, contasPagar]
   );
 
   const dadosGrafico = useMemo(() => base.meses.map((m, i) => ({
@@ -294,8 +304,9 @@ export default function ProjecaoCaixaPage() {
             </table>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '12px 4px 0', lineHeight: 1.6 }}>
-            A projeção usa apenas lançamentos com status <strong>previsto</strong> — os realizados já estão
-            refletidos no saldo em conta. Quanto mais completo o contas a pagar e a receber, mais fiel a curva.
+            A projeção usa lançamentos com status <strong>previsto</strong> e os títulos ainda em aberto
+            lançados via <strong>integração com o ERP</strong> — os realizados já estão refletidos no saldo
+            em conta. Quanto mais completo o contas a pagar e a receber, mais fiel a curva.
           </div>
         </div>
       </div>

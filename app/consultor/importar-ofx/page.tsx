@@ -75,6 +75,18 @@ export default function ImportarOFXPage() {
   };
 
   // Estados para Regras de Conciliação
+  interface ContaFinanceiraAberta {
+    id: string;
+    valorLiquido: number;
+    dataVencimento: string;
+    baixas: { valor: number }[];
+    sacado?: { nome: string };
+    fornecedor?: { nome: string };
+  }
+  const [contasReceberAbertas, setContasReceberAbertas] = useState<ContaFinanceiraAberta[]>([]);
+  const [contasPagarAbertas, setContasPagarAbertas] = useState<ContaFinanceiraAberta[]>([]);
+  const [baixandoContaId, setBaixandoContaId] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<'import' | 'rules'>('import');
   const [rules, setRules] = useState<TransactionPattern[]>([]);
   const [showRuleModal, setShowRuleModal] = useState(false);
@@ -108,6 +120,72 @@ export default function ImportarOFXPage() {
   useEffect(() => {
     loadRules();
   }, [loadRules]);
+
+  // Títulos em aberto lançados pelo ERP do cliente via API v1 — usados para
+  // sugerir a baixa direto pela tela quando uma transação do extrato bate
+  // com um título aberto (mesma lógica de sugestão do match de Lançamento
+  // previsto, ver getPotentialMatches, mas para o módulo CP/CR).
+  useEffect(() => {
+    if (!empresaId) return;
+    fetch(`/api/contas-financeiras?tipo=receber&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasReceberAbertas(j.contas || [])).catch(() => setContasReceberAbertas([]));
+    fetch(`/api/contas-financeiras?tipo=pagar&status=aberto,parcial&empresaId=${empresaId}`)
+      .then(r => r.ok ? r.json() : { contas: [] }).then(j => setContasPagarAbertas(j.contas || [])).catch(() => setContasPagarAbertas([]));
+  }, [empresaId]);
+
+  const encontrarContaFinanceira = useCallback((t: OFXTransaction): { conta: ContaFinanceiraAberta; tipo: 'receber' | 'pagar' } | null => {
+    const lista = t.type === 'CREDIT' ? contasReceberAbertas : contasPagarAbertas;
+    const match = lista.find(c => {
+      const emAberto = c.valorLiquido - c.baixas.reduce((s, b) => s + b.valor, 0);
+      const dentroDaJanela = Math.abs(new Date(c.dataVencimento + 'T12:00:00').getTime() - new Date(t.date + 'T12:00:00').getTime()) <= 5 * 24 * 60 * 60 * 1000;
+      return dentroDaJanela && Math.abs(emAberto - t.amount) < 0.01;
+    });
+    return match ? { conta: match, tipo: t.type === 'CREDIT' ? 'receber' : 'pagar' } : null;
+  }, [contasReceberAbertas, contasPagarAbertas]);
+
+  /** Importa a transação como lançamento realizado e, na sequência, dá baixa no título do ERP que bateu com ela. */
+  const handleReconcileContaFinanceira = async (t: OFXTransaction, conta: ContaFinanceiraAberta, tipo: 'receber' | 'pagar') => {
+    if (!portadorId) { toast.error('Selecione um portador.'); return; }
+    setBaixandoContaId(conta.id);
+    try {
+      store.saveLancamentos([{
+        id: uid(),
+        empresaId,
+        data: t.date,
+        descricao: t.description,
+        valor: t.amount,
+        tipo: (t.type === 'CREDIT' ? 'receita' : 'despesa') as 'receita' | 'despesa',
+        planoContaId: catMap[t.id] || (t.type === 'CREDIT' ? 'pc4' : 'pc30'),
+        portadorId,
+        status: 'realizado' as 'realizado',
+        numeroDocumento: t.checkNum,
+        observacao: t.memo,
+        origem: 'ofx' as 'ofx',
+        ofxId: t.fitId,
+        createdAt: new Date().toISOString(),
+      }]);
+
+      const res = await fetch(`/api/contas-financeiras/${conta.id}/baixas?tipo=${tipo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valor: t.amount, data: t.date, formaPagamento: 'Conciliação OFX', observacao: `Extrato bancário — ${t.description}` }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        toast.error(`Lançamento importado, mas a baixa do título ERP falhou: ${j.error || 'erro desconhecido'}.`);
+      } else {
+        toast.success('Transação importada e título do ERP baixado com sucesso!');
+        if (tipo === 'receber') setContasReceberAbertas(prev => prev.filter(c => c.id !== conta.id));
+        else setContasPagarAbertas(prev => prev.filter(c => c.id !== conta.id));
+      }
+      setTransactions(prev => prev.filter(item => item.id !== t.id));
+      setSelected(prev => { const s = new Set(prev); s.delete(t.id); return s; });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBaixandoContaId(null);
+    }
+  };
 
   const handleSaveRule = () => {
     if (!rulePattern || !ruleCategory) {
@@ -492,12 +570,29 @@ export default function ImportarOFXPage() {
                             return (
                               <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                                 <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(96,0,0,0.06)', color: 'var(--accent)', borderRadius: 4, fontWeight: 600 }}>💡 Conciliação</span>
-                                <button 
+                                <button
                                   onClick={() => handleReconcile(t, matches[0].id)}
                                   className="btn btn-ghost btn-sm"
                                   style={{ padding: '2px 6px', fontSize: 10, border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', borderRadius: 4 }}
                                 >
                                   🤝 Conciliar: "{matches[0].descricao}"
+                                </button>
+                              </div>
+                            );
+                          }
+                          const contaMatch = encontrarContaFinanceira(t);
+                          if (contaMatch) {
+                            const pessoa = contaMatch.tipo === 'receber' ? contaMatch.conta.sacado?.nome : contaMatch.conta.fornecedor?.nome;
+                            return (
+                              <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(37,99,235,0.08)', color: '#2563eb', borderRadius: 4, fontWeight: 600 }}>🔌 Título ERP</span>
+                                <button
+                                  onClick={() => handleReconcileContaFinanceira(t, contaMatch.conta, contaMatch.tipo)}
+                                  disabled={baixandoContaId === contaMatch.conta.id}
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ padding: '2px 6px', fontSize: 10, border: '1px solid #2563eb', color: '#2563eb', cursor: 'pointer', borderRadius: 4 }}
+                                >
+                                  {baixandoContaId === contaMatch.conta.id ? 'Baixando...' : `💵 Importar e baixar título: "${pessoa || '—'}"`}
                                 </button>
                               </div>
                             );
