@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
@@ -15,6 +15,15 @@ const SITE_DESC =
   'Escritório de contabilidade consultiva e BPO financeiro em Francisco Beltrão, Paraná. '
   + 'Escrituração fiscal, folha de pagamento, abertura de empresas e planejamento tributário '
   + 'para Simples Nacional, Lucro Presumido e Lucro Real.';
+
+// Sem isso, o navegador do celular renderiza a página numa viewport virtual
+// de ~980px e encolhe tudo — nenhuma regra @media do CSS chega a disparar,
+// mesmo as que já existiam e estavam corretas.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   // O título/descrição antigos falavam do portal interno — mas esta é a metadata

@@ -39,6 +39,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     section: 'Painel',
     items: [
       { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
+      { label: 'Ecossistema BPO (IA)', href: '/consultor/bpo', icon: Activity },
       { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
     ],
   },
@@ -226,9 +227,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     }
   }, []);
 
-  const toggleSection = (section: string) => {
+  // `efetivo` é o estado visualmente aberto/fechado já considerando o
+  // fallback "seção da página atual abre sozinha" — sem isso, clicar numa
+  // seção que só está aberta pelo fallback (nunca teve toggle explícito)
+  // pareceria não fazer nada na primeira vez (undefined → true, já visível).
+  const toggleSection = (section: string, efetivo: boolean) => {
     setExpandedSections(prev => {
-      const next = { ...(prev || {}), [section]: !(prev?.[section]) };
+      const next = { ...(prev || {}), [section]: !efetivo };
       try { localStorage.setItem('cf_sidebar_expanded_sections', JSON.stringify(next)); } catch {}
       return next;
     });
@@ -482,15 +487,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       <nav className="sidebar-nav">
         {nav.map(section => {
           const containsActive = section.items.some(item => item.href === pathname);
+          // No desktop (topbar) isso não importa — o hover é quem manda lá.
+          // No celular (accordion vertical), a seção da página atual abre
+          // sozinha até o usuário tocar nela explicitamente.
+          const isExpanded = expandedSections?.[section.section] ?? containsActive;
           return (
-            <div key={section.section}>
-              <div className="nav-section">
+            <div key={section.section} className={isExpanded ? 'expanded' : ''}>
+              <div className="nav-section" onClick={() => toggleSection(section.section, isExpanded)}>
                 <span className="nav-section-label">
                   {section.section}
-                  <ChevronDown size={14} style={{ opacity: 0.6 }} />
+                  <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }} />
                 </span>
               </div>
-              
+
               <div className="dropdown-menu-wrapper">
                 {section.items.map(item => {
                   const isActive = pathname === item.href;

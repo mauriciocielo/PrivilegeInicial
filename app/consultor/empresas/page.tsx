@@ -38,6 +38,7 @@ const AVAILABLE_SCREENS = [
   { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
   { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
+  { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
   { label: '🏢 Empresas', route: '/consultor/empresas' },
   { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
   { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
