@@ -6,8 +6,9 @@ import { syncBackupInChunks } from '../../../lib/sync-helper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { SERVICOS_PADRAO } from '../../../lib/contrato-pdf';
+import ApiDocumentation from '../../../components/ApiDocumentation';
 
-type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup';
+type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup' | 'api-docs';
 
 const ADMIN_TABS: { key: AdminTab; label: string }[] = [
   { key: 'visao-geral', label: '📊 Visão Geral' },
@@ -16,6 +17,7 @@ const ADMIN_TABS: { key: AdminTab; label: string }[] = [
   { key: 'equipe', label: '🗺️ Equipe em Campo' },
   { key: 'inteligencia', label: '🧠 Inteligência' },
   { key: 'backup', label: '📦 Backup & Integrações' },
+  { key: 'api-docs', label: '🔌 Documentação API' },
 ];
 
 export default function AdministrativoPage() {
@@ -1575,6 +1577,10 @@ export default function AdministrativoPage() {
               </div>
             </div>
             
+            <div style={{ display: activeTab === 'api-docs' ? undefined : 'none' }}>
+              <ApiDocumentation />
+            </div>
+
             <div style={{ marginTop: 24, fontSize: 13, color: 'var(--text-muted)' }}>
               <strong>Ambiente Sandbox:</strong> Configurações temporárias que afetam apenas o cliente/empresa selecionada pelo consultor na sua máquina. Sincronização Serverless em teste.
             </div>
