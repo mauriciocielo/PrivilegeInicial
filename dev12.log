@@ -1,0 +1,7 @@
+> Ready on http://localhost:3001
+(node:15976) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Chunked Migration] Iniciando migração da coleção: cf_agenda_semanal...
+Migrando 1 tarefas da agenda...
+[Chunked Migration] ✅ Sincronização da coleção cf_agenda_semanal concluída com sucesso.
+🔌 WebSocket: Migração da coleção cf_agenda_semanal efetuada de forma silenciosa e performática (sem broadcast massivo).
