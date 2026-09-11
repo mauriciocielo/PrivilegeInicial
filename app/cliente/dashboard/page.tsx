@@ -7,7 +7,7 @@ import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
-import { TrendingUp, TrendingDown, Activity, Percent, Scale } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -18,6 +18,8 @@ export default function ClienteDashboard() {
   const [empresaId, setEmpresaId] = useState('e1');
   const [resumo, setResumo] = useState<ReturnType<typeof store.getResumoMensal>>([]);
   const [totais, setTotais] = useState({ receitas: 0, despesas: 0, saldo: 0, portadores: 0 });
+  const [totaisAnterior, setTotaisAnterior] = useState({ receitas: 0, despesas: 0 });
+  const [carregado, setCarregado] = useState(false);
   const [portadoresList, setPortadoresList] = useState<{ nome: string; saldo: number; tipo: string }[]>([]);
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
@@ -93,6 +95,29 @@ export default function ClienteDashboard() {
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
     setPortadoresList(ports.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, eId, dataFimPeriodo), tipo: p.tipo })));
 
+    // Mesma competência, mês anterior — só para a variação (MoM) dos cards.
+    const dataMesSel = new Date(ano, mes - 1, 1);
+    const mesAntDate = new Date(dataMesSel.getFullYear(), dataMesSel.getMonth() - 1, 1);
+    const mesAntStr = `${mesAntDate.getFullYear()}-${String(mesAntDate.getMonth() + 1).padStart(2, '0')}`;
+    const lancsMsAnt = lancs.filter(l => l.data.startsWith(mesAntStr));
+    const recAnt = lancsMsAnt.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'receita';
+    }).reduce((a, l) => {
+      const pc = plano.find(p => p.id === l.planoContaId);
+      const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+      return a + (isRedutora ? -l.valor : l.valor);
+    }, 0);
+    const despAnt = lancsMsAnt.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = plano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).reduce((a, l) => a + l.valor, 0);
+    setTotaisAnterior({ receitas: recAnt, despesas: despAnt });
+
     const despCats: Record<string, number> = {};
     lancsMs.filter(l => {
       if (l.planoContaId === 'transf') return false;
@@ -120,18 +145,18 @@ export default function ClienteDashboard() {
     const valor = (ebitdaMedio * 12 * 5) - totalDiv;
     setValuation({ ebitdaMedio, mult: 5, divida: totalDiv, valor: valor > 0 ? valor : 0 });
 
-    // Agendas da Semana
+    // Próximos compromissos — janela de 14 dias (não só a semana corrente),
+    // pra sempre dar algo útil pra mostrar mesmo perto do fim de semana.
     const hj = new Date();
-    const dSemana = hj.getDay();
-    const dtIni = new Date(hj); dtIni.setDate(hj.getDate() - dSemana);
-    const dtFim = new Date(hj); dtFim.setDate(hj.getDate() + (6 - dSemana));
-    const sIni = dtIni.toISOString().split('T')[0];
-    const sFim = dtFim.toISOString().split('T')[0];
+    const sIni = `${hj.getFullYear()}-${String(hj.getMonth() + 1).padStart(2, '0')}-${String(hj.getDate()).padStart(2, '0')}`;
+    const dtFim = new Date(hj); dtFim.setDate(hj.getDate() + 14);
+    const sFim = `${dtFim.getFullYear()}-${String(dtFim.getMonth() + 1).padStart(2, '0')}-${String(dtFim.getDate()).padStart(2, '0')}`;
     const tarefas = store.getAgendaTasks()
       .filter(t => t.empresaId === eId && t.dateStr >= sIni && t.dateStr <= sFim && !t.completed)
       .sort((a,b) => a.dateStr.localeCompare(b.dateStr) || (a.horario || '').localeCompare(b.horario || ''));
     setAgendasSemana(tarefas);
 
+    setCarregado(true);
   }, []);
 
   useEffect(() => {
@@ -179,6 +204,33 @@ export default function ClienteDashboard() {
   const [ySel, moSel] = mesSelecionado.split('-');
   const dSel = new Date(Number(ySel), Number(moSel) - 1, 1);
   const mesAtualLabel = dSel.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const horaAgora = new Date().getHours();
+  const saudacao = horaAgora < 12 ? 'Bom dia' : horaAgora < 18 ? 'Boa tarde' : 'Boa noite';
+  const primeiroNome = userName.split(' ')[0];
+
+  /** % de variação vs. o mesmo indicador no mês anterior — null quando a base é zero (evita ±Infinity/NaN). */
+  const variacaoPct = (atual: number, anterior: number): number | null => anterior > 0 ? ((atual - anterior) / anterior) * 100 : null;
+  const TrendBadge = ({ atual, anterior, favoravelSeMaior }: { atual: number; anterior: number; favoravelSeMaior: boolean }) => {
+    const pct = variacaoPct(atual, anterior);
+    if (pct === null) return null;
+    const subiu = pct >= 0;
+    const favoravel = subiu === favoravelSeMaior;
+    return (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 11, fontWeight: 800, color: favoravel ? 'var(--green)' : 'var(--red)' }}>
+        {subiu ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>vs. mês anterior</span>
+      </div>
+    );
+  };
+
+  const rotularDia = (iso: string): string => {
+    const hojeIso = new Date().toISOString().split('T')[0];
+    const amanhaIso = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    if (iso === hojeIso) return 'Hoje';
+    if (iso === amanhaIso) return 'Amanhã';
+    const [a, m, d] = iso.split('-');
+    return `${d}/${m}`;
+  };
 
   return (
     <>
@@ -244,7 +296,7 @@ export default function ClienteDashboard() {
 
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              Olá, <span className="text-gradient" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #d4af37 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{userName}</span>! 
+              {saudacao}, <span className="text-gradient" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #d4af37 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{primeiroNome}</span>!
             </div>
             <div style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 500 }}>
               Aqui está o pulso financeiro em tempo real da <strong>{empresa?.razaoSocial}</strong>.
@@ -267,11 +319,59 @@ export default function ClienteDashboard() {
           </div>
         </div>
         
-        <GeminiTips 
-          empresaId={empresaId} 
-          dataIni={dataIni} 
-          dataFim={dataFim} 
-          contextKey={mesSelecionado} 
+        {/* Próximos compromissos — sempre visível (com estado vazio), próximos 14 dias */}
+        <div className="glass-card card-dynamic animate-slide-up" style={{
+          marginBottom: 32, padding: '24px 32px', borderLeft: '4px solid var(--accent)', animationDelay: '150ms',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: agendasSemana.length > 0 ? 16 : 4, flexWrap: 'wrap', gap: 8 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CalendarDays size={18} style={{ color: 'var(--accent)' }} /> Próximos Compromissos
+            </h3>
+            <a href="/cliente/agenda" style={{ fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>
+              Ver agenda completa →
+            </a>
+          </div>
+
+          {agendasSemana.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0 4px' }}>
+              Nenhum compromisso agendado para os próximos 14 dias.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+              {agendasSemana.slice(0, 6).map(ag => {
+                const rotulo = rotularDia(ag.dateStr);
+                const isHoje = rotulo === 'Hoje';
+                return (
+                  <div key={ag.id} style={{
+                    padding: 16, borderRadius: 12, background: isHoje ? 'rgba(140,26,34,0.05)' : 'rgba(255,255,255,0.7)',
+                    border: `1px solid ${isHoje ? 'rgba(140,26,34,0.25)' : 'var(--border-light)'}`,
+                  }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 800, marginBottom: 4, textTransform: 'capitalize' }}>
+                      {rotulo} às {ag.horario}
+                    </div>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{ag.title}</div>
+                    {ag.location && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {ag.location}</div>}
+                  </div>
+                );
+              })}
+              {agendasSemana.length > 6 && (
+                <a href="/cliente/agenda" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none',
+                  padding: 16, borderRadius: 12, background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--border-light)',
+                  fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)',
+                }}>
+                  +{agendasSemana.length - 6} mais →
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+
+        <GeminiTips
+          empresaId={empresaId}
+          dataIni={dataIni}
+          dataFim={dataFim}
+          contextKey={mesSelecionado}
         />
 
         {/* Valuation Module (Elite CFO) */}
@@ -306,32 +406,6 @@ export default function ClienteDashboard() {
         {/* Painel de IA / Inteligência */}
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
 
-        {agendasSemana.length > 0 && (
-          <div className="glass-card card-dynamic animate-slide-up" style={{
-            marginBottom: 32, padding: '24px 32px', borderLeft: '4px solid var(--accent)', animationDelay: '250ms'
-          }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              📅 Meus Compromissos da Semana
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-              {agendasSemana.map(ag => {
-                  const arrDt = ag.dateStr.split('-');
-                  const ds = `${arrDt[2]}/${arrDt[1]}`;
-                  return (
-                    <div key={ag.id} style={{ padding: 16, borderRadius: 12, border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.6)' }}>
-                       <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 800, marginBottom: 4 }}>
-                          {ds} às {ag.horario}
-                       </div>
-                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{ag.title}</div>
-                       {ag.clienteParticipante && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>👤 {ag.clienteParticipante}</div>}
-                       {ag.location && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {ag.location}</div>}
-                    </div>
-                  );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Foco na Semana */}
         {/* O cliente não tem a tela dedicada de projeção; aqui é onde ele vê
             para onde o caixa caminha. */}
@@ -353,22 +427,25 @@ export default function ClienteDashboard() {
 
         <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '500ms' }}>Resumo do Mês ({mesAtualLabel})</h3>
         <div className="stat-grid" style={{ marginBottom: 32 }}>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '600ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '600ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className="stat-icon green animate-float"><TrendingUp size={20} /></div>
             <div className="stat-label">Entradas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
+            {carregado && <TrendBadge atual={totais.receitas} anterior={totaisAnterior.receitas} favoravelSeMaior={true} />}
           </div>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '700ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '700ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className="stat-icon red animate-float"><TrendingDown size={20} /></div>
             <div className="stat-label">Saídas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
+            {carregado && <TrendBadge atual={totais.despesas} anterior={totaisAnterior.despesas} favoravelSeMaior={false} />}
           </div>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '800ms' }}>
+          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '800ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className={`stat-icon animate-float ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
             <div className="stat-label">O que Sobrou (Fôlego)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
+            {carregado && <TrendBadge atual={totais.saldo} anterior={totaisAnterior.receitas - totaisAnterior.despesas} favoravelSeMaior={true} />}
           </div>
           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '900ms' }}>
             <div className="stat-icon purple animate-float"><Percent size={20} /></div>

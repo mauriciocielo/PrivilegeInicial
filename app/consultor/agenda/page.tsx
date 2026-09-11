@@ -265,6 +265,20 @@ export default function AgendaPage() {
   const saveTasks = (updated: AgendaTask[]) => {
     setTasks(updated);
     store.saveAgendaTasks(updated);
+
+    // Salva direto no Postgres além do ciclo de sync geral (debounced 1s,
+    // via components/TransitionProvider.tsx) — a agenda ficava só no
+    // navegador de quem criou o compromisso e nunca aparecia em outro
+    // aparelho/sessão (nem no portal do cliente). Reusa a mesma rota que o
+    // sync automático já usa (POST /api/migrate-backup com `collection`),
+    // só que na hora, sem esperar o debounce nem depender dele funcionar.
+    fetch('/api/migrate-backup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: 'cf_agenda_semanal', data: updated }),
+    }).catch(err => {
+      console.error('Falha ao salvar a agenda direto no servidor (fica pendente pelo sync geral):', err);
+    });
   };
 
   const abrirNovo = (dateStr?: string) => {
