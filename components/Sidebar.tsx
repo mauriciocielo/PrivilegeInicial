@@ -129,6 +129,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
     section: 'Minha Empresa',
     items: [
       { label: 'Dashboard', href: '/cliente/dashboard', icon: LayoutDashboard },
+      { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
       { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
       { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },

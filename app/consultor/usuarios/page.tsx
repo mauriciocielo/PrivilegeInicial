@@ -45,6 +45,7 @@ const AVAILABLE_SCREENS = [
 
 const AVAILABLE_CLIENT_SCREENS = [
   { label: '📊 Dashboard', route: '/cliente/dashboard' },
+  { label: '📅 Agenda', route: '/cliente/agenda' },
   { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },
   { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
   { label: '📝 Lançamentos', route: '/cliente/lancamentos' },

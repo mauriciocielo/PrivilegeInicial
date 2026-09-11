@@ -25,6 +25,8 @@ export default function ConsultorDashboard() {
   const [empresaId, setEmpresaId] = useState('e1');
   const [resumo, setResumo] = useState<ReturnType<typeof store.getResumoMensal>>([]);
   const [totais, setTotais] = useState({ receitas: 0, despesas: 0, saldo: 0, portadores: 0 });
+  const [totaisAnterior, setTotaisAnterior] = useState({ receitas: 0, despesas: 0 });
+  const [carregado, setCarregado] = useState(false);
   const [portadoresList, setPortadoresList] = useState<{ nome: string; saldo: number; tipo: string }[]>([]);
   const [lancRecentes, setLancRecentes] = useState<ReturnType<typeof store.getLancamentos>>([]);
   const [categorias, setCategorias] = useState<{ name: string; value: number; color: string }[]>([]);
@@ -118,6 +120,31 @@ export default function ConsultorDashboard() {
     setTotais({ receitas: rec, despesas: desp, saldo: rec - desp, portadores: totalPort });
     setPortadoresList(targetPorts.map(p => ({ nome: p.nome, saldo: store.getSaldoPortador(p.id, p.empresaId, dataFimPeriodo), tipo: p.tipo })));
 
+    // Mesma competência, mês anterior — só para calcular a variação (MoM)
+    // exibida nos cards de KPI, sempre relativa ao mês selecionado no filtro
+    // (não ao mês corrente do calendário).
+    const dataMesSelecionado = new Date(Number(anoPeriodo), Number(mesPeriodo) - 1, 1);
+    const mesAnteriorDate = new Date(dataMesSelecionado.getFullYear(), dataMesSelecionado.getMonth() - 1, 1);
+    const mesAnteriorStr = `${mesAnteriorDate.getFullYear()}-${String(mesAnteriorDate.getMonth() + 1).padStart(2, '0')}`;
+    const lancsMsAnterior = lancs.filter(l => l.data.startsWith(mesAnteriorStr));
+    const recAnterior = lancsMsAnterior.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'receita';
+    }).reduce((a, l) => {
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      const isRedutora = pc && pc.descricao.trim().startsWith('( - )');
+      return a + (isRedutora ? -l.valor : l.valor);
+    }, 0);
+    const despAnterior = lancsMsAnterior.filter(l => {
+      if (l.planoContaId === 'transf') return false;
+      const pc = targetPlano.find(p => p.id === l.planoContaId);
+      if (pc?.tipo === 'transferencia') return false;
+      return l.tipo === 'despesa';
+    }).reduce((a, l) => a + l.valor, 0);
+    setTotaisAnterior({ receitas: recAnterior, despesas: despAnterior });
+
     const sorted = [...lancs].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
     setLancRecentes(sorted);
 
@@ -164,6 +191,7 @@ export default function ConsultorDashboard() {
     const valor = (ebitdaMedio * 12 * 5) - totalDiv;
     setValuation({ ebitdaMedio, mult: 5, divida: totalDiv, valor: valor > 0 ? valor : 0 });
 
+    setCarregado(true);
   }, [mesSelecionado]);
 
   useEffect(() => {
@@ -209,6 +237,27 @@ export default function ConsultorDashboard() {
   const [anoLabel, mesLabel] = mesSelecionado.split('-');
   const mesAtualLabel = new Date(Number(anoLabel), Number(mesLabel)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
+  const horaAgora = new Date().getHours();
+  const saudacao = horaAgora < 12 ? 'Bom dia' : horaAgora < 18 ? 'Boa tarde' : 'Boa noite';
+  const primeiroNome = userName.split(' ')[0];
+
+  /** % de variação vs. o mesmo indicador no mês anterior — null quando a base é zero (evita ±Infinity/NaN). */
+  const variacaoPct = (atual: number, anterior: number): number | null => anterior > 0 ? ((atual - anterior) / anterior) * 100 : null;
+  const TrendBadge = ({ atual, anterior, favoravelSeMaior }: { atual: number; anterior: number; favoravelSeMaior: boolean }) => {
+    const pct = variacaoPct(atual, anterior);
+    if (pct === null) return null;
+    const subiu = pct >= 0;
+    const favoravel = subiu === favoravelSeMaior;
+    return (
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 11, fontWeight: 800,
+        color: favoravel ? 'var(--green)' : 'var(--red)',
+      }}>
+        {subiu ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>vs. mês anterior</span>
+      </div>
+    );
+  };
+
   const mesesOptions: string[] = [];
   const hoje = new Date();
   for (let i = 0; i < 12; i++) {
@@ -227,7 +276,9 @@ export default function ConsultorDashboard() {
       }}>
         <div>
           <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <span className="text-gradient" style={{ fontSize: '22px', fontWeight: 800 }}>Painel de Controle — Consultoria</span>
+            <span className="text-gradient" style={{ fontSize: '22px', fontWeight: 800 }}>
+              {primeiroNome ? `${saudacao}, ${primeiroNome}` : 'Painel de Controle — Consultoria'}
+            </span>
             {userName && (
               <div style={{ position: 'relative' }}>
                 <div 
@@ -333,22 +384,25 @@ export default function ConsultorDashboard() {
         
         {/* KPI Cards (Glass) */}
         <div className="stat-grid" style={{ marginBottom: 32 }}>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '100ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '100ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className="stat-icon green animate-float" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><TrendingUp size={22} /></div>
             <div className="stat-label">Receitas Efetivas (Mês)</div>
             <div className="stat-value" style={{ fontSize: 28 }}><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
+            {carregado && <TrendBadge atual={totais.receitas} anterior={totaisAnterior.receitas} favoravelSeMaior={true} />}
           </div>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '200ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '200ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className="stat-icon red animate-float" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}><TrendingDown size={22} /></div>
             <div className="stat-label">Despesas Efetivas (Mês)</div>
             <div className="stat-value" style={{ fontSize: 28 }}><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
+            {carregado && <TrendBadge atual={totais.despesas} anterior={totaisAnterior.despesas} favoravelSeMaior={false} />}
           </div>
-          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '300ms' }}>
+          <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '300ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
             <div className={`stat-icon animate-float ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={22} /></div>
             <div className="stat-label">Resultado Operacional Líquido</div>
             <div className="stat-value" style={{ fontSize: 28, color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
+            {carregado && <TrendBadge atual={totais.saldo} anterior={totaisAnterior.receitas - totaisAnterior.despesas} favoravelSeMaior={true} />}
           </div>
           <div className="glass-card stat-card card-dynamic animate-slide-up" style={{ padding: '24px', background: 'rgba(255,255,255,0.94)', border: '1px solid rgba(255,255,255,0.8)', animationDelay: '400ms' }}>
              <div className="stat-icon animate-float" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Scale size={22} /></div>

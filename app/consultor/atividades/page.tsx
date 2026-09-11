@@ -322,13 +322,35 @@ export default function AtividadesTempoPage() {
     setAtividades(store.getAtividadesLog());
     window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
 
+    // Regista no log de auditoria da empresa (Trilha de Auditoria) que a
+    // atividade foi concluída — antes essa tela nunca chamava logAction.
+    store.logAction(
+      selectedEmpresaId,
+      'Atividade',
+      `Concluiu a atividade "${atividadeDesc}" (${Math.round(timePassed / 60)} min registrados)`
+    );
+
+    // Salva direto no banco além do ciclo de sync geral — não fica esperando
+    // o debounce/gate de components/TransitionProvider.tsx pra garantir que
+    // a atividade (com as fotos) chegue no servidor assim que é finalizada.
+    fetch('/api/atividades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novaAtividade),
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    }).catch(err => {
+      console.error('Falha ao salvar a atividade direto no servidor (fica pendente pelo sync geral):', err);
+      toast.warning('Atividade salva no dispositivo — a sincronização com o servidor será concluída em breve.');
+    });
+
     setAtividadeDesc('');
     setTimePassed(0);
     setSelectedEmpresaId('');
     setFotoInicio(null);
     setFotoFim(null);
     setSelectedAgendaTaskId(null);
-    
+
     toast.success('✅ Atividade registrada com sucesso!');
   };
 
