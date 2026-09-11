@@ -1,12 +1,28 @@
 'use client';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { getApiDocSecoes, tokenizarInline, type ApiDocBloco } from '../lib/api-docs-content';
 
 /**
  * Documentação da API v1 (CP/CR), pensada para ser compartilhada com o time
- * técnico do ERP do cliente — a mesma referência que qualquer outra API
- * pública teria, só que embutida no portal em vez de um site separado.
+ * técnico do ERP do cliente. O conteúdo vem de lib/api-docs-content.ts —
+ * mesma fonte usada pela exportação em PDF (lib/api-docs-pdf.ts), para as
+ * duas nunca ficarem desalinhadas.
  */
+
+function Inline({ texto }: { texto: string }) {
+  return (
+    <>
+      {tokenizarInline(texto).map((t, i) =>
+        t.tipo === 'codigo'
+          ? <code key={i} style={{ background: 'var(--bg-card2)', padding: '1px 5px', borderRadius: 4, fontSize: '0.93em' }}>{t.conteudo}</code>
+          : t.tipo === 'negrito'
+          ? <strong key={i}>{t.conteudo}</strong>
+          : <span key={i}>{t.conteudo}</span>
+      )}
+    </>
+  );
+}
 
 function CodeBlock({ children, label }: { children: string; label?: string }) {
   const copiar = () => { navigator.clipboard.writeText(children); toast.success('Copiado.'); };
@@ -39,18 +55,41 @@ function CodeBlock({ children, label }: { children: string; label?: string }) {
   );
 }
 
-function Metodo({ verbo, cor }: { verbo: string; cor: string }) {
+const METODO_COR: Record<string, string> = { POST: '#059669', GET: '#2563eb', DELETE: '#dc2626' };
+
+function Bloco({ bloco }: { bloco: ApiDocBloco }) {
+  if (bloco.tipo === 'texto') {
+    return <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 10 }}><Inline texto={bloco.texto} /></p>;
+  }
+  if (bloco.tipo === 'codigo') {
+    return <CodeBlock label={bloco.label}>{bloco.codigo}</CodeBlock>;
+  }
+  if (bloco.tipo === 'endpoint') {
+    return (
+      <div style={{ marginBottom: 6 }}>
+        <span style={{
+          display: 'inline-block', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+          background: METODO_COR[bloco.verbo], color: '#fff', marginRight: 8, fontFamily: 'ui-monospace, monospace',
+        }}>
+          {bloco.verbo}
+        </span>
+        <code style={{ fontSize: 12.5 }}>{bloco.rota}</code>
+      </div>
+    );
+  }
+  // erros
   return (
-    <span style={{
-      display: 'inline-block', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 4,
-      background: cor, color: '#fff', marginRight: 8, fontFamily: 'ui-monospace, monospace',
-    }}>
-      {verbo}
-    </span>
+    <div style={{ fontSize: 12.5, lineHeight: 2 }}>
+      {bloco.itens.map(it => (
+        <div key={it.codigo}>
+          <code style={{ color: '#dc2626', fontWeight: 700 }}>{it.codigo}</code> — <Inline texto={it.desc} />
+        </div>
+      ))}
+    </div>
   );
 }
 
-function Secao({ titulo, children, aberta: abertaInicial = false }: { titulo: string; children: React.ReactNode; aberta?: boolean }) {
+function Secao({ titulo, blocos, aberta: abertaInicial = false }: { titulo: string; blocos: ApiDocBloco[]; aberta?: boolean }) {
   const [aberta, setAberta] = useState(abertaInicial);
   return (
     <div className="card" style={{ marginBottom: 14, padding: 0, overflow: 'hidden' }}>
@@ -65,27 +104,43 @@ function Secao({ titulo, children, aberta: abertaInicial = false }: { titulo: st
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{titulo}</span>
         <span style={{ fontSize: 13, color: 'var(--text-muted)', transform: aberta ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</span>
       </button>
-      {aberta && <div style={{ padding: '0 18px 18px' }}>{children}</div>}
+      {aberta && <div style={{ padding: '0 18px 18px' }}>{blocos.map((b, i) => <Bloco key={i} bloco={b} />)}</div>}
     </div>
   );
 }
 
-const P = ({ children }: { children: React.ReactNode }) => (
-  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 10 }}>{children}</p>
-);
-
 export default function ApiDocumentation() {
+  const [exportando, setExportando] = useState(false);
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://SEU-DOMINIO';
+  const secoes = getApiDocSecoes(baseUrl);
+
+  const exportarPdf = async () => {
+    setExportando(true);
+    try {
+      const { gerarApiDocsPdf } = await import('../lib/api-docs-pdf');
+      await gerarApiDocsPdf(baseUrl);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar o PDF da documentação.');
+    } finally {
+      setExportando(false);
+    }
+  };
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h3 style={{ fontSize: 16, marginBottom: 8 }}>🔌 API de Integração — Contas a Pagar/Receber</h3>
-        <P>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>🔌 API de Integração — Contas a Pagar/Receber</h3>
+          <button type="button" className="btn btn-primary btn-sm" onClick={exportarPdf} disabled={exportando}>
+            {exportando ? 'Gerando...' : '📄 Exportar PDF'}
+          </button>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 10 }}>
           Documentação para o time técnico do ERP do cliente conectar diretamente com o sistema:
           cadastrar sacados/fornecedores e lançar títulos a pagar/receber, com baixa e estorno.
-          Envie esta página (ou o link) para quem for implementar a integração.
-        </P>
+          Envie o PDF (ou o link desta página) para quem for implementar a integração.
+        </p>
         <div style={{
           display: 'flex', gap: 24, flexWrap: 'wrap', padding: '10px 14px',
           background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 12.5,
@@ -96,204 +151,9 @@ export default function ApiDocumentation() {
         </div>
       </div>
 
-      <Secao titulo="1. Autenticação" aberta>
-        <P>
-          Toda chamada exige o cabeçalho <code>Authorization</code> com um token gerado no portal —
-          em <strong>Empresas → Editar a empresa → Integração via API → Gerar Chave</strong>.
-          O token completo só é mostrado uma vez no momento da geração; guarde-o com segurança.
-        </P>
-        <CodeBlock label="Cabeçalho obrigatório em toda requisição">
-{`Authorization: Bearer {prefixo}.{secret}
-Content-Type: application/json`}
-        </CodeBlock>
-        <P>
-          Uma chave pode ser revogada a qualquer momento pelo portal — chamadas com uma chave
-          revogada recebem <code>401 Unauthorized</code> imediatamente.
-        </P>
-      </Secao>
-
-      <Secao titulo="2. Cadastrar sacado ou fornecedor">
-        <Metodo verbo="POST" cor="#059669" /><code>/api/v1/sacados</code>
-        <P>
-          Cadastra a pessoa/empresa que deve (sacado, para Contas a Receber) ou que é paga
-          (fornecedor, para Contas a Pagar). Se o CPF/CNPJ já existir para esta empresa, os dados
-          são atualizados em vez de duplicados — os dígitos verificadores são validados de verdade,
-          não só o formato.
-        </P>
-        <CodeBlock label={`POST ${baseUrl}/api/v1/sacados`}>
-{`{
-  "nome": "Empresa Cliente LTDA",
-  "cpfCnpj": "33.000.167/0001-01",
-  "tipo": "cliente",
-  "email": "financeiro@clienteltda.com.br",
-  "telefone": "(46) 99999-9999",
-  "endereco": "Rua Exemplo, 123",
-  "cidade": "Francisco Beltrão",
-  "estado": "PR",
-  "cep": "85601-000"
-}`}
-        </CodeBlock>
-        <P>
-          <code>tipo</code>: <code>"cliente"</code> (sacado), <code>"fornecedor"</code> ou{' '}
-          <code>"ambos"</code>. Padrão: <code>"cliente"</code>.
-        </P>
-        <CodeBlock label="Resposta — 201 (criado) ou 200 (já existia, foi atualizado)">
-{`{
-  "id": "44bc2f8e-2f40-417c-a13d-d1ede8d2fabd",
-  "nome": "Empresa Cliente LTDA",
-  "cpfCnpj": "33.000.167/0001-01",
-  "tipo": "cliente",
-  "atualizado": false
-}`}
-        </CodeBlock>
-        <P>Guarde o <code>id</code> retornado — é ele que vai em <code>sacadoId</code>/<code>fornecedorId</code> nos lançamentos.</P>
-      </Secao>
-
-      <Secao titulo="3. Lançar conta a receber">
-        <Metodo verbo="POST" cor="#059669" /><code>/api/v1/contas-receber</code>
-        <CodeBlock label={`POST ${baseUrl}/api/v1/contas-receber`}>
-{`{
-  "sacadoId": "44bc2f8e-2f40-417c-a13d-d1ede8d2fabd",
-  "numeroDocumento": "NF-000123",
-  "descricao": "Venda de mercadorias",
-  "dataEmissao": "2026-09-10",
-  "dataVencimento": "2026-10-10",
-  "dataCompetencia": "2026-09-10",
-  "valorOriginal": 1000.00,
-  "acrescimos": 0,
-  "descontos": 0,
-  "documentoFiscalUrl": "https://seu-erp.com/nfe/123.xml"
-}`}
-        </CodeBlock>
-        <P>
-          <code>dataVencimento</code> no passado é <strong>rejeitada</strong> por padrão — some
-          <code>"permitirRetroativo": true</code> ao payload para autorizar explicitamente (ex.: migração de saldo já vencido).
-          Valores aceitam no máximo 2 casas decimais.
-        </P>
-        <CodeBlock label="Resposta — 201">
-{`{
-  "id": "8ba9b259-c861-47b0-bbe4-12f7fe290bd9",
-  "status": "aberto",
-  "valorLiquido": 1000.00,
-  "dataVencimento": "2026-10-10"
-}`}
-        </CodeBlock>
-      </Secao>
-
-      <Secao titulo="4. Lançar conta a pagar">
-        <Metodo verbo="POST" cor="#059669" /><code>/api/v1/contas-pagar</code>
-        <P>Mesmo formato do item 3, trocando <code>sacadoId</code> por <code>fornecedorId</code> e aceitando também <code>centroCustoId</code> opcional.</P>
-        <CodeBlock label={`POST ${baseUrl}/api/v1/contas-pagar`}>
-{`{
-  "fornecedorId": "id-do-fornecedor",
-  "numeroDocumento": "NF-9988",
-  "dataEmissao": "2026-09-10",
-  "dataVencimento": "2026-10-05",
-  "valorOriginal": 450.00,
-  "centroCustoId": "opcional"
-}`}
-        </CodeBlock>
-      </Secao>
-
-      <Secao titulo="5. Baixar (pagar) ou estornar um título">
-        <Metodo verbo="POST" cor="#059669" /><code>/api/v1/contas-receber/{'{id}'}/baixas</code>
-        <span style={{ margin: '0 6px', color: 'var(--text-muted)' }}>·</span>
-        <code style={{ fontSize: 12 }}>/api/v1/contas-pagar/{'{id}'}/baixas</code>
-        <P>
-          Cada baixa é um registro somado ao título — nunca edita nem apaga uma anterior. O status
-          (<code>aberto</code> → <code>parcial</code> → <code>liquidado</code>) é recalculado
-          automaticamente pela soma de todas as baixas.
-        </P>
-        <CodeBlock label="Baixa normal (pagamento)">
-{`{
-  "valor": 500.00,
-  "data": "2026-09-15",
-  "formaPagamento": "PIX",
-  "observacao": "Pagamento parcial"
-}`}
-        </CodeBlock>
-        <P>
-          Para reverter uma baixa lançada por engano, envie o <code>id</code> dela em{' '}
-          <code>estornoDeId</code> — o valor do estorno é sempre o negativo exato da baixa original,
-          o cliente da API não escolhe o valor (evita estorno parcial por engano):
-        </P>
-        <CodeBlock label="Estorno de uma baixa anterior">
-{`{
-  "estornoDeId": "id-da-baixa-a-reverter",
-  "observacao": "Pagamento duplicado por engano"
-}`}
-        </CodeBlock>
-      </Secao>
-
-      <Secao titulo="6. Consultar títulos">
-        <Metodo verbo="GET" cor="#2563eb" /><code>/api/v1/contas-receber</code> ou <code>/api/v1/contas-pagar</code>
-        <P>Filtros opcionais via query string: <code>?status=aberto&amp;sacadoId=...&amp;limit=50</code></P>
-        <Metodo verbo="GET" cor="#2563eb" /><code>/api/v1/contas-receber/{'{id}'}</code>
-        <P>Retorna o título com o histórico completo de baixas e o cadastro do sacado.</P>
-      </Secao>
-
-      <Secao titulo="7. Exclusão e imutabilidade">
-        <Metodo verbo="DELETE" cor="#dc2626" /><code>/api/v1/contas-receber/{'{id}'}</code>
-        <P>
-          Só é permitido enquanto o título estiver <code>aberto</code> e sem nenhuma baixa lançada.
-          Assim que há qualquer movimentação ou conciliação, o <code>DELETE</code> retorna{' '}
-          <code>409 Conflict</code> — a única forma de reverter a partir daí é lançar um estorno
-          (item 5). É proposital: garante que o histórico financeiro nunca desaparece silenciosamente.
-        </P>
-      </Secao>
-
-      <Secao titulo="8. Webhooks — notificação de liquidação">
-        <P>
-          Quando um título é totalmente liquidado, o sistema pode notificar uma URL do seu ERP
-          via <code>POST</code>, assinado com HMAC-SHA256 no cabeçalho{' '}
-          <code>X-Webhook-Signature</code> (peça ao seu consultor para configurar a assinatura de
-          webhook desta empresa).
-        </P>
-        <CodeBlock label="Corpo do webhook enviado">
-{`{
-  "evento": "conta_receber.liquidada",
-  "dados": {
-    "contaReceberId": "8ba9b259-...",
-    "sacadoId": "44bc2f8e-...",
-    "valorLiquido": 1000.00,
-    "liquidadoEm": "2026-09-20T14:32:00.000Z"
-  },
-  "enviadoEm": "2026-09-20T14:32:01.120Z"
-}`}
-        </CodeBlock>
-      </Secao>
-
-      <Secao titulo="9. Códigos de erro">
-        <div style={{ fontSize: 12.5, lineHeight: 2 }}>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>401</code> — token ausente, inválido ou revogado.</div>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>404</code> — recurso não encontrado (ou não pertence a esta empresa).</div>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>409</code> — conflito: DELETE em título já movimentado, ou baixa já estornada.</div>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>422</code> — payload inválido (o corpo da resposta traz <code>detalhes</code> por campo).</div>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>429</code> — muitas requisições (limite: 120/min por empresa nos POSTs, 60/min nos GETs).</div>
-          <div><code style={{ color: '#dc2626', fontWeight: 700 }}>500</code> — erro interno; se persistir, avise o time técnico do BPO.</div>
-        </div>
-      </Secao>
-
-      <Secao titulo="10. Exemplo completo em cURL">
-        <CodeBlock label="Fluxo: sacado → título → baixa">
-{`TOKEN="{prefixo}.{secret}"
-
-# 1) cadastrar sacado
-curl -X POST ${baseUrl}/api/v1/sacados \\
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
-  -d '{"nome":"Cliente X","cpfCnpj":"33.000.167/0001-01"}'
-
-# 2) lançar conta a receber (use o id retornado acima em sacadoId)
-curl -X POST ${baseUrl}/api/v1/contas-receber \\
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
-  -d '{"sacadoId":"<id>","dataEmissao":"2026-09-10","dataVencimento":"2026-10-10","valorOriginal":1000}'
-
-# 3) dar baixa (use o id retornado acima)
-curl -X POST ${baseUrl}/api/v1/contas-receber/<id>/baixas \\
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
-  -d '{"valor":1000,"data":"2026-09-20","formaPagamento":"PIX"}'`}
-        </CodeBlock>
-      </Secao>
+      {secoes.map((s, i) => (
+        <Secao key={s.titulo} titulo={s.titulo} blocos={s.blocos} aberta={i === 0} />
+      ))}
     </div>
   );
 }
