@@ -138,9 +138,16 @@ export default function RelatoriosPage() {
       subaccounts: [] as any[]
     });
 
+    // "Custo de Mercadoria" só faz sentido pra Comércio — mesmo rótulo
+    // por ramo usado na DRE, pra não chamar de "mercadoria" o custo de um
+    // serviço prestado ou de um produto industrializado.
+    const labelCustos = empresa?.atividade === 'Indústria' ? 'Custos de Produção'
+      : empresa?.atividade === 'Serviço' ? 'Custos dos Serviços Prestados'
+      : 'Custos de Mercadoria';
+
     const catGroups = {
       receitas: initGroup('receitas', 'Receitas', false),
-      custos: initGroup('custos', 'Custos de Mercadoria', true),
+      custos: initGroup('custos', labelCustos, true),
       despesas_impostos: initGroup('despesas_impostos', 'Despesas com Impostos', true),
       despesas_fixas: initGroup('despesas_fixas', 'Despesas Fixas', true),
       despesas_variaveis: initGroup('despesas_variaveis', 'Despesas Variáveis', true),
@@ -360,7 +367,15 @@ export default function RelatoriosPage() {
         const pc = plano.find(p => p.id === l.planoContaId);
         if (!pc) return;
         const cod = pc.codigo;
-        
+
+        // Contas redutoras (ex.: "(-) Devoluções e Cancelamentos",
+        // "(-) Descontos Concedidos") são lançadas como receita mas precisam
+        // SUBTRAIR da receita bruta — sem isso, uma devolução inflava a
+        // "Receita Total de Vendas" em vez de reduzi-la (o cálculo do fluxo
+        // de caixa já fazia essa correção via isContaRedutoraReceita, a DRE
+        // não fazia).
+        const valorGerencial = cod.startsWith('1') && isContaRedutoraReceita(pc.descricao) ? -l.valor : l.valor;
+
         let cat = pc.dreCategoria;
         if (!cat) {
           if (cod.startsWith('1')) cat = 'receita_vendas';
@@ -374,10 +389,10 @@ export default function RelatoriosPage() {
         }
 
         if (cat && cat in vals) {
-          vals[cat as keyof typeof vals] += l.valor;
+          vals[cat as keyof typeof vals] += valorGerencial;
         } else {
-          if (l.tipo === 'receita') vals.outras_receitas += l.valor;
-          else vals.outras_despesas += l.valor;
+          if (l.tipo === 'receita') vals.outras_receitas += valorGerencial;
+          else vals.outras_despesas += valorGerencial;
         }
       });
 
@@ -386,11 +401,18 @@ export default function RelatoriosPage() {
       const lucroOperacional = lucroBruto - vals.despesas_fixas - vals.despesas_variaveis - vals.despesas_pessoal - vals.despesas_bancarias - vals.despesas_terceiros;
       const resultadoFinal = lucroOperacional + vals.outras_receitas - vals.outras_despesas;
 
+      // O nome da linha de custo muda pelo ramo da empresa — "CMV" só faz
+      // sentido pra quem revende mercadoria; serviço e indústria têm nomes
+      // técnicos próprios pro mesmo conceito (custo do que foi vendido).
+      const labelCmv = empresa?.atividade === 'Indústria' ? 'CPV (Custo dos Produtos Vendidos)'
+        : empresa?.atividade === 'Serviço' ? 'CSP (Custo dos Serviços Prestados)'
+        : 'CMV (Custo da Mercadoria Vendida)';
+
       const rows: (string | number)[][] = [
         ['Receita Total de Vendas', fmt.currency(vals.receita_vendas)],
         ['(-) Despesas com Impostos', `-${fmt.currency(vals.impostos)}`],
         ['(=) Receita Líquida', fmt.currency(recLiquida)],
-        ['(-) CMV (Custo da Mercadoria Vendida)', `-${fmt.currency(vals.cmv)}`],
+        [`(-) ${labelCmv}`, `-${fmt.currency(vals.cmv)}`],
         ['(=) Lucro Bruto', fmt.currency(lucroBruto)],
         ['(-) Despesas Fixas', `-${fmt.currency(vals.despesas_fixas)}`],
         ['(-) Despesas Variáveis', `-${fmt.currency(vals.despesas_variaveis)}`],
@@ -413,7 +435,7 @@ export default function RelatoriosPage() {
     } else if (tipo === 'fluxo') {
       const rows: (string | number)[][] = [
         ['Receitas', fmt.currency(receitas)],
-        ['Custos de Mercadoria', fmt.currency(custos)],
+        [drilldownData.groups.custos.label, fmt.currency(custos)],
         ['Despesas Totais', fmt.currency(despesas)],
         ['  - Despesas com Impostos', fmt.currency(desp.impostos)],
         ['  - Despesas Fixas', fmt.currency(desp.fixas)],
