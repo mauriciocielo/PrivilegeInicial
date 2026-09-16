@@ -871,6 +871,18 @@ ${result.portadoresAdded} portadores criados`);
                   <option key={p.id} value={p.id}>{p.razaoSocial} {p.nomeFantasia && p.nomeFantasia !== p.razaoSocial ? `(${p.nomeFantasia})` : ''}</option>
                 ))}
               </select>
+              {planoEmpresaId && (() => {
+                const emp = list.find(p => p.id === planoEmpresaId);
+                return emp?.atividade ? (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
+                    A conta principal de receita e de custo variável já vem pronta para <strong>{emp.atividade}</strong> (campo "Atividade" do cadastro).
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11.5, color: 'var(--yellow)', marginTop: 6 }}>
+                    Esta empresa não tem "Atividade" definida no cadastro — o plano sai com os nomes genéricos de serviço. Edite o cadastro antes para Comércio/Indústria terem as contas certas.
+                  </div>
+                );
+              })()}
             </div>
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowPlanoModal(false)}>Cancelar</button>

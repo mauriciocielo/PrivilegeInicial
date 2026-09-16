@@ -535,19 +535,23 @@ const DEFAULT_EMPRESAS: Empresa[] = [];
 
 const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   // 1. RECEITAS OPERACIONAIS
+  // Organizada pela NATUREZA da receita (o que gera a entrada), não pela
+  // forma de pagamento — "Recebimento Pix/Cartão/Dinheiro" não diz nada sobre
+  // a operação em si (isso já existe em Portador/forma de pagamento da baixa)
+  // e impedia qualquer leitura de margem por linha de negócio na DRE.
   { id: 'pc1', codigo: '1', descricao: 'RECEITAS OPERACIONAIS', tipo: 'receita', nivel: 1, ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1', codigo: '1.1', descricao: 'RECEITAS', tipo: 'receita', nivel: 2, parentId: 'pc1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_1', codigo: '1.1.1.001', descricao: 'Recebimento Cheque/Dinheiro', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_2', codigo: '1.1.1.002', descricao: 'Recebimento Cartao de Credito/Debito', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_3', codigo: '1.1.1.003', descricao: 'Recebimento Pix', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_4', codigo: '1.1.1.004', descricao: 'Recebimento Antecipação', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc1_1_5', codigo: '1.1.1.005', descricao: '( - ) Estorno de Recebimento', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1', codigo: '1.1', descricao: 'RECEITA BRUTA', tipo: 'receita', nivel: 2, parentId: 'pc1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_1', codigo: '1.1.1.001', descricao: 'Prestação de Serviços', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_2', codigo: '1.1.1.002', descricao: 'Outras Receitas Operacionais', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_3', codigo: '1.1.1.003', descricao: 'Receita de Comissões', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_4', codigo: '1.1.1.004', descricao: '( - ) Devoluções e Cancelamentos', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc1_1_5', codigo: '1.1.1.005', descricao: '( - ) Descontos Concedidos', tipo: 'receita', nivel: 3, parentId: 'pc1_1', ativo: true, empresaId: 'e1' },
 
   // 2. CUSTOS OPERACIONAIS (VARIÁVEIS)
   { id: 'pc2', codigo: '2', descricao: 'CUSTOS OPERACIONAIS (VARIÁVEIS)', tipo: 'despesa', nivel: 1, ativo: true, empresaId: 'e1' },
   { id: 'pc2_1', codigo: '2.1', descricao: 'CUSTOS (COMPRAS)', tipo: 'despesa', nivel: 2, parentId: 'pc2', ativo: true, empresaId: 'e1' },
-  { id: 'pc2_1_1', codigo: '2.1.1.001', descricao: 'Pagamento de Armação', tipo: 'despesa', nivel: 3, parentId: 'pc2_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc2_1_2', codigo: '2.1.1.002', descricao: 'Pagamento de Lentes', tipo: 'despesa', nivel: 3, parentId: 'pc2_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc2_1_1', codigo: '2.1.1.001', descricao: 'Materiais e Insumos Aplicados', tipo: 'despesa', nivel: 3, parentId: 'pc2_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc2_1_2', codigo: '2.1.1.002', descricao: 'Mão de Obra Direta / Terceirizada', tipo: 'despesa', nivel: 3, parentId: 'pc2_1', ativo: true, empresaId: 'e1' },
   { id: 'pc2_1_3', codigo: '2.1.1.003', descricao: 'Frete S/ Compra', tipo: 'despesa', nivel: 3, parentId: 'pc2_1', ativo: true, empresaId: 'e1' },
 
   // 3. DESPESAS OPERACIONAIS
@@ -607,7 +611,6 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   { id: 'pc3_4_3', codigo: '3.4.1.003', descricao: 'Despesa Coleta de Residuos', tipo: 'despesa', nivel: 3, parentId: 'pc3_4', ativo: true, empresaId: 'e1' },
   { id: 'pc3_4_4', codigo: '3.4.1.004', descricao: 'Despesa Zeladora', tipo: 'despesa', nivel: 3, parentId: 'pc3_4', ativo: true, empresaId: 'e1' },
   { id: 'pc3_4_5', codigo: '3.4.1.005', descricao: 'Despesa com Responsável Técnico', tipo: 'despesa', nivel: 3, parentId: 'pc3_4', ativo: true, empresaId: 'e1' },
-  { id: 'pc3_4_6', codigo: '3.4.1.006', descricao: 'Despesa com Optometrista', tipo: 'despesa', nivel: 3, parentId: 'pc3_4', ativo: true, empresaId: 'e1' },
 
   // 3.5 DESPESAS COM PESSOAL
   { id: 'pc3_5', codigo: '3.5', descricao: 'DESPESAS COM PESSOAL', tipo: 'despesa', nivel: 2, parentId: 'pc3', ativo: true, empresaId: 'e1' },
@@ -652,19 +655,17 @@ const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   { id: 'pc4_1_2', codigo: '4.1.1.002', descricao: 'Emprestimo Obtido Terceiros', tipo: 'receita', nivel: 3, parentId: 'pc4_1', ativo: true, empresaId: 'e1' },
 
   { id: 'pc4_2', codigo: '4.2', descricao: 'PAGAMENTOS PARCELAS / EMPRÉSTIMOS (SAÍDAS)', tipo: 'despesa', nivel: 2, parentId: 'pc4', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_1', codigo: '4.2.1.001', descricao: 'Cresol - Contrato 500100320250943198', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_2', codigo: '4.2.1.002', descricao: 'Cresol - Contrato 500100320240839225', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_3', codigo: '4.2.1.003', descricao: 'Cresol - Contrato 500100320250051273', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_4', codigo: '4.2.1.004', descricao: 'Cresol - Contrato 500100320250942612', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_5', codigo: '4.2.1.005', descricao: 'Consórcio - Contemplado', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
-  { id: 'pc4_2_6', codigo: '4.2.1.006', descricao: 'Sicredi - Contrato C51831658', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
+  { id: 'pc4_2_1', codigo: '4.2.1.001', descricao: 'Parcela de Empréstimo Bancário', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
+  { id: 'pc4_2_2', codigo: '4.2.1.002', descricao: 'Parcela de Financiamento', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
+  { id: 'pc4_2_3', codigo: '4.2.1.003', descricao: 'Parcela de Consórcio', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
+  { id: 'pc4_2_4', codigo: '4.2.1.004', descricao: 'Parcela de Dívida com Terceiros/Agiota', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
+  { id: 'pc4_2_5', codigo: '4.2.1.005', descricao: 'Parcelamento de Impostos', tipo: 'despesa', nivel: 3, parentId: 'pc4_2', ativo: true, empresaId: 'e1' },
 
   // 5. ATIVIDADE DE INVESTIMENTO
   { id: 'pc5_inv', codigo: '5', descricao: 'ATIVIDADE DE INVESTIMENTO', tipo: 'despesa', nivel: 1, ativo: true, empresaId: 'e1' },
   { id: 'pc5_1', codigo: '5.1', descricao: 'INVESTIMENTOS / IMOBILIZADO', tipo: 'despesa', nivel: 2, parentId: 'pc5_inv', ativo: true, empresaId: 'e1' },
-  { id: 'pc5_1_1', codigo: '5.1.1.001', descricao: 'Capitalização Sicoob', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc5_1_2', codigo: '5.1.1.002', descricao: 'Capitalização Cresol', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
-  { id: 'pc5_1_3', codigo: '5.1.1.003', descricao: 'Capitalização Santander', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc5_1_1', codigo: '5.1.1.001', descricao: 'Aplicações Financeiras', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
+  { id: 'pc5_1_2', codigo: '5.1.1.002', descricao: 'Capitalização em Cooperativa de Crédito', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_4', codigo: '5.1.1.004', descricao: 'Consorcio', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_5', codigo: '5.1.1.005', descricao: 'Imobilizado', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
   { id: 'pc5_1_6', codigo: '5.1.1.006', descricao: 'Pagamento da Franquia', tipo: 'despesa', nivel: 3, parentId: 'pc5_1', ativo: true, empresaId: 'e1' },
@@ -733,7 +734,12 @@ const DEFAULT_CONTAS_BALANCO: Omit<ContaBalanco, 'id' | 'empresaId' | 'createdAt
   { grupo: 'patrimonio_liquido', codigo: '2.3.05', descricao: 'Resultado do Exercício', ordem: 5, ativo: true },
 ];
 
-function adaptPlanoContaDescricao(pcId: string, descricao: string, tipo?: 'empresa' | 'condominio' | 'cooperativa'): string {
+function adaptPlanoContaDescricao(
+  pcId: string,
+  descricao: string,
+  tipo?: 'empresa' | 'condominio' | 'cooperativa',
+  atividade?: 'Comércio' | 'Serviço' | 'Indústria'
+): string {
   if (tipo === 'condominio') {
     if (pcId === 'pc1_1_1') return 'Taxas Condominiais Ordinárias';
     if (pcId === 'pc1_1_2') return 'Taxas Extraordinárias';
@@ -749,6 +755,19 @@ function adaptPlanoContaDescricao(pcId: string, descricao: string, tipo?: 'empre
     if (pcId === 'pc1_1_3') return 'Taxas e Contribuições';
     if (pcId === 'pc3_1_1') return 'Despesas com Cooperados';
     if (pcId === 'pc3_1_2') return 'Rateio de Despesas';
+  } else if (!tipo || tipo === 'empresa') {
+    // Só a receita principal e o custo variável principal mudam de nome por
+    // ramo — são as duas contas que o consultor mais usa no dia a dia, e
+    // onde "Prestação de Serviços"/"Materiais e Insumos" fica sem sentido
+    // pra quem revende mercadoria ou fabrica produto.
+    if (atividade === 'Comércio') {
+      if (pcId === 'pc1_1_1') return 'Venda de Mercadorias';
+      if (pcId === 'pc2_1_1') return 'Compra de Mercadoria para Revenda';
+    } else if (atividade === 'Indústria') {
+      if (pcId === 'pc1_1_1') return 'Venda de Produtos Industrializados';
+      if (pcId === 'pc2_1_1') return 'Matéria-Prima';
+    }
+    // atividade === 'Serviço' (ou não informado) já é o texto-base do array.
   }
   return descricao;
 }
@@ -967,7 +986,7 @@ class DataStore {
         return {
           ...p,
           id: newId,
-          descricao: adaptPlanoContaDescricao(p.id, p.descricao, emp.tipo),
+          descricao: adaptPlanoContaDescricao(p.id, p.descricao, emp.tipo, emp.atividade),
           empresaId: emp.id
         };
       });
@@ -1285,7 +1304,7 @@ class DataStore {
         const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
         idMap[p.id] = newId;
 
-        return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo), empresaId: empresa.id };
+        return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo, empresa.atividade), empresaId: empresa.id };
       });
 
       // Corrige parentId para os novos IDs
@@ -1413,7 +1432,7 @@ class DataStore {
       const newId = 'pc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       idMap[p.id] = newId;
 
-      return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo), empresaId };
+      return { ...p, id: newId, descricao: adaptPlanoContaDescricao(p.id, p.descricao, empresa.tipo, empresa.atividade), empresaId };
     });
 
     newPcs.forEach(p => {
