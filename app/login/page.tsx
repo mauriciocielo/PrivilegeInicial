@@ -409,10 +409,15 @@ export default function LoginPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+               {/* `useOneTap` foi removido de propósito: era a causa da tela de
+                   login "piscando". O One Tap usa FedCM, um mecanismo separado
+                   do botão normal com exigências de domínio mais rígidas — quando
+                   o navegador/conta não atende esses requisitos, o Google fica
+                   tentando mostrar e esconder o prompt em loop. O botão comum
+                   abaixo continua funcionando normalmente sem esse problema. */}
                <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={() => setError('Ocorreu um erro ao conectar com o Google.')}
-                  useOneTap
                   theme="outline"
                   size="large"
                   text="signin_with"
