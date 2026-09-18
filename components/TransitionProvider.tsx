@@ -109,6 +109,17 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Auto-sincronização com o PostgreSQL ao carregar o site
   useEffect(() => {
+    // Esta era a causa real da tela de login "piscando" — não o Google One
+    // Tap (isso só afetava o botão). Sem sessão válida (o caso normal de
+    // quem está justamente NA tela de login), /api/migrate-backup devolve
+    // 401 e o bloco "unauthorized" abaixo faz `window.location.href =
+    // '/login'` — um reload completo, que remonta este componente e roda
+    // este efeito de novo, que recebe 401 de novo, que redireciona de novo:
+    // loop infinito de recarregamento, visto pelo usuário como piscar. As
+    // outras duas sincronizações deste arquivo (a de push debounced e o
+    // polling) já tinham essa mesma exceção — só esta, a inicial, não tinha.
+    if (pathname === '/login') return;
+
     const syncDb = async () => {
       if (sessionStorage.getItem('cf_postgres_synced') === 'true') {
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
@@ -173,7 +184,11 @@ export default function TransitionProvider({ children }: { children: React.React
           // mais nela. Força novo login em vez de deixar tudo em branco.
           console.warn('🔒 Sessão inválida ou expirada — redirecionando para o login.');
           store.setCurrentUser(null);
-          window.location.href = '/login';
+          // Reforço: nunca navegar para /login estando já em /login — é
+          // exatamente esse redirect-para-si-mesmo (reload -> remonta ->
+          // 401 de novo -> redirect de novo) que causava a tela piscando.
+          if (pathname !== '/login') window.location.href = '/login';
+          else sessionStorage.setItem('cf_postgres_synced', 'true');
           return;
         }
 
