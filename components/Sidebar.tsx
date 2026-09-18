@@ -483,7 +483,109 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
 
 
-      {/* Switcher de empresa movido para o Painel Administrativo de acordo com a solicitação */}
+      {/*
+        Seletor de empresa — antes existia só um comentário aqui dizendo que
+        isso "foi movido pro Painel Administrativo", mas nunca foi reconstruído
+        lá (nem em nenhum outro lugar): sem isso, ninguém tinha como trocar de
+        empresa pela interface — nem consultor com acesso total, nem restrito.
+        Fica na Sidebar (não numa tela específica) justamente porque ela
+        aparece em toda página, independente das permissões de rota do
+        usuário — reaproveita o estado que já existia pronto (busca,
+        recentes, grupos econômicos) só sem UI nenhuma.
+      */}
+      {isConsultorOrAdmin && selectableEmpresas.length > 0 && (
+        <div style={{ position: 'relative' }}>
+          <div
+            onClick={() => setShowCompanyDropdown(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+              padding: '8px 14px', borderRadius: 10, background: 'var(--bg-card2)',
+              border: '1px solid var(--border-light)', maxWidth: 220,
+            }}
+            title="Trocar de empresa"
+          >
+            <Building2 size={14} style={{ flexShrink: 0, color: 'var(--accent)' }} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial || 'Selecionar empresa'}
+            </span>
+            <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.6, transform: showCompanyDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          </div>
+
+          {showCompanyDropdown && (
+            <div
+              className="dropdown-anim-up"
+              style={{
+                position: 'absolute', top: '100%', left: 0, marginTop: 8, width: 300, maxHeight: 420,
+                overflowY: 'auto', background: '#fff', border: '1px solid var(--border-light)',
+                borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', zIndex: 1001, padding: 12,
+              }}
+            >
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  autoFocus
+                  placeholder="Buscar empresa..."
+                  value={searchEmpresa}
+                  onChange={e => setSearchEmpresa(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 12.5, borderRadius: 8,
+                    border: '1px solid var(--border-light)', outline: 'none', color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+
+              {!searchEmpresa && recentEmpresas.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                    <Clock size={11} /> Recentes
+                  </div>
+                  {recentEmpresas.map(id => {
+                    const e = selectableEmpresas.find(x => x.id === id);
+                    if (!e) return null;
+                    return (
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 800 : 500, background: e.id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                        {e.nomeFantasia || e.razaoSocial}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!searchEmpresa && gruposEconomicos.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                    <Globe size={11} /> Grupos econômicos
+                  </div>
+                  {gruposEconomicos.map(g => {
+                    const id = `grupo:${g}`;
+                    return (
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: id === selectedEmpresa ? 800 : 500, background: id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                        Grupo {g}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  Todas as empresas ({selectableEmpresas.length})
+                </div>
+                {selectableEmpresas
+                  .filter(e => !searchEmpresa || `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase()))
+                  .map(e => (
+                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 800 : 500, background: e.id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                      {e.nomeFantasia || e.razaoSocial}
+                    </div>
+                  ))}
+                {searchEmpresa && selectableEmpresas.filter(e => `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase())).length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <nav className="sidebar-nav">
         {nav.map(section => {
