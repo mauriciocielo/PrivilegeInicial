@@ -40,6 +40,25 @@ const removePendingKeys = (keys: string[]) => {
   localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(Array.from(current)));
 };
 
+// O cookie de sessão e o cache local do usuário (`cf_current_user`) são uma
+// foto tirada no momento do login — se um administrador muda depois quais
+// empresas este usuário atende, a sessão já aberta ficava presa à lista
+// antiga (às vezes vazia) até um novo login. Chamado no boot da aba e a cada
+// ~15s de uso: se o servidor detectar que os dados mudaram, emite um cookie
+// novo e devolve o usuário atualizado, sem exigir logout. Ver
+// app/api/auth/refresh-session/route.ts.
+async function refreshUserSession(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/auth/refresh-session', { cache: 'no-store' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data?.user) store.setCurrentUser(data.user);
+    return Boolean(data?.changed);
+  } catch {
+    return false;
+  }
+}
+
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [displayChildren, setDisplayChildren] = useState(children);
@@ -121,6 +140,11 @@ export default function TransitionProvider({ children }: { children: React.React
     if (pathname === '/login') return;
 
     const syncDb = async () => {
+      // Confere/atualiza a sessão antes de tudo — se as empresas do usuário
+      // mudaram desde o login, o cookie novo já sai daqui e a busca abaixo
+      // (que depende dele para saber o que este usuário pode ver) vem correta.
+      await refreshUserSession();
+
       if (sessionStorage.getItem('cf_postgres_synced') === 'true') {
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
         return;
@@ -540,6 +564,30 @@ export default function TransitionProvider({ children }: { children: React.React
         // 2. POLLING ESPECÍFICO ROTA ou DASHBOARD (Agenda, Empresas, etc)
         // Só rodamos a cada ~15s (1 em cada 5 ticks) para poupar o banco, a menos que seja forçado
         if (!force && counter % 5 !== 0) return;
+
+        // 2.5 Sessão pode ter ficado desatualizada com a aba já aberta (ex:
+        // administrador mudou as empresas deste usuário durante o uso) —
+        // confere no mesmo ritmo de ~15s e recarrega os dados já com o
+        // escopo novo, sem exigir logout/login.
+        try {
+          const mudou = await refreshUserSession();
+          if (mudou) {
+            console.log('🔐 Acesso do usuário foi atualizado no servidor — recarregando dados...');
+            sessionStorage.setItem('cf_sync_in_progress', 'true');
+            const res = await fetch('/api/migrate-backup', { cache: 'no-store' });
+            if (res.ok) {
+              const fresh = await res.json();
+              if (fresh?.data?.cf_empresas) {
+                store.importBackup(JSON.stringify(fresh));
+                window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'all', source: 'import' } }));
+                toast.success('Seu acesso foi atualizado — os dados foram recarregados.');
+              }
+            }
+            sessionStorage.setItem('cf_sync_in_progress', 'false');
+          }
+        } catch {
+          sessionStorage.setItem('cf_sync_in_progress', 'false');
+        }
 
         // Se está no Dashboard (onde pageCollection é null), checamos a Agenda e Empresas
         const collectionsToPoll: string[] = [];
