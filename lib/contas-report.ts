@@ -67,14 +67,22 @@ export function relatorioContasHtml(pagar: ResumoContas, receber: ResumoContas):
   return secao('💸 Contas a Pagar', '#b45309', pagar) + secao('💰 Contas a Receber', '#047857', receber);
 }
 
-/** Texto resumido (WhatsApp) do relatório de uma empresa. */
+const MAX_ITENS_TEXTO = 5;
+
+/** Texto (WhatsApp) do relatório de uma empresa: totais e as primeiras contas de cada grupo. */
 export function relatorioContasTexto(pagar: ResumoContas, receber: ResumoContas): string {
-  const linha = (nome: string, r: ResumoContas) => {
-    const partes: string[] = [];
-    if (r.vencidas.length) partes.push(`${r.vencidas.length} vencida(s) ${brl(soma(r.vencidas))}`);
-    if (r.hoje.length) partes.push(`${r.hoje.length} hoje ${brl(soma(r.hoje))}`);
-    if (r.proximos7.length) partes.push(`${r.proximos7.length} nos próx. 7 dias ${brl(soma(r.proximos7))}`);
-    return partes.length ? `• ${nome}: ${partes.join(' | ')}\n` : '';
+  const grupo = (rotulo: string, itens: ContaPendente[]) => {
+    if (itens.length === 0) return '';
+    let t = `  ${rotulo}: ${itens.length} conta(s) · ${brl(soma(itens))}\n`;
+    itens.slice(0, MAX_ITENS_TEXTO).forEach(l => {
+      t += `    - ${br(l.data).slice(0, 5)} ${l.descricao} — ${brl(l.valor)}\n`;
+    });
+    if (itens.length > MAX_ITENS_TEXTO) t += `    … e mais ${itens.length - MAX_ITENS_TEXTO}\n`;
+    return t;
   };
-  return linha('A Pagar', pagar) + linha('A Receber', receber);
+  const secao = (nome: string, r: ResumoContas) => {
+    const corpo = grupo('🔴 Vencidas', r.vencidas) + grupo('🟡 Hoje', r.hoje) + grupo('📅 Próx. 7 dias', r.proximos7);
+    return corpo ? `*${nome}*\n${corpo}` : '';
+  };
+  return secao('💸 Contas a Pagar', pagar) + secao('💰 Contas a Receber', receber);
 }
