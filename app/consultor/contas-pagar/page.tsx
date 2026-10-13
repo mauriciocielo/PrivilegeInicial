@@ -4,6 +4,7 @@ import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, t
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { downloadCsv } from '../../../lib/csv';
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
 
@@ -35,6 +36,8 @@ export default function ContasPagarPage() {
   const [contaSearch, setContaSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Lancamento>>({});
+  const [sortBy, setSortBy] = useState<{ key: 'data' | 'valor'; dir: 'asc' | 'desc' }>({ key: 'data', dir: 'asc' });
+  const [triedSave, setTriedSave] = useState(false);
 
   const load = useCallback((eId: string) => {
     if (!eId) return;
@@ -79,8 +82,44 @@ export default function ContasPagarPage() {
         if (filtros.vencimento === 'proximos30' && (l.data < todayStr || l.data > addDays(todayStr, 30))) return false;
       }
       return true;
-    }).sort((a, b) => a.data.localeCompare(b.data));
-  }, [lancamentos, filtros, todayStr]);
+    }).sort((a, b) => {
+      const r = sortBy.key === 'valor' ? a.valor - b.valor : a.data.localeCompare(b.data);
+      return sortBy.dir === 'asc' ? r : -r;
+    });
+  }, [lancamentos, filtros, todayStr, sortBy]);
+
+  // Limpa a seleção quando os filtros mudam (evita agir sobre itens ocultos)
+  useEffect(() => { setSelectedIds([]); }, [filtros]);
+
+  // Esc fecha o modal
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showModal]);
+
+  const totalSelecionado = useMemo(() => filtered.filter(l => selectedIds.includes(l.id)).reduce((a, l) => a + l.valor, 0), [filtered, selectedIds]);
+
+  const toggleSort = (key: 'data' | 'valor') => setSortBy(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
+  const sortIcon = (key: 'data' | 'valor') => sortBy.key === key ? (sortBy.dir === 'asc' ? ' ▲' : ' ▼') : '';
+
+  const exportCsv = () => {
+    downloadCsv(
+      `contas-pagar-${todayStr}.csv`,
+      ['Vencimento', 'Descrição', 'Fornecedor/Cliente', 'Categoria', 'Portador', 'Nº Doc.', 'Situação', 'Valor'],
+      filtered.map(l => [
+        fmt.date(l.data),
+        l.descricao,
+        clientes.find(c => c.id === l.clienteId)?.nome || '',
+        (() => { const pc = planoContas.find(p => p.id === l.planoContaId); return pc ? `${pc.codigo} - ${pc.descricao}` : ''; })(),
+        portadores.find(p => p.id === l.portadorId)?.nome || '',
+        l.numeroDocumento || '',
+        getVencStatus(l).label,
+        l.valor.toFixed(2).replace('.', ','),
+      ]),
+    );
+  };
 
   const pendentes = useMemo(() => filtered.filter(l => l.status === 'previsto'), [filtered]);
   const pagos = useMemo(() => filtered.filter(l => l.status === 'realizado'), [filtered]);
@@ -144,6 +183,7 @@ export default function ContasPagarPage() {
   const openNew = () => {
     setEditItem(null);
     setContaSearch('');
+    setTriedSave(false);
     setForm({
       tipo: 'despesa',
       status: 'previsto',
@@ -157,13 +197,15 @@ export default function ContasPagarPage() {
   const openEdit = (l: Lancamento) => {
     setEditItem(l);
     setContaSearch('');
+    setTriedSave(false);
     setForm({ ...l });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!form.descricao || !form.valor || !form.planoContaId || !form.portadorId || !form.data) {
-      toast.error('Preencha todos os campos obrigatórios.');
+    setTriedSave(true);
+    if (!form.descricao || !form.valor || Number(form.valor) <= 0 || !form.planoContaId || !form.portadorId || !form.data) {
+      toast.error('Preencha todos os campos obrigatórios (valor deve ser maior que zero).');
       return;
     }
     setSaving(true);
@@ -224,7 +266,7 @@ export default function ContasPagarPage() {
           {selectedIds.length > 0 && (
             <>
               <button className="btn btn-primary" onClick={marcarPagoLote}>
-                ✅ Pagar {selectedIds.length} Selecionado(s)
+                ✅ Pagar {selectedIds.length} Selecionado(s) · {fmt.currency(totalSelecionado)}
               </button>
               <button className="btn btn-danger btn-sm" onClick={async () => {
                 if (!(await confirmAsync(`Excluir ${selectedIds.length} lançamento(s)?`))) return;
@@ -236,6 +278,7 @@ export default function ContasPagarPage() {
               </button>
             </>
           )}
+          <button className="btn btn-secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Exportar a lista filtrada para CSV">⬇️ Exportar CSV</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Conta a Pagar</button>
         </div>
       </div>
@@ -343,13 +386,13 @@ export default function ContasPagarPage() {
                   <th style={{ width: 40, textAlign: 'center' }}>
                     <input type="checkbox" checked={filtered.length > 0 && selectedIds.length === filtered.length} onChange={toggleSelectAll} />
                   </th>
-                  <th>Vencimento</th>
+                  <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('data')}>Vencimento{sortIcon('data')}</th>
                   <th>Descrição / Fornecedor</th>
                   <th>Categoria</th>
                   <th>Portador</th>
                   <th>Nº Doc.</th>
                   <th>Situação</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th style={{ textAlign: 'right', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('valor')}>Valor{sortIcon('valor')}</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -458,6 +501,8 @@ export default function ContasPagarPage() {
                   inputMode="numeric"
                   className="form-control"
                   placeholder="R$ 0,00"
+                  autoFocus
+                  style={triedSave && !form.valor ? { borderColor: 'var(--red)' } : undefined}
                   value={form.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(form.valor)) : ''}
                   onChange={e => {
                     const digits = e.target.value.replace(/\D/g, '');
@@ -469,7 +514,7 @@ export default function ContasPagarPage() {
 
             <div className="form-group">
               <label className="form-label">Descrição / Referência *</label>
-              <input className="form-control" value={form.descricao || ''} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
+              <input className="form-control" style={triedSave && !form.descricao ? { borderColor: 'var(--red)' } : undefined} value={form.descricao || ''} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
             </div>
 
             <div className="form-group">
