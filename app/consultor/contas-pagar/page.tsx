@@ -453,7 +453,17 @@ export default function ContasPagarPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Valor *</label>
-                <input type="number" step="0.01" min="0" className="form-control" value={form.valor ?? ''} onChange={e => setForm(f => ({ ...f, valor: e.target.value as any }))} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="form-control"
+                  placeholder="R$ 0,00"
+                  value={form.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(form.valor)) : ''}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    setForm(f => ({ ...f, valor: digits ? Number(digits) / 100 : undefined }));
+                  }}
+                />
               </div>
             </div>
 
