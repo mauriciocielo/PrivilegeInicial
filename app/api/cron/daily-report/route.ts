@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import nodemailer from 'nodemailer';
 import { captureError } from '../../../../lib/sentry-helper';
+import { agruparContas, relatorioContasHtml, relatorioContasTexto } from '../../../../lib/contas-report';
 
 export async function GET(request: Request) {
   try {
@@ -115,6 +116,15 @@ export async function GET(request: Request) {
         const contasAPagarHoje = pendentesHoje.filter(l => l.tipo === 'despesa').reduce((sum, l) => sum + l.valor, 0);
         const contasAReceberHoje = pendentesHoje.filter(l => l.tipo === 'receita').reduce((sum, l) => sum + l.valor, 0);
 
+        // Relatório de Contas a Pagar / Receber pendentes (vencidas, hoje e próximos 7 dias)
+        const limitePendentes = new Date(Date.parse(today + 'T12:00:00Z') + 7 * 86400000).toISOString().split('T')[0];
+        const contasPendentes = await db.lancamento.findMany({
+          where: { empresaId: emp.id, status: 'previsto', data: { lte: limitePendentes } },
+          orderBy: { data: 'asc' }
+        });
+        const contasPagar = agruparContas(contasPendentes.filter(l => l.tipo === 'despesa'), today);
+        const contasReceber = agruparContas(contasPendentes.filter(l => l.tipo === 'receita'), today);
+
         summaries.push({
           empresa: emp.nomeFantasia || emp.razaoSocial,
           receitasHoje,
@@ -163,6 +173,7 @@ export async function GET(request: Request) {
               </tr>
             </table>
 
+            ${relatorioContasHtml(contasPagar, contasReceber)}
             <!-- Bloco de Agenda -->
         `;
 
@@ -216,6 +227,7 @@ export async function GET(request: Request) {
         whatsappTextBody += `• Despesas Realizadas: R$ ${despesasHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
         if (contasAReceberHoje > 0) whatsappTextBody += `• Previsto a Receber: R$ ${contasAReceberHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
         if (contasAPagarHoje > 0) whatsappTextBody += `• Previsto a Pagar: R$ ${contasAPagarHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        whatsappTextBody += relatorioContasTexto(contasPagar, contasReceber);
         whatsappTextBody += `\n`;
       }
 
