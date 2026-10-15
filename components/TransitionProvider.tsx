@@ -334,6 +334,13 @@ export default function TransitionProvider({ children }: { children: React.React
             keysToSync.forEach(k => pendingKeys.add(k));
             console.error(`Erro ao auto-salvar no banco:`, syncResult.error);
             window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'error' }));
+            if (syncResult.unauthorized) {
+              // Sessão expirou: tentar de novo a cada 10s só gera 401 em loop.
+              // As chaves seguem registradas como pendentes em localStorage e
+              // são reenviadas após o novo login.
+              window.location.href = '/login';
+              return;
+            }
             // Continua tentando mesmo sem novas edições — não depende do usuário mexer de novo.
             timeoutId = setTimeout(runSync, 10000);
           }
