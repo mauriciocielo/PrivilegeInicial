@@ -16,7 +16,7 @@ export async function syncBackupInChunks(
   backupText: string,
   onProgress?: (message: string) => void,
   collectionsToSync?: string[]
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; unauthorized?: boolean }> {
   try {
     const parsed = JSON.parse(backupText);
     if (!parsed || typeof parsed !== 'object') {
@@ -92,6 +92,11 @@ export async function syncBackupInChunks(
           });
 
           if (res.ok) { lastErr = undefined; break; }
+
+          // Sessão expirada/ausente: repetir não adianta, só o login resolve.
+          if (res.status === 401) {
+            return { success: false, unauthorized: true, error: 'Sessão expirada. Faça login novamente.' };
+          }
 
           const errText = await res.text();
           let parsedErr = errText;
