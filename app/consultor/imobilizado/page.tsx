@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { store, type Imobilizado, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
@@ -11,6 +12,42 @@ export default function ImobilizadoPage() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Imobilizado | null>(null);
   const [form, setForm] = useState<Partial<Imobilizado>>({});
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Planilha com colunas: und | Descrição | Ano | Valor Unit | Valor Total.
+  // Cada linha vira um bem (valor = Valor Total; quantidade vai no nome).
+  // Sem depreciação (taxa 0); sem ano, usa a data de hoje.
+  const handleImport = async (file: File) => {
+    if (!empresaId) { toast.error('Selecione uma empresa.'); return; }
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const hoje = new Date().toISOString().split('T')[0];
+      let count = 0;
+      for (const r of rows) {
+        const und = Number(r[0]);
+        const nome = String(r[1] || '').trim();
+        const total = Number(r[4]) || (Number(r[3]) || 0) * und;
+        if (!nome || !und || !total) continue; // cabeçalho/linhas vazias
+        const ano = Number(r[2]);
+        store.saveImobilizado({
+          id: uid(),
+          empresaId,
+          nome: und > 1 ? `${und}x ${nome}` : nome,
+          dataAquisicao: ano >= 1900 ? `${ano}-01-01` : hoje,
+          valorAquisicao: total,
+          taxaDepreciacao: 0,
+          createdAt: new Date().toISOString(),
+        });
+        count++;
+      }
+      setImobilizados(store.getImobilizados(empresaId));
+      toast.success(`${count} bens importados.`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Não foi possível ler a planilha.');
+    }
+  };
 
   const load = (eId: string) => {
     if (!eId) return;
@@ -122,6 +159,9 @@ export default function ImobilizadoPage() {
           <div className="page-subtitle">Controle de bens, patrimônios e depreciação acumulada</div>
         </div>
         <div className="header-actions">
+          <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
+          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>📥 Importar planilha</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Bem</button>
         </div>
       </div>
