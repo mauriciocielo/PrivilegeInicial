@@ -76,6 +76,7 @@ async function migrateImobilizados(itens: any[]) {
       const dados = {
         empresaId: String(i.empresaId),
         nome: String(i.nome || ''),
+        quantidade: Math.max(1, Math.round(Number(i.quantidade)) || 1),
         dataAquisicao: String(i.dataAquisicao || ''),
         valorAquisicao: Number(i.valorAquisicao) || 0,
         taxaDepreciacao: Number(i.taxaDepreciacao) || 0,
