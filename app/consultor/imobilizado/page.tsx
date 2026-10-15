@@ -23,17 +23,26 @@ export default function ImobilizadoPage() {
       const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
       const rows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
       const hoje = new Date().toISOString().split('T')[0];
+      // Já lançado = mesmo nome (com a quantidade) e mesmo valor. A data fica
+      // de fora porque itens sem ano recebem a data de hoje a cada importação.
+      const chave = (nome: string, valor: number) => `${nome.trim().toUpperCase()}|${valor.toFixed(2)}`;
+      const existentes = new Set(store.getImobilizados(empresaId).map(i => chave(i.nome, i.valorAquisicao)));
       let count = 0;
+      let ignorados = 0;
       for (const r of rows) {
         const und = Number(r[0]);
         const nome = String(r[1] || '').trim();
         const total = Number(r[4]) || (Number(r[3]) || 0) * und;
         if (!nome || !und || !total) continue; // cabeçalho/linhas vazias
         const ano = Number(r[2]);
+        const nomeFinal = und > 1 ? `${und}x ${nome}` : nome;
+        const k = chave(nomeFinal, total);
+        if (existentes.has(k)) { ignorados++; continue; }
+        existentes.add(k);
         store.saveImobilizado({
           id: uid(),
           empresaId,
-          nome: und > 1 ? `${und}x ${nome}` : nome,
+          nome: nomeFinal,
           dataAquisicao: ano >= 1900 ? `${ano}-01-01` : hoje,
           valorAquisicao: total,
           taxaDepreciacao: 0,
@@ -42,7 +51,7 @@ export default function ImobilizadoPage() {
         count++;
       }
       setImobilizados(store.getImobilizados(empresaId));
-      toast.success(`${count} bens importados.`);
+      toast.success(`${count} bens importados.${ignorados ? ` ${ignorados} já estavam lançados e foram ignorados.` : ''}`);
     } catch (err) {
       console.error(err);
       toast.error('Não foi possível ler a planilha.');
