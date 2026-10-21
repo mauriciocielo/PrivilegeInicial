@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { store, type Imobilizado, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
@@ -11,6 +12,56 @@ export default function ImobilizadoPage() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Imobilizado | null>(null);
   const [form, setForm] = useState<Partial<Imobilizado>>({});
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Planilha com colunas: und | Descrição | Ano | Valor Unit | Valor Total.
+  // Cada linha vira um bem (quantidade = und; valor = Valor Total).
+  // Sem depreciação (taxa 0); sem ano, usa a data de hoje.
+  const handleImport = async (file: File) => {
+    if (!empresaId) { toast.error('Selecione uma empresa.'); return; }
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const hoje = new Date().toISOString().split('T')[0];
+      // Já lançado = mesmo nome (com a quantidade) e mesmo valor. A data fica
+      // de fora porque itens sem ano recebem a data de hoje a cada importação.
+      // Ignora o prefixo "3x " de bens importados antes de existir o campo quantidade.
+      const chave = (nome: string, qtd: number, valor: number) =>
+        `${nome.trim().replace(/^\d+x\s+/i, '').toUpperCase()}|${qtd}|${valor.toFixed(2)}`;
+      const existentes = new Set(store.getImobilizados(empresaId).map(i => {
+        const prefixo = i.nome.match(/^(\d+)x\s+/i);
+        return chave(i.nome, i.quantidade ?? (prefixo ? Number(prefixo[1]) : 1), i.valorAquisicao);
+      }));
+      let count = 0;
+      let ignorados = 0;
+      for (const r of rows) {
+        const und = Number(r[0]);
+        const nome = String(r[1] || '').trim();
+        const total = Number(r[4]) || (Number(r[3]) || 0) * und;
+        if (!nome || !und || !total) continue; // cabeçalho/linhas vazias
+        const ano = Number(r[2]);
+        const k = chave(nome, und, total);
+        if (existentes.has(k)) { ignorados++; continue; }
+        existentes.add(k);
+        store.saveImobilizado({
+          id: uid(),
+          empresaId,
+          nome,
+          quantidade: und,
+          dataAquisicao: ano >= 1900 ? `${ano}-01-01` : hoje,
+          valorAquisicao: total,
+          taxaDepreciacao: 0,
+          createdAt: new Date().toISOString(),
+        });
+        count++;
+      }
+      setImobilizados(store.getImobilizados(empresaId));
+      toast.success(`${count} bens importados.${ignorados ? ` ${ignorados} já estavam lançados e foram ignorados.` : ''}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Não foi possível ler a planilha.');
+    }
+  };
 
   const load = (eId: string) => {
     if (!eId) return;
@@ -36,7 +87,7 @@ export default function ImobilizadoPage() {
 
   const openNew = () => {
     setEditItem(null);
-    setForm({ empresaId, dataAquisicao: new Date().toISOString().split('T')[0], valorAquisicao: 0, taxaDepreciacao: 10 });
+    setForm({ empresaId, dataAquisicao: new Date().toISOString().split('T')[0], valorAquisicao: 0, quantidade: 1, taxaDepreciacao: 10 });
     setShowModal(true);
   };
 
@@ -56,6 +107,7 @@ export default function ImobilizadoPage() {
       id: editItem?.id || uid(),
       empresaId,
       nome: form.nome!,
+      quantidade: Math.max(1, Math.round(Number(form.quantidade)) || 1),
       dataAquisicao: form.dataAquisicao!,
       valorAquisicao: Number(form.valorAquisicao) || 0,
       taxaDepreciacao: Number(form.taxaDepreciacao) || 0,
@@ -122,6 +174,9 @@ export default function ImobilizadoPage() {
           <div className="page-subtitle">Controle de bens, patrimônios e depreciação acumulada</div>
         </div>
         <div className="header-actions">
+          <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
+          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>📥 Importar planilha</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Bem</button>
         </div>
       </div>
@@ -152,6 +207,7 @@ export default function ImobilizadoPage() {
               <thead>
                 <tr>
                   <th>Bem / Descrição</th>
+                  <th style={{ textAlign: 'right' }}>Qtd</th>
                   <th>Data de Aquisição</th>
                   <th style={{ textAlign: 'right' }}>Taxa Anual</th>
                   <th style={{ textAlign: 'right' }}>Vida Útil Passada</th>
@@ -163,7 +219,7 @@ export default function ImobilizadoPage() {
               </thead>
               <tbody>
                 {calculos.list.length === 0 ? (
-                  <tr><td colSpan={8}>
+                  <tr><td colSpan={9}>
                     <div className="empty-state">
                       <div className="empty-state-icon">🏗️</div>
                       <h3>Nenhum bem imobilizado cadastrado</h3>
@@ -173,6 +229,7 @@ export default function ImobilizadoPage() {
                 ) : calculos.list.map(i => (
                   <tr key={i.id}>
                     <td style={{ fontWeight: 600 }}>{i.nome}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.quantidade ?? 1}</td>
                     <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{fmt.date(i.dataAquisicao)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.taxaDepreciacao}% a.a.</td>
                     <td style={{ textAlign: 'right', fontSize: 13 }}>{i.mesesUso} meses</td>
@@ -212,7 +269,11 @@ export default function ImobilizadoPage() {
                 <input type="date" className="form-control" value={form.dataAquisicao || ''} onChange={e => setForm(f => ({ ...f, dataAquisicao: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="form-label">Valor Original (R$) *</label>
+                <label className="form-label">Quantidade *</label>
+                <input type="number" min={1} step={1} className="form-control" value={form.quantidade ?? 1} onChange={e => setForm(f => ({ ...f, quantidade: Number(e.target.value) }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Valor Total (R$) *</label>
                 <input type="number" step="0.01" className="form-control" value={form.valorAquisicao ?? ''} onChange={e => setForm(f => ({ ...f, valorAquisicao: Number(e.target.value) }))} />
               </div>
               <div className="form-group">

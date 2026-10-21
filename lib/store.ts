@@ -251,6 +251,7 @@ export interface Imobilizado {
   id: string;
   empresaId: string;
   nome: string;
+  quantidade?: number; // padrão 1; valorAquisicao é o total do lote
   dataAquisicao: string;
   valorAquisicao: number;
   taxaDepreciacao: number;
