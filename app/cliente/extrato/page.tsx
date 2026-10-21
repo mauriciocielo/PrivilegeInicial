@@ -4,7 +4,13 @@ import { store, Lancamento, PlanoConta, Portador } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 
 export default function ClienteExtrato() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
+  const [empresaId, setEmpresaId] = useState(() => {
+    const user = store.getCurrentUser();
+    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
+    return saved || defaultEmpresaId || 'e1';
+  });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);

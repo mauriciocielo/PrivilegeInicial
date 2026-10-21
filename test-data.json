@@ -1,0 +1,192 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Admin Consultor",
+      "email": "consultor@sistema.com",
+      "password": "123456",
+      "role": "administrador",
+      "empresaIds": [
+        "emp_teste_001"
+      ],
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    },
+    {
+      "id": "u2",
+      "name": "João Silva",
+      "email": "cliente@empresa.com",
+      "password": "123456",
+      "role": "cliente",
+      "empresaIds": [
+        "emp_teste_001"
+      ],
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    }
+  ],
+  "empresas": [
+    {
+      "id": "emp_teste_001",
+      "razaoSocial": "Empresa Teste LTDA",
+      "nomeFantasia": "Empresa Teste",
+      "cnpj": "12.345.678/0001-90",
+      "responsavel": "João Silva",
+      "email": "contato@empresa-teste.com",
+      "telefone": "(11) 99999-9999",
+      "atividade": "Serviço",
+      "tipo": "empresa",
+      "createdAt": "2026-10-21T01:48:15.424Z"
+    }
+  ],
+  "planoContas": [
+    {
+      "id": "pc1",
+      "codigo": "1",
+      "descricao": "RECEITAS OPERACIONAIS",
+      "tipo": "receita",
+      "nivel": 1,
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc1_1_1",
+      "codigo": "1.1.1",
+      "descricao": "Prestação de Serviços",
+      "tipo": "receita",
+      "nivel": 3,
+      "parentId": "pc1",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc2",
+      "codigo": "2",
+      "descricao": "CUSTOS OPERACIONAIS",
+      "tipo": "despesa",
+      "nivel": 1,
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc2_1_1",
+      "codigo": "2.1.1",
+      "descricao": "Materiais e Insumos",
+      "tipo": "despesa",
+      "nivel": 3,
+      "parentId": "pc2",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc3",
+      "codigo": "3",
+      "descricao": "DESPESAS OPERACIONAIS",
+      "tipo": "despesa",
+      "nivel": 1,
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc3_1_1",
+      "descricao": "Aluguel",
+      "codigo": "3.1.1",
+      "tipo": "despesa",
+      "nivel": 3,
+      "parentId": "pc3",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc6",
+      "codigo": "6",
+      "descricao": "Transferências",
+      "tipo": "transferencia",
+      "nivel": 1,
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "pc6_1_1",
+      "codigo": "6.1.1",
+      "descricao": "Transferência Entrada",
+      "tipo": "transferencia",
+      "nivel": 3,
+      "parentId": "pc6",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    }
+  ],
+  "portadores": [
+    {
+      "id": "port_teste_1",
+      "nome": "Conta Corrente Principal",
+      "tipo": "conta_corrente",
+      "saldoInicial": 50000,
+      "saldoInicialData": "2024-01-01",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    },
+    {
+      "id": "port_teste_2",
+      "nome": "Caixa",
+      "tipo": "caixa",
+      "saldoInicial": 5000,
+      "saldoInicialData": "2024-01-01",
+      "ativo": true,
+      "empresaId": "emp_teste_001"
+    }
+  ],
+  "lancamentos": [
+    {
+      "id": "lanc_001",
+      "empresaId": "emp_teste_001",
+      "data": "2024-10-15",
+      "descricao": "Prestação de Serviços - Cliente ABC",
+      "valor": 5000,
+      "tipo": "receita",
+      "planoContaId": "pc1_1_1",
+      "portadorId": "port_teste_1",
+      "status": "realizado",
+      "origem": "manual",
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    },
+    {
+      "id": "lanc_002",
+      "empresaId": "emp_teste_001",
+      "data": "2024-10-10",
+      "descricao": "Aluguel do Escritório",
+      "valor": 3000,
+      "tipo": "despesa",
+      "planoContaId": "pc3_1_1",
+      "portadorId": "port_teste_1",
+      "status": "realizado",
+      "origem": "manual",
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    },
+    {
+      "id": "lanc_003",
+      "empresaId": "emp_teste_001",
+      "data": "2024-10-12",
+      "descricao": "Compra de Materiais",
+      "valor": 1500,
+      "tipo": "despesa",
+      "planoContaId": "pc2_1_1",
+      "portadorId": "port_teste_1",
+      "status": "realizado",
+      "origem": "manual",
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    },
+    {
+      "id": "lanc_004",
+      "empresaId": "emp_teste_001",
+      "data": "2024-10-18",
+      "descricao": "Prestação de Serviços - Cliente XYZ",
+      "valor": 8000,
+      "tipo": "receita",
+      "planoContaId": "pc1_1_1",
+      "portadorId": "port_teste_1",
+      "status": "previsto",
+      "origem": "manual",
+      "createdAt": "2026-10-21T01:48:15.425Z"
+    }
+  ]
+}

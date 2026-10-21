@@ -508,7 +508,7 @@ const DEFAULT_USERS: User[] = [
     email: 'consultor@sistema.com',
     password: '123456',
     role: 'administrador',
-    empresaIds: [],
+    empresaIds: ['emp_teste_001'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -517,7 +517,7 @@ const DEFAULT_USERS: User[] = [
     email: 'consultoria@privilegecontabilidade.com.br',
     password: '145236',
     role: 'administrador',
-    empresaIds: [],
+    empresaIds: ['emp_teste_001'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -526,12 +526,25 @@ const DEFAULT_USERS: User[] = [
     email: 'cliente@empresa.com',
     password: '123456',
     role: 'cliente',
-    empresaIds: [],
+    empresaIds: ['emp_teste_001'],
     createdAt: new Date().toISOString(),
   },
 ];
 
-const DEFAULT_EMPRESAS: Empresa[] = [];
+const DEFAULT_EMPRESAS: Empresa[] = [
+  {
+    id: 'emp_teste_001',
+    razaoSocial: 'Empresa Teste LTDA',
+    nomeFantasia: 'Empresa Teste',
+    cnpj: '12.345.678/0001-90',
+    responsavel: 'João Silva',
+    email: 'contato@empresa-teste.com',
+    telefone: '(11) 99999-9999',
+    atividade: 'Serviço',
+    tipo: 'empresa',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 const DEFAULT_PLANO_CONTAS: PlanoConta[] = [
   // 1. RECEITAS OPERACIONAIS
