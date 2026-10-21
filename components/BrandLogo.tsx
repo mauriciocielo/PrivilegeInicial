@@ -10,8 +10,6 @@ interface BrandLogoProps {
 export default function BrandLogo({ size = 48, showText = true, subtitle }: BrandLogoProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const logoHeight = size;
-  // A imagem original é horizontal, então deixamos a largura flexível ou proporcional (~ 3.5x a altura)
-  const logoWidth = logoHeight * 3.5;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -21,7 +19,7 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
             height: logoHeight,
             width: 'auto',
             minWidth: 120,
-            maxWidth: 240,
+            maxWidth: 280,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-start',
@@ -30,18 +28,18 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
           }}
         >
           <img
-            src="/logo.png"
+            src="/logo.svg"
             alt="Privilege Contabilidade e Consultoria"
             onError={() => setImageFailed(true)}
-            style={{ height: '100%', width: 'auto', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+            style={{ height: '100%', width: 'auto', objectFit: 'contain', display: 'block' }}
           />
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: size, 
-            height: size, 
-            borderRadius: 12, 
+            width: size,
+            height: size,
+            borderRadius: 12,
             background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -57,13 +55,13 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
               <path d="M 66 26 L 76 26 L 76 36" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          
+
           {showText && (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div className="logo-text" style={{ 
-                letterSpacing: '3px', 
-                fontSize: size > 40 ? 18 : 14, 
-                fontWeight: 800, 
+              <div className="logo-text" style={{
+                letterSpacing: '3px',
+                fontSize: size > 40 ? 18 : 14,
+                fontWeight: 800,
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                 background: 'linear-gradient(90deg, #111827 0%, #4b5563 100%)',
                 WebkitBackgroundClip: 'text',
@@ -73,11 +71,11 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
                 PRIVILEGE
               </div>
               {subtitle && (
-                <div className="logo-sub" style={{ 
-                  fontSize: 10, 
-                  color: 'var(--text-secondary)', 
-                  letterSpacing: '1px', 
-                  textTransform: 'uppercase', 
+                <div className="logo-sub" style={{
+                  fontSize: 10,
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase',
                   fontWeight: 700,
                   marginTop: 2
                 }}>

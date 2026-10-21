@@ -61,6 +61,9 @@ async function refreshUserSession(): Promise<boolean> {
 
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isPublicRoute = pathname === '/login' || pathname === '/' || pathname?.startsWith('/novo-layout');
+  const isPublicRouteRef = useRef(isPublicRoute);
+  isPublicRouteRef.current = isPublicRoute;
   const [displayChildren, setDisplayChildren] = useState(children);
   const [transitionStage, setTransitionStage] = useState('fade-in');
   const prevPathnameRef = useRef(pathname);
@@ -137,7 +140,7 @@ export default function TransitionProvider({ children }: { children: React.React
     // loop infinito de recarregamento, visto pelo usuário como piscar. As
     // outras duas sincronizações deste arquivo (a de push debounced e o
     // polling) já tinham essa mesma exceção — só esta, a inicial, não tinha.
-    if (pathname === '/login') return;
+    if (isPublicRoute) return;
 
     const syncDb = async () => {
       // Confere/atualiza a sessão antes de tudo — se as empresas do usuário
@@ -211,7 +214,7 @@ export default function TransitionProvider({ children }: { children: React.React
           // Reforço: nunca navegar para /login estando já em /login — é
           // exatamente esse redirect-para-si-mesmo (reload -> remonta ->
           // 401 de novo -> redirect de novo) que causava a tela piscando.
-          if (pathname !== '/login') window.location.href = '/login';
+          if (!isPublicRoute) window.location.href = '/login';
           else sessionStorage.setItem('cf_postgres_synced', 'true');
           return;
         }
@@ -366,7 +369,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Sincronização em tempo real via WebSockets (Socket.io)
   useEffect(() => {
-    if (pathname === '/login') return;
+    if (isPublicRoute) return;
 
     console.log('🔌 Inicializando conexão WebSocket global...');
     const socket = io();
@@ -520,7 +523,7 @@ export default function TransitionProvider({ children }: { children: React.React
       window.removeEventListener('pageshow', handleVisibleReconnect);
       socket.disconnect();
     };
-  }, [pathname === '/login']);
+  }, [isPublicRoute]);
 
   // Mapeia o caminho atual para a coleção correspondente — vem do registro
   // único (lib/sync-registry.ts), então toda coleção com pagePaths definido
@@ -529,7 +532,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa
   useEffect(() => {
-    if (pathname === '/login') return;
+    if (isPublicRoute) return;
 
     // Coleção principal ativada pela rota, se houver
     const pageCollection = getCollectionFromPath(pathname);
