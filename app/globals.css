@@ -1442,6 +1442,32 @@ tbody td {
 .animate-pulse      { animation: pulse 2s ease-in-out infinite; }
 .pulse-glow         { animation: pulse-orange 2s infinite ease-in-out; }
 .animate-slide-up   { animation: slideUp var(--dur-slow) var(--ease-out); }
+
+/* ============================================================
+   RESPONSIVE PROPORTIONAL SCALING (MONITORS & MOBILE)
+   ============================================================ */
+@media (max-width: 1400px) {
+  .container { max-width: 1000px; padding: 0 30px; }
+}
+
+@media (max-width: 1024px) {
+  .grid-2, .grid-3, .grid-12, .grid-21 { grid-template-columns: 1fr !important; gap: 16px; }
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .sidebar { padding: 0 16px; height: auto; flex-wrap: wrap; }
+  .sidebar-nav { width: 100%; overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }
+  .page-header { padding: 0 20px; flex-direction: column; align-items: flex-start; height: auto; gap: 12px; padding-bottom: 14px; }
+  .page-body { padding: 20px; }
+}
+
+@media (max-width: 640px) {
+  html { font-size: 14px; }
+  .container { padding: 0 16px; }
+  .card { padding: 18px; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .page-header { padding: 14px 16px; }
+  .page-body { padding: 14px; }
+  .modal { padding: 20px; width: 95%; max-height: 90vh; }
+}
 .animate-fade-in    { animation: fadeIn var(--dur-base) ease; }
 
 .main-content > * {
