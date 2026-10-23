@@ -1444,6 +1444,21 @@ tbody td {
 .animate-slide-up   { animation: slideUp var(--dur-slow) var(--ease-out); }
 
 /* ============================================================
+   GRID LAYOUTS ESPECÍFICOS PARA LANDING PAGE
+   ============================================================ */
+.mvv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px; /* Ajuste para o gap da seção Pilares */
+}
+
+.partners-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px;
+}
+
+/* ============================================================
    RESPONSIVE PROPORTIONAL SCALING (MONITORS & MOBILE)
    ============================================================ */
 @media (max-width: 1400px) {
@@ -1451,7 +1466,7 @@ tbody td {
 }
 
 @media (max-width: 1024px) {
-  .grid-2, .grid-3, .grid-12, .grid-21 { grid-template-columns: 1fr !important; gap: 16px; }
+  .grid-2, .grid-3, .grid-12, .grid-21, .mvv-grid, .partners-grid { grid-template-columns: 1fr !important; gap: 16px; }
   .stat-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .sidebar { padding: 0 16px; height: auto; flex-wrap: wrap; }
   .sidebar-nav { width: 100%; overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }

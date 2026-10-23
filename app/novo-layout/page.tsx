@@ -29,7 +29,7 @@ export default function EnhancedLayoutPage() {
           background: var(--bg); color: var(--text); line-height: 1.6;
         }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+        .container { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 40px; box-sizing: border-box; }
 
         /* Typography */
         h1, h2, h3 { font-family: ${serif.style.fontFamily}; color: #000; }
@@ -67,9 +67,14 @@ export default function EnhancedLayoutPage() {
         .item-list li { margin-bottom: 12px; font-size: 15px; color: var(--text-light); display: flex; align-items: center; gap: 10px; }
 
         /* Partners Grid */
+        .mvv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+        .mvv-card { background: #fff; padding: 32px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: flex-start; }
+        .mvv-card-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; min-height: 52px; }
+        .mvv-card-head h4 { font-size: 22px; margin: 0; color: #000; line-height: 1.25; flex: 1; word-break: break-word; }
+        .mvv-card-head svg { flex-shrink: 0; margin-top: 4px; }
         .partners-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
         .partner-card { background: #fff; border: 1px solid var(--border); padding: 40px; border-radius: 28px; display: flex; gap: 24px; align-items: flex-start; }
-        .partner-avatar { width: 150px; height: 150px; border-radius: 24px; overflow: hidden; flex-shrink: 0; }
+        .partner-avatar { width: 150px; height: 150px; border-radius: 24px; overflow: hidden; flex-shrink: 0; position: relative; }
         .partner-monogram { width: 150px; height: 150px; border-radius: 24px; background: linear-gradient(135deg, #600000, #2c0000); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
 
         /* FAQ & CNDs */
@@ -129,7 +134,7 @@ export default function EnhancedLayoutPage() {
           h1 { font-size: 46px; line-height: 1.1; margin-bottom: 24px; }
           h2 { font-size: 36px; margin-bottom: 30px; }
           .hero { padding: 80px 0 60px; }
-          .impact-grid, .grid, .partners-grid, .footer-grid, .cnd-grid, .mvv-grid, .partners-logos { grid-template-columns: 1fr; }
+          .impact-grid, .grid, .partners-grid, .footer-grid, .cnd-grid, .mvv-grid, .partners-logos { grid-template-columns: 1fr !important; }
           .partners-logos { display: grid !important; gap: 30px; }
           .partner-card { flex-direction: column; align-items: center; text-align: center; }
           .partner-card p { text-align: center !important; }
@@ -237,22 +242,76 @@ export default function EnhancedLayoutPage() {
           {/* Quem Somos */}
         <section id="quem-somos" style={{ padding: '90px 0', borderTop: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
           <Image src="/team_meeting.png" alt="Team Meeting" fill style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }} />
-          <div style={{ maxWidth: '800px', marginBottom: '50px' }}>
-            <h2 className="serif" style={{ fontSize: 40, marginBottom: 20 }}>Sua parceira estratégica em contabilidade e gestão.</h2>
-            <p style={{ fontSize: 17, color: 'var(--text-light)', marginBottom: 16 }}>
-              A Privilege Contabilidade e Consultoria nasceu da necessidade de transformar dados contábeis em decisões estratégicas para empresas em crescimento.
+          <div style={{ maxWidth: '920px', marginBottom: '48px' }}>
+            <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
+              Quem Somos
+            </span>
+            <h2 className="serif" style={{ fontSize: 44, marginBottom: 24, lineHeight: 1.15 }}>
+              Sua parceira estratégica em contabilidade e gestão.
+            </h2>
+            <p style={{ fontSize: 17, color: 'var(--text-light)', marginBottom: 18, textAlign: 'justify', lineHeight: 1.75 }}>
+              Fundada em 2018 na cidade de Francisco Beltrão (PR), a <strong style={{ color: 'var(--text)' }}>PRIVILEGE CONTABILIDADE E CONSULTORIA</strong> nasceu com o propósito de transformar a contabilidade tradicional em um verdadeiro motor de crescimento estratégico. Hoje, somos referência nacional em contabilidade, assessoria tributária e consultoria de negócios, oferecendo soluções inteligentes, seguras e personalizadas para empresas de todo o país.
             </p>
-            <p style={{ fontSize: 17, color: 'var(--text-light)' }}>
-              Nossa abordagem une a precisão técnica necessária para a conformidade fiscal com uma visão consultiva voltada para a rentabilidade e longevidade do seu negócio.
+            <p style={{ fontSize: 17, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.75 }}>
+              Acreditamos que a contabilidade vai muito além do cumprimento de obrigações: ela é uma ferramenta vital de gestão. Por isso, aliamos o profundo conhecimento técnico, a atualização constante e uma visão estratégica e consultiva para auxiliar nossos clientes no compliance legal, na otimização tributária inteligente e na tomada de decisões seguras — impulsionando o desenvolvimento sustentável.
+            </p>
+          </div>
+
+          {/* Nossos Pilares de Atuação */}
+          <div style={{ marginBottom: '56px' }}>
+            <h3 className="serif" style={{ fontSize: 32, marginBottom: 10 }}>Nossos Pilares de Atuação</h3>
+            <p style={{ fontSize: 16, color: 'var(--text-light)', marginBottom: 28 }}>
+              Nossa essência e o padrão de excelência que entregamos todos os dias aos nossos parceiros estão fundamentados em três valores centrais:
+            </p>
+            <div className="mvv-grid">
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Segurança e Confiança</h4>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Atuação altamente responsável, rigor técnico e compromisso inegociável com a conformidade legal, societária e tributária para garantir a total tranquilidade da sua empresa.
+                </p>
+              </div>
+
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Inteligência Estratégica</h4>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Diagnósticos precisos, soluções contábeis e consultorias customizadas que apoiam decisões eficientes, evitam desperdícios e geram resultados financeiros reais.
+                </p>
+              </div>
+
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Pessoas e Excelência</h4>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Contamos com uma equipe de cerca de 30 profissionais altamente qualificados e em constante evolução, unidos por uma cultura de proximidade e dedicação total às necessidades de cada cliente.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Liderança com Visão de Futuro */}
+          <div style={{ maxWidth: '920px', marginBottom: '44px' }}>
+            <h3 className="serif" style={{ fontSize: 32, marginBottom: 14 }}>Liderança com Visão de Futuro</h3>
+            <p style={{ fontSize: 16.5, color: 'var(--text-light)', marginBottom: 14, textAlign: 'justify', lineHeight: 1.75 }}>
+              Sob a direção de <strong style={{ color: 'var(--text)' }}>Marcos Cancelier</strong> — contador, empresário, consultor, professor e palestrante, especialista em Gestão Empresarial e Direito Tributário —, a Privilege une a bagagem e a autoridade técnica de quem entende o mercado de ponta a ponta com o dinamismo de uma estrutura ágil e focada em resultados.
+            </p>
+            <p style={{ fontSize: 16.5, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.75 }}>
+              Mais do que prestadores de serviços, somos parceiros estratégicos de jornada. Oferecemos o conhecimento e a confiança que sua empresa precisa para ir mais longe.
             </p>
           </div>
 
           <div className="partners-grid">
             {/* Marcos Cancelier */}
             <div className="partner-card">
-              <div className="partner-monogram">
-                <span style={{ fontSize: 36, letterSpacing: '2px' }}>MC</span>
-                <span style={{ fontSize: 10, opacity: 0.8, textTransform: 'uppercase', marginTop: 4 }}>UTFPR · CRC-PR</span>
+              <div className="partner-avatar">
+                <Image src="/foto-marcos.jpg" alt="Marcos Cancelier" fill sizes="(max-width: 900px) 140px, 150px" style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
               </div>
               <div style={{ flex: 1 }}>
                 <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Marcos Cancelier</h3>
@@ -270,7 +329,7 @@ export default function EnhancedLayoutPage() {
             {/* Mauricio Cielo */}
             <div className="partner-card">
               <div className="partner-avatar">
-                <Image src="/foto-mauricio.jpg" alt="Mauricio Cielo" width={150} height={150} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                <Image src="/foto-mauricio.jpg" alt="Mauricio Cielo" fill sizes="(max-width: 900px) 140px, 150px" style={{ objectFit: 'cover', objectPosition: 'center center' }} />
               </div>
               <div style={{ flex: 1 }}>
                 <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Mauricio Cielo</h3>
@@ -288,18 +347,24 @@ export default function EnhancedLayoutPage() {
 
           <div style={{ marginTop: '60px' }}>
             <h2 className="serif" style={{ fontSize: 36, marginBottom: '30px' }}>Missão, Visão e Valores</h2>
-            <div className="mvv-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '30px' }}>
-                <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                    <h3 className="serif" style={{ fontSize: 22, marginBottom: '15px' }}>Missão</h3>
-                    <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify' }}>Oferecer serviços com qualidade, responsabilidade e excelência, superando as necessidades e expectativas dos clientes, colaboradores e da sociedade. É o nosso compromisso diário em cada atendimento e entrega.</p>
+            <div className="mvv-grid">
+                <div className="mvv-card">
+                    <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                      <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Missão</h3>
+                    </div>
+                    <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>Oferecer serviços com qualidade, responsabilidade e excelência, superando as necessidades e expectativas dos clientes, colaboradores e da sociedade. É o nosso compromisso diário em cada atendimento e entrega.</p>
                 </div>
-                <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                    <h3 className="serif" style={{ fontSize: 22, marginBottom: '15px' }}>Visão</h3>
-                  <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify' }}>Ser reconhecido, nos próximos 5 anos, em Francisco Beltrão, como o escritório de referência em contabilidade — um destino natural para quem busca excelência, confiança e resultados concretos.</p>
+                <div className="mvv-card">
+                    <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                      <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Visão</h3>
+                    </div>
+                    <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>Ser reconhecido, nos próximos 5 anos, em Francisco Beltrão, como o escritório de referência em contabilidade — um destino natural para quem busca excelência, confiança e resultados concretos.</p>
                 </div>
-                <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                    <h3 className="serif" style={{ fontSize: 22, marginBottom: '15px' }}>Valores</h3>
-                    <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify' }}>Ética & Comprometimento, Responsabilidade & Confiança, Excelência & Qualidade, Inovação & Evolução, Sustentabilidade & Organização.</p>
+                <div className="mvv-card">
+                    <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                      <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Valores</h3>
+                    </div>
+                    <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>Ética & Comprometimento, Responsabilidade & Confiança, Excelência & Qualidade, Inovação & Evolução, Sustentabilidade & Organização.</p>
                 </div>
             </div>
           </div>
