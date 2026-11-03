@@ -387,9 +387,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     }
   };
 
-  const handleEmpresaChange = (id: string) => {
+  const handleEmpresaChange = async (id: string) => {
     setSelectedEmpresa(id);
     sessionStorage.setItem('cf_empresa_sel', id);
+
+    // Hidratação de dados ao trocar de empresa
+    console.log(`[SIDEBAR] Trocando para empresa ${id}, disparando pull remoto...`);
+    await store.pullFromServer(id);
 
     setRecentEmpresas(prev => {
       const newRecents = [id, ...prev.filter(x => x !== id)].slice(0, 3);

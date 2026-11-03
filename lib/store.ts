@@ -818,6 +818,28 @@ class DataStore {
   private _lancamentosCache: Lancamento[] | null = null;
   private _lancamentosReady: Promise<void> | null = null;
 
+  async pullFromServer(empresaId: string): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      console.log(`☁️ [STORE] Iniciando pull remoto para empresa ${empresaId}...`);
+      const res = await fetch(`/api/migrate-backup?empresaId=${empresaId}`);
+      if (!res.ok) {
+        console.error('❌ Erro no pull remoto:', await res.text());
+        return false;
+      }
+      const data = await res.json();
+      if (data && data.data) {
+        this.importBackup(JSON.stringify(data));
+        console.log('☁️ [STORE] Pull remoto concluído e dados importados.');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('❌ Erro inesperado no pull remoto:', err);
+      return false;
+    }
+  }
+
   /** Garante que o cache de lançamentos está carregado */
   private async ensureLancamentosCache(): Promise<void> {
     // Se a Promise já foi iniciada, aguardamos ela terminar.

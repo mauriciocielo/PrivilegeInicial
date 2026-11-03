@@ -922,7 +922,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
           <div className="page-title">Lançamentos</div>
           <div className="page-subtitle">{filtered.length} lançamentos encontrados</div>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
+        <div className="header-actions">
           <button className="btn btn-secondary" onClick={selectMissing} title="Selecionar todos os lançamentos sem plano de contas configurado">
             🎯 Selecionar s/ Plano
           </button>
@@ -1001,24 +1001,21 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         <LancamentosInsights lancamentos={filtered} planoContas={planoContas} onSelectMissing={selectMissing} />
 
         {/* Quick Tabs for Accounts Payable/Receivable */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
+        <div className="quick-tabs">
           <button
             className={`btn ${(!filtros.status && !filtros.tipo) ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: '', tipo: '' }))}
           >
             📋 Todos os Lançamentos
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'receita') ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'receita' }))}
           >
             💰 Contas a Receber (Pendentes)
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'despesa') ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'despesa' }))}
           >
             💸 Contas a Pagar (Pendentes)
@@ -1052,90 +1049,88 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         </div>
 
         {/* Filters */}
-        <div className="card card-sm" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div className="search-bar" style={{ position: 'relative' }}>
-              <span>🔍</span>
-              <input
-                placeholder="Busca: desc., valor ou conta..."
-                value={filtros.search}
-                onChange={e => setFiltros(f => ({ ...f, search: e.target.value }))}
-                style={{ paddingRight: filtros.search ? '32px' : undefined }}
-              />
-              {filtros.search && (
-                <button
-                  onClick={() => setFiltros(f => ({ ...f, search: '' }))}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10
-                  }}
-                  title="Limpar busca"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <DateRangeFilter
-              ini={filtros.dataIni}
-              fim={filtros.dataFim}
-              onChange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim, mes: '' }))}
-              placeholder="Período (data)"
+        <div className="card card-sm filters-bar" style={{ marginBottom: 20 }}>
+          <div className="search-bar" style={{ position: 'relative' }}>
+            <span>🔍</span>
+            <input
+              placeholder="Busca: desc., valor ou conta..."
+              value={filtros.search}
+              onChange={e => setFiltros(f => ({ ...f, search: e.target.value }))}
+              style={{ paddingRight: filtros.search ? '32px' : undefined }}
             />
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.planoContaId} onChange={e => setFiltros(f => ({ ...f, planoContaId: e.target.value }))}>
-                <option value="">Todos os planos</option>
-                <option value="transf">⇄ Transferência</option>
-                {planoContas.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.tipo} onChange={e => setFiltros(f => ({ ...f, tipo: e.target.value }))}>
-                <option value="">Todos os tipos</option>
-                <option value="receita">Receitas</option>
-                <option value="despesa">Despesas</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
-                <option value="">Todos os status</option>
-                <option value="realizado">Realizado</option>
-                <option value="previsto">Previsto</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <select className="form-control" value={filtros.portadorId} onChange={e => setFiltros(f => ({ ...f, portadorId: e.target.value }))}>
-                <option value="">Todos os portadores</option>
-                {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingBottom: '8px' }}>
-              <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
-              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>🚨 Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})</label>
-            </div>
-            {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano || filtros.planoContaId || filtros.dataIni || filtros.dataFim) && (
-              <button className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, planoContaId: '', dataIni: '', dataFim: '' })}>
-                ✕ Limpar Restrições
+            {filtros.search && (
+              <button
+                onClick={() => setFiltros(f => ({ ...f, search: '' }))}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10
+                }}
+                title="Limpar busca"
+              >
+                ✕
               </button>
             )}
           </div>
+          <DateRangeFilter
+            ini={filtros.dataIni}
+            fim={filtros.dataFim}
+            onChange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim, mes: '' }))}
+            placeholder="Período (data)"
+          />
+          <div className="form-group" style={{ margin: 0 }}>
+            <select className="form-control" value={filtros.planoContaId} onChange={e => setFiltros(f => ({ ...f, planoContaId: e.target.value }))}>
+              <option value="">Todos os planos</option>
+              <option value="transf">⇄ Transferência</option>
+              {planoContas.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <select className="form-control" value={filtros.tipo} onChange={e => setFiltros(f => ({ ...f, tipo: e.target.value }))}>
+              <option value="">Todos os tipos</option>
+              <option value="receita">Receitas</option>
+              <option value="despesa">Despesas</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <select className="form-control" value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
+              <option value="">Todos os status</option>
+              <option value="realizado">Realizado</option>
+              <option value="previsto">Previsto</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <select className="form-control" value={filtros.portadorId} onChange={e => setFiltros(f => ({ ...f, portadorId: e.target.value }))}>
+              <option value="">Todos os portadores</option>
+              {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+          </div>
+          <div className="filter-check">
+            <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
+            <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer' }}>🚨 Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})</label>
+          </div>
+          {(filtros.tipo || filtros.status || filtros.portadorId || filtros.search || filtros.mes || filtros.semPlano || filtros.planoContaId || filtros.dataIni || filtros.dataFim) && (
+            <button className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setFiltros({ tipo: '', status: '', portadorId: '', search: '', mes: '', semPlano: false, planoContaId: '', dataIni: '', dataFim: '' })}>
+              ✕ Limpar Restrições
+            </button>
+          )}
         </div>
 
         {/* Table */}
         <div className="card">
           <div className="table-wrap">
-            <table>
+            <table className="table-lancamentos">
               <thead>
                 <tr>
                   <th style={{ width: 40, textAlign: 'center' }}>
@@ -1159,7 +1154,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9}>
+                  <tr><td colSpan={11}>
                     <div className="empty-state">
                       <div className="empty-state-icon">📭</div>
                       <h3>Nenhum lançamento encontrado</h3>
@@ -1341,12 +1336,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
           </div>
 
           {filtered.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
+            <div className="table-footer">
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, filtered.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong>
                 {selectedIds.length > 0 && ` · ${selectedIds.length} selecionados`}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <select
                   className="form-control form-control-sm"
                   value={pageSize}

@@ -69,6 +69,16 @@ export default function LoginPage() {
       }
 
       store.setCurrentUser(result.user);
+
+      // Nova funcionalidade: Hidratação de dados no login
+      const empIds = result.user.empresaIds;
+      if (empIds && empIds.length > 0) {
+        // Se houver várias empresas, a hidratação pode ser feita na seleção de empresa,
+        // mas aqui forçamos a primeira para garantir que o dashboard não carregue vazio.
+        console.log(`[LOGIN] Disparando pull de dados para empresa: ${empIds[0]}`);
+        await store.pullFromServer(empIds[0]);
+      }
+
       router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
     } catch (err: any) {
       setError('Erro de conexão ao tentar entrar.');
@@ -97,6 +107,14 @@ export default function LoginPage() {
       }
 
       store.setCurrentUser(result.user);
+
+      // Nova funcionalidade: Hidratação de dados no 2FA
+      const empIds = result.user.empresaIds;
+      if (empIds && empIds.length > 0) {
+        console.log(`[2FA] Disparando pull de dados para empresa: ${empIds[0]}`);
+        await store.pullFromServer(empIds[0]);
+      }
+
       router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
     } catch (err) {
       setError('Erro de conexão ao verificar o código.');
@@ -141,6 +159,14 @@ export default function LoginPage() {
 
       store.saveUser(result.user);
       store.setCurrentUser(result.user);
+
+      // Nova funcionalidade: Hidratação de dados no login (Google)
+      const empIds = result.user.empresaIds;
+      if (empIds && empIds.length > 0) {
+        console.log(`[LOGIN-GOOGLE] Disparando pull de dados para empresa: ${empIds[0]}`);
+        await store.pullFromServer(empIds[0]);
+      }
+
       router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
     } catch (err) {
       setError('Falha ao processar o Login com o Google.');
@@ -179,6 +205,14 @@ export default function LoginPage() {
 
       store.saveUser(result.user);
       store.setCurrentUser(result.user);
+
+      // Nova funcionalidade: Hidratação de dados no login (Google)
+      const empIds = result.user.empresaIds;
+      if (empIds && empIds.length > 0) {
+        console.log(`[LOGIN-GOOGLE] Disparando pull de dados para empresa: ${empIds[0]}`);
+        await store.pullFromServer(empIds[0]);
+      }
+
       router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
     } catch (err) {
       setError('Falha ao processar vinculação.');
