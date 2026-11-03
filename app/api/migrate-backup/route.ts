@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { SYNC_COLLECTION_KEYS } from '../../../lib/sync-registry';
 import { captureError } from '../../../lib/sentry-helper';
 import { requireAuth } from '../../../lib/api-auth';
+import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -1653,9 +1654,37 @@ async function migrateNfse(nfse: any[]) {
         empresaIdsSet.add(empresaId);
       }
 
+      // Nota autorizada pelo Sefin só muda pelas rotas /api/nfse: uma cópia antiga
+      // no navegador não pode reverter o status nem os valores do documento fiscal.
+      // A exceção é o vínculo com a conta a receber, criada no navegador após a autorização.
+      const autorizada = await db.nfsE.findFirst({
+        where: { id: String(n.id), chaveAcesso: { not: null } },
+        select: { id: true, lancamentoId: true },
+      });
+      if (autorizada) {
+        if (n.lancamentoId && !autorizada.lancamentoId) {
+          const lancamento = await db.lancamento.findUnique({ where: { id: String(n.lancamentoId) }, select: { id: true } });
+          if (lancamento) await db.nfsE.update({ where: { id: autorizada.id }, data: { lancamentoId: lancamento.id } });
+        }
+        continue;
+      }
+
+      const dadosEmissor = {
+        gerarContaReceber: n.gerarContaReceber === true,
+        portadorId: n.portadorId ? String(n.portadorId) : null,
+        planoContaId: n.planoContaId ? String(n.planoContaId) : null,
+        vencimento: n.vencimento ? String(n.vencimento) : null,
+        cTribMun: n.cTribMun ? String(n.cTribMun) : null,
+        cNbs: n.cNbs ? String(n.cNbs) : null,
+        tomadorCodigoMunicipio: n.tomadorCodigoMunicipio ? String(n.tomadorCodigoMunicipio) : null,
+        tomadorNumero: n.tomadorNumero ? String(n.tomadorNumero) : null,
+        tomadorBairro: n.tomadorBairro ? String(n.tomadorBairro) : null,
+      };
+
       await db.nfsE.upsert({
         where: { id: String(n.id) },
         update: {
+          ...dadosEmissor,
           empresaId: empresaId,
           numero: String(n.numero || ''),
           serie: String(n.serie || '1'),
@@ -1699,6 +1728,7 @@ async function migrateNfse(nfse: any[]) {
           lancamentoId: n.lancamentoId ? String(n.lancamentoId) : null,
         },
         create: {
+          ...dadosEmissor,
           id: String(n.id),
           empresaId: empresaId,
           numero: String(n.numero || ''),
@@ -1929,7 +1959,8 @@ const empresaWhere = (scope: EmpresaScope, field = 'empresaId') =>
 
 const QUERIES: Record<string, CollectionQuery> = {
   cf_empresas: (scope) => db.empresa.findMany({
-    where: scope ? { id: { in: scope } } : {},
+    // Emissor por procuração não é cliente: fica fora do navegador e das demais telas.
+    where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR }, ...(scope ? { id: { in: scope } } : {}) },
     select: {
       id: true,
       razaoSocial: true,
@@ -2169,7 +2200,8 @@ export async function POST(request: Request) {
             case 'cf_atas': await db.ataAtendimento.deleteMany({ where: { id: record.id } }); break;
             case 'cf_indicadores': await db.indicadorMensal.deleteMany({ where: { id: record.id } }); break;
             case 'cf_orcamentos': await db.orcamentoMensal.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_nfse': await db.nfsE.deleteMany({ where: { id: record.id } }); break;
+            // Documento fiscal autorizado não é apagado pela sincronização.
+            case 'cf_nfse': await db.nfsE.deleteMany({ where: { id: record.id, chaveAcesso: null } }); break;
             case 'cf_situacao_fiscal': await db.situacaoFiscal.deleteMany({ where: { id: record.id } }); break;
             case 'cf_transaction_patterns': await db.transactionPattern.deleteMany({ where: { id: record.id } }); break;
             case 'cf_atividades_log': await db.atividade.deleteMany({ where: { id: record.id } }); break;

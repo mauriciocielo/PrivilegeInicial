@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { store, User, Empresa } from '../../../lib/store';
 import { uid } from '../../../lib/store';
+import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
 import { hashPassword } from '../../../lib/auth-hash';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
@@ -57,6 +58,8 @@ const AVAILABLE_CLIENT_SCREENS = [
   { label: '📝 Atas de Atendimento', route: '/cliente/atas' },
 ];
 
+type EmissorVinculavel = Pick<Empresa, 'id' | 'razaoSocial' | 'nomeFantasia'>;
+
 export default function UsuariosPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -65,6 +68,8 @@ export default function UsuariosPage() {
   const [form, setForm] = useState<Partial<User> & { newPassword?: string }>({});
   const [search, setSearch] = useState('');
   const [rawImageData, setRawImageData] = useState<string | null>(null);
+  // Empresas só emissoras não vão para o navegador: vêm da rota da NFS-e, só para vincular o login.
+  const [emissores, setEmissores] = useState<EmissorVinculavel[]>([]);
 
   useEffect(() => {
     const load = () => {
@@ -73,6 +78,10 @@ export default function UsuariosPage() {
     };
     load();
     window.addEventListener('cfDataChange', load);
+    fetch('/api/nfse/emissores')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setEmissores((d?.empresas || []).filter((e: EmissorVinculavel & { tipo: string }) => e.tipo === TIPO_EMPRESA_SO_EMISSOR)))
+      .catch(() => { /* sem a lista, a tela segue com as empresas do cadastro */ });
     return () => window.removeEventListener('cfDataChange', load);
   }, []);
 
@@ -178,7 +187,7 @@ export default function UsuariosPage() {
               <tbody>
                 {filtered.map(u => {
                   const initials = u.name.split(' ').map(w => w[0]).slice(0,2).join('');
-                  const emps = empresas.filter(e => u.empresaIds?.includes(e.id));
+                  const emps = [...empresas, ...emissores].filter(e => u.empresaIds?.includes(e.id));
                   
                   let roleText = '🏢 Cliente';
                   let roleBadge = 'badge-blue';
@@ -401,16 +410,22 @@ export default function UsuariosPage() {
               <div className="form-group" style={{ marginTop: 16 }}>
                 <label className="form-label" style={{ fontWeight: 600 }}>Empresas Vinculadas</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  {empresas.map(e => {
+                  {[...empresas, ...emissores].map(e => {
                     const checked = (form.empresaIds || []).includes(e.id);
+                    const soEmissor = emissores.some(x => x.id === e.id);
                     return (
                       <label key={e.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius-sm)', border:`1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, cursor:'pointer', background: checked ? 'var(--accent-glow)' : 'transparent', fontSize: 13, color: checked ? 'var(--accent-light)' : 'var(--text-secondary)' }}>
                         <input type="checkbox" style={{display:'none'}} checked={checked} onChange={() => toggleEmpresa(e.id)} />
-                        {checked ? '✓' : '○'} {e.nomeFantasia || e.razaoSocial}
+                        {checked ? '✓' : '○'} {e.nomeFantasia || e.razaoSocial}{soEmissor ? ' (só emissor)' : ''}
                       </label>
                     );
                   })}
                 </div>
+                {emissores.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                    &quot;Só emissor&quot; é a empresa trazida pela procuração, sem cadastro completo: o login dela serve só para emitir NFS-e.
+                  </div>
+                )}
               </div>
             )}
 

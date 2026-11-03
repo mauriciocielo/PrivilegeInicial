@@ -471,11 +471,24 @@ export interface NfsE {
   aliquotaIss: number;         // % ISS
   valorBaseCalculo: number;
   valorLiquido: number;
-  // Vínculo financeiro
+  // Vínculo financeiro (só existe se gerarContaReceber for marcado)
+  gerarContaReceber?: boolean;
   lancamentoId?: string;       // ID do lançamento (Conta a Receber) gerado
   portadorId?: string;
   planoContaId?: string;
   vencimento?: string;         // Data de vencimento da conta a receber
+  // Emissor Nacional (Sefin)
+  ambiente?: 'homologacao' | 'producao' | null;
+  nDps?: string | null;        // Número da DPS (contador interno, não é o número fiscal)
+  idDps?: string | null;
+  chaveAcesso?: string | null; // Chave de 50 posições; só existe em nota autorizada pelo Sefin
+  cancelamentoEmAnalise?: boolean;
+  ultimoErro?: string | null;
+  cTribMun?: string | null;
+  cNbs?: string | null;
+  tomadorCodigoMunicipio?: string | null; // IBGE
+  tomadorNumero?: string | null;
+  tomadorBairro?: string | null;
   // Controle
   createdAt: string;
   updatedAt?: string;

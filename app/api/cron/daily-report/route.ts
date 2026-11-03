@@ -3,6 +3,7 @@ import db from '../../../../lib/prisma';
 import nodemailer from 'nodemailer';
 import { captureError } from '../../../../lib/sentry-helper';
 import { agruparContas, relatorioContasHtml, relatorioContasTexto } from '../../../../lib/contas-report';
+import { TIPO_EMPRESA_SO_EMISSOR } from '../../../../lib/nfse/emissor';
 
 export async function GET(request: Request) {
   try {
@@ -47,10 +48,10 @@ export async function GET(request: Request) {
       // Se for administrador, ele tem acesso a todas. Se for cliente ou consultor, filtramos pelas permitidas.
       let empresas;
       if (user.role === 'administrador') {
-        empresas = await db.empresa.findMany();
+        empresas = await db.empresa.findMany({ where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR } } });
       } else {
         empresas = await db.empresa.findMany({
-          where: { id: { in: user.empresaIds } }
+          where: { id: { in: user.empresaIds }, tipo: { not: TIPO_EMPRESA_SO_EMISSOR } }
         });
       }
 

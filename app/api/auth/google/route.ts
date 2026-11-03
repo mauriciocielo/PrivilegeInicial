@@ -5,6 +5,7 @@ import db from '../../../../lib/prisma';
 import { hashPassword } from '../../../../lib/auth-hash';
 import { checkRateLimit, getClientKey } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
+import { TIPO_EMPRESA_SO_EMISSOR } from '../../../../lib/nfse/emissor';
 import { createSessionToken, createTwoFactorPendingToken, sessionCookieHeader } from '../../../../lib/session';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -64,7 +65,8 @@ export async function POST(request: Request) {
       }
 
       const cnpjDigits = cleanCnpj(cnpj);
-      const empresas = await db.empresa.findMany({ select: { id: true, cnpj: true } });
+      // Emissor por procuração não é cliente: ninguém entra no sistema vinculando-se a ele.
+      const empresas = await db.empresa.findMany({ where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR } }, select: { id: true, cnpj: true } });
       const empresa = empresas.find(e => cleanCnpj(e.cnpj) === cnpjDigits);
       if (!empresa) {
         return NextResponse.json({ error: 'Nenhuma empresa encontrada com este CNPJ.' }, { status: 404 });

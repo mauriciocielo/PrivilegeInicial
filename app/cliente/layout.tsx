@@ -4,18 +4,31 @@ import { useRouter, usePathname } from 'next/navigation';
 import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
 import FloatingCopilot from '../../components/FloatingCopilot';
+import { useAcessoNfse } from '../../lib/nfse/use-acesso-nfse';
+
+const ROTA_NFSE = '/cliente/nfse';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+  const acessoNfse = useAcessoNfse(true);
 
   useEffect(() => {
     const user = store.getCurrentUser();
     if (!user) { router.replace('/login'); return; }
     if (user.role !== 'cliente') { router.replace('/consultor/dashboard'); return; }
-    
+    if (acessoNfse.carregando) { setAuthorized(false); return; }
+
+    // Cliente com procuração para o escritório usa só a emissão de notas.
+    if (acessoNfse.liberado) {
+      if (pathname === ROTA_NFSE) setAuthorized(true);
+      else { setAuthorized(false); router.replace(ROTA_NFSE); }
+      return;
+    }
+    if (pathname === ROTA_NFSE) { setAuthorized(false); router.replace('/cliente/dashboard'); return; }
+
     const allowed = user.allowedRoutes || [];
     if (allowed.length === 0) {
       // Compatibility
@@ -24,7 +37,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       const isOk = pathname === '/cliente/dashboard' || allowed.some(route => pathname.startsWith(route));
       setAuthorized(isOk);
     }
-  }, [router, pathname]);
+  }, [router, pathname, acessoNfse.carregando, acessoNfse.liberado]);
 
   // Fecha o menu lateral automaticamente ao mudar de rota no mobile
   useEffect(() => {
@@ -91,7 +104,9 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
       <Sidebar role="cliente" />
       <main className="main-content">
-        {authorized ? (
+        {acessoNfse.carregando || (acessoNfse.liberado && !authorized) || (!acessoNfse.liberado && pathname === ROTA_NFSE) ? (
+          <div className="page-body" style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)' }}>⏳ Carregando...</div>
+        ) : authorized ? (
           children
         ) : (
           <div className="page-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', textAlign: 'center' }}>
@@ -109,7 +124,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
           </div>
         )}
       </main>
-      <FloatingCopilot />
+      {!acessoNfse.liberado && !acessoNfse.carregando && <FloatingCopilot />}
     </div>
   );
 }

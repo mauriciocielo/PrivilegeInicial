@@ -85,6 +85,7 @@ model Empresa {
   indicadores                IndicadorMensal[]
   lancamentos                Lancamento[]
   nfsList                    NfsE[]
+  nfseConfig                 NfseConfig?
   orcamentos                 OrcamentoMensal[]
   planoContas                PlanoConta[]
   portadores                 Portador[]
@@ -444,9 +445,108 @@ model NfsE {
   lancamentoId                String?
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime?   @updatedAt
+  // Emissor Nacional — só as rotas /api/nfse gravam ambiente, nDps, idDps,
+  // chaveAcesso e cancelamentoEmAnalise; a sincronização não os sobrescreve.
+  ambiente                    String?
+  nDps                        String?
+  idDps                       String?
+  chaveAcesso                 String?     @unique
+  cancelamentoEmAnalise       Boolean     @default(false)
+  ultimoErro                  String?
+  cTribMun                    String?
+  cNbs                        String?
+  tomadorCodigoMunicipio      String?
+  tomadorNumero               String?
+  tomadorBairro               String?
+  // A nota só gera conta a receber quando isso é marcado. Portador e categoria
+  // são guardados no rascunho para sobreviverem à sincronização.
+  gerarContaReceber           Boolean     @default(false)
+  portadorId                  String?
+  planoContaId                String?
+  vencimento                  String?
   cliente                     Cliente?    @relation(fields: [clienteId], references: [id])
   empresa                     Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   lancamento                  Lancamento? @relation(fields: [lancamentoId], references: [id])
+  documento                   NfseDocumento?
+}
+
+// XMLs fiscais ficam fora de NfsE para não trafegarem na sincronização com o
+// navegador (a tabela NfsE vai inteira para o localStorage).
+model NfseDocumento {
+  nfseId    String   @id
+  dpsXml    String?
+  nfseXml   String
+  eventoXml String?
+  updatedAt DateTime @updatedAt
+  nfse      NfsE     @relation(fields: [nfseId], references: [id], onDelete: Cascade)
+}
+
+// Certificado do contador, procurador das empresas. Registro único (id "padrao");
+// o conteúdo cifrado nunca é devolvido ao navegador.
+model NfseCertificadoEscritorio {
+  id               String   @id @default("padrao")
+  certPfxCifrado   String
+  certSenhaCifrada String
+  nomeArquivo      String?
+  titular          String
+  documento        String?
+  validoAte        DateTime
+  updatedAt        DateTime @updatedAt
+}
+
+// Parâmetros do Emissor Nacional por empresa. Os campos cert*Cifrado nunca são
+// devolvidos ao navegador (ver lib/nfse/cofre.ts).
+model NfseConfig {
+  id                     String    @id @default(uuid())
+  empresaId              String    @unique
+  ambiente               String    @default("homologacao")
+  // True: emite com o certificado do escritório (NfseCertificadoEscritorio), por
+  // procuração. False: com o certificado próprio da empresa (cert* abaixo).
+  usarProcuracao         Boolean   @default(true)
+  // Resultado da última verificação na API de distribuição: ativa | sem_procuracao | indeterminada.
+  procuracaoStatus       String?
+  procuracaoMensagem     String?
+  procuracaoVerificadaEm DateTime?
+  // Serviços vistos nas notas já emitidas pela empresa, e quando os dados foram lidos.
+  servicosConhecidos     Json?
+  dadosImportadosEm      DateTime?
+  // Quando há retenção de tributos: ver RegraRetencao em lib/nfse/retencao.ts.
+  regrasRetencao         Json?
+  // Onde parou a leitura das notas no portal, e o período já coberto.
+  adnUltimoNsu           String?
+  adnMesesImportados     Int?
+  codigoMunicipio        String?
+  inscricaoMunicipal     String?
+  opSimpNac              Int       @default(3)
+  regApTribSN            Int?      @default(1)
+  regEspTrib             Int       @default(0)
+  pTotTribSN             Float?
+  piscofinsCst           String    @default("08")
+  tpRetPisCofins         String?
+  pTotTribFed            Float?
+  pTotTribEst            Float?
+  pTotTribMun            Float?
+  convenioAtivo          Boolean   @default(true)
+  ibsCbsCIndOp           String?
+  ibsCbsCst              String?
+  ibsCbsCClassTrib       String?
+  ibsCbsIndFinal         String?
+  leiaute                String?
+  serie                  String    @default("10")
+  proximoNDpsHomologacao Int       @default(1)
+  proximoNDpsProducao    Int       @default(1)
+  cTribNacPadrao         String?
+  cTribMunPadrao         String?
+  cNbsPadrao             String?
+  certPfxCifrado         String?
+  certSenhaCifrada       String?
+  certNomeArquivo        String?
+  certTitular            String?
+  certCnpj               String?
+  certValidoAte          DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  empresa                Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 model TransactionPattern {

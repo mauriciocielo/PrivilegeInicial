@@ -1,6 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { store, User, Empresa } from '../lib/store';
+import { useAcessoNfse } from '../lib/nfse/use-acesso-nfse';
 import { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
 import TwoFactorModal from './TwoFactorModal';
@@ -178,6 +179,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [appMode, setAppMode] = useState<'empresarial' | 'condominio'>('empresarial');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'idle'>('idle');
+  const acessoNfse = useAcessoNfse(role === 'cliente');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -419,6 +421,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setSearchEmpresa('');
   };
 
+  // Outras telas (ex.: emissores da NFS-e) pedem a troca por aqui, para o seletor não ficar defasado.
+  useEffect(() => {
+    const selecionar = (e: Event) => handleEmpresaChange((e as CustomEvent<string>).detail);
+    window.addEventListener('selecionarEmpresa', selecionar);
+    return () => window.removeEventListener('selecionarEmpresa', selecionar);
+  });
+
   const handleLogout = () => {
     store.setCurrentUser(null);
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -427,6 +436,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const getFilteredNav = () => {
     if (role === 'cliente') {
+      // Cliente com procuração para o escritório usa só a emissão de notas.
+      if (acessoNfse.liberado) {
+        return [{ section: 'Notas Fiscais', items: [{ label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText }] }];
+      }
+      if (acessoNfse.carregando) return [];
       const allowedClient = user?.allowedRoutes || [];
       if (allowedClient.length === 0) return clienteNav; // backward compatibility for clients that have no allowedRoutes configured yet
       return clienteNav.map(section => {

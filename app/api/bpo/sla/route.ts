@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
+import { TIPO_EMPRESA_SO_EMISSOR } from '../../../../lib/nfse/emissor';
 
 const STATUS_VALIDOS = ['ABERTO', 'EM_ANDAMENTO', 'ATRASADO', 'CONCLUIDO'];
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
     const isAdmin = auth.session.role === 'administrador';
     const empresas = await db.empresa.findMany({
-      where: isAdmin ? {} : { id: { in: auth.session.empresaIds } },
+      where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR }, ...(isAdmin ? {} : { id: { in: auth.session.empresaIds } }) },
       select: { id: true, nomeFantasia: true, razaoSocial: true },
       orderBy: { nomeFantasia: 'asc' },
     });
