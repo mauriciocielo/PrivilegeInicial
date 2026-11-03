@@ -12,9 +12,13 @@ import crypto from 'crypto';
 export class CofreNaoConfiguradoError extends Error {}
 
 function obterChave(): Buffer {
-  const chave = Buffer.from(process.env.NFSE_CERT_KEY || '', 'base64');
+  const bruta = (process.env.NFSE_CERT_KEY || '').trim().replace(/^["']+|["']+$/g, '').trim();
+  if (!bruta) {
+    throw new CofreNaoConfiguradoError('NFSE_CERT_KEY não configurada no servidor (adicione nas variáveis de ambiente e faça um novo deploy).');
+  }
+  const chave = Buffer.from(bruta, 'base64');
   if (chave.length !== 32) {
-    throw new CofreNaoConfiguradoError('NFSE_CERT_KEY não configurada no servidor (32 bytes em base64).');
+    throw new CofreNaoConfiguradoError(`NFSE_CERT_KEY inválida no servidor (decodificou ${chave.length} bytes, mas precisa ter 32 bytes em base64).`);
   }
   return chave;
 }
