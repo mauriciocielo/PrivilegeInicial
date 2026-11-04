@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Instrument_Serif } from 'next/font/google';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
@@ -142,9 +142,12 @@ export default function NfeDestinadasPainel() {
   const [empresaCertificadoModal, setEmpresaCertificadoModal] = useState<EmpresaMonitor | null>(null);
   const [showCndModal, setShowCndModal] = useState(false);
   const [showCadastrarCnpjModal, setShowCadastrarCnpjModal] = useState(false);
+  const [showTrocarEmpresaModal, setShowTrocarEmpresaModal] = useState(false);
+  const [buscaModalEmpresa, setBuscaModalEmpresa] = useState('');
 
   // Filtro de Empresas
   const [filtroEmpresaTexto, setFiltroEmpresaTexto] = useState('');
+  const inicializadoRef = useRef(false);
 
   // Seleção Múltipla & Ações em Lote
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
@@ -166,12 +169,13 @@ export default function NfeDestinadasPainel() {
       const data = await lerJsonResposta(res);
       if (res.ok && Array.isArray(data.empresas)) {
         setEmpresas(data.empresas);
-        if (!empresaIdSelecionada && data.empresas.length > 0) {
-          // Tenta recuperar a última empresa usada
+        if (!inicializadoRef.current) {
+          inicializadoRef.current = true;
+          // Tenta recuperar a última empresa usada na inicialização
           const salva = sessionStorage.getItem('cf_nfe_empresa_id');
           if (salva && data.empresas.some((e: EmpresaMonitor) => e.id === salva)) {
             setEmpresaIdSelecionada(salva);
-          } else {
+          } else if (data.empresas.length > 0) {
             setEmpresaIdSelecionada(data.empresas[0].id);
           }
         }
@@ -184,7 +188,7 @@ export default function NfeDestinadasPainel() {
     } finally {
       setCarregandoEmpresas(false);
     }
-  }, [empresaIdSelecionada]);
+  }, []);
 
   useEffect(() => {
     carregarEmpresas();
@@ -500,12 +504,27 @@ export default function NfeDestinadasPainel() {
   const empresasFiltradas = useMemo(() => {
     const t = filtroEmpresaTexto.toLowerCase().trim();
     if (!t) return empresas;
+    const digitos = filtroEmpresaTexto.replace(/\D/g, '');
     return empresas.filter(e =>
       e.razaoSocial.toLowerCase().includes(t) ||
       (e.nomeFantasia || '').toLowerCase().includes(t) ||
-      e.cnpj.includes(t)
+      e.cnpj.includes(t) ||
+      (digitos && e.cnpj.replace(/\D/g, '').includes(digitos))
     );
   }, [empresas, filtroEmpresaTexto]);
+
+  // Filtro de empresas para o modal de troca rápida
+  const empresasModalFiltradas = useMemo(() => {
+    const t = buscaModalEmpresa.toLowerCase().trim();
+    if (!t) return empresas;
+    const digitos = buscaModalEmpresa.replace(/\D/g, '');
+    return empresas.filter(e =>
+      e.razaoSocial.toLowerCase().includes(t) ||
+      (e.nomeFantasia || '').toLowerCase().includes(t) ||
+      e.cnpj.includes(t) ||
+      (digitos && e.cnpj.replace(/\D/g, '').includes(digitos))
+    );
+  }, [empresas, buscaModalEmpresa]);
 
   // Se nenhuma empresa estiver selecionada: tela idêntica à de NFS-e
   if (!empresaIdSelecionada) {
@@ -579,7 +598,14 @@ export default function NfeDestinadasPainel() {
                 </thead>
                 <tbody>
                   {empresasFiltradas.map(emp => (
-                    <tr key={emp.id} style={{ cursor: 'pointer' }} onClick={() => setEmpresaIdSelecionada(emp.id)}>
+                    <tr
+                      key={emp.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        setEmpresaIdSelecionada(emp.id);
+                        sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
+                      }}
+                    >
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.razaoSocial}</div>
                         {emp.nomeFantasia && emp.nomeFantasia !== emp.razaoSocial && (
@@ -602,7 +628,11 @@ export default function NfeDestinadasPainel() {
                           type="button"
                           className="btn btn-primary btn-sm"
                           style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '5px 12px' }}
-                          onClick={ev => { ev.stopPropagation(); setEmpresaIdSelecionada(emp.id); }}
+                          onClick={ev => {
+                            ev.stopPropagation();
+                            setEmpresaIdSelecionada(emp.id);
+                            sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
+                          }}
                         >
                           Selecionar
                         </button>
@@ -654,7 +684,10 @@ export default function NfeDestinadasPainel() {
 
             <button
               type="button"
-              onClick={() => setEmpresaIdSelecionada('')}
+              onClick={() => {
+                setBuscaModalEmpresa('');
+                setShowTrocarEmpresaModal(true);
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1455,6 +1488,7 @@ export default function NfeDestinadasPainel() {
                             style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '4px 10px' }}
                             onClick={() => {
                               setEmpresaIdSelecionada(emp.id);
+                              sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
                               setAbaPrincipal('recebidas');
                             }}
                           >
@@ -1668,6 +1702,244 @@ export default function NfeDestinadasPainel() {
             if (empresaIdSelecionada) carregarNotas(empresaIdSelecionada);
           }}
         />
+      )}
+
+      {/* Modal de Trocar Empresa */}
+      {showTrocarEmpresaModal && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            className="modal"
+            style={{
+              maxWidth: 820,
+              width: '100%',
+              background: '#fff',
+              borderRadius: 20,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              overflow: 'hidden',
+              border: '1px solid #e5e5e5',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '90vh',
+            }}
+          >
+            {/* Header do Modal */}
+            <div
+              style={{
+                padding: '24px 28px 20px',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 16,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
+                  Módulo Fiscal • Carteira SEFAZ
+                </div>
+                <h3 className={serif.className} style={{ fontSize: 28, fontWeight: 400, color: '#000', margin: '0 0 4px', lineHeight: 1.1 }}>
+                  Escolha a Empresa para Operar NF-e
+                </h3>
+                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                  Selecione qualquer cliente cadastrado para consultar notas destinadas (compras), emitidas (vendas) e manifestação.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTrocarEmpresaModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 20,
+                  cursor: 'pointer',
+                  color: '#9ca3af',
+                  padding: 4,
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Barra de Busca */}
+            <div style={{ padding: '16px 28px 12px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+              <div
+                className="search-bar"
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e5e5e5',
+                  borderRadius: 12,
+                  padding: '9px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <Search size={16} style={{ color: '#525252', flexShrink: 0 }} />
+                <input
+                  placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
+                  value={buscaModalEmpresa}
+                  onChange={e => setBuscaModalEmpresa(e.target.value)}
+                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: 13.5 }}
+                  autoFocus
+                />
+                {buscaModalEmpresa && (
+                  <button
+                    type="button"
+                    onClick={() => setBuscaModalEmpresa('')}
+                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 12 }}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#71717a', display: 'flex', justifyContent: 'space-between' }}>
+                <span>
+                  {empresasModalFiltradas.length} empresa(s) encontrada(s)
+                </span>
+                {empresaAtual && (
+                  <span>
+                    Empresa selecionada: <strong>{empresaAtual.razaoSocial}</strong>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Lista / Tabela de Empresas */}
+            <div style={{ padding: '0 28px', overflowY: 'auto', flex: 1, maxHeight: 420 }}>
+              {empresasModalFiltradas.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#525252', fontSize: 13.5 }}>
+                  Nenhuma empresa encontrada com os termos digitados.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1, borderBottom: '1px solid #e5e5e5' }}>
+                    <tr>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Empresa</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>CNPJ</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Certificado</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Notas</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {empresasModalFiltradas.slice(0, 100).map(emp => {
+                      const isAtual = emp.id === empresaIdSelecionada;
+                      return (
+                        <tr
+                          key={emp.id}
+                          style={{
+                            borderBottom: '1px solid #f4f4f5',
+                            cursor: 'pointer',
+                            background: isAtual ? '#f0fdf4' : 'transparent',
+                          }}
+                          onClick={() => {
+                            setEmpresaIdSelecionada(emp.id);
+                            sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
+                            setShowTrocarEmpresaModal(false);
+                            carregarNotas(emp.id);
+                          }}
+                        >
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.razaoSocial}</span>
+                              {isAtual && <span className="badge badge-green" style={{ fontSize: 10, padding: '2px 6px' }}>Atual</span>}
+                            </div>
+                            {emp.nomeFantasia && emp.nomeFantasia !== emp.razaoSocial && (
+                              <div style={{ fontSize: 11.5, color: '#525252' }}>{emp.nomeFantasia}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: 12, color: '#525252' }}>
+                            {formatCnpj(emp.cnpj)}
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            {emp.certificado === 'propria' ? (
+                              <span className="badge badge-green" style={{ fontSize: 11 }}>A1 Próprio</span>
+                            ) : emp.certificado === 'escritorio' ? (
+                              <span className="badge badge-green" style={{ fontSize: 11 }}>Procuração</span>
+                            ) : (
+                              <span className="badge" style={{ background: '#fef2f2', color: '#991b1b', fontSize: 11 }}>Sem Certificado</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: 13, color: '#171717', fontWeight: 600 }}>
+                            {emp.totalNotas}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                background: isAtual ? '#15803d' : '#600000',
+                                borderColor: isAtual ? '#15803d' : '#600000',
+                                fontSize: 12,
+                                padding: '4px 12px',
+                              }}
+                              onClick={ev => {
+                                ev.stopPropagation();
+                                setEmpresaIdSelecionada(emp.id);
+                                sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
+                                setShowTrocarEmpresaModal(false);
+                                carregarNotas(emp.id);
+                              }}
+                            >
+                              {isAtual ? 'Selecionada' : 'Selecionar'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer do Modal */}
+            <div
+              style={{
+                padding: '16px 28px',
+                borderTop: '1px solid #f0f0f0',
+                background: '#fafafa',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 13 }}
+                onClick={() => {
+                  setShowTrocarEmpresaModal(false);
+                  setShowCadastrarCnpjModal(true);
+                }}
+              >
+                + Cadastrar Novo CNPJ
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #d4d4d8', fontSize: 13 }}
+                onClick={() => setShowTrocarEmpresaModal(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Cadastro de CNPJ / Importação de Carteira */}

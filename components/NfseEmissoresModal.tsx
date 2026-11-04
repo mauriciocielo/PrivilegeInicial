@@ -249,7 +249,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
   const ocupado = !!progresso || !!verificando || !!progressoImportacao;
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !ocupado && onFechar()}>
+    <div className="modal-overlay">
       <div className="modal modal-lg" style={{ maxWidth: 900, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2 className="modal-title">Emissores por procuração</h2>
