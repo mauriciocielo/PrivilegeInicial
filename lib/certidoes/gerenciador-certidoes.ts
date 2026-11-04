@@ -257,7 +257,7 @@ async function enviarEmailRelatorioMensal(
   totalComPendencia: number
 ) {
   try {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'mail.privilegecontabilidade.com.br',
       port: Number(process.env.SMTP_PORT) || 465,
       secure: true,
