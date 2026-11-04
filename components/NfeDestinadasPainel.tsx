@@ -111,9 +111,14 @@ export default function NfeDestinadasPainel() {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
-  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'carteira'>('recebidas');
+  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'certificados' | 'carteira'>('recebidas');
   const [filtroStatusRapido, setFiltroStatusRapido] = useState<string>('todas');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
+
+  // Filtros da aba de Controle de Certificados
+  const [filtroCertificadoStatus, setFiltroCertificadoStatus] = useState<'todos' | 'validos' | 'vencendo' | 'vencidos' | 'procuracao' | 'sem_cert'>('todos');
+  const [buscaCertificadoTexto, setBuscaCertificadoTexto] = useState('');
+  const [ordemCertificado, setOrdemCertificado] = useState<'validade_asc' | 'validade_desc' | 'nome_asc' | 'cnpj_asc'>('validade_asc');
 
   // Filtros de busca de notas
   const [busca, setBusca] = useState('');
@@ -277,7 +282,7 @@ export default function NfeDestinadasPainel() {
   // Toggle do Monitor Automático
   const handleToggleMonitor = async (empId: string, novoAtivo: boolean) => {
     try {
-      const res = await fetch('/api/nfe/destinadas/config', {
+      const res = await fetch('/api/nfe/monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresaId: empId, ativo: novoAtivo }),
@@ -300,7 +305,7 @@ export default function NfeDestinadasPainel() {
   // Toggle Consulta Noturna
   const handleToggleNoturno = async (empId: string, apenasNoturno: boolean) => {
     try {
-      const res = await fetch('/api/nfe/destinadas/config', {
+      const res = await fetch('/api/nfe/monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresaId: empId, apenasNoturno }),
@@ -525,6 +530,153 @@ export default function NfeDestinadasPainel() {
       (digitos && e.cnpj.replace(/\D/g, '').includes(digitos))
     );
   }, [empresas, buscaModalEmpresa]);
+
+  // Estatísticas para a aba de Controle de Certificados Digitais
+  const totaisCertificados = useMemo(() => {
+    const agora = Date.now();
+    const em30Dias = agora + 30 * 24 * 60 * 60 * 1000;
+
+    let comA1 = 0;
+    let comProcuracao = 0;
+    let vencendo30d = 0;
+    let vencidos = 0;
+    let semCert = 0;
+
+    for (const emp of empresas) {
+      if (emp.certValidoAte) {
+        comA1++;
+        const exp = new Date(emp.certValidoAte).getTime();
+        if (exp < agora) {
+          vencidos++;
+        } else if (exp <= em30Dias) {
+          vencendo30d++;
+        }
+      } else if (emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa') {
+        comProcuracao++;
+      } else {
+        semCert++;
+      }
+    }
+
+    return {
+      total: empresas.length,
+      comA1,
+      comProcuracao,
+      vencendo30d,
+      vencidos,
+      semCert,
+      totalComCertificado: comA1 + comProcuracao,
+    };
+  }, [empresas]);
+
+  // Empresas filtradas e ordenadas para a aba de Controle de Certificados
+  const empresasCertificadosFiltradas = useMemo(() => {
+    const agora = Date.now();
+    const em30Dias = agora + 30 * 24 * 60 * 60 * 1000;
+    const termo = buscaCertificadoTexto.toLowerCase().trim();
+    const digitos = buscaCertificadoTexto.replace(/\D/g, '');
+
+    return empresas.filter(emp => {
+      // Filtro de texto
+      if (termo) {
+        const bateu =
+          emp.razaoSocial.toLowerCase().includes(termo) ||
+          (emp.nomeFantasia || '').toLowerCase().includes(termo) ||
+          emp.cnpj.includes(termo) ||
+          (digitos && emp.cnpj.replace(/\D/g, '').includes(digitos)) ||
+          (emp.certTitular || '').toLowerCase().includes(termo);
+        if (!bateu) return false;
+      }
+
+      // Filtro de status
+      if (filtroCertificadoStatus === 'validos') {
+        if (!emp.certValidoAte) return false;
+        const exp = new Date(emp.certValidoAte).getTime();
+        return exp > em30Dias;
+      }
+      if (filtroCertificadoStatus === 'vencendo') {
+        if (!emp.certValidoAte) return false;
+        const exp = new Date(emp.certValidoAte).getTime();
+        return exp >= agora && exp <= em30Dias;
+      }
+      if (filtroCertificadoStatus === 'vencidos') {
+        if (!emp.certValidoAte) return false;
+        const exp = new Date(emp.certValidoAte).getTime();
+        return exp < agora;
+      }
+      if (filtroCertificadoStatus === 'procuracao') {
+        return !emp.certValidoAte && (emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa');
+      }
+      if (filtroCertificadoStatus === 'sem_cert') {
+        return !emp.certValidoAte && emp.procuracaoStatus !== 'ativa';
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (ordemCertificado === 'validade_asc') {
+        const timeA = a.certValidoAte ? new Date(a.certValidoAte).getTime() : 9999999999999;
+        const timeB = b.certValidoAte ? new Date(b.certValidoAte).getTime() : 9999999999999;
+        return timeA - timeB;
+      }
+      if (ordemCertificado === 'validade_desc') {
+        const timeA = a.certValidoAte ? new Date(a.certValidoAte).getTime() : 0;
+        const timeB = b.certValidoAte ? new Date(b.certValidoAte).getTime() : 0;
+        return timeB - timeA;
+      }
+      if (ordemCertificado === 'cnpj_asc') {
+        return a.cnpj.localeCompare(b.cnpj);
+      }
+      return a.razaoSocial.localeCompare(b.razaoSocial);
+    });
+  }, [empresas, buscaCertificadoTexto, filtroCertificadoStatus, ordemCertificado]);
+
+  // Exportação CSV do Relatório de Certificados
+  const exportarRelatorioCertificadosCsv = useCallback(() => {
+    const agora = Date.now();
+    const linhas = [
+      ['Razao Social', 'Nome Fantasia', 'CNPJ', 'Tipo', 'Titular', 'Validade', 'Dias Restantes', 'Situacao'].join(';')
+    ];
+
+    for (const emp of empresasCertificadosFiltradas) {
+      let dias = '';
+      let situacao = 'Sem Certificado';
+      let validadeFormatada = '';
+
+      if (emp.certValidoAte) {
+        const dt = new Date(emp.certValidoAte);
+        validadeFormatada = dt.toLocaleDateString('pt-BR');
+        const diff = Math.ceil((dt.getTime() - agora) / (1000 * 60 * 60 * 24));
+        dias = String(diff);
+        if (diff < 0) situacao = 'Vencido';
+        else if (diff <= 30) situacao = 'Vence em Breve';
+        else situacao = 'Valido';
+      } else if (emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa') {
+        situacao = 'Procuracao Ativa';
+      }
+
+      const tipo = emp.certValidoAte ? 'A1 Proprio' : (emp.certificado === 'escritorio' ? 'Procuracao' : 'Nenhum');
+
+      linhas.push([
+        `"${emp.razaoSocial.replace(/"/g, '""')}"`,
+        `"${(emp.nomeFantasia || '').replace(/"/g, '""')}"`,
+        `"${formatCnpj(emp.cnpj)}"`,
+        tipo,
+        `"${(emp.certTitular || '').replace(/"/g, '""')}"`,
+        validadeFormatada,
+        dias,
+        situacao
+      ].join(';'));
+    }
+
+    const blob = new Blob([linhas.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-certificados-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Relatório de certificados exportado com sucesso!');
+  }, [empresasCertificadosFiltradas]);
 
   // Se nenhuma empresa estiver selecionada: tela idêntica à de NFS-e
   if (!empresaIdSelecionada) {
@@ -1011,6 +1163,42 @@ export default function NfeDestinadasPainel() {
             </button>
             <button
               type="button"
+              onClick={() => setAbaPrincipal('certificados')}
+              style={{
+                background: abaPrincipal === 'certificados' ? '#600000' : 'transparent',
+                color: abaPrincipal === 'certificados' ? '#fff' : '#374151',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <KeyRound size={14} />
+              Controle de Certificados ({totaisCertificados.comA1})
+              {totaisCertificados.vencendo30d > 0 && (
+                <span
+                  style={{
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: 99,
+                    marginLeft: 2,
+                  }}
+                  title={`${totaisCertificados.vencendo30d} certificado(s) vencendo nos próximos 30 dias`}
+                >
+                  {totaisCertificados.vencendo30d}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
               onClick={() => setAbaPrincipal('carteira')}
               style={{
                 background: abaPrincipal === 'carteira' ? '#600000' : 'transparent',
@@ -1028,7 +1216,7 @@ export default function NfeDestinadasPainel() {
           </div>
 
           {/* Filtros de Data e Competência */}
-          {abaPrincipal !== 'carteira' && (
+          {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 12, color: '#525252', fontWeight: 600 }}>Mês:</span>
@@ -1070,7 +1258,7 @@ export default function NfeDestinadasPainel() {
         {/* =========================================================================
             VISÃO 1: NOTAS FISCAIS (RECEBIDAS, EMITIDAS OU TODAS)
             ========================================================================= */}
-        {abaPrincipal !== 'carteira' ? (
+        {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' ? (
           <>
             {/* Barra de Busca e Filtros Rápidos de Status */}
             <div style={{ display: 'flex', gap: 12, marginBottom: 18, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1373,6 +1561,433 @@ export default function NfeDestinadasPainel() {
               </div>
             </div>
           </>
+        ) : abaPrincipal === 'certificados' ? (
+          /* =========================================================================
+             VISÃO 3: CONTROLE DE CERTIFICADOS DIGITAIS
+             ========================================================================= */
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              borderRadius: 20,
+              padding: 24,
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+            }}
+          >
+            {/* Topo do Controle de Certificados */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 14 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#600000' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000' }}>
+                    Gestão Centralizada de Segurança ICP-Brasil
+                  </span>
+                </div>
+                <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', margin: '0 0 4px' }}>
+                  Controle de Certificados Digitais A1 & Procurações
+                </h3>
+                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                  Monitore o ciclo de vida, expiração e cobertura de certificados A1 criptografados no cofre para NF-e e NFS-e Nacional.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={exportarRelatorioCertificadosCsv}
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                  title="Baixar planilha CSV com a listagem completa de certificados e validades"
+                >
+                  <Download size={14} /> Exportar Relatório CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCadastrarCnpjModal(true)}
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px', background: '#600000', borderColor: '#600000' }}
+                >
+                  <Building2 size={14} /> + Cadastrar CNPJs
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Cards de Métricas de Certificados */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 22 }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Com Certificado A1 no Cofre</span>
+                  <ShieldCheck size={16} color="#16a34a" />
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>
+                  {totaisCertificados.comA1}
+                </div>
+                <span style={{ fontSize: 11, color: '#16a34a' }}>
+                  Criptografia AES-256-GCM ativa
+                </span>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Com Procuração Eletrônica</span>
+                  <FileText size={16} color="#2563eb" />
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>
+                  {totaisCertificados.comProcuracao}
+                </div>
+                <span style={{ fontSize: 11, color: '#2563eb' }}>
+                  Via Certificado da Matriz / Escritório
+                </span>
+              </div>
+
+              <div style={{ background: totaisCertificados.vencendo30d > 0 ? '#fffbeb' : '#f8fafc', border: `1px solid ${totaisCertificados.vencendo30d > 0 ? '#fde68a' : '#e2e8f0'}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b', fontWeight: 600 }}>Vencendo em até 30 Dias</span>
+                  <Clock size={16} color={totaisCertificados.vencendo30d > 0 ? '#d97706' : '#94a3b8'} />
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#0f172a' }}>
+                  {totaisCertificados.vencendo30d}
+                </div>
+                <span style={{ fontSize: 11, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b' }}>
+                  {totaisCertificados.vencendo30d > 0 ? 'Atenção para renovação imediata' : 'Nenhum certificado expirando breve'}
+                </span>
+              </div>
+
+              <div style={{ background: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#fef2f2' : '#f8fafc', border: `1px solid ${(totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#fecaca' : '#e2e8f0'}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b', fontWeight: 600 }}>Vencidos ou Pendentes</span>
+                  <AlertCircle size={16} color={(totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#dc2626' : '#94a3b8'} />
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#0f172a' }}>
+                  {totaisCertificados.vencidos + totaisCertificados.semCert}
+                </div>
+                <span style={{ fontSize: 11, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b' }}>
+                  {totaisCertificados.vencidos > 0 ? `${totaisCertificados.vencidos} vencido(s) • ${totaisCertificados.semCert} sem certificado` : `${totaisCertificados.semCert} sem certificado`}
+                </span>
+              </div>
+            </div>
+
+            {/* Barra de Filtros e Busca */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              {/* Pílulas de Filtro Rápido */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setFiltroCertificadoStatus('todos')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 20,
+                    border: '1px solid',
+                    borderColor: filtroCertificadoStatus === 'todos' ? '#600000' : '#e5e7eb',
+                    background: filtroCertificadoStatus === 'todos' ? '#600000' : '#ffffff',
+                    color: filtroCertificadoStatus === 'todos' ? '#ffffff' : '#4b5563',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Todos ({totaisCertificados.total})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroCertificadoStatus('validos')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 20,
+                    border: '1px solid',
+                    borderColor: filtroCertificadoStatus === 'validos' ? '#16a34a' : '#e5e7eb',
+                    background: filtroCertificadoStatus === 'validos' ? '#16a34a' : '#ffffff',
+                    color: filtroCertificadoStatus === 'validos' ? '#ffffff' : '#4b5563',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Válidos (&gt;30d)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroCertificadoStatus('vencendo')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 20,
+                    border: '1px solid',
+                    borderColor: filtroCertificadoStatus === 'vencendo' ? '#d97706' : '#e5e7eb',
+                    background: filtroCertificadoStatus === 'vencendo' ? '#d97706' : '#ffffff',
+                    color: filtroCertificadoStatus === 'vencendo' ? '#ffffff' : '#4b5563',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ⚠️ Vencendo em 30d ({totaisCertificados.vencendo30d})
+                </button>
+                {totaisCertificados.vencidos > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFiltroCertificadoStatus('vencidos')}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: 20,
+                      border: '1px solid',
+                      borderColor: filtroCertificadoStatus === 'vencidos' ? '#dc2626' : '#e5e7eb',
+                      background: filtroCertificadoStatus === 'vencidos' ? '#dc2626' : '#ffffff',
+                      color: filtroCertificadoStatus === 'vencidos' ? '#ffffff' : '#4b5563',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ⛔ Vencidos ({totaisCertificados.vencidos})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFiltroCertificadoStatus('procuracao')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 20,
+                    border: '1px solid',
+                    borderColor: filtroCertificadoStatus === 'procuracao' ? '#2563eb' : '#e5e7eb',
+                    background: filtroCertificadoStatus === 'procuracao' ? '#2563eb' : '#ffffff',
+                    color: filtroCertificadoStatus === 'procuracao' ? '#ffffff' : '#4b5563',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Procuração ({totaisCertificados.comProcuracao})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroCertificadoStatus('sem_cert')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 20,
+                    border: '1px solid',
+                    borderColor: filtroCertificadoStatus === 'sem_cert' ? '#4b5563' : '#e5e7eb',
+                    background: filtroCertificadoStatus === 'sem_cert' ? '#4b5563' : '#ffffff',
+                    color: filtroCertificadoStatus === 'sem_cert' ? '#ffffff' : '#4b5563',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Sem Certificado ({totaisCertificados.semCert})
+                </button>
+              </div>
+
+              {/* Busca e Ordenação */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div
+                  className="search-bar"
+                  style={{
+                    background: '#f9fafb',
+                    border: '1px solid #e5e5e5',
+                    borderRadius: 10,
+                    padding: '7px 12px',
+                    width: 260,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Search size={14} style={{ color: '#6b7280' }} />
+                  <input
+                    value={buscaCertificadoTexto}
+                    onChange={(e) => setBuscaCertificadoTexto(e.target.value)}
+                    placeholder="Filtrar por empresa, CNPJ ou titular..."
+                    style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12.5, width: '100%' }}
+                  />
+                  {buscaCertificadoTexto && (
+                    <button
+                      type="button"
+                      onClick={() => setBuscaCertificadoTexto('')}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={ordemCertificado}
+                  onChange={(e: any) => setOrdemCertificado(e.target.value)}
+                  style={{
+                    padding: '7px 10px',
+                    fontSize: 12.5,
+                    border: '1px solid #e5e5e5',
+                    borderRadius: 10,
+                    background: '#ffffff',
+                    color: '#374151',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="validade_asc">Validade: Mais próximos do fim</option>
+                  <option value="validade_desc">Validade: Mais distantes</option>
+                  <option value="nome_asc">Razão Social (A-Z)</option>
+                  <option value="cnpj_asc">CNPJ (Crescente)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tabela de Controle de Certificados */}
+            <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Empresa</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Cobertura & Modalidade</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Titular ICP-Brasil</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Validade do Certificado</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Situação</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empresasCertificadosFiltradas.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                        Nenhuma empresa encontrada com os filtros selecionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    empresasCertificadosFiltradas.map((emp) => {
+                      const agora = Date.now();
+                      const dtValidade = emp.certValidoAte ? new Date(emp.certValidoAte) : null;
+                      const diasRestantes = dtValidade ? Math.ceil((dtValidade.getTime() - agora) / (1000 * 60 * 60 * 24)) : null;
+
+                      let statusBadge = null;
+                      if (dtValidade && diasRestantes !== null) {
+                        if (diasRestantes < 0) {
+                          statusBadge = (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+                              <AlertCircle size={12} /> Expirado há {Math.abs(diasRestantes)}d
+                            </span>
+                          );
+                        } else if (diasRestantes <= 30) {
+                          statusBadge = (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>
+                              <Clock size={12} /> Vence em {diasRestantes}d
+                            </span>
+                          );
+                        } else {
+                          statusBadge = (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                              <CheckCircle2 size={12} /> Válido ({diasRestantes}d)
+                            </span>
+                          );
+                        }
+                      } else if (emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa') {
+                        statusBadge = (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}>
+                            <FileText size={12} /> Procuração Ativa
+                          </span>
+                        );
+                      } else {
+                        statusBadge = (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1' }}>
+                            Pendente
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <tr key={emp.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{emp.razaoSocial}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#64748b' }}>
+                              <span>CNPJ: {emp.cnpj}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(emp.cnpj);
+                                  toast.success('CNPJ copiado!');
+                                }}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: '#94a3b8' }}
+                                title="Copiar CNPJ"
+                              >
+                                <Copy size={11} />
+                              </button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            {emp.certValidoAte ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <ShieldCheck size={15} color="#16a34a" />
+                                <div>
+                                  <div style={{ fontWeight: 600, color: '#166534', fontSize: 12 }}>A1 no Cofre Seguro</div>
+                                  <div style={{ fontSize: 11, color: '#64748b' }}>Criptografia AES-256</div>
+                                </div>
+                              </div>
+                            ) : emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <FileText size={15} color="#2563eb" />
+                                <div>
+                                  <div style={{ fontWeight: 600, color: '#1e40af', fontSize: 12 }}>Procuração Eletrônica</div>
+                                  <div style={{ fontSize: 11, color: '#64748b' }}>Certificado do Escritório</div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <AlertCircle size={15} color="#94a3b8" />
+                                <span style={{ fontSize: 12, color: '#64748b' }}>Sem certificado</span>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: 12, color: '#334155' }}>
+                            {emp.certTitular ? (
+                              <span title={emp.certTitular} style={{ display: 'block', maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {emp.certTitular}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#94a3b8' }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                            {dtValidade ? (
+                              <div>
+                                <span style={{ fontWeight: 500, color: '#0f172a' }}>{dtValidade.toLocaleDateString('pt-BR')}</span>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8' }}>Não informado</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            {statusBadge}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: 6 }}>
+                              <button
+                                type="button"
+                                onClick={() => setEmpresaCertificadoModal(emp)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '4px 8px' }}
+                              >
+                                <KeyRound size={12} /> {emp.certValidoAte ? 'Trocar A1' : 'Subir A1'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEmpresaIdSelecionada(emp.id);
+                                  setAbaPrincipal('recebidas');
+                                }}
+                                className="btn btn-secondary btn-sm"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '4px 8px' }}
+                              >
+                                Ver Notas <ChevronRight size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
           /* =========================================================================
              VISÃO 2: CARTEIRA DE EMPRESAS (MONITORADAS)

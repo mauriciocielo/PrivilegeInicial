@@ -137,30 +137,21 @@ export async function POST(request: Request) {
       const novosLimpos = chavesLimpos.filter(limpo => !cnpjsJaCadastrados.has(limpo));
       const criadas: any[] = [...existentes.map(e => ({ ...e, jaExistia: true }))];
 
-      // Processa a inserção imediata no banco de dados para nunca dar timeout
+      // Processa a inserção imediata no banco de dados para nunca dar timeout 504
       for (const limpo of novosLimpos) {
         const formatado = cnpjsValidos.get(limpo)!;
-
-        // Tenta busca rápida na Receita Federal (timeout curto de 1.5s para não travar o lote)
-        let dadosReceita = null;
-        try {
-          dadosReceita = await buscarDadosCnpjReceita(limpo, 1500);
-        } catch {
-          // Continua com nome padrão
-        }
-
-        const razaoSocial = dadosReceita?.razaoSocial || `EMPRESA CNPJ ${formatado}`;
-        const nomeFantasia = dadosReceita?.nomeFantasia || razaoSocial;
+        const razaoSocial = `EMPRESA CNPJ ${formatado}`;
+        const nomeFantasia = razaoSocial;
 
         const nova = await db.empresa.create({
           data: {
             cnpj: formatado,
             razaoSocial,
             nomeFantasia,
-            email: dadosReceita?.email || 'contato@privilegecontabilidade.com.br',
-            telefone: dadosReceita?.telefone || '(00) 0000-0000',
-            responsavel: dadosReceita?.responsavel || 'Responsável',
-            atividade: dadosReceita?.atividade || 'Serviço',
+            email: 'contato@privilegecontabilidade.com.br',
+            telefone: '(00) 0000-0000',
+            responsavel: 'Responsável',
+            atividade: 'Serviço',
             tipo: 'empresa',
             nfeDistribuicao: {
               create: { ativo: true, apenasNoturno: false },
@@ -168,7 +159,7 @@ export async function POST(request: Request) {
             nfseConfig: {
               create: {
                 usarProcuracao: true,
-                codigoMunicipio: dadosReceita?.codigoMunicipio || '',
+                codigoMunicipio: '',
               },
             },
           },

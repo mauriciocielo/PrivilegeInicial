@@ -88,7 +88,7 @@ export default function CadastrarCnpjModal({ onFechar, onEmpresaCadastrada }: Pr
     setResultadoLote(null);
     setProgressoLote({ processados: 0, total: listaUnica.length });
 
-    const TAMANHO_LOTE = 25;
+    const TAMANHO_LOTE = 20;
     let totalProcessadas = 0;
     let totalNovas = 0;
     let totalExistentes = 0;
