@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       }),
       db.nfeDistribuicao.findUnique({
         where: { empresaId },
-        select: { ativo: true, ultimaConsultaEm: true, proximaConsultaEm: true, ultimoStatus: true, ultimaMensagem: true, ultNsu: true, maxNsu: true, certOrigem: true },
+        select: { ativo: true, apenasNoturno: true, ultimaConsultaEm: true, proximaConsultaEm: true, ultimoStatus: true, ultimaMensagem: true, ultNsu: true, maxNsu: true, certOrigem: true },
       }),
     ]);
 

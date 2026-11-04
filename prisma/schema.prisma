@@ -986,6 +986,7 @@ model NfeDistribuicao {
   ultNsu            String    @default("0")
   maxNsu            String    @default("0")
   ativo             Boolean   @default(true)
+  apenasNoturno     Boolean   @default(false)
   ultimaConsultaEm  DateTime?
   proximaConsultaEm DateTime?
   ultimoStatus      String?

@@ -5,7 +5,7 @@ import { Instrument_Serif } from 'next/font/google';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
-  ExternalLink, Eye, X, Layers, Play
+  ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +20,7 @@ interface EmpresaMonitor {
   procuracaoStatus: string | null;
   monitor: {
     ativo: boolean;
+    apenasNoturno?: boolean;
     ultimaConsultaEm: string | null;
     proximaConsultaEm: string | null;
     ultimoStatus: string | null;
@@ -73,6 +74,7 @@ export default function NfeDestinadasPainel() {
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
   const [modoVisao, setModoVisao] = useState<'empresa' | 'visao-geral'>('empresa');
+  const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
 
   // Filtros de busca de notas
   const [busca, setBusca] = useState('');
@@ -104,6 +106,7 @@ export default function NfeDestinadasPainel() {
       const data = await res.json();
       const lista: EmpresaMonitor[] = data.empresas || [];
       setEmpresas(lista);
+      setEhHorarioNoturno(Boolean(data.ehHorarioNoturno));
 
       // Se ainda não tiver empresa selecionada, pega a primeira disponível ou recupera da sessão
       if (!empresaIdSelecionada && lista.length > 0) {
@@ -229,7 +232,7 @@ export default function NfeDestinadasPainel() {
       setEmpresas(prev => prev.map(e => e.id === empId ? {
         ...e,
         monitor: e.monitor ? { ...e.monitor, ativo: novoAtivo } : {
-          ativo: novoAtivo, ultimaConsultaEm: null, proximaConsultaEm: null,
+          ativo: novoAtivo, apenasNoturno: false, ultimaConsultaEm: null, proximaConsultaEm: null,
           ultimoStatus: null, ultimaMensagem: null, ultNsu: '0', maxNsu: '0'
         }
       } : e));
@@ -239,6 +242,58 @@ export default function NfeDestinadasPainel() {
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Erro ao alternar monitor.');
+    }
+  };
+
+  // Toggle da restrição de consulta noturna (22h às 05h)
+  const handleToggleNoturno = async (empId: string, apenasNoturno: boolean) => {
+    try {
+      const res = await fetch('/api/nfe/monitor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: empId, apenasNoturno }),
+      });
+      if (!res.ok) throw new Error('Falha ao atualizar janela noturna.');
+      toast.success(apenasNoturno
+        ? 'Consulta automática configurada para o horário noturno (22h às 05h).'
+        : 'Consulta automática liberada para qualquer horário (24h).'
+      );
+      setEmpresas(prev => prev.map(e => e.id === empId ? {
+        ...e,
+        monitor: e.monitor ? { ...e.monitor, apenasNoturno } : {
+          ativo: true, apenasNoturno, ultimaConsultaEm: null, proximaConsultaEm: null,
+          ultimoStatus: null, ultimaMensagem: null, ultNsu: '0', maxNsu: '0'
+        }
+      } : e));
+      if (empId === empresaIdSelecionada) {
+        setMonitorAtual(prev => prev ? { ...prev, apenasNoturno } : null);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao alterar janela noturna.');
+    }
+  };
+
+  // Aplicar modo noturno ou 24h em todas as empresas
+  const handleAplicarNoturnoTodos = async (apenasNoturno: boolean) => {
+    try {
+      const res = await fetch('/api/nfe/monitor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aplicarTodos: true, apenasNoturno }),
+      });
+      if (!res.ok) throw new Error('Falha ao aplicar configuração global.');
+      toast.success(apenasNoturno
+        ? 'Todas as empresas configuradas para consulta automática noturna (22h às 05h).'
+        : 'Todas as empresas configuradas para varredura contínua (24h).'
+      );
+      await carregarEmpresas();
+      if (empresaIdSelecionada) {
+        setMonitorAtual(prev => prev ? { ...prev, apenasNoturno } : null);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao configurar todas as empresas.');
     }
   };
 
@@ -301,7 +356,7 @@ export default function NfeDestinadasPainel() {
   return (
     <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%', padding: '24px 28px' }}>
       {/* Cabeçalho */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <span style={{
@@ -311,9 +366,20 @@ export default function NfeDestinadasPainel() {
               <Inbox size={22} />
             </span>
             <div>
-              <h1 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#171717', margin: 0, lineHeight: 1.1 }}>
-                NF-e Destinadas
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h1 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#171717', margin: 0, lineHeight: 1.1 }}>
+                  NF-e Destinadas
+                </h1>
+                {ehHorarioNoturno ? (
+                  <span className="badge" style={{ background: '#1e1b4b', color: '#c7d2fe', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '3px 8px' }}>
+                    <Moon size={11} /> Janela Noturna Ativa (22h - 05h)
+                  </span>
+                ) : (
+                  <span className="badge" style={{ background: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '3px 8px' }}>
+                    <Sun size={11} /> Horário Comercial (Noturno às 22h)
+                  </span>
+                )}
+              </div>
               <span style={{ fontSize: 13, color: '#737373' }}>
                 Monitor automático de compras e notas fiscais de mercadorias emitidas para seus CNPJs (SEFAZ NT 2014.002)
               </span>
@@ -322,7 +388,7 @@ export default function NfeDestinadasPainel() {
         </div>
 
         {/* Abas de Navegação / Ações do Topo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{
             display: 'inline-flex', padding: 3, background: '#f4f4f5', borderRadius: 8, border: '1px solid #e4e4e7'
           }}>
@@ -356,10 +422,10 @@ export default function NfeDestinadasPainel() {
             onClick={handleDispararLote}
             className="btn btn-secondary btn-sm"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
-            title="Aciona a rodada de varredura em segundo plano para todas as empresas ativas"
+            title="Aciona a rodada de varredura em segundo plano para todas as empresas ativas elegíveis"
           >
             <Play size={13} />
-            Varredura Geral SEFAZ
+            Varredura Agora
           </button>
         </div>
       </div>
@@ -367,7 +433,7 @@ export default function NfeDestinadasPainel() {
       {/* Conteúdo: MODO 1 - NOTAS DA EMPRESA */}
       {modoVisao === 'empresa' && (
         <>
-          {/* Seletor da Empresa Ativa */}
+          {/* Seletor da Empresa Ativa e Controles */}
           <div style={{
             background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb',
             padding: '16px 20px', marginBottom: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
@@ -395,9 +461,9 @@ export default function NfeDestinadasPainel() {
                 </div>
               </div>
 
-              {/* Informações do Certificado e Status */}
+              {/* Informações do Certificado e Controles */}
               {empresaAtual && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>
                       Certificado Digital
@@ -417,9 +483,10 @@ export default function NfeDestinadasPainel() {
                     )}
                   </div>
 
+                  {/* Auto-Monitoramento */}
                   <div>
                     <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>
-                      Auto-Monitoramento
+                      Auto-Monitor
                     </div>
                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                       <input
@@ -429,6 +496,24 @@ export default function NfeDestinadasPainel() {
                         style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#2563eb' }}
                       />
                       <span>{monitorAtual?.ativo !== false ? 'Ativo' : 'Pausado'}</span>
+                    </label>
+                  </div>
+
+                  {/* Janela Noturna (22h às 05h) */}
+                  <div style={{ background: '#f8fafc', padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Moon size={12} color="#6366f1" /> Consulta Noturna
+                    </div>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 12.5, fontWeight: 500 }}>
+                      <input
+                        type="checkbox"
+                        checked={monitorAtual?.apenasNoturno ?? false}
+                        onChange={(e) => handleToggleNoturno(empresaAtual.id, e.target.checked)}
+                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#6366f1' }}
+                      />
+                      <span title="Executa a busca automática apenas das 22h às 05h para priorizar menor tráfego na SEFAZ">
+                        {monitorAtual?.apenasNoturno ? 'Apenas 22h às 05h' : 'Contínuo 24h'}
+                      </span>
                     </label>
                   </div>
 
@@ -457,11 +542,11 @@ export default function NfeDestinadasPainel() {
               )}
             </div>
 
-            {/* Aviso anti-bloqueio SEFAZ */}
+            {/* Aviso anti-bloqueio SEFAZ e detalhes da última consulta */}
             {monitorAtual?.ultimoStatus && (
               <div style={{
                 marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#4b5563'
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#4b5563', flexWrap: 'wrap', gap: 8
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontWeight: 600 }}>Último retorno SEFAZ:</span>
@@ -523,23 +608,23 @@ export default function NfeDestinadasPainel() {
 
             <div style={{ background: '#fff', padding: 18, borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
               <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>
-                Sincronismo SEFAZ
+                Janela do Agendador
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 20, fontWeight: 600, color: '#374151' }}>
-                {esperaInfo.bloqueado ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, fontWeight: 600, color: '#374151' }}>
+                {monitorAtual?.apenasNoturno ? (
                   <>
-                    <Clock size={20} color="#f59e0b" />
-                    <span>Em espera</span>
+                    <Moon size={18} color="#6366f1" />
+                    <span>Noturno (22h - 05h)</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 size={20} color="#16a34a" />
-                    <span>Pronto p/ consulta</span>
+                    <Sun size={18} color="#f59e0b" />
+                    <span>Contínuo (24h)</span>
                   </>
                 )}
               </div>
               <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-                Janela anti-bloqueio respeitada
+                {ehHorarioNoturno ? 'Janela noturna ativa agora' : (monitorAtual?.apenasNoturno ? 'Aguardando 22:00 de Brasília' : 'Executando em ciclos diurnos')}
               </div>
             </div>
           </div>
@@ -770,27 +855,63 @@ export default function NfeDestinadasPainel() {
           background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb',
           overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
         }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          {/* Barra superior de ações globais e filtro */}
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
             <div>
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
-                Status do Monitor por Empresa
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                  Painel de Controle do Monitor DF-e
+                </h2>
+                {ehHorarioNoturno ? (
+                  <span className="badge" style={{ background: '#1e1b4b', color: '#c7d2fe', fontSize: 11 }}>
+                    🌙 Janela Noturna em Execução (22h - 05h)
+                  </span>
+                ) : (
+                  <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontSize: 11 }}>
+                    ☀️ Horário Diurno (22h varredura noturna)
+                  </span>
+                )}
+              </div>
               <span style={{ fontSize: 12, color: '#6b7280' }}>
-                Acompanhamento das consultas agendadas, NSUs processados e certificados vinculados
+                Gerencie o agendamento noturno e o estado de sincronismo de todas as empresas
               </span>
             </div>
-            <div style={{ width: 280, position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: '#9ca3af' }} />
-              <input
-                type="text"
-                value={filtroEmpresaTexto}
-                onChange={(e) => setFiltroEmpresaTexto(e.target.value)}
-                placeholder="Filtrar por nome ou CNPJ..."
-                style={{
-                  width: '100%', padding: '7px 10px 7px 30px', fontSize: 12.5,
-                  border: '1px solid #d1d5db', borderRadius: 6, outline: 'none'
-                }}
-              />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {/* Botões de Ação em Massa */}
+              <div style={{ display: 'inline-flex', gap: 6 }}>
+                <button
+                  onClick={() => handleAplicarNoturnoTodos(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+                  title="Configura todas as empresas para consultar somente entre 22h e 05h da manhã"
+                >
+                  <Moon size={12} color="#6366f1" /> Noturno em Todas (22h - 05h)
+                </button>
+                <button
+                  onClick={() => handleAplicarNoturnoTodos(false)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+                  title="Configura todas as empresas para consultar a qualquer horário (24h)"
+                >
+                  <Sun size={12} color="#f59e0b" /> Contínuo 24h em Todas
+                </button>
+              </div>
+
+              {/* Busca de Empresa */}
+              <div style={{ width: 240, position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: '#9ca3af' }} />
+                <input
+                  type="text"
+                  value={filtroEmpresaTexto}
+                  onChange={(e) => setFiltroEmpresaTexto(e.target.value)}
+                  placeholder="Filtrar por nome ou CNPJ..."
+                  style={{
+                    width: '100%', padding: '7px 10px 7px 30px', fontSize: 12.5,
+                    border: '1px solid #d1d5db', borderRadius: 6, outline: 'none'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -800,6 +921,7 @@ export default function NfeDestinadasPainel() {
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Empresa</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Certificado</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Monitor Automático</th>
+                <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Janela de Horário</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Total Notas</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Último Retorno SEFAZ</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Próxima Consulta</th>
@@ -809,14 +931,14 @@ export default function NfeDestinadasPainel() {
             <tbody>
               {carregandoEmpresas ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#2563eb' }} />
                     Carregando empresas monitoradas...
                   </td>
                 </tr>
               ) : empresasFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
                     Nenhuma empresa encontrada com os filtros informados.
                   </td>
                 </tr>
@@ -824,6 +946,8 @@ export default function NfeDestinadasPainel() {
                 empresasFiltradas.map((emp) => {
                   const m = emp.monitor;
                   const bloqueado = m?.proximaConsultaEm && new Date(m.proximaConsultaEm).getTime() > Date.now();
+                  const noturnoAtivo = m?.apenasNoturno ?? false;
+
                   return (
                     <tr
                       key={emp.id}
@@ -853,9 +977,25 @@ export default function NfeDestinadasPainel() {
                           onClick={() => handleToggleMonitor(emp.id, !(m?.ativo ?? true))}
                           className={`badge ${m?.ativo !== false ? 'badge-green' : 'badge-yellow'}`}
                           style={{ cursor: 'pointer', border: 'none', padding: '4px 10px' }}
-                          title="Clique para alternar status"
+                          title="Clique para alternar monitoramento ativo/pausado"
                         >
                           {m?.ativo !== false ? 'Ativo' : 'Pausado'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleToggleNoturno(emp.id, !noturnoAtivo)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px',
+                            borderRadius: 6, fontSize: 11.5, fontWeight: 500, cursor: 'pointer', border: '1px solid transparent',
+                            background: noturnoAtivo ? '#eef2ff' : '#fef9c3',
+                            color: noturnoAtivo ? '#4338ca' : '#854d0e',
+                            borderColor: noturnoAtivo ? '#c7d2fe' : '#fef08a'
+                          }}
+                          title="Clique para alternar entre Noturno (22h-05h) e 24 Horas"
+                        >
+                          {noturnoAtivo ? <Moon size={12} /> : <Sun size={12} />}
+                          {noturnoAtivo ? 'Noturno (22h-05h)' : 'Contínuo 24h'}
                         </button>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#111827' }}>
@@ -1042,4 +1182,3 @@ export default function NfeDestinadasPainel() {
     </div>
   );
 }
-

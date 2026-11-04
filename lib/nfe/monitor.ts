@@ -26,6 +26,16 @@ const MAX_PAGINAS_POR_CONSULTA = 12;
 
 const AMBIENTE: AmbienteNfe = 'producao';
 
+/**
+ * Retorna se o momento atual está dentro da janela noturna (22h às 05h de Brasília / UTC-3).
+ * A SEFAZ possui tráfego consideravelmente menor nessa faixa, ideal para lotes volumosos.
+ */
+export function ehHorarioNoturnoBrasilia(): boolean {
+  const agoraBrasilia = new Date(Date.now() - 3 * 3600 * 1000);
+  const hora = agoraBrasilia.getUTCHours();
+  return hora >= 22 || hora < 5;
+}
+
 export interface ResultadoConsultaNfe {
   empresaId: string;
   executada: boolean;
@@ -241,10 +251,15 @@ const PAUSA_ENTRE_EMPRESAS_MS = 2000;
 
 async function executarLote(maxEmpresas: number): Promise<ResumoLote> {
   const agora = new Date();
+  const noturno = ehHorarioNoturnoBrasilia();
   // Só empresas com o monitoramento ligado (linha em NfeDistribuicao criada por quem ativou)
-  // e fora do período de espera da SEFAZ. Nada é consultado sem ter sido ativado.
+  // e fora do período de espera da SEFAZ. Empresas marcadas como 'apenasNoturno' só rodam entre 22h e 05h.
   const pendentes = await db.nfeDistribuicao.findMany({
-    where: { ativo: true, OR: [{ proximaConsultaEm: null }, { proximaConsultaEm: { lte: agora } }] },
+    where: {
+      ativo: true,
+      ...(noturno ? {} : { apenasNoturno: false }),
+      OR: [{ proximaConsultaEm: null }, { proximaConsultaEm: { lte: agora } }],
+    },
     orderBy: { ultimaConsultaEm: { sort: 'asc', nulls: 'first' } },
     select: { empresaId: true },
     take: maxEmpresas,
