@@ -12,20 +12,32 @@ export interface FiltroNotas {
   ate?: string | null;
   situacao?: string | null;
   busca?: string | null;
+  papel?: 'todas' | 'recebidas' | 'emitidas' | string | null;
+  cnpjEmpresa?: string | null;
 }
 
 export function filtroNotasDestinadas(empresaId: string, f: FiltroNotas): Prisma.NfeDestinadaWhereInput {
   const busca = (f.busca || '').trim();
   const digitos = busca.replace(/\D/g, '');
   const situacao = f.situacao || '';
+  const papel = f.papel || 'todas';
+  const cnpjLimpo = (f.cnpjEmpresa || '').replace(/\D/g, '');
 
   const dataEmissao: { gte?: string; lte?: string } = {};
   if (/^\d{4}-\d{2}$/.test(f.mes || '')) { dataEmissao.gte = `${f.mes}-01`; dataEmissao.lte = `${f.mes}-31`; }
   if (/^\d{4}-\d{2}-\d{2}$/.test(f.de || '')) dataEmissao.gte = f.de as string;
   if (/^\d{4}-\d{2}-\d{2}$/.test(f.ate || '')) dataEmissao.lte = f.ate as string;
 
+  const filtroPapel: Prisma.NfeDestinadaWhereInput = {};
+  if (cnpjLimpo && papel === 'emitidas') {
+    filtroPapel.emitenteCnpj = { contains: cnpjLimpo };
+  } else if (cnpjLimpo && papel === 'recebidas') {
+    filtroPapel.NOT = { emitenteCnpj: { contains: cnpjLimpo } };
+  }
+
   return {
     empresaId,
+    ...filtroPapel,
     ...(Object.keys(dataEmissao).length ? { dataEmissao } : {}),
     ...(['autorizada', 'denegada', 'cancelada'].includes(situacao) ? { situacao } : {}),
     ...(busca

@@ -520,6 +520,25 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const nav = getFilteredNav();
   const initials = user?.name?.split(' ').map(w => w[0]).slice(0, 2).join('') || 'U';
 
+  const isFiscalRoute = Boolean(
+    pathname?.includes('/nfse') ||
+    pathname?.includes('/nfe') ||
+    pathname?.includes('/cnd') ||
+    pathname?.includes('/certid')
+  );
+
+  const isFiscalUser = Boolean(
+    user?.id === 'u_fiscal_privilege' ||
+    user?.id?.toLowerCase().includes('fiscal') ||
+    user?.email?.toLowerCase().includes('fiscal') ||
+    user?.name?.toLowerCase().includes('fiscal') ||
+    user?.role?.toLowerCase().includes('fiscal') ||
+    (user?.allowedRoutes && user.allowedRoutes.length > 0 &&
+      user.allowedRoutes.some(r => r.includes('nfse') || r.includes('nfe') || r.includes('cnd') || r.includes('fiscal') || r.includes('certid')) &&
+      !user.allowedRoutes.some(r => r.includes('extrato') || r.includes('conciliacao') || r.includes('contas-pagar') || r.includes('contas-receber') || r.includes('dre'))
+    )
+  );
+
   return (
     <header className="sidebar">
       <div 
@@ -536,7 +555,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         <BrandLogo size={42} />
       </div>
 
-      {isConsultorOrAdmin && selectableEmpresas.length > 0 && (
+      {isConsultorOrAdmin && !isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
         <div ref={companyDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => setShowCompanyDropdown(o => !o)}

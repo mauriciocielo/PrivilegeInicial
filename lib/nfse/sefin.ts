@@ -21,7 +21,7 @@ const ENDPOINTS_ADN: Record<AmbienteNfse, string> = {
 };
 
 const TIMEOUT_MS = 20_000;
-const MAX_NUMEROS_PULADOS = 20;
+const MAX_NUMEROS_PULADOS = 500;
 
 export interface RespostaHttp {
   status: number;

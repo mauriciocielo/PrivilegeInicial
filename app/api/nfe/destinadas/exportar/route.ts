@@ -39,8 +39,13 @@ export async function POST(request: Request) {
       : null;
     if (ids && ids.length === 0) return NextResponse.json({ error: 'Selecione ao menos uma nota.' }, { status: 422 });
 
+    const empresa = await db.empresa.findUnique({
+      where: { id: empresaId },
+      select: { cnpj: true, razaoSocial: true, nomeFantasia: true },
+    });
+
     // A empresa fica sempre no filtro: um id de outra empresa simplesmente não é encontrado.
-    const where = ids ? { empresaId, id: { in: ids } } : filtroNotasDestinadas(empresaId, body ?? {});
+    const where = ids ? { empresaId, id: { in: ids } } : filtroNotasDestinadas(empresaId, { ...(body ?? {}), cnpjEmpresa: empresa?.cnpj });
 
     const [notas, semXml] = await Promise.all([
       db.nfeDestinada.findMany({
@@ -61,7 +66,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const empresa = await db.empresa.findUnique({ where: { id: empresaId }, select: { razaoSocial: true, nomeFantasia: true } });
     const referencia = ids ? 'Selecionadas' : (typeof body?.mes === 'string' && body.mes) || 'Filtro';
     const nomeBase = `NFe-${limparNome(empresa?.nomeFantasia || empresa?.razaoSocial || 'Empresa')}-${referencia}`;
     let comErro = 0;

@@ -31,6 +31,8 @@ export type ResultadoSincronizacaoAdn =
       foraDoPeriodo: number;
       servicos: ServicoConhecido[];
       temMais: boolean;
+      ultimoNumeroEmitido?: number;
+      proximoNDpsProducao?: number;
     }
   | { ok: false; status: number; error: string };
 
@@ -161,15 +163,125 @@ export async function sincronizarNotasAdn(
   // Serviços só somam em leitura nova: reler do início recomeça a contagem.
   const atuais = continuar ? ((config.servicosConhecidos as unknown as ServicoConhecido[] | null) || []) : [];
   const servicos = mesclarServicos(atuais, extrairDadosEmissor(caixa.xmls, cnpj).servicos);
+
+  // Calcula o maior número emitido na base oficial (NFS-e e DPS) para dar sequência correta
+  const notasEmitidas = await db.nfsE.findMany({
+    where: {
+      empresaId,
+      status: { not: 'rascunho' },
+      OR: [
+        { prestadorCnpj: empresa.cnpj },
+        { prestadorCnpj: apenasDigitos(empresa.cnpj) },
+      ],
+    },
+    select: { numero: true, nDps: true },
+  });
+
+  let maiorNumeroEmitido = 0;
+  for (const n of notasEmitidas) {
+    const num = parseInt(n.numero || '0', 10);
+    if (!isNaN(num) && num > maiorNumeroEmitido) maiorNumeroEmitido = num;
+    const dps = parseInt(n.nDps || '0', 10);
+    if (!isNaN(dps) && dps > maiorNumeroEmitido) maiorNumeroEmitido = dps;
+  }
+
+  const proximoNDpsProducao = Math.max(config.proximoNDpsProducao || 1, maiorNumeroEmitido + 1);
+
   await db.nfseConfig.update({
     where: { empresaId },
     data: {
       adnUltimoNsu: String(caixa.ultimoNsu),
       adnMesesImportados: Math.max(meses, continuar ? (config.adnMesesImportados ?? 0) : 0),
       servicosConhecidos: servicos as unknown as Prisma.InputJsonValue,
+      proximoNDpsProducao,
     },
   });
 
-  return { ok: true, idsAlterados, criadas, criadasEmitidas, criadasTomadas, foraDoPeriodo, servicos, temMais: caixa.parcial };
+  return {
+    ok: true,
+    idsAlterados,
+    criadas,
+    criadasEmitidas,
+    criadasTomadas,
+    foraDoPeriodo,
+    servicos,
+    temMais: caixa.parcial,
+    ultimoNumeroEmitido: maiorNumeroEmitido,
+    proximoNDpsProducao,
+  };
+}
+
+/**
+ * Consulta a base oficial (ADN/Sefin) e o banco para obter o último número emitido
+ * e sincronizar o próximo número de DPS na base de produção.
+ */
+export async function sincronizarSequenciaOficial(
+  empresaId: string,
+  forcarConsultaAdn = false,
+): Promise<{
+  ok: boolean;
+  ultimoNumeroEmitido: number;
+  proximoNDpsProducao: number;
+  ambiente: string;
+  serie: string;
+  mensagem: string;
+}> {
+  const empresa = await db.empresa.findUnique({
+    where: { id: empresaId },
+    select: { cnpj: true, razaoSocial: true, nfseConfig: true },
+  });
+  if (!empresa) throw new Error('Empresa não encontrada.');
+
+  const config = empresa.nfseConfig ?? await db.nfseConfig.create({ data: { empresaId } });
+
+  // Se solicitado ou se o contador estiver no início (1) e sem notas no banco, tenta buscar do portal
+  if (forcarConsultaAdn || ((config.proximoNDpsProducao || 1) <= 1 && !config.adnUltimoNsu)) {
+    try {
+      await sincronizarNotasAdn(empresaId, { meses: 12, reiniciar: true });
+    } catch (e) {
+      console.warn('Erro ao consultar ADN durante sincronização de sequência:', e);
+    }
+  }
+
+  // Recalcula com base nas notas emitidas
+  const notasEmitidas = await db.nfsE.findMany({
+    where: {
+      empresaId,
+      status: { not: 'rascunho' },
+      OR: [
+        { prestadorCnpj: empresa.cnpj },
+        { prestadorCnpj: apenasDigitos(empresa.cnpj) },
+      ],
+    },
+    select: { numero: true, nDps: true },
+  });
+
+  let maiorNumero = 0;
+  for (const n of notasEmitidas) {
+    const num = parseInt(n.numero || '0', 10);
+    if (!isNaN(num) && num > maiorNumero) maiorNumero = num;
+    const dps = parseInt(n.nDps || '0', 10);
+    if (!isNaN(dps) && dps > maiorNumero) maiorNumero = dps;
+  }
+
+  const proximo = Math.max(config.proximoNDpsProducao || 1, maiorNumero + 1);
+
+  if ((config.proximoNDpsProducao || 1) < proximo) {
+    await db.nfseConfig.update({
+      where: { empresaId },
+      data: { proximoNDpsProducao: proximo },
+    });
+  }
+
+  return {
+    ok: true,
+    ultimoNumeroEmitido: maiorNumero,
+    proximoNDpsProducao: proximo,
+    ambiente: config.ambiente,
+    serie: config.serie,
+    mensagem: maiorNumero > 0
+      ? `Último número oficial identificado: ${maiorNumero}. Próxima nota na sequência: ${proximo}.`
+      : `Nenhuma nota anterior encontrada na base oficial. Sequência iniciará no número ${proximo}.`,
+  };
 }
 

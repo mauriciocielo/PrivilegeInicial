@@ -25,7 +25,16 @@ export async function GET(request: Request) {
     const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
-    const [notas, monitor] = await Promise.all([
+    const empresa = await db.empresa.findUnique({
+      where: { id: empresaId },
+      select: { cnpj: true, razaoSocial: true },
+    });
+    if (!empresa) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
+
+    const papel = url.searchParams.get('papel') || 'todas';
+    const cnpjLimpo = empresa.cnpj.replace(/\D/g, '');
+
+    const [notasBrutas, monitor, contagemEmitidas, contagemRecebidas] = await Promise.all([
       db.nfeDestinada.findMany({
         where: filtroNotasDestinadas(empresaId, {
           mes: url.searchParams.get('mes'),
@@ -33,6 +42,8 @@ export async function GET(request: Request) {
           ate: url.searchParams.get('ate'),
           situacao: url.searchParams.get('situacao'),
           busca: url.searchParams.get('busca'),
+          papel,
+          cnpjEmpresa: empresa.cnpj,
         }),
         select: colunas,
         orderBy: [{ dataEmissao: 'desc' }, { nsu: 'desc' }],
@@ -42,9 +53,42 @@ export async function GET(request: Request) {
         where: { empresaId },
         select: { ativo: true, apenasNoturno: true, ultimaConsultaEm: true, proximaConsultaEm: true, ultimoStatus: true, ultimaMensagem: true, ultNsu: true, maxNsu: true, certOrigem: true },
       }),
+      db.nfeDestinada.count({
+        where: {
+          empresaId,
+          emitenteCnpj: { contains: cnpjLimpo },
+        },
+      }),
+      db.nfeDestinada.count({
+        where: {
+          empresaId,
+          NOT: { emitenteCnpj: { contains: cnpjLimpo } },
+        },
+      }),
     ]);
 
-    return NextResponse.json({ notas, monitor, limitado: notas.length >= LIMITE });
+    const notas = notasBrutas.map(n => {
+      const emitLimpo = (n.emitenteCnpj || '').replace(/\D/g, '');
+      const ehEmitida = cnpjLimpo.length >= 8 && emitLimpo.includes(cnpjLimpo);
+      return {
+        ...n,
+        papel: ehEmitida ? ('emitida' as const) : ('recebida' as const),
+      };
+    });
+
+    const totais = {
+      totalGeral: contagemEmitidas + contagemRecebidas,
+      totalEmitidas: contagemEmitidas,
+      totalRecebidas: contagemRecebidas,
+    };
+
+    return NextResponse.json({
+      notas,
+      totais,
+      monitor,
+      limitado: notas.length >= LIMITE,
+      empresa: { cnpj: empresa.cnpj, razaoSocial: empresa.razaoSocial },
+    });
   } catch (error) {
     console.error('Erro em GET nfe/destinadas:', error);
     captureError(error);

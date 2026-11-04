@@ -5,11 +5,15 @@ import { Instrument_Serif } from 'next/font/google';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
-  ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building
+  ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
+  Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import NfeCertificadoModal from './NfeCertificadoModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
+import NfeDifalModal from './NfeDifalModal';
+import NfeIntegracaoModal from './NfeIntegracaoModal';
+import NfeImportarXmlModal from './NfeImportarXmlModal';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
@@ -53,6 +57,7 @@ interface NfeDestinadaItem {
   situacao: string;
   manifestacao: string | null;
   possuiXml: boolean;
+  papel?: 'emitida' | 'recebida';
 }
 
 function formatCnpj(v: string): string {
@@ -93,6 +98,17 @@ export default function NfeDestinadasPainel() {
   const [dataFim, setDataFim] = useState('');
   const [situacaoFiltro, setSituacaoFiltro] = useState('');
   const [apenasComXml, setApenasComXml] = useState(false);
+  const [papelFiltro, setPapelFiltro] = useState<'todas' | 'recebidas' | 'emitidas'>('todas');
+  const [totaisMonitor, setTotaisMonitor] = useState<{ totalGeral: number; totalEmitidas: number; totalRecebidas: number }>({
+    totalGeral: 0,
+    totalEmitidas: 0,
+    totalRecebidas: 0,
+  });
+
+  // Modais de DIFAL, Integração e Importação
+  const [showDifalModal, setShowDifalModal] = useState(false);
+  const [showIntegracaoModal, setShowIntegracaoModal] = useState(false);
+  const [showImportarModal, setShowImportarModal] = useState(false);
 
   // Dados das notas
   const [notas, setNotas] = useState<NfeDestinadaItem[]>([]);
@@ -161,6 +177,7 @@ export default function NfeDestinadasPainel() {
       if (dataFim) params.set('ate', dataFim);
       if (situacaoFiltro) params.set('situacao', situacaoFiltro);
       if (busca) params.set('busca', busca);
+      if (papelFiltro && papelFiltro !== 'todas') params.set('papel', papelFiltro);
 
       const res = await fetch(`/api/nfe/destinadas?${params.toString()}`);
       if (!res.ok) throw new Error('Falha ao carregar notas destinadas.');
@@ -170,6 +187,9 @@ export default function NfeDestinadasPainel() {
         lista = lista.filter(n => n.possuiXml);
       }
       setNotas(lista);
+      if (data.totais) {
+        setTotaisMonitor(data.totais);
+      }
       setSelecionadas(new Set());
       setMonitorAtual(data.monitor || null);
     } catch (err: any) {
@@ -178,7 +198,7 @@ export default function NfeDestinadasPainel() {
     } finally {
       setCarregandoNotas(false);
     }
-  }, [mesFiltro, dataInicio, dataFim, situacaoFiltro, busca, apenasComXml]);
+  }, [mesFiltro, dataInicio, dataFim, situacaoFiltro, busca, papelFiltro, apenasComXml]);
 
   useEffect(() => {
     if (empresaIdSelecionada) {
@@ -472,11 +492,17 @@ export default function NfeDestinadasPainel() {
   const totais = useMemo(() => {
     const valorTotal = notas.reduce((acc, n) => acc + (n.valorNf || 0), 0);
     const comXmlCount = notas.filter(n => n.possuiXml).length;
+    const emitidas = notas.filter(n => n.papel === 'emitida');
+    const recebidas = notas.filter(n => n.papel !== 'emitida');
     return {
       quantidade: notas.length,
       valorTotal,
       comXmlCount,
       apenasResumo: notas.length - comXmlCount,
+      qtdEmitidas: emitidas.length,
+      valorEmitidas: emitidas.reduce((acc, n) => acc + (n.valorNf || 0), 0),
+      qtdRecebidas: recebidas.length,
+      valorRecebidas: recebidas.reduce((acc, n) => acc + (n.valorNf || 0), 0),
     };
   }, [notas]);
 
@@ -556,14 +582,41 @@ export default function NfeDestinadasPainel() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowDifalModal(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#15803d', background: '#f0fdf4', borderColor: '#bbf7d0', fontWeight: 600 }}
+              title="Calcular e gerar relatório do Diferencial de Alíquota (DIFAL) nas compras interestaduais"
+            >
+              <Calculator size={13} color="#16a34a" /> Relatório DIFAL
+            </button>
+
+            <button
+              onClick={() => setShowIntegracaoModal(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#6d28d9', background: '#f5f3ff', borderColor: '#ddd6fe', fontWeight: 600 }}
+              title="API externa para compartilhar notas, consultar e fazer download de XMLs/PDFs com outro sistema"
+            >
+              <Globe size={13} color="#7c3aed" /> API Integração
+            </button>
+
+            <button
+              onClick={() => setShowImportarModal(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#0369a1', background: '#f0f9ff', borderColor: '#bae6fd', fontWeight: 600 }}
+              title="Importar arquivos XML de NF-e emitidas (vendas) ou recebidas (compras)"
+            >
+              <UploadCloud size={13} color="#0284c7" /> Importar XMLs
+            </button>
+
             <button
               onClick={() => setShowCndModal(true)}
               className="btn btn-secondary btn-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#0284c7', background: '#f0f9ff', borderColor: '#bae6fd' }}
-              title="Consultar Certidão Negativa de Débitos Federais (CND) no SERPRO / Receita Federal"
+              title="Gerar o Relatório de Situação Fiscal (SITFIS) na Receita Federal e na PGFN"
             >
-              🏛️ CND Federal
+              🏛️ Situação Federal
             </button>
 
             <button
@@ -792,6 +845,67 @@ export default function NfeDestinadasPainel() {
             </div>
           </div>
 
+          {/* Abas de Operação: Todas | Recebidas (Compras) | Emitidas (Vendas) */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => setPapelFiltro('todas')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: papelFiltro === 'todas' ? 600 : 500,
+                border: papelFiltro === 'todas' ? '1px solid #2563eb' : '1px solid #e5e7eb',
+                background: papelFiltro === 'todas' ? '#eff6ff' : '#ffffff',
+                color: papelFiltro === 'todas' ? '#1d4ed8' : '#4b5563',
+                cursor: 'pointer', transition: 'all .15s', boxShadow: papelFiltro === 'todas' ? '0 1px 3px rgba(37,99,235,0.1)' : 'none'
+              }}
+            >
+              <Inbox size={16} />
+              <span>Todas as Notas</span>
+              <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11.5, background: papelFiltro === 'todas' ? '#dbeafe' : '#f3f4f6', color: papelFiltro === 'todas' ? '#1e40af' : '#6b7280', fontWeight: 700 }}>
+                {totaisMonitor.totalGeral || notas.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setPapelFiltro('recebidas')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: papelFiltro === 'recebidas' ? 600 : 500,
+                border: papelFiltro === 'recebidas' ? '1px solid #16a34a' : '1px solid #e5e7eb',
+                background: papelFiltro === 'recebidas' ? '#f0fdf4' : '#ffffff',
+                color: papelFiltro === 'recebidas' ? '#15803d' : '#4b5563',
+                cursor: 'pointer', transition: 'all .15s', boxShadow: papelFiltro === 'recebidas' ? '0 1px 3px rgba(22,163,74,0.1)' : 'none'
+              }}
+              title="Notas fiscais recebidas de fornecedores (compras destinadas a este CNPJ)"
+            >
+              <ArrowDownLeft size={16} color={papelFiltro === 'recebidas' ? '#16a34a' : '#6b7280'} />
+              <span>📥 Recebidas / Compras (Destinadas)</span>
+              <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11.5, background: papelFiltro === 'recebidas' ? '#dcfce7' : '#f3f4f6', color: papelFiltro === 'recebidas' ? '#166534' : '#6b7280', fontWeight: 700 }}>
+                {totaisMonitor.totalRecebidas}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setPapelFiltro('emitidas')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: papelFiltro === 'emitidas' ? 600 : 500,
+                border: papelFiltro === 'emitidas' ? '1px solid #7c3aed' : '1px solid #e5e7eb',
+                background: papelFiltro === 'emitidas' ? '#f5f3ff' : '#ffffff',
+                color: papelFiltro === 'emitidas' ? '#6d28d9' : '#4b5563',
+                cursor: 'pointer', transition: 'all .15s', boxShadow: papelFiltro === 'emitidas' ? '0 1px 3px rgba(124,58,237,0.1)' : 'none'
+              }}
+              title="Notas fiscais emitidas pelo CNPJ desta empresa (vendas / saídas de mercadorias)"
+            >
+              <ArrowUpRight size={16} color={papelFiltro === 'emitidas' ? '#7c3aed' : '#6b7280'} />
+              <span>📤 Emitidas pelo CNPJ (Vendas / Saídas)</span>
+              <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11.5, background: papelFiltro === 'emitidas' ? '#ede9fe' : '#f3f4f6', color: papelFiltro === 'emitidas' ? '#5b21b6' : '#6b7280', fontWeight: 700 }}>
+                {totaisMonitor.totalEmitidas}
+              </span>
+            </button>
+          </div>
+
           {/* Filtros da Tabela */}
           <div style={{
             background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb',
@@ -811,6 +925,20 @@ export default function NfeDestinadasPainel() {
                 }}
               />
             </div>
+
+            {/* Filtro Operação (Todas | Recebidas | Emitidas) */}
+            <select
+              value={papelFiltro}
+              onChange={(e) => setPapelFiltro(e.target.value as any)}
+              style={{
+                padding: '7px 10px', fontSize: 13, border: '1px solid #d1d5db',
+                borderRadius: 6, outline: 'none', background: '#fff'
+              }}
+            >
+              <option value="todas">Todas as Operações</option>
+              <option value="recebidas">📥 Apenas Recebidas (Compras)</option>
+              <option value="emitidas">📤 Apenas Emitidas pelo CNPJ (Vendas)</option>
+            </select>
 
             {/* Filtro Mês */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -968,8 +1096,9 @@ export default function NfeDestinadasPainel() {
                     />
                   </th>
                   <th style={{ padding: '12px 16px', fontWeight: 600 }}>Emissão</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Operação</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600 }}>Número / Série</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Emitente (Fornecedor)</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Contraparte / Razão Social</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>Valor Total</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>Situação</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>XML</th>
@@ -979,18 +1108,18 @@ export default function NfeDestinadasPainel() {
               <tbody>
                 {carregandoNotas ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
                       <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#2563eb' }} />
                       Carregando NF-e destinadas...
                     </td>
                   </tr>
                 ) : notas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={9} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
                       <Inbox size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-                      <div style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Nenhuma nota destinada encontrada</div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Nenhuma nota encontrada com os filtros informados</div>
                       <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-                        {busca || mesFiltro || dataInicio ? 'Tente ajustar os filtros informados.' : 'Clique em "Consultar SEFAZ Agora" para buscar novos documentos.'}
+                        {busca || mesFiltro || dataInicio ? 'Tente ajustar os filtros informados ou alternar entre Recebidas e Emitidas.' : 'Clique em "Consultar SEFAZ Agora" para buscar novos documentos.'}
                       </div>
                     </td>
                   </tr>
@@ -1016,13 +1145,24 @@ export default function NfeDestinadasPainel() {
                       <td style={{ padding: '12px 16px', color: '#111827', whiteSpace: 'nowrap' }}>
                         {formatData(n.dataEmissao)}
                       </td>
+                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                        {n.papel === 'emitida' ? (
+                          <span className="badge" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <ArrowUpRight size={12} /> Emitida (Saída)
+                          </span>
+                        ) : (
+                          <span className="badge" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <ArrowDownLeft size={12} /> Recebida (Entrada)
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500, whiteSpace: 'nowrap' }}>
                         {n.numero ? `NF ${n.numero}` : '-'}
                         {n.serie ? <span style={{ color: '#6b7280', fontSize: 11, marginLeft: 4 }}>Série {n.serie}</span> : ''}
                       </td>
                       <td style={{ padding: '12px 16px', maxWidth: 280 }}>
                         <div style={{ fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {n.emitenteNome || 'Fornecedor não identificado'}
+                          {n.papel === 'emitida' ? `${empresaAtual?.razaoSocial || n.emitenteNome} (Emitente)` : (n.emitenteNome || 'Fornecedor não identificado')}
                         </div>
                         <div style={{ fontSize: 11, color: '#6b7280' }}>
                           CNPJ: {formatCnpj(n.emitenteCnpj)}
@@ -1494,11 +1634,44 @@ export default function NfeDestinadasPainel() {
         />
       )}
 
-      {/* Modal de Consulta da Certidão Negativa Federal (SITFIS / SERPRO) */}
+      {/* Consulta do Relatório de Situação Fiscal (SITFIS) */}
       {showCndModal && (
         <CertidaoFederalModal
           empresaIdInicial={empresaIdSelecionada}
           onFechar={() => setShowCndModal(false)}
+        />
+      )}
+
+      {/* Relatório e Cálculo do DIFAL */}
+      {showDifalModal && empresaAtual && (
+        <NfeDifalModal
+          empresaId={empresaAtual.id}
+          empresaNome={empresaAtual.razaoSocial}
+          cnpj={empresaAtual.cnpj}
+          onClose={() => setShowDifalModal(false)}
+        />
+      )}
+
+      {/* Modal da API de Integração e Download */}
+      {showIntegracaoModal && empresaAtual && (
+        <NfeIntegracaoModal
+          empresaId={empresaAtual.id}
+          empresaNome={empresaAtual.razaoSocial}
+          cnpj={empresaAtual.cnpj}
+          onClose={() => setShowIntegracaoModal(false)}
+        />
+      )}
+
+      {/* Modal de Importação em Lote de XMLs */}
+      {showImportarModal && empresaAtual && (
+        <NfeImportarXmlModal
+          empresaId={empresaAtual.id}
+          empresaNome={empresaAtual.razaoSocial}
+          onClose={() => setShowImportarModal(false)}
+          onConcluido={() => {
+            setShowImportarModal(false);
+            if (empresaIdSelecionada) carregarNotas(empresaIdSelecionada);
+          }}
         />
       )}
     </div>

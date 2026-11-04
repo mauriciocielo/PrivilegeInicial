@@ -141,7 +141,26 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
 
   // O CNPJ da empresa já é conhecido: município e regime vêm do cadastro público.
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [sincronizandoOficial, setSincronizandoOficial] = useState(false);
   const [municipioNome, setMunicipioNome] = useState('');
+
+  const sincronizarOficial = async () => {
+    setSincronizandoOficial(true);
+    try {
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/sequencia`, { method: 'POST' });
+      const dados = await res.json().catch(() => ({}));
+      if (res.ok) {
+        set('proximoNDpsProducao', dados.proximoNDpsProducao);
+        toast.success(dados.mensagem || `Sequência sincronizada: próxima DPS ${dados.proximoNDpsProducao}!`);
+      } else {
+        toast.error(dados.error || 'Não foi possível consultar a base oficial.');
+      }
+    } catch {
+      toast.error('Erro de conexão ao sincronizar com a base oficial.');
+    } finally {
+      setSincronizandoOficial(false);
+    }
+  };
   const preencherPeloCnpj = useCallback(async (avisar: boolean) => {
     if (!cnpj) return;
     setBuscandoCnpj(true);
@@ -390,7 +409,18 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               <input type="number" min="1" className="form-control" value={p.proximoNDpsHomologacao} onChange={e => set('proximoNDpsHomologacao', Number(e.target.value))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Próxima DPS (produção)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Próxima DPS (produção)</label>
+                <button
+                  type="button"
+                  onClick={sincronizarOficial}
+                  disabled={sincronizandoOficial}
+                  style={{ background: 'transparent', border: 'none', color: '#16a34a', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                  title="Busca o último número emitido no portal da Receita Federal e ajusta a sequência"
+                >
+                  {sincronizandoOficial ? 'Consultando...' : '🔄 Puxar da base oficial'}
+                </button>
+              </div>
               <input type="number" min="1" className="form-control" value={p.proximoNDpsProducao} onChange={e => set('proximoNDpsProducao', Number(e.target.value))} />
             </div>
           </div>

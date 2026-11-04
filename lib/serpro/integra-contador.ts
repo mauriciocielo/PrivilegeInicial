@@ -12,6 +12,10 @@ import db from '../prisma';
 import { ID_CERT_ESCRITORIO, ESCOPO_CERT_ESCRITORIO } from '../nfse/servidor';
 import { decifrar } from '../nfse/cofre';
 import { lerCertificadoA1 } from '../nfse/assinatura';
+import { classificarRelatorioSitfis, type SituacaoFederal } from '../certidoes/situacao';
+
+// Cada consulta faz duas chamadas: precisa caber nos 60 s da função.
+const TIMEOUT_GATEWAY_MS = 25_000;
 
 // Credenciais fornecidas pelo cliente (podem ser sobrescritas por variáveis de ambiente)
 const CONSUMER_KEY_PADRAO = 'cmbN0rWbJvs1rRwxHXgtzPxU3jEa';
@@ -155,6 +159,7 @@ export async function chamarIntegraContador(
     const url = `${SERPRO_CONFIG.gatewayUrl}/${endpoint}`;
     const req = https.request(url, {
       method: 'POST',
+      timeout: TIMEOUT_GATEWAY_MS,
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'jwt_token': jwtToken,
@@ -186,6 +191,7 @@ export async function chamarIntegraContador(
       });
     });
 
+    req.on('timeout', () => req.destroy(new Error('O Integra Contador não respondeu a tempo. Tente de novo.')));
     req.on('error', reject);
     req.write(payload);
     req.end();
@@ -387,7 +393,7 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
 
 export interface CertidaoFederalResult {
   sucesso: boolean;
-  situacao: 'NEGATIVA' | 'POSITIVA_COM_EFEITO_NEGATIVA' | 'POSITIVA' | 'PROCESSANDO' | 'ERRO';
+  situacao: SituacaoFederal;
   protocolo?: string;
   pdfBase64?: string;
   mensagem: string;
@@ -395,8 +401,8 @@ export interface CertidaoFederalResult {
 }
 
 /**
- * Consulta e emite a Certidão Negativa Federal / Relatório de Situação Fiscal (SITFIS)
- * diretamente junto à Receita Federal e PGFN via Integra Contador.
+ * Emite o Relatório de Situação Fiscal (SITFIS) pelo Integra Contador.
+ * É um relatório, não uma certidão: a CND é emitida pela Receita, em serviço próprio.
  */
 export async function consultarCertidaoNegativaFederal(cnpj: string): Promise<CertidaoFederalResult> {
   const cnpjLimpo = apenasDigitos(cnpj);
@@ -452,23 +458,16 @@ export async function consultarCertidaoNegativaFederal(cnpj: string): Promise<Ce
   if (resEmitir.status === 200 && resEmitir.dados?.pdf) {
     const pdfB64 = resEmitir.dados.pdf;
     const pdfBuf = Buffer.from(pdfB64, 'base64');
-    const linhas = extrairTextoPdf(pdfBuf);
-    const textoCompleto = linhas.join(' ').toUpperCase();
-
-    let situacao: 'NEGATIVA' | 'POSITIVA_COM_EFEITO_NEGATIVA' | 'POSITIVA' = 'NEGATIVA';
-    if (textoCompleto.includes('POSITIVA COM EFEITOS DE NEGATIVA')) {
-      situacao = 'POSITIVA_COM_EFEITO_NEGATIVA';
-    } else if (textoCompleto.includes('PENDÊNCIA') || textoCompleto.includes('DÉBITO') || textoCompleto.includes('EXIGIBILIDADE')) {
-      // Se houver pendências ativas sem suspensão
-      situacao = textoCompleto.includes('REGULAR') || textoCompleto.includes('NEGATIVA') ? 'NEGATIVA' : 'POSITIVA';
-    }
+    const situacao = classificarRelatorioSitfis(extrairTextoPdf(pdfBuf).join(' '));
 
     return {
       sucesso: true,
       situacao,
       protocolo,
       pdfBase64: pdfB64,
-      mensagem: 'Relatório de Situação Fiscal emitido com sucesso pela Receita Federal e PGFN.',
+      mensagem: situacao === 'INDETERMINADA'
+        ? 'Relatório emitido, mas o resultado não pôde ser lido automaticamente. Abra o PDF para conferir.'
+        : 'Relatório de Situação Fiscal emitido pela Receita Federal e PGFN.',
     };
   }
 

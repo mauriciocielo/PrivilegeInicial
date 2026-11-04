@@ -12,13 +12,48 @@ import {
 import { criarTransporteMtls, emitirNfse, SefinIndisponivelError } from '../../../../lib/nfse/sefin';
 import { totalRetidoFederal } from '../../../../lib/nfse/retencao';
 import { estimarValoresNota } from '../../../../lib/nfse/lote';
+import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const textoOuNull = (v: unknown) => texto(v) || null;
 
 /** Reserva o próximo nDPS do ambiente de forma atômica: duas emissões simultâneas nunca recebem o mesmo número. */
-async function reservarNDps(empresaId: string, ambiente: AmbienteNfse): Promise<string> {
+async function reservarNDps(empresaId: string, ambiente: AmbienteNfse, cnpjPrestador?: string): Promise<string> {
   const campo = ambiente === 'producao' ? 'proximoNDpsProducao' : 'proximoNDpsHomologacao';
+
+  if (ambiente === 'producao') {
+    // Busca o maior número já emitido (NFS-e e DPS) na base oficial para garantir sequência correta
+    const notasEmitidas = await db.nfsE.findMany({
+      where: {
+        empresaId,
+        status: { not: 'rascunho' },
+        ...(cnpjPrestador ? {
+          OR: [
+            { prestadorCnpj: cnpjPrestador },
+            { prestadorCnpj: apenasDigitos(cnpjPrestador) },
+          ],
+        } : {}),
+      },
+      select: { numero: true, nDps: true },
+    });
+
+    let maxEmitido = 0;
+    for (const nota of notasEmitidas) {
+      const num = parseInt(nota.numero || '0', 10);
+      if (!isNaN(num) && num > maxEmitido) maxEmitido = num;
+      const dps = parseInt(nota.nDps || '0', 10);
+      if (!isNaN(dps) && dps > maxEmitido) maxEmitido = dps;
+    }
+
+    const cfgAtual = await db.nfseConfig.findUnique({ where: { empresaId }, select: { proximoNDpsProducao: true } });
+    if (cfgAtual && (cfgAtual.proximoNDpsProducao || 1) <= maxEmitido) {
+      await db.nfseConfig.update({
+        where: { empresaId },
+        data: { proximoNDpsProducao: maxEmitido + 1 },
+      });
+    }
+  }
+
   const config = await db.nfseConfig.update({
     where: { empresaId },
     data: { [campo]: { increment: 1 } },
@@ -112,7 +147,27 @@ export async function POST(request: Request) {
 
     const clienteId = textoOuNull(n.clienteId);
     const clienteValido = clienteId ? await db.cliente.findFirst({ where: { id: clienteId, empresaId }, select: { id: true } }) : null;
-    const nDpsInicial = mesmoAmbiente ? existente!.nDps! : await reservarNDps(empresaId, ambiente);
+
+    // Se estiver em produção e o contador estiver em 1 (ou não houver notas no banco),
+    // tenta verificar as notas no ADN caso haja procuração/certificado para descobrir se já há notas emitidas no portal oficial
+    if (ambiente === 'producao' && (!existente || !existente.nDps)) {
+      const temNotasNoBanco = await db.nfsE.count({
+        where: {
+          empresaId,
+          status: { in: ['emitida', 'cancelada'] },
+          OR: [{ prestadorCnpj: empresa.cnpj }, { prestadorCnpj: apenasDigitos(empresa.cnpj) }],
+        },
+      });
+      if (temNotasNoBanco === 0 && (config.proximoNDpsProducao || 1) <= 1) {
+        try {
+          await sincronizarNotasAdn(empresaId, { meses: 12, reiniciar: true });
+        } catch (e) {
+          console.warn('Tentativa de sincronização inicial do ADN antes da emissão:', e);
+        }
+      }
+    }
+
+    const nDpsInicial = mesmoAmbiente ? existente!.nDps! : await reservarNDps(empresaId, ambiente, empresa.cnpj);
 
     // Prestador vem do cadastro, nunca do navegador. Os valores são estimativa até o retorno do Sefin.
     const estimado = estimarValoresNota(valorServicos, aliquotaIss, issRetido, totalRetidoFederal(retencao));
@@ -183,7 +238,7 @@ export async function POST(request: Request) {
         return { id, xmlAssinado: assinarXml(xml, 'infDPS', id, credencial) };
       },
       proximoNumero: async () => {
-        const nDps = await reservarNDps(empresaId, ambiente);
+        const nDps = await reservarNDps(empresaId, ambiente, empresa.cnpj);
         await db.nfsE.update({ where: { id: notaId }, data: { nDps, idDps: idDps(cfg, serie, nDps) } });
         return nDps;
       },
@@ -221,6 +276,16 @@ export async function POST(request: Request) {
         },
       },
     });
+
+    if (ambiente === 'producao') {
+      const numOficial = parseInt(autorizada.numero || '0', 10);
+      const dpsOficial = parseInt(resultado.nDps || '0', 10);
+      const proximoAposEmissao = Math.max(numOficial + 1, dpsOficial + 1);
+      const cfgAtual = await db.nfseConfig.findUnique({ where: { empresaId }, select: { proximoNDpsProducao: true } });
+      if (cfgAtual && (cfgAtual.proximoNDpsProducao || 1) < proximoAposEmissao) {
+        await db.nfseConfig.update({ where: { empresaId }, data: { proximoNDpsProducao: proximoAposEmissao } });
+      }
+    }
 
     return NextResponse.json({
       recuperada: resultado.recuperada,

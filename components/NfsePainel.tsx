@@ -21,7 +21,7 @@ import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
 import { Instrument_Serif } from 'next/font/google';
-import { Search, Download, FileCode, FileText, ArrowLeftRight } from 'lucide-react';
+import { Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
@@ -401,6 +401,42 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     }
   };
 
+  const [sincronizandoSequencia, setSincronizandoSequencia] = useState(false);
+
+  const calcularProximoNumero = useCallback(() => {
+    const proximoConfig = emProducao
+      ? (parametros?.proximoNDpsProducao || 1)
+      : (parametros?.proximoNDpsHomologacao || 1);
+    const doStore = parseInt(store.getNextNfseNumero(empresaId), 10) || 1;
+    const maxNfseList = nfseList
+      .filter(n => n.status !== 'cancelada' && (!emProducao || n.ambiente === 'producao'))
+      .map(n => parseInt(n.numero, 10))
+      .filter(n => !isNaN(n));
+    const maxDaLista = maxNfseList.length > 0 ? Math.max(...maxNfseList) + 1 : 1;
+    const maior = Math.max(proximoConfig, doStore, maxDaLista);
+    return String(maior).padStart(6, '0');
+  }, [emProducao, parametros, empresaId, nfseList]);
+
+  const handleSincronizarSequenciaOficial = async () => {
+    if (!empresaId) return;
+    setSincronizandoSequencia(true);
+    try {
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/sequencia`, { method: 'POST' });
+      const dados = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(dados.mensagem || `Sequência sincronizada com a base oficial! Próxima nota: ${dados.proximoNDpsProducao}`);
+        await carregarConfig(empresaId);
+        await carregarNotasServidor(empresaId);
+      } else {
+        toast.error(dados.error || 'Não foi possível sincronizar com a base oficial.');
+      }
+    } catch {
+      toast.error('Erro de conexão ao sincronizar com a base oficial.');
+    } finally {
+      setSincronizandoSequencia(false);
+    }
+  };
+
   const openNovo = () => {
     setPapelFiltro('prestadas');
     setPercentuaisRetencao(SEM_RETENCAO);
@@ -414,7 +450,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     }
     setForm({
       empresaId,
-      numero: store.getNextNfseNumero(empresaId),
+      numero: calcularProximoNumero(),
       serie: parametros?.serie || '1',
       status: 'rascunho',
       dataEmissao: hojeBrasilia(),
@@ -425,11 +461,11 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       valorServicos: 0,
       aliquotaIss: 0,
       issRetido: false,
-      codigoServico: parametros?.cTribNacPadrao || '',
-      cTribMun: parametros?.cTribMunPadrao || '',
-      cNbs: parametros?.cNbsPadrao || '',
+      codigoServico: parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac || '',
+      cTribMun: (parametros?.cTribMunPadrao && parametros.cTribMunPadrao.length <= 3 && parametros.cTribMunPadrao !== parametros?.cTribNacPadrao) ? parametros.cTribMunPadrao : '',
+      cNbs: parametros?.cNbsPadrao || parametros?.servicosConhecidos?.[0]?.cNbs || '',
       municipioPrestacao: parametros?.codigoMunicipio || '',
-      discriminacao: '',
+      discriminacao: parametros?.servicosConhecidos?.[0]?.descricao || '',
       tomadorCnpjCpf: '',
       tomadorRazaoSocial: '',
       gerarContaReceber: false,
@@ -565,7 +601,8 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
   const abrirEdicao = (n: NfsE) => {
     // Se cTribMun veio com 6 dígitos ou idêntico ao codigoServico, higieniza para não causar o erro E1235 no Sefin
-    const codServico = n.codigoServico || (n.cTribMun && n.cTribMun.length === 6 ? n.cTribMun : '');
+    const padraoEmpresa = parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac || '';
+    const codServico = (n.codigoServico && n.codigoServico.trim()) || (n.cTribMun && n.cTribMun.length === 6 ? n.cTribMun : '') || padraoEmpresa;
     const codMun = n.cTribMun && n.cTribMun.length <= 3 && n.cTribMun !== codServico ? n.cTribMun : '';
     setForm({ ...n, codigoServico: codServico, cTribMun: codMun });
     setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
@@ -599,7 +636,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       ...(form as NfsE),
       id: form.id || uid(),
       empresaId,
-      numero: form.numero || store.getNextNfseNumero(empresaId),
+      numero: form.numero || calcularProximoNumero(),
       serie: form.serie || parametros?.serie || '1',
       status: 'rascunho',
       prestadorCnpj: empresa?.cnpj || form.prestadorCnpj || '',
@@ -679,10 +716,15 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const enviarAoSefin = async (nfse: NfsE, pTotTribSN?: number): Promise<ResultadoEnvio> => {
     setTransmitindoId(nfse.id);
     try {
+      const padraoEmpresa = parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac || '';
+      const codServico = (nfse.codigoServico && nfse.codigoServico.trim()) || (nfse.cTribMun && nfse.cTribMun.length === 6 ? nfse.cTribMun : '') || padraoEmpresa;
+      const codMun = nfse.cTribMun && nfse.cTribMun.length <= 3 && nfse.cTribMun !== codServico ? nfse.cTribMun : null;
+      const notaAEnviar = { ...nfse, codigoServico: codServico, cTribMun: codMun };
+
       const res = await fetch('/api/nfse/emitir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId, nota: nfse, ...(pTotTribSN !== undefined ? { pTotTribSN } : {}) }),
+        body: JSON.stringify({ empresaId, nota: notaAEnviar, ...(pTotTribSN !== undefined ? { pTotTribSN } : {}) }),
       });
       const dados = await res.json().catch(() => ({}));
 
@@ -1210,6 +1252,18 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               </button>
             </>
           )}
+          {emProducao && (
+            <button
+              className="btn btn-secondary"
+              style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={handleSincronizarSequenciaOficial}
+              disabled={sincronizandoSequencia}
+              title="Busca o último número emitido no portal oficial e sincroniza a sequência da DPS"
+            >
+              <RefreshCw size={14} className={sincronizandoSequencia ? 'animate-spin' : ''} />
+              {sincronizandoSequencia ? 'Sincronizando...' : `Sincronizar Sequência Oficial (#${parametros?.proximoNDpsProducao || 1})`}
+            </button>
+          )}
           <button
             className="btn btn-secondary"
             style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
@@ -1248,9 +1302,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               className="btn btn-secondary"
               style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
               onClick={() => setShowCndModal(true)}
-              title="Consultar Certidão Negativa de Débitos Federais (CND / Receita Federal & PGFN via SERPRO)"
+              title="Gerar o Relatório de Situação Fiscal (SITFIS) na Receita Federal e na PGFN"
             >
-              🏛️ CND Federal
+              🏛️ Situação Federal
             </button>
           )}
           <button
@@ -1302,6 +1356,11 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               <strong style={{ color: '#171717' }}>
                 {emProducao ? 'Ambiente de Produção (com validade fiscal)' : 'Produção Restrita (ambiente de testes, sem valor fiscal)'}
               </strong>
+              {emProducao && (
+                <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
+                  Próxima DPS Oficial: #{parametros?.proximoNDpsProducao || 1}
+                </span>
+              )}
               {' — '}
               {modoCliente ? (
                 <>
@@ -2174,7 +2233,22 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                   <input type="month" className="form-control" max={hojeBrasilia().slice(0, 7)} value={form.dataCompetencia || ''} onChange={e => setForm(f => ({ ...f, dataCompetencia: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Cód. Tributação Nacional / Municipal *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Cód. Tributação Nacional / Municipal *</label>
+                    {(parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const padrao = parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac || '';
+                          setForm(f => ({ ...f, codigoServico: padrao, cTribMun: '' }));
+                          toast.success(`Código de tributação ${padrao} preenchido.`);
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#600000', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                      >
+                        ⚡ Puxar da empresa
+                      </button>
+                    )}
+                  </div>
                   <input
                     className="form-control"
                     maxLength={6}
@@ -2184,9 +2258,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                       const v = e.target.value.replace(/\D/g, '').slice(0, 6);
                       setForm(f => ({ ...f, codigoServico: v }));
                     }}
+                    style={{ marginTop: 4 }}
                   />
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                    Item da LC 116 (ex: 171901).
+                    Item da LC 116 (ex: 171901). É o mesmo código nacional e municipal.
                   </div>
                 </div>
                 <div className="form-group">
@@ -2208,7 +2283,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                     }}
                   />
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                    Se o município usa o mesmo código, <strong>deixe em branco</strong>.
+                    Se o município usa o código padrão (171901), <strong>deixe em branco</strong>.
                   </div>
                 </div>
               </div>

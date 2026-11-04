@@ -2,129 +2,84 @@ import { NextResponse } from 'next/server';
 import db from '../../../lib/prisma';
 import { requireAuth } from '../../../lib/api-auth';
 import { captureError } from '../../../lib/sentry-helper';
+import { filtroEmpresasNfse } from '../../../lib/nfse/escopo';
+import { cnpjValido } from '../../../lib/nfse/dps';
+import { ORIGEM_ANEXO, categoriaFederal, type CategoriaFederal } from '../../../lib/certidoes/situacao';
 
 export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
-    const url = new URL(request.url);
-    const empresaIdParam = url.searchParams.get('empresaId');
-
-    // Filtra empresas acessíveis
-    const whereEmpresa: any = {};
-    if (auth.session.role !== 'administrador') {
-      whereEmpresa.id = { in: auth.session.empresaIds };
-    }
-    if (empresaIdParam) {
-      whereEmpresa.id = empresaIdParam;
-    }
-
-    const empresas = await db.empresa.findMany({
-      where: whereEmpresa,
-      select: {
-        id: true,
-        razaoSocial: true,
-        nomeFantasia: true,
-        cnpj: true,
-        uf: true,
-        cidade: true,
-      },
+    const empresaIdParam = new URL(request.url).searchParams.get('empresaId');
+    const empresasBrutas = await db.empresa.findMany({
+      // O filtro de escopo sempre vale: pedir uma empresa específica não pode abrir outra carteira.
+      where: { AND: [await filtroEmpresasNfse(auth.session), ...(empresaIdParam ? [{ id: empresaIdParam }] : [])] },
+      select: { id: true, razaoSocial: true, nomeFantasia: true, cnpj: true, uf: true, cidade: true },
       orderBy: { razaoSocial: 'asc' },
     });
+    const empresas = empresasBrutas.filter(e => cnpjValido(e.cnpj));
 
-    // Busca as certidões mais recentes de cada empresa
-    const empresaIds = empresas.map(e => e.id);
-    const ultimasCertidoes = await db.certidaoFiscal.findMany({
-      where: { empresaId: { in: empresaIds } },
+    const ids = empresas.map(e => e.id);
+    const colunas = {
+      id: true, empresaId: true, tipo: true, uf: true, situacao: true, protocolo: true, emitidoEm: true, validoAte: true,
+      observacoes: true, pendencias: true, criadoAutomaticamente: true, createdAt: true,
+    } as const;
+    const certidoes = await db.certidaoFiscal.findMany({
+      where: { empresaId: { in: ids }, tipo: 'FEDERAL' },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        empresaId: true,
-        tipo: true,
-        uf: true,
-        situacao: true,
-        protocolo: true,
-        numeroCertidao: true,
-        codigoAutenticidade: true,
-        emitidoEm: true,
-        validoAte: true,
-        observacoes: true,
-        criadoAutomaticamente: true,
-        createdAt: true,
-      },
+      select: colunas,
+    });
+    // Só as anexadas: os registros estaduais antigos foram gerados pelo sistema, sem consultar a SEFAZ.
+    const anexadas = await db.certidaoFiscal.findMany({
+      where: { empresaId: { in: ids }, tipo: 'ESTADUAL', pendencias: { path: ['origem'], equals: ORIGEM_ANEXO } },
+      orderBy: { createdAt: 'desc' },
+      select: colunas,
     });
 
-    // Agrupa por empresa: mais recente federal e estadual
-    const mapaCertidoes = new Map<string, { federal?: any; estadual?: any; historico: any[] }>();
-    for (const c of ultimasCertidoes) {
-      if (!mapaCertidoes.has(c.empresaId)) {
-        mapaCertidoes.set(c.empresaId, { historico: [] });
+    const agrupar = (registros: typeof certidoes) => {
+      const mapa = new Map<string, typeof certidoes>();
+      for (const c of registros) {
+        const lista = mapa.get(c.empresaId);
+        if (lista) lista.push(c); else mapa.set(c.empresaId, [c]);
       }
-      const item = mapaCertidoes.get(c.empresaId)!;
-      item.historico.push(c);
-      if (c.tipo === 'FEDERAL' && !item.federal) {
-        item.federal = c;
-      } else if (c.tipo === 'ESTADUAL' && !item.estadual) {
-        item.estadual = c;
-      }
-    }
+      return mapa;
+    };
+    const federaisPorEmpresa = agrupar(certidoes);
+    const anexadasPorEmpresa = agrupar(anexadas);
 
-    let totalRegulares = 0;
-    let totalComEfeito = 0;
-    let totalPendencias = 0;
-    let totalNaoConsultadas = 0;
-
+    const metricas: Record<CategoriaFederal, number> = { pendencias: 0, atencao: 0, nao_consultada: 0, com_efeito: 0, sem_pendencias: 0 };
     const lista = empresas.map(e => {
-      const c = mapaCertidoes.get(e.id) || { historico: [] };
-      const fedSit = c.federal?.situacao;
-      const estSit = c.estadual?.situacao;
-
-      if (!fedSit && !estSit) {
-        totalNaoConsultadas++;
-      } else if (fedSit === 'POSITIVA' || estSit === 'POSITIVA') {
-        totalPendencias++;
-      } else if (fedSit === 'POSITIVA_COM_EFEITO_NEGATIVA' || estSit === 'POSITIVA_COM_EFEITO_NEGATIVA') {
-        totalComEfeito++;
-      } else if (fedSit === 'NEGATIVA' || estSit === 'NEGATIVA') {
-        totalRegulares++;
-      }
-
-      return {
-        ...e,
-        federal: c.federal || null,
-        estadual: c.estadual || null,
-        historico: c.historico.slice(0, 10),
-      };
+      const federais = federaisPorEmpresa.get(e.id) || [];
+      const estaduaisTodas = anexadasPorEmpresa.get(e.id) || [];
+      const federal = federais[0] || null;
+      const categoria = categoriaFederal(federal);
+      metricas[categoria]++;
+      // Vale a mais recente de cada estado: uma empresa pode ter certidão de vários.
+      const vistas = new Set<string>();
+      const estaduais = estaduaisTodas.filter(c => {
+        const uf = c.uf || '';
+        if (vistas.has(uf)) return false;
+        vistas.add(uf);
+        return true;
+      });
+      const historico = [...federais, ...estaduaisTodas]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 15);
+      return { ...e, federal, categoria, estaduais, historico };
     });
 
-    // Configuração de agendamento automático
-    const configAgendamento = await db.certidaoConfig.findFirst({
-      where: { empresaId: null },
-    });
+    const configAgendamento = await db.certidaoConfig.findFirst({ where: { empresaId: null } });
 
     return NextResponse.json({
       empresas: lista,
-      metricas: {
-        total: empresas.length,
-        regulares: totalRegulares,
-        comEfeito: totalComEfeito,
-        pendencias: totalPendencias,
-        naoConsultadas: totalNaoConsultadas,
-      },
-      configAgendamento: configAgendamento || {
-        ativo: true,
-        executarUltimoDia: true,
-        horario: '23:00',
-        consultarFederal: true,
-        consultarEstadual: true,
-        notificarEmail: true,
-      },
+      metricas: { total: empresas.length, ...metricas },
+      configAgendamento: configAgendamento || { ativo: false, notificarEmail: true, emailsNotificacao: '' },
     });
   } catch (error) {
     console.error('Erro em GET /api/certidoes:', error);
     captureError(error);
-    return NextResponse.json({ error: 'Erro ao listar certidões fiscais.' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao listar a situação fiscal.' }, { status: 500 });
   }
 }
-
