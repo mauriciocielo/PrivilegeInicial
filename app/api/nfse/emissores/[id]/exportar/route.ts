@@ -165,3 +165,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Erro ao exportar as notas fiscais.' }, { status: 500 });
   }
 }
+

@@ -95,3 +95,4 @@ export function criarZipBuffer(arquivos: ArquivoZip[]): Buffer {
 
   return Buffer.concat([...locais, ...centrais, fim]);
 }
+
