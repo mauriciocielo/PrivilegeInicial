@@ -98,6 +98,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Altera só a alíquota do Simples, a partir da tela da nota. Fora do PUT de propósito: ele regrava
+ * todos os parâmetros, e um valor antigo do contador de DPS poderia repetir o número de uma nota.
+ */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireAuth(request);
+    if (auth.error) return auth.error;
+    const { id: empresaId } = await params;
+    const negado = await acessoNegado(auth.session, empresaId);
+    if (negado) return negado;
+
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const pTotTribSN = Number(body.pTotTribSN);
+    if (body.pTotTribSN == null || !(pTotTribSN > 0) || pTotTribSN > 100) {
+      return NextResponse.json({ error: 'Informe uma alíquota do Simples entre 0 e 100%.' }, { status: 422 });
+    }
+    const alterado = await db.nfseConfig.updateMany({ where: { empresaId }, data: { pTotTribSN } });
+    if (alterado.count === 0) return NextResponse.json({ error: 'Configure o Emissor Nacional desta empresa primeiro.' }, { status: 404 });
+    return NextResponse.json({ pTotTribSN });
+  } catch (error) {
+    console.error('Erro em PATCH nfse-config:', error);
+    captureError(error);
+    return NextResponse.json({ error: 'Erro ao salvar a alíquota do Simples.' }, { status: 500 });
+  }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAuth(request);

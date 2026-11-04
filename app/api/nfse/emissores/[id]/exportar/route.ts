@@ -11,6 +11,10 @@ import {
 } from '../../../../../../lib/nfse/danfse';
 import { criarZipBuffer, type ArquivoZip } from '../../../../../../lib/nfse/zip';
 
+const MAX_NOTAS_SELECIONADAS = 200;
+// A Vercel recusa respostas acima de cerca de 4,5 MB.
+const LIMITE_RESPOSTA_BYTES = 4.2 * 1024 * 1024;
+
 function limparNomeArquivo(texto: string): string {
   return texto
     .normalize('NFD')
@@ -27,6 +31,7 @@ function limparNomeArquivo(texto: string): string {
  * - `papel`: 'prestadas' | 'tomadas' | 'todas' (padrão 'prestadas')
  * - `formato`: 'xml' | 'pdf' | 'ambos' | 'pdf_unico' (padrão 'ambos')
  * - `incluirCanceladas`: '1' | '0' (padrão '0', exporta apenas emitidas)
+ * - `ids`: ids separados por vírgula (notas selecionadas). Substitui mês, papel e canceladas.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,10 +42,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (negado) return negado;
 
     const url = new URL(request.url);
-    const mes = (url.searchParams.get('mes') || '').trim();
-    const papel = url.searchParams.get('papel') || 'prestadas';
+    const ids = (url.searchParams.get('ids') || '').split(',').map(i => i.trim()).filter(Boolean);
+    if (ids.length > MAX_NOTAS_SELECIONADAS) {
+      return NextResponse.json({ error: `Selecione no máximo ${MAX_NOTAS_SELECIONADAS} notas por vez.` }, { status: 400 });
+    }
+    const porSelecao = ids.length > 0;
+    const mes = porSelecao ? '' : (url.searchParams.get('mes') || '').trim();
+    const papel = porSelecao ? 'todas' : url.searchParams.get('papel') || 'prestadas';
     const formato = url.searchParams.get('formato') || 'ambos';
-    const incluirCanceladas = url.searchParams.get('incluirCanceladas') === '1';
+    const incluirCanceladas = porSelecao || url.searchParams.get('incluirCanceladas') === '1';
 
     const empresa = await db.empresa.findUnique({
       where: { id: empresaId },
@@ -53,6 +63,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const todasNotas = await db.nfsE.findMany({
       where: {
         empresaId,
+        ...(porSelecao ? { id: { in: ids } } : {}),
         chaveAcesso: { not: null },
         ...(incluirCanceladas ? { status: { in: ['emitida', 'cancelada'] } } : { status: 'emitida' }),
       },
@@ -80,8 +91,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const logoPng = Buffer.from(logoNfse.png, 'base64');
-    const sufixoPapel = papel === 'tomadas' ? 'ServicosTomados' : papel === 'todas' ? 'TodasNotas' : 'NotasEmitidas';
-    const sufixoMes = mes || 'Periodo';
+    const sufixoPapel = porSelecao ? 'NotasSelecionadas' : papel === 'tomadas' ? 'ServicosTomados' : papel === 'todas' ? 'TodasNotas' : 'NotasEmitidas';
+    const sufixoMes = porSelecao ? String(filtradas.length) : mes || 'Periodo';
+    const cabecalhoQuantidade = { 'X-Notas-Exportadas': String(filtradas.length) };
+    const grandeDemais = (tamanho: number) => tamanho > LIMITE_RESPOSTA_BYTES
+      ? NextResponse.json({ error: 'O arquivo passou do limite de envio. Selecione menos notas, um período menor ou só os XMLs.' }, { status: 413 })
+      : null;
     const nomeEmpresa = limparNomeArquivo(empresa.nomeFantasia || empresa.razaoSocial || cnpjEmpresa);
 
     if (formato === 'pdf_unico') {
@@ -99,8 +114,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         });
       }
       const pdfUnico = gerarDanfsePdfUnico(paginas);
+      const excessoPdf = grandeDemais(pdfUnico.length);
+      if (excessoPdf) return excessoPdf;
       return new Response(new Uint8Array(pdfUnico), {
         headers: {
+          ...cabecalhoQuantidade,
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="DANFSe-${nomeEmpresa}-${sufixoPapel}-${sufixoMes}.pdf"`,
           'Cache-Control': 'private, no-store',
@@ -152,8 +170,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const zip = criarZipBuffer(arquivos);
+    const excessoZip = grandeDemais(zip.length);
+    if (excessoZip) return excessoZip;
     return new Response(new Uint8Array(zip), {
       headers: {
+        ...cabecalhoQuantidade,
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="NFSe-${nomeEmpresa}-${sufixoPapel}-${sufixoMes}.zip"`,
         'Cache-Control': 'private, no-store',

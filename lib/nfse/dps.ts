@@ -193,7 +193,7 @@ export function validarEmissao(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date =
   }
 
   if (cfg.opSimpNac === 3 && cfg.pTotTribSN == null) {
-    problemas.push('Informe na configuração a alíquota aproximada do Simples (pTotTribSN).');
+    problemas.push('Informe a alíquota do Simples Nacional na nota ou na configuração do emissor (pTotTribSN).');
   }
 
   if (d.issRetido) {

@@ -6,6 +6,7 @@ import {
   Eye, EyeOff, RefreshCw, Trash2, Building, Calendar, ArrowRight, ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
 interface NfeCertificadoModalProps {
   empresaId: string;
@@ -77,7 +78,7 @@ export default function NfeCertificadoModal({
       setCarregando(true);
       const res = await fetch(`/api/nfe/certificado?empresaId=${empresaId}`);
       if (!res.ok) throw new Error('Falha ao carregar situação dos certificados.');
-      const json = await res.json();
+      const json = await lerJsonResposta(res);
       setDados(json);
     } catch (err: any) {
       console.error(err);
@@ -126,7 +127,7 @@ export default function NfeCertificadoModal({
         }),
       });
 
-      const ret = await res.json();
+      const ret = await lerJsonResposta(res);
       if (!res.ok) throw new Error(ret.error || 'Falha ao validar certificado A1.');
 
       toast.success(ret.mensagem || 'Certificado digital A1 salvo com sucesso!');
@@ -151,7 +152,7 @@ export default function NfeCertificadoModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresaId, usarProcuracao }),
       });
-      const ret = await res.json();
+      const ret = await lerJsonResposta(res);
       if (!res.ok) throw new Error(ret.error || 'Falha ao alternar certificado.');
 
       toast.success(usarProcuracao

@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { confirmAsync } from './ConfirmProvider';
 import NfseServicoPicker from './NfseServicoPicker';
 import NfseRegrasRetencao from './NfseRegrasRetencao';
 import type { RegraRetencao } from '../lib/nfse/retencao';
+import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 
 export interface NfseServicoConhecido {
   cTribNac: string;
@@ -102,19 +103,70 @@ function lerArquivoBase64(arquivo: File): Promise<string> {
 
 interface Props {
   empresaId: string;
+  cnpj?: string;
+  cnaes?: CnaeEmpresa[] | null;
   config: NfseConfigResposta | null;
   onFechar: () => void;
   onSalvo: (config: NfseConfigResposta) => void;
 }
 
-export default function NfseConfigModal({ empresaId, config, onFechar, onSalvo }: Props) {
+export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFechar, onSalvo }: Props) {
   const [p, setP] = useState<NfseParametros>(config?.parametros || PARAMETROS_INICIAIS);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [senha, setSenha] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [buscandoSerpro, setBuscandoSerpro] = useState(false);
+
+  const buscarAliquotaSerpro = async () => {
+    if (!empresaId) return;
+    setBuscandoSerpro(true);
+    try {
+      const res = await fetch(`/api/serpro/aliquota-simples?empresaId=${empresaId}`);
+      const data = await res.json();
+      if (data.sucesso && data.aliquota > 0) {
+        set('pTotTribSN', data.aliquota);
+        toast.success(`Alíquota do Simples Nacional obtida via Integra Contador: ${data.aliquota}% (${data.periodoApuracao || 'último PA'})`);
+      } else {
+        toast.error(data.error || 'Nenhuma apuração recente encontrada no SERPRO.');
+      }
+    } catch {
+      toast.error('Erro ao consultar o Integra Contador.');
+    } finally {
+      setBuscandoSerpro(false);
+    }
+  };
 
   const set = <K extends keyof NfseParametros>(campo: K, valor: NfseParametros[K]) => setP(atual => ({ ...atual, [campo]: valor }));
   const num = (v: string) => (v === '' ? null : Number(v));
+
+  // O CNPJ da empresa já é conhecido: município e regime vêm do cadastro público.
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [municipioNome, setMunicipioNome] = useState('');
+  const preencherPeloCnpj = useCallback(async (avisar: boolean) => {
+    if (!cnpj) return;
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`/api/nfse/dados-publicos?cnpj=${encodeURIComponent(cnpj)}`);
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) { if (avisar) toast.warning(dados.error || 'Não foi possível consultar o CNPJ.'); return; }
+      setP(a => ({
+        ...a,
+        codigoMunicipio: dados.codigoMunicipio || a.codigoMunicipio,
+        opSimpNac: dados.opSimpNac ?? a.opSimpNac,
+      }));
+      setMunicipioNome(dados.cidade ? `${dados.cidade}${dados.uf ? `/${dados.uf}` : ''}` : '');
+      if (avisar) toast.success('Município e regime preenchidos pelo CNPJ. Confira antes de salvar.');
+    } catch {
+      if (avisar) toast.warning('Sem conexão para consultar o CNPJ.');
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }, [cnpj]);
+
+  const municipioVazioAoAbrir = !config?.parametros?.codigoMunicipio;
+  useEffect(() => {
+    if (municipioVazioAoAbrir) preencherPeloCnpj(false);
+  }, [municipioVazioAoAbrir, preencherPeloCnpj]);
 
   const salvar = async () => {
     const enviarCertificado = !p.usarProcuracao && !!arquivo;
@@ -205,6 +257,14 @@ export default function NfseConfigModal({ empresaId, config, onFechar, onSalvo }
 
         <div style={secaoStyle}>
           <div style={tituloStyle}>🏢 Prestador</div>
+          {cnpj && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, fontSize: 13 }}>
+              <span>CNPJ <strong>{cnpj}</strong></span>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => preencherPeloCnpj(true)} disabled={buscandoCnpj}>
+                {buscandoCnpj ? 'Consultando...' : 'Preencher pelo CNPJ'}
+              </button>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Ambiente</label>
@@ -215,7 +275,8 @@ export default function NfseConfigModal({ empresaId, config, onFechar, onSalvo }
             </div>
             <div className="form-group">
               <label className="form-label">Município (código IBGE) *</label>
-              <input className="form-control" maxLength={7} value={p.codigoMunicipio || ''} onChange={e => set('codigoMunicipio', e.target.value)} />
+              <input className="form-control" maxLength={7} value={p.codigoMunicipio || ''} onChange={e => { setMunicipioNome(''); set('codigoMunicipio', e.target.value); }} />
+              {municipioNome && <div style={ajudaStyle}>{municipioNome}</div>}
             </div>
             <div className="form-group">
               <label className="form-label">Inscrição municipal</label>
@@ -242,7 +303,30 @@ export default function NfseConfigModal({ empresaId, config, onFechar, onSalvo }
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Alíquota aproximada do Simples (%) *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Alíquota do Simples Nacional (%) *</label>
+                    <button
+                      type="button"
+                      onClick={buscarAliquotaSerpro}
+                      disabled={buscandoSerpro}
+                      style={{
+                        background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 4,
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: buscandoSerpro ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                      title="Busca a alíquota oficial apurada na Receita Federal via Integra Contador (SERPRO)"
+                    >
+                      {buscandoSerpro ? 'Buscando...' : '⚡ Buscar no SERPRO'}
+                    </button>
+                  </div>
                   <input type="number" step="0.01" min="0" className="form-control" value={p.pTotTribSN ?? ''} onChange={e => set('pTotTribSN', num(e.target.value))} />
                 </div>
               </>
@@ -273,6 +357,7 @@ export default function NfseConfigModal({ empresaId, config, onFechar, onSalvo }
         <div style={secaoStyle}>
           <div style={tituloStyle}>⚙️ Serviço padrão e numeração</div>
           <NfseServicoPicker
+            cnaes={cnaes}
             cTribNac={p.cTribNacPadrao || ''}
             cNbs={p.cNbsPadrao || ''}
             onChange={m => setP(a => ({

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   store, type NfsE, type Cliente, type Empresa, type Portador, type PlanoConta, uid,
 } from '../lib/store';
@@ -14,10 +14,12 @@ import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse
 import NfseCopiarModal from './NfseCopiarModal';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
-import { MOTIVOS_CANCELAMENTO, apenasDigitos, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
+import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
+import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
+import CertidaoFederalModal from './CertidaoFederalModal';
 import { Instrument_Serif } from 'next/font/google';
 import { Search, Download, FileCode, FileText, ArrowLeftRight } from 'lucide-react';
 import {
@@ -98,6 +100,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const [showAcessoClienteModal, setShowAcessoClienteModal] = useState(false);
   const [showCopiarModal, setShowCopiarModal] = useState(false);
   const [showImportarModal, setShowImportarModal] = useState(false);
+  const [showCndModal, setShowCndModal] = useState(false);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [progressoLote, setProgressoLote] = useState<{ feitas: number; total: number } | null>(null);
 
@@ -113,6 +116,14 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   // Depois que a pessoa mexe nas retenções da nota, a regra não sobrescreve mais.
   const [retencaoManual, setRetencaoManual] = useState(false);
   const [regraAplicada, setRegraAplicada] = useState('');
+  // Null enquanto a pessoa não digitar: vale o valor salvo na configuração do emissor.
+  const [aliquotaSimplesDigitada, setAliquotaSimplesDigitada] = useState<string | null>(null);
+  const [buscandoAliquotaSerpro, setBuscandoAliquotaSerpro] = useState(false);
+  const [infoAliquotaSerpro, setInfoAliquotaSerpro] = useState<string | null>(null);
+  const [buscandoTomador, setBuscandoTomador] = useState(false);
+  const [origemEndereco, setOrigemEndereco] = useState('');
+  // Só vale a resposta da última consulta: as anteriores podem chegar depois.
+  const ultimaConsultaTomador = useRef('');
 
   const carregarListaEmissores = useCallback(async () => {
     if (modoCliente) return;
@@ -147,7 +158,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       const dados = await res.json().catch(() => ({}));
       if (res.ok && Array.isArray(dados.notas)) {
         const locais = new Map(store.getNfsE(eId).map(n => [n.id, n]));
-        const mescladas: NfsE[] = dados.notas.map((n: NfsE) => ({
+        // Excluída aqui e ainda não apagada no servidor: não pode voltar para a lista.
+        const excluidas = new Set(store.getDeletedRecords().filter(r => r.collection === 'cf_nfse').map(r => r.id));
+        const mescladas: NfsE[] = dados.notas.filter((n: NfsE) => !excluidas.has(n.id)).map((n: NfsE) => ({
           ...locais.get(n.id),
           ...n,
           createdAt: String(n.createdAt),
@@ -229,6 +242,32 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   }, [modoCliente, carregarListaEmissores, load, carregarConfig, carregarNotasServidor]);
 
   const cnpjEmpresaAtual = empresa?.cnpj || '';
+
+  // CNAEs da empresa emissora, para destacar os serviços dela. Sem resposta, só some o destaque.
+  const [cnaesEmpresa, setCnaesEmpresa] = useState<CnaeEmpresa[] | null>(null);
+  useEffect(() => {
+    const cnpj = apenasDigitos(cnpjEmpresaAtual);
+    if (!cnpjValido(cnpj)) { setCnaesEmpresa([]); return; }
+    const chave = `cf_nfse_cnaes_${cnpj}`;
+    try {
+      const guardado = sessionStorage.getItem(chave);
+      if (guardado) { setCnaesEmpresa(JSON.parse(guardado)); return; }
+    } catch {
+      // Cache ilegível: consulta de novo.
+    }
+    let cancelado = false;
+    setCnaesEmpresa(null);
+    fetch(`/api/nfse/dados-publicos?cnpj=${cnpj}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(dados => {
+        if (cancelado) return;
+        const cnaes: CnaeEmpresa[] = dados?.cnaes || [];
+        setCnaesEmpresa(cnaes);
+        if (cnaes.length > 0) sessionStorage.setItem(chave, JSON.stringify(cnaes));
+      })
+      .catch(() => { if (!cancelado) setCnaesEmpresa([]); });
+    return () => { cancelado = true; };
+  }, [cnpjEmpresaAtual]);
 
   // Notas que passam apenas pelo filtro de período (para alimentar contadores das abas e cards de resumo)
   const notasNoPeriodo = useMemo(() => {
@@ -315,6 +354,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     tomadorBairro: form.tomadorBairro,
   };
   const enderecoCompleto = enderecoTomadorCompleto(dadosEnderecoForm);
+  const ehSimples = parametros?.opSimpNac === 3;
+  const aliquotaSimplesForm = aliquotaSimplesDigitada ?? (parametros?.pTotTribSN != null ? String(parametros.pTotTribSN) : '');
+  const aliquotaSimplesValida = (v: number) => v > 0 && v <= 100;
+  const AVISO_ALIQUOTA_SIMPLES = 'Informe a alíquota do Simples Nacional para emitir.';
 
   // A regra de retenção acompanha o serviço, o tomador e o valor da nota em edição.
   const regrasDaEmpresa = parametros?.regrasRetencao;
@@ -334,11 +377,36 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     });
   }, [modalMode, retencaoManual, regrasDaEmpresa, form.codigoServico, form.tomadorCnpjCpf, form.valorServicos]);
 
+  const buscarAliquotaIntegraContador = async () => {
+    if (!empresaId) return;
+    setBuscandoAliquotaSerpro(true);
+    setInfoAliquotaSerpro(null);
+    try {
+      const res = await fetch(`/api/serpro/aliquota-simples?empresaId=${empresaId}`);
+      const data = await res.json();
+      if (data.sucesso && data.aliquota > 0) {
+        setAliquotaSimplesDigitada(String(data.aliquota));
+        const det = `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (RBT12: R$ ${(data.rbt12 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
+        setInfoAliquotaSerpro(det);
+        toast.success(`Alíquota do Simples atualizada via Integra Contador: ${data.aliquota}%`);
+      } else {
+        toast.error(data.error || 'Nenhuma apuração recente do Simples Nacional foi localizada no SERPRO para este CNPJ.');
+      }
+    } catch {
+      toast.error('Erro de conexão ao consultar alíquota no Integra Contador.');
+    } finally {
+      setBuscandoAliquotaSerpro(false);
+    }
+  };
+
   const openNovo = () => {
     setPapelFiltro('prestadas');
     setPercentuaisRetencao(SEM_RETENCAO);
     setRetencaoManual(false);
     setRegraAplicada('');
+    setAliquotaSimplesDigitada(null);
+    setInfoAliquotaSerpro(null);
+    setOrigemEndereco('');
     if (!prontoParaEmitir) {
       toast.info(modoCliente ? `${AVISO_FALE_COM_ESCRITORIO} O rascunho pode ser salvo mesmo assim.` : 'Configure o município e o certificado antes de emitir. O rascunho pode ser salvo mesmo assim.');
     }
@@ -432,6 +500,92 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       tomadorUf: cli.estado || '',
       tomadorCep: cli.cep || '',
     }));
+    // O cadastro do cliente não guarda o código do município: completa só o que falta.
+    preencherTomadorPeloCnpj(cli.cpfCnpj, true);
+  };
+
+  const preencherTomadorPeloCnpj = async (documento: string, soCamposVazios: boolean) => {
+    const cnpj = apenasDigitos(documento);
+    if (!cnpjValido(cnpj)) return;
+    ultimaConsultaTomador.current = cnpj;
+    setBuscandoTomador(true);
+    setOrigemEndereco('');
+    try {
+      const res = await fetch(`/api/nfse/dados-publicos?cnpj=${cnpj}`);
+      const dados = await res.json().catch(() => ({}));
+      if (ultimaConsultaTomador.current !== cnpj) return;
+      if (!res.ok) { toast.warning(dados.error || 'Não foi possível consultar o CNPJ. Preencha os dados à mão.'); return; }
+      const valor = (atual: string | null | undefined, novo: string | null | undefined) => (soCamposVazios ? atual || novo || '' : novo || atual || '');
+      setForm(f => {
+        // A pessoa pode ter trocado o CNPJ enquanto a consulta estava em andamento.
+        if (apenasDigitos(f.tomadorCnpjCpf || '') !== cnpj) return f;
+        return {
+          ...f,
+          tomadorRazaoSocial: valor(f.tomadorRazaoSocial, dados.razaoSocial),
+          tomadorEmail: valor(f.tomadorEmail, dados.email),
+          tomadorEndereco: valor(f.tomadorEndereco, dados.logradouro),
+          tomadorNumero: valor(f.tomadorNumero, dados.numero),
+          tomadorBairro: valor(f.tomadorBairro, dados.bairro),
+          tomadorCep: valor(f.tomadorCep, dados.cep),
+          tomadorCodigoMunicipio: valor(f.tomadorCodigoMunicipio, dados.codigoMunicipio),
+          tomadorCidade: valor(f.tomadorCidade, dados.cidade),
+          tomadorUf: valor(f.tomadorUf, dados.uf),
+        };
+      });
+      setOrigemEndereco('Preenchido pelo cadastro público do CNPJ. Confira antes de emitir.');
+    } catch {
+      if (ultimaConsultaTomador.current === cnpj) toast.warning('Sem conexão para consultar o CNPJ.');
+    } finally {
+      if (ultimaConsultaTomador.current === cnpj) setBuscandoTomador(false);
+    }
+  };
+
+  const preencherEnderecoPeloCep = async (cepDigitado: string) => {
+    const cep = apenasDigitos(cepDigitado);
+    if (cep.length !== 8) return;
+    try {
+      const res = await fetch(`/api/nfse/dados-publicos?cep=${cep}`);
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.warning(dados.error || 'Não foi possível consultar o CEP.'); return; }
+      setForm(f => (apenasDigitos(f.tomadorCep || '') !== cep ? f : {
+        ...f,
+        tomadorEndereco: dados.logradouro || f.tomadorEndereco,
+        tomadorBairro: dados.bairro || f.tomadorBairro,
+        tomadorCodigoMunicipio: dados.codigoMunicipio || f.tomadorCodigoMunicipio,
+        tomadorCidade: dados.cidade || f.tomadorCidade,
+        tomadorUf: dados.uf || f.tomadorUf,
+      }));
+      setOrigemEndereco('Endereço e código do município preenchidos pelo CEP. Confira e informe o número.');
+    } catch {
+      toast.warning('Sem conexão para consultar o CEP.');
+    }
+  };
+
+  const abrirEdicao = (n: NfsE) => {
+    setForm({ ...n });
+    setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
+    setRetencaoManual(true);
+    setRegraAplicada('');
+    setAliquotaSimplesDigitada(null);
+    setOrigemEndereco('');
+    setModalMode('novo');
+  };
+
+  /** Guarda a alíquota digitada para as próximas notas. Cliente só usa na nota: a configuração é do escritório. */
+  const salvarAliquotaSimples = async (aliquota: number) => {
+    if (modoCliente || !ehSimples || !aliquotaSimplesValida(aliquota) || aliquota === parametros?.pTotTribSN) return;
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/nfse-config`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pTotTribSN: aliquota }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.warning(dados.error || 'A alíquota do Simples não foi salva para as próximas notas.'); return; }
+      setConfig(c => (c?.parametros ? { ...c, parametros: { ...c.parametros, pTotTribSN: aliquota } } : c));
+    } catch {
+      toast.warning('A alíquota do Simples não foi salva para as próximas notas.');
+    }
   };
 
   const montarRascunho = (): NfsE => {
@@ -470,13 +624,16 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     if (!valorForm) { toast.error('Informe o valor do serviço.'); return; }
     const financeiroErro = financeiroInvalido(financeiroForm);
     if (financeiroErro) { toast.error(financeiroErro); return; }
+    const aliquotaSimples = Number(aliquotaSimplesForm);
+    if (emitir && ehSimples && !aliquotaSimplesValida(aliquotaSimples)) { toast.error(AVISO_ALIQUOTA_SIMPLES); return; }
 
     const rascunho = montarRascunho();
     store.saveNfsE(rascunho);
     setNfseList(store.getNfsE(empresaId));
+    await salvarAliquotaSimples(aliquotaSimples);
     if (!emitir) { setModalMode(null); return; }
     // O formulário só fecha se autorizada: em uma rejeição o usuário corrige ali mesmo.
-    const autorizada = await handleTransmitir(rascunho);
+    const autorizada = await handleTransmitir(rascunho, ehSimples ? aliquotaSimples : undefined);
     if (autorizada) setModalMode('ver');
     else setForm(store.getNfsE(empresaId).find(n => n.id === rascunho.id) || rascunho);
   };
@@ -514,13 +671,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     return false;
   };
 
-  const enviarAoSefin = async (nfse: NfsE): Promise<ResultadoEnvio> => {
+  const enviarAoSefin = async (nfse: NfsE, pTotTribSN?: number): Promise<ResultadoEnvio> => {
     setTransmitindoId(nfse.id);
     try {
       const res = await fetch('/api/nfse/emitir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId, nota: nfse }),
+        body: JSON.stringify({ empresaId, nota: nfse, ...(pTotTribSN !== undefined ? { pTotTribSN } : {}) }),
       });
       const dados = await res.json().catch(() => ({}));
 
@@ -556,14 +713,20 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   };
 
   /** Devolve true se o Sefin autorizou a nota. */
-  const handleTransmitir = async (nfse: NfsE): Promise<boolean> => {
+  const handleTransmitir = async (nfse: NfsE, pTotTribSN?: number): Promise<boolean> => {
     if (transmitindoId || !garantirPronto()) return false;
+    // Transmitindo pela lista, sem alíquota salva: abre a nota para informar.
+    if (ehSimples && parametros?.pTotTribSN == null && pTotTribSN === undefined) {
+      toast.error(AVISO_ALIQUOTA_SIMPLES);
+      abrirEdicao(nfse);
+      return false;
+    }
     if (emProducao) {
       const confirmado = await confirmAsync(`Emitir nota fiscal REAL de ${fmt.currency(nfse.valorServicos)} para ${nfse.tomadorRazaoSocial}?`);
       if (!confirmado) return false;
     }
 
-    const envio = await enviarAoSefin(nfse);
+    const envio = await enviarAoSefin(nfse, pTotTribSN);
     if (envio.resultado !== 'autorizada') {
       if (envio.resultado === 'incerta') toast.warning(envio.mensagem, { duration: 15000 });
       else toast.error(envio.mensagem, { duration: 15000 });
@@ -578,7 +741,12 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     return true;
   };
 
-  const rascunhosSelecionados = nfseList.filter(n => n.status === 'rascunho' && selecionadas.has(n.id));
+  // Só conta o que está na lista: uma ação nunca atinge uma nota que o filtro escondeu.
+  const notasSelecionadas = filtered.filter(n => selecionadas.has(n.id));
+  const rascunhosSelecionados = notasSelecionadas.filter(n => n.status === 'rascunho' && !ehNotaTomada(n, cnpjEmpresaAtual));
+  const excluiveisSelecionadas = notasSelecionadas.filter(n => !n.chaveAcesso);
+  const exportaveisSelecionadas = notasSelecionadas.filter(n => !!n.chaveAcesso);
+  const todasMarcadas = filtered.length > 0 && notasSelecionadas.length === filtered.length;
 
   const alternarSelecao = (id: string) => setSelecionadas(atual => {
     const novo = new Set(atual);
@@ -588,6 +756,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
   const handleTransmitirLote = async () => {
     if (transmitindoId || progressoLote || rascunhosSelecionados.length === 0 || !garantirPronto()) return;
+    if (ehSimples && parametros?.pTotTribSN == null) {
+      toast.error(`${AVISO_ALIQUOTA_SIMPLES} Abra uma nota ou use Configurar Emissor.`);
+      return;
+    }
     const total = rascunhosSelecionados.reduce((soma, n) => soma + n.valorServicos, 0);
     const pergunta = emProducao
       ? `Emitir ${rascunhosSelecionados.length} nota(s) fiscal(is) REAL(IS), somando ${fmt.currency(total)}?`
@@ -693,6 +865,57 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     toast.success('Rascunhos e notas simuladas excluídos.');
   };
 
+  /** Exclui rascunhos e notas simuladas. Nota com chave do Sefin nunca é excluída por aqui. */
+  const handleExcluirSemChave = async (notas: NfsE[]) => {
+    const alvo = notas.filter(n => !n.chaveAcesso);
+    if (alvo.length === 0) return false;
+    const nomeAlvo = alvo.length === 1 ? `a nota de ${alvo[0].tomadorRazaoSocial || 'tomador não informado'}` : `${alvo.length} notas sem autorização`;
+    // Enviada e sem resposta: pode ter sido autorizada. Transmitir de novo é o que confirma, sem duplicar.
+    const semConfirmacao = alvo.filter(n => n.nDps && !n.ultimoErro).length;
+    const aviso = semConfirmacao > 0
+      ? ` ATENÇÃO: ${semConfirmacao} já foi(ram) enviada(s) ao Sefin sem resposta e pode(m) ter sido autorizada(s). Antes de excluir, transmita de novo para confirmar.`
+      : '';
+    const confirmado = await confirmAsync(
+      `Excluir ${nomeAlvo}? Os lançamentos vinculados também são excluídos, e isso não pode ser desfeito.${aviso}`,
+      { title: 'Excluir rascunho', confirmText: 'Excluir', cancelText: 'Manter', danger: true },
+    );
+    if (!confirmado) return false;
+
+    alvo.forEach(n => {
+      if (n.lancamentoId) store.deleteLancamento(n.lancamentoId);
+      store.deleteNfsE(n.id);
+    });
+    setNfseList(store.getNfsE(empresaId));
+    setSelecionadas(atual => {
+      const novo = new Set(atual);
+      alvo.forEach(n => novo.delete(n.id));
+      return novo;
+    });
+    toast.success(alvo.length === 1 ? 'Rascunho excluído.' : `${alvo.length} notas excluídas.`);
+    return true;
+  };
+
+  const baixarExportacao = async (params: URLSearchParams, nomePadrao: string): Promise<number | null> => {
+    const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
+    if (!res.ok) {
+      const erro = await res.json().catch(() => ({}));
+      toast.error(erro.error || 'Não foi possível exportar as notas.');
+      return null;
+    }
+    const blob = await res.blob();
+    const nomeArquivo = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1]
+      || `${nomePadrao}.${params.get('formato') === 'pdf_unico' ? 'pdf' : 'zip'}`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return Number(res.headers.get('X-Notas-Exportadas')) || 0;
+  };
+
   const handleExportarMes = async () => {
     if (!empresaId) return;
     setExportando(true);
@@ -703,26 +926,26 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         formato: formatoExportacao,
         incluirCanceladas: incluirCanceladasExport ? '1' : '0',
       });
-      const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
-      if (!res.ok) {
-        const erro = await res.json().catch(() => ({}));
-        toast.error(erro.error || 'Não foi possível exportar as notas deste período.');
-        return;
-      }
-      const blob = await res.blob();
-      const disp = res.headers.get('Content-Disposition') || '';
-      const nomeMatch = disp.match(/filename="([^"]+)"/);
-      const nomeArquivo = nomeMatch?.[1] || `NFSe-${mesExportacao}.${formatoExportacao === 'pdf_unico' ? 'pdf' : 'zip'}`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = nomeArquivo;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      if ((await baixarExportacao(params, `NFSe-${mesExportacao}`)) === null) return;
       toast.success('Exportação concluída com sucesso!');
       setShowExportarModal(false);
+    } catch {
+      toast.error('Erro de conexão ao exportar os arquivos.');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const handleExportarSelecionadas = async () => {
+    if (!empresaId || exportaveisSelecionadas.length === 0) return;
+    setExportando(true);
+    try {
+      const params = new URLSearchParams({ formato: formatoExportacao, ids: exportaveisSelecionadas.map(n => n.id).join(',') });
+      const exportadas = await baixarExportacao(params, 'NFSe-selecionadas');
+      if (exportadas === null) return;
+      const semArquivo = exportaveisSelecionadas.length - exportadas;
+      toast.success(`${exportadas} nota(s) exportada(s).`);
+      if (semArquivo > 0) toast.warning(`${semArquivo} nota(s) ficaram de fora porque o XML ainda não está no sistema.`);
     } catch {
       toast.error('Erro de conexão ao exportar os arquivos.');
     } finally {
@@ -1015,6 +1238,16 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           >
             Importar Lista
           </button>
+          {!modoCliente && (
+            <button
+              className="btn btn-secondary"
+              style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setShowCndModal(true)}
+              title="Consultar Certidão Negativa de Débitos Federais (CND / Receita Federal & PGFN via SERPRO)"
+            >
+              🏛️ CND Federal
+            </button>
+          )}
           <button
             className="btn"
             style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 13.5 }}
@@ -1378,7 +1611,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         </div>
 
         {/* Barra de Transmissão em Lote */}
-        {papelFiltro === 'prestadas' && rascunhosSelecionados.length > 0 && (
+        {notasSelecionadas.length > 0 && (
           <div
             style={{
               padding: '14px 20px',
@@ -1393,21 +1626,59 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             }}
           >
             <span style={{ fontSize: 13.5, color: '#171717' }}>
-              <strong>{rascunhosSelecionados.length}</strong> rascunho(s) selecionado(s) —{' '}
-              <strong>{fmt.currency(rascunhosSelecionados.reduce((soma, n) => soma + n.valorServicos, 0))}</strong>
+              <strong>{notasSelecionadas.length}</strong> nota(s) selecionada(s) —{' '}
+              <strong>{fmt.currency(notasSelecionadas.reduce((soma, n) => soma + n.valorServicos, 0))}</strong>
             </span>
-            <button
-              className="btn"
-              style={{ marginLeft: 'auto', background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 18px', fontSize: 13 }}
-              onClick={handleTransmitirLote}
-              disabled={!!transmitindoId || !!progressoLote}
-            >
-              {progressoLote
-                ? `Transmitindo ${progressoLote.feitas + 1} de ${progressoLote.total}...`
-                : emProducao
-                ? 'Emitir Selecionadas'
-                : 'Emitir Selecionadas (Teste)'}
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {exportaveisSelecionadas.length > 0 && (
+                <>
+                  <select
+                    className="form-control"
+                    aria-label="Formato da exportação"
+                    style={{ width: 'auto', fontSize: 13, padding: '7px 10px' }}
+                    value={formatoExportacao}
+                    onChange={e => setFormatoExportacao(e.target.value as typeof formatoExportacao)}
+                    disabled={exportando}
+                  >
+                    <option value="ambos">PDF e XML (ZIP)</option>
+                    <option value="pdf">Só PDF (ZIP)</option>
+                    <option value="xml">Só XML (ZIP)</option>
+                    <option value="pdf_unico">Um único PDF</option>
+                  </select>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    onClick={handleExportarSelecionadas}
+                    disabled={exportando || !!progressoLote}
+                  >
+                    <Download size={13} />
+                    {exportando ? 'Gerando...' : `Baixar (${exportaveisSelecionadas.length})`}
+                  </button>
+                </>
+              )}
+              {excluiveisSelecionadas.length > 0 && (
+                <button
+                  className="btn btn-secondary"
+                  style={{ background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}
+                  onClick={() => handleExcluirSemChave(excluiveisSelecionadas)}
+                  disabled={!!transmitindoId || !!progressoLote}
+                >
+                  Excluir ({excluiveisSelecionadas.length})
+                </button>
+              )}
+              {rascunhosSelecionados.length > 0 && (
+                <button
+                  className="btn"
+                  style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 18px', fontSize: 13 }}
+                  onClick={handleTransmitirLote}
+                  disabled={!!transmitindoId || !!progressoLote}
+                >
+                  {progressoLote
+                    ? `Transmitindo ${progressoLote.feitas + 1} de ${progressoLote.total}...`
+                    : `${emProducao ? 'Emitir Selecionadas' : 'Emitir Selecionadas (Teste)'} (${rascunhosSelecionados.length})`}
+                </button>
+              )}
+            </div>
             <button
               className="btn btn-secondary"
               style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 13 }}
@@ -1434,15 +1705,14 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>
-                    {papelFiltro === 'prestadas' && (
-                      <input
-                        type="checkbox"
-                        aria-label="Selecionar todos os rascunhos"
-                        disabled={!!progressoLote}
-                        checked={filtered.some(n => n.status === 'rascunho') && filtered.filter(n => n.status === 'rascunho').every(n => selecionadas.has(n.id))}
-                        onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.filter(n => n.status === 'rascunho').map(n => n.id)) : new Set())}
-                      />
-                    )}
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todas as notas da lista"
+                      title="Selecionar todas as notas da lista"
+                      disabled={!!progressoLote || filtered.length === 0}
+                      checked={todasMarcadas}
+                      onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.map(n => n.id)) : new Set())}
+                    />
                   </th>
                   <th>Número</th>
                   <th>Emissão</th>
@@ -1480,15 +1750,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                     return (
                       <tr key={n.id} style={{ opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.6 : 1 }}>
                         <td>
-                          {!tomada && n.status === 'rascunho' && (
-                            <input
-                              type="checkbox"
-                              aria-label={`Selecionar rascunho de ${n.tomadorRazaoSocial}`}
-                              disabled={!!progressoLote}
-                              checked={selecionadas.has(n.id)}
-                              onChange={() => alternarSelecao(n.id)}
-                            />
-                          )}
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar nota de ${nomeContraparte}`}
+                            disabled={!!progressoLote}
+                            checked={selecionadas.has(n.id)}
+                            onChange={() => alternarSelecao(n.id)}
+                          />
                         </td>
                         <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
                           {n.status === 'rascunho' ? <span style={{ color: '#9ca3af' }}>—</span> : n.numero}
@@ -1555,15 +1823,17 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                                 <button
                                   className="btn btn-secondary btn-sm"
                                   style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
-                                  onClick={() => {
-                                    setForm({ ...n });
-                                    setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
-                                    setRetencaoManual(true);
-                                    setRegraAplicada('');
-                                    setModalMode('novo');
-                                  }}
+                                  onClick={() => abrirEdicao(n)}
                                 >
                                   Editar
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
+                                  onClick={() => handleExcluirSemChave([n])}
+                                  disabled={!!transmitindoId || !!progressoLote}
+                                >
+                                  Excluir
                                 </button>
                                 <button
                                   className="btn btn-sm"
@@ -1678,6 +1948,8 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       {showConfigModal && (
         <NfseConfigModal
           empresaId={empresaId}
+          cnpj={empresa?.cnpj}
+          cnaes={cnaesEmpresa}
           config={config}
           onFechar={() => setShowConfigModal(false)}
           onSalvo={novaConfig => { setConfig(novaConfig); setShowConfigModal(false); }}
@@ -1779,13 +2051,32 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                 </select>
               </div>
               <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">CNPJ / CPF *</label>
+                  <input
+                    className="form-control"
+                    placeholder="Digite o CNPJ para preencher os dados"
+                    value={form.tomadorCnpjCpf || ''}
+                    onChange={e => {
+                      const documento = e.target.value;
+                      const digitos = apenasDigitos(documento);
+                      setForm(f => {
+                        // Outro documento já não é aquele cliente: a nota não pode ficar vinculada a ele.
+                        const cliente = clientes.find(c => c.id === f.clienteId);
+                        const continuaCliente = cliente && apenasDigitos(cliente.cpfCnpj) === digitos;
+                        return { ...f, tomadorCnpjCpf: documento, clienteId: continuaCliente ? f.clienteId : undefined };
+                      });
+                      if (cnpjValido(digitos)) preencherTomadorPeloCnpj(digitos, false);
+                      else if (buscandoTomador) { ultimaConsultaTomador.current = ''; setBuscandoTomador(false); }
+                    }}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    {buscandoTomador ? 'Consultando o CNPJ...' : 'Com CNPJ, o cadastro e o endereço são preenchidos sozinhos.'}
+                  </div>
+                </div>
                 <div className="form-group" style={{ flex: 2 }}>
                   <label className="form-label">Razão Social / Nome *</label>
                   <input className="form-control" value={form.tomadorRazaoSocial || ''} onChange={e => setForm(f => ({ ...f, tomadorRazaoSocial: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">CNPJ / CPF *</label>
-                  <input className="form-control" value={form.tomadorCnpjCpf || ''} onChange={e => setForm(f => ({ ...f, tomadorCnpjCpf: e.target.value }))} />
                 </div>
               </div>
               <div className="form-row">
@@ -1815,13 +2106,24 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">CEP</label>
-                  <input className="form-control" value={form.tomadorCep || ''} onChange={e => setForm(f => ({ ...f, tomadorCep: e.target.value }))} />
+                  <input
+                    className="form-control"
+                    placeholder="Preenche o endereço"
+                    value={form.tomadorCep || ''}
+                    onChange={e => {
+                      const cep = e.target.value;
+                      setForm(f => ({ ...f, tomadorCep: cep }));
+                      preencherEnderecoPeloCep(cep);
+                    }}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Município (código IBGE)</label>
-                  <input className="form-control" maxLength={7} value={form.tomadorCodigoMunicipio || ''} onChange={e => setForm(f => ({ ...f, tomadorCodigoMunicipio: e.target.value }))} />
+                  <input className="form-control" maxLength={7} value={form.tomadorCodigoMunicipio || ''} onChange={e => setForm(f => ({ ...f, tomadorCodigoMunicipio: e.target.value, tomadorCidade: '', tomadorUf: '' }))} />
+                  {form.tomadorCidade && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{form.tomadorCidade}{form.tomadorUf ? `/${form.tomadorUf}` : ''}</div>}
                 </div>
               </div>
+              {origemEndereco && <div style={{ fontSize: 11, color: 'var(--accent)', marginBottom: 4 }}>{origemEndereco}</div>}
               {!enderecoCompleto && (
                 <div style={{ fontSize: 11, color: issRetidoForm ? 'var(--red)' : 'var(--text-muted)' }}>
                   {issRetidoForm
@@ -1837,11 +2139,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               {(parametros?.servicosConhecidos?.length || 0) > 0 && (
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label className="form-label">Serviços que esta empresa já emitiu</label>
-                  <select className="form-control" value="" onChange={e => {
+                  <select className="form-control" value={String(parametros?.servicosConhecidos?.findIndex(s =>
+                    s.cTribNac === (form.codigoServico || '').replace(/\D/g, '') && (s.cTribMun || '') === (form.cTribMun || '') && (s.cNbs || '') === (form.cNbs || ''),
+                  ) ?? -1)} onChange={e => {
                     const s = parametros?.servicosConhecidos?.[Number(e.target.value)];
                     if (s) setForm(f => ({ ...f, codigoServico: s.cTribNac, cTribMun: s.cTribMun || '', cNbs: s.cNbs || '', discriminacao: f.discriminacao || s.descricao }));
                   }}>
-                    <option value="">— Selecionar para preencher os códigos —</option>
+                    <option value="-1">— Selecionar para preencher os códigos —</option>
                     {parametros?.servicosConhecidos?.map((s, i) => (
                       <option key={`${s.cTribNac}-${s.cTribMun}-${s.cNbs}`} value={i}>{s.cTribNac}{s.cTribMun ? ` / ${s.cTribMun}` : ''} — {s.descricao.slice(0, 70)} ({s.quantidade}x)</option>
                     ))}
@@ -1849,6 +2153,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                 </div>
               )}
               <NfseServicoPicker
+                cnaes={cnaesEmpresa}
                 cTribNac={(form.codigoServico || '').replace(/\D/g, '')}
                 cNbs={form.cNbs || ''}
                 onChange={m => setForm(f => ({
@@ -1905,6 +2210,56 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                     {aliquotaObrigatoria ? 'Enviada na nota: obrigatória neste regime.' : 'Só para estimativa: quem define é a parametrização do município.'}
                   </div>
                 </div>
+                {ehSimples && (
+                  <div className="form-group">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="form-label" style={{ marginBottom: 0 }}>Alíquota do Simples Nacional (%) *</label>
+                      <button
+                        type="button"
+                        onClick={buscarAliquotaIntegraContador}
+                        disabled={buscandoAliquotaSerpro}
+                        style={{
+                          background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: buscandoAliquotaSerpro ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                        title="Busca a alíquota apurada na Receita Federal via Integra Contador (SERPRO)"
+                      >
+                        {buscandoAliquotaSerpro ? 'Buscando no SERPRO...' : '⚡ Buscar no Integra Contador'}
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      className="form-control"
+                      value={aliquotaSimplesForm}
+                      onChange={e => {
+                        setAliquotaSimplesDigitada(e.target.value);
+                        setInfoAliquotaSerpro(null);
+                      }}
+                    />
+                    {infoAliquotaSerpro && (
+                      <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                        ✓ {infoAliquotaSerpro}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                      {modoCliente
+                        ? 'Percentual aproximado de tributos informado na nota. Vale para esta emissão.'
+                        : 'Percentual aproximado de tributos informado na nota. Fica salvo para as próximas notas desta empresa.'}
+                    </div>
+                  </div>
+                )}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
                 <input type="checkbox" checked={issRetidoForm} onChange={e => { setRetencaoManual(true); setRegraAplicada(''); setForm(f => ({ ...f, issRetido: e.target.checked })); }} />
@@ -1962,6 +2317,19 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             </div>
 
             <div className="form-actions" style={{ marginTop: 24, gap: 10 }}>
+              {form.id && !form.chaveAcesso && (
+                <button
+                  className="btn btn-secondary"
+                  style={{ marginRight: 'auto', border: '1px solid #fca5a5', color: '#b91c1c' }}
+                  onClick={async () => {
+                    const salva = store.getNfsE(empresaId).find(n => n.id === form.id);
+                    if (salva && await handleExcluirSemChave([salva])) setModalMode(null);
+                  }}
+                  disabled={!!transmitindoId}
+                >
+                  Excluir rascunho
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={() => setModalMode(null)}>Cancelar</button>
               <button className="btn btn-secondary" onClick={() => handleSave(false)} disabled={!!transmitindoId}>Salvar Rascunho</button>
               <button className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} onClick={() => handleSave(true)} disabled={!!transmitindoId}>
@@ -2210,6 +2578,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             </div>
           </div>
         </div>
+      )}
+
+      {showCndModal && (
+        <CertidaoFederalModal
+          empresaIdInicial={empresaId}
+          onFechar={() => setShowCndModal(false)}
+        />
       )}
     </>
   );

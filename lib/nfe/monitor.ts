@@ -23,6 +23,10 @@ const ESPERA_APOS_656_MS = 65 * MINUTO;
 const ESPERA_APOS_REJEICAO_MS = 6 * 60 * MINUTO;
 const ESPERA_APOS_FALHA_MS = 30 * MINUTO;
 const MAX_PAGINAS_POR_CONSULTA = 12;
+const RESERVA_CONSULTA_MS = 10 * MINUTO;
+const TIMEOUT_SEFAZ_MS = 40_000;
+// Quanto uma chamada já iniciada ainda pode durar depois do limite da rodada.
+const FOLGA_APOS_LIMITE_MS = 12_000;
 
 const AMBIENTE: AmbienteNfe = 'producao';
 
@@ -120,8 +124,11 @@ async function registrar(empresaId: string, dados: { cStat?: string | null; mens
   });
 }
 
-/** Consulta a SEFAZ para um CNPJ e grava o que chegou. Não lança por problema de uma empresa: devolve o motivo. */
-export async function consultarNfeDestinadas(empresaId: string): Promise<ResultadoConsultaNfe> {
+/**
+ * Consulta a SEFAZ para um CNPJ e grava o que chegou. Não lança por problema de uma empresa: devolve o motivo.
+ * `limite` (hora, em ms): a partir dela não pede novas páginas, para terminar dentro do tempo da função.
+ */
+export async function consultarNfeDestinadas(empresaId: string, limite?: number): Promise<ResultadoConsultaNfe> {
   const base: ResultadoConsultaNfe = {
     empresaId, executada: false, cStat: null, mensagem: '', paginas: 0, novas: 0, atualizadas: 0, ultNsu: '0', maxNsu: '0', temMais: false, proximaConsultaEm: null,
   };
@@ -141,6 +148,14 @@ export async function consultarNfeDestinadas(empresaId: string): Promise<Resulta
   if (estado.proximaConsultaEm && estado.proximaConsultaEm.getTime() > Date.now()) {
     return { ...base, mensagem: `A SEFAZ só permite nova consulta deste CNPJ daqui a ${textoEspera(estado.proximaConsultaEm)}.` };
   }
+
+  // Reserva no banco: em ambiente serverless cada chamada pode estar em uma instância, e duas
+  // consultas simultâneas do mesmo CNPJ quebram a sequência de NSU (656). Se a função morrer, libera sozinha.
+  const reserva = await db.nfeDistribuicao.updateMany({
+    where: { empresaId, OR: [{ proximaConsultaEm: null }, { proximaConsultaEm: { lte: new Date() } }] },
+    data: { proximaConsultaEm: depois(RESERVA_CONSULTA_MS) },
+  });
+  if (reserva.count === 0) return { ...base, mensagem: 'Já há uma consulta deste CNPJ em andamento.' };
 
   const certOrigem = empresa.nfseConfig.usarProcuracao ? 'escritorio' : 'propria';
   let aberta;
@@ -172,10 +187,13 @@ export async function consultarNfeDestinadas(empresaId: string): Promise<Resulta
   const resultado: ResultadoConsultaNfe = { ...base, executada: true };
 
   for (let pagina = 0; pagina < MAX_PAGINAS_POR_CONSULTA; pagina++) {
+    // Sem tempo para outra página: sai pelo caminho de leitura parcial, que retoma do NSU gravado.
+    if (limite && pagina > 0 && Date.now() >= limite) break;
     let resposta;
     try {
       const envelope = montarEnvelopeDistribuicao({ ambiente: AMBIENTE, cnpj, ultNsu, cUfAutor: ufDoMunicipio(empresa.nfseConfig.codigoMunicipio) });
-      const http = await enviarDistribuicao(aberta.credencial, AMBIENTE, envelope);
+      const timeout = limite ? Math.max(1000, Math.min(TIMEOUT_SEFAZ_MS, limite + FOLGA_APOS_LIMITE_MS - Date.now())) : TIMEOUT_SEFAZ_MS;
+      const http = await enviarDistribuicao(aberta.credencial, AMBIENTE, envelope, timeout);
       resposta = lerRespostaDistribuicao(http.corpo);
     } catch (erro) {
       if (!(erro instanceof SefazIndisponivelError)) throw erro;
@@ -243,14 +261,17 @@ export interface ResumoLote {
   puladas: number;
   novas: number;
   falhas: number;
+  /** Empresas da fila que ficaram para a próxima rodada por falta de tempo. */
+  restantes: number;
 }
 
 export const loteNfeEmAndamento = () => execucaoEmLote !== null;
 
-const PAUSA_ENTRE_EMPRESAS_MS = 2000;
+const PAUSA_ENTRE_EMPRESAS_MS = 500;
 
-async function executarLote(maxEmpresas: number): Promise<ResumoLote> {
+async function executarLote(maxEmpresas: number, tempoMs?: number): Promise<ResumoLote> {
   const agora = new Date();
+  const limite = tempoMs ? agora.getTime() + tempoMs : undefined;
   const noturno = ehHorarioNoturnoBrasilia();
   // Só empresas com o monitoramento ligado (linha em NfeDistribuicao criada por quem ativou)
   // e fora do período de espera da SEFAZ. Empresas marcadas como 'apenasNoturno' só rodam entre 22h e 05h.
@@ -266,10 +287,14 @@ async function executarLote(maxEmpresas: number): Promise<ResumoLote> {
   });
   const fila = pendentes.map(p => p.empresaId);
 
-  const resumo: ResumoLote = { empresas: fila.length, consultadas: 0, puladas: 0, novas: 0, falhas: 0 };
+  const resumo: ResumoLote = { empresas: fila.length, consultadas: 0, puladas: 0, novas: 0, falhas: 0, restantes: 0 };
   for (let i = 0; i < fila.length; i++) {
+    if (limite && Date.now() >= limite) {
+      resumo.restantes = fila.length - i;
+      break;
+    }
     try {
-      const r = await consultarNfeDestinadas(fila[i]);
+      const r = await consultarNfeDestinadas(fila[i], limite);
       if (r.executada) { resumo.consultadas++; resumo.novas += r.novas; } else resumo.puladas++;
       if (r.executada && r.cStat && !['137', '138'].includes(r.cStat)) resumo.falhas++;
     } catch {
@@ -280,9 +305,12 @@ async function executarLote(maxEmpresas: number): Promise<ResumoLote> {
   return resumo;
 }
 
-/** Uma execução por vez; chamadas durante uma execução recebem a mesma. */
-export function consultarLoteNfeDestinadas(maxEmpresas = 150): Promise<ResumoLote> {
+/**
+ * Uma execução por instância; chamadas durante uma execução recebem a mesma.
+ * Com `tempoMs`, para de começar novas empresas ao fim desse tempo e a fila continua na próxima rodada.
+ */
+export function consultarLoteNfeDestinadas(maxEmpresas = 150, tempoMs?: number): Promise<ResumoLote> {
   if (execucaoEmLote) return execucaoEmLote;
-  execucaoEmLote = executarLote(maxEmpresas).finally(() => { execucaoEmLote = null; });
+  execucaoEmLote = executarLote(maxEmpresas, tempoMs).finally(() => { execucaoEmLote = null; });
   return execucaoEmLote;
 }

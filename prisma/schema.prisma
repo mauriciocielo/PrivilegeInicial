@@ -106,6 +106,7 @@ model Empresa {
   slasFechamento             SLAFechamento[]
   nfeDistribuicao            NfeDistribuicao?
   nfesDestinadas             NfeDestinada[]
+  nfeManifestacoes           NfeManifestacaoEvento[]
 }
 
 model Unidade {
@@ -1025,4 +1026,22 @@ model NfeDestinada {
 
   @@unique([empresaId, chaveAcesso])
   @@index([empresaId, dataEmissao])
+}
+
+// Histórico de cada envio de manifestação à SEFAZ: quem pediu e o que a SEFAZ respondeu.
+model NfeManifestacaoEvento {
+  id           String   @id @default(uuid())
+  empresaId    String
+  chaveAcesso  String
+  tpEvento     String
+  usuarioId    String
+  usuarioEmail String
+  cStat        String?
+  xMotivo      String?
+  protocolo    String?
+  registrado   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, chaveAcesso])
 }

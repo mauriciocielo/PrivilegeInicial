@@ -59,8 +59,13 @@ function raizesConfiaveis(): string[] | undefined {
   }
 }
 
-export function enviarDistribuicao(credencial: CredencialA1, ambiente: AmbienteNfe, envelope: string): Promise<{ status: number; corpo: string }> {
-  const url = new URL(ENDPOINTS[ambiente]);
+export function enviarDistribuicao(credencial: CredencialA1, ambiente: AmbienteNfe, envelope: string, timeoutMs = TIMEOUT_MS): Promise<{ status: number; corpo: string }> {
+  return enviarSoap(credencial, ENDPOINTS[ambiente], `${NS_WSDL}/nfeDistDFeInteresse`, envelope, timeoutMs);
+}
+
+/** POST SOAP 1.2 com mTLS: mesmo transporte para a distribuição e para os eventos. */
+export function enviarSoap(credencial: CredencialA1, endereco: string, acao: string, envelope: string, timeoutMs = TIMEOUT_MS): Promise<{ status: number; corpo: string }> {
+  const url = new URL(endereco);
   const ca = raizesConfiaveis();
   const agent = new https.Agent({ key: credencial.chavePem, cert: credencial.certificadosPem, keepAlive: false, ...(ca ? { ca } : {}) });
   const corpo = Buffer.from(envelope, 'utf8');
@@ -71,9 +76,9 @@ export function enviarDistribuicao(credencial: CredencialA1, ambiente: AmbienteN
       method: 'POST',
       hostname: url.hostname,
       path: url.pathname,
-      timeout: TIMEOUT_MS,
+      timeout: timeoutMs,
       headers: {
-        'Content-Type': `application/soap+xml; charset=utf-8; action="${NS_WSDL}/nfeDistDFeInteresse"`,
+        'Content-Type': `application/soap+xml; charset=utf-8; action="${acao}"`,
         'Content-Length': corpo.length,
       },
     }, res => {

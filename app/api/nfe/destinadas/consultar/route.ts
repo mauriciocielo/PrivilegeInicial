@@ -4,6 +4,9 @@ import { captureError } from '../../../../../lib/sentry-helper';
 import { acessoNegado } from '../../../../../lib/nfse/servidor';
 import { consultarNfeDestinadas } from '../../../../../lib/nfe/monitor';
 
+export const maxDuration = 60;
+const TEMPO_DA_CONSULTA_MS = 40_000;
+
 /**
  * Consulta a SEFAZ agora, para uma empresa. Respeita a espera exigida pela SEFAZ:
  * se ainda não puder consultar, responde 200 com `executada: false` e o motivo.
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
     const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
-    return NextResponse.json(await consultarNfeDestinadas(empresaId));
+    return NextResponse.json(await consultarNfeDestinadas(empresaId, Date.now() + TEMPO_DA_CONSULTA_MS));
   } catch (error) {
     console.error('Erro em POST nfe/destinadas/consultar:', error);
     captureError(error);

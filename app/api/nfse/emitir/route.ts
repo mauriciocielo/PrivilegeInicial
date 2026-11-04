@@ -87,7 +87,10 @@ export async function POST(request: Request) {
       tomadorBairro: textoOuNull(n.tomadorBairro),
     };
 
-    const cfg = configFiscal(config, empresa.cnpj);
+    // A alíquota do Simples muda com o faturamento: a digitada na nota vale para esta emissão.
+    const aliquotaDaNota = Number(body?.pTotTribSN);
+    const usaAliquotaDaNota = config.opSimpNac === 3 && body?.pTotTribSN != null && aliquotaDaNota > 0 && aliquotaDaNota <= 100;
+    const cfg = configFiscal(usaAliquotaDaNota ? { ...config, pTotTribSN: aliquotaDaNota } : config, empresa.cnpj);
     const problemas = validarEmissao(cfg, dados);
     if (problemas.length > 0) return NextResponse.json({ error: problemas.join(' '), problemas }, { status: 422 });
 

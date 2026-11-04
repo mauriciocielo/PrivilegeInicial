@@ -8,6 +8,7 @@
 
 import { apenasDigitos, cnpjValido } from './dps';
 import { dividirRetencaoAgrupada } from './retencao';
+import type { CnaeEmpresa } from './cnae-servicos';
 
 /** Empresa que só emite nota: não é cliente e fica fora das demais telas. */
 export const TIPO_EMPRESA_SO_EMISSOR = 'emissor_nfse';
@@ -301,6 +302,30 @@ export interface CnpjPublico {
   cidade: string | null;
   uf: string | null;
   cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  bairro: string | null;
+  email: string | null;
+  cnaes: CnaeEmpresa[];
+}
+
+/** Os provedores entregam o CNAE como número ou texto, com ou sem máscara. */
+function lerCnae(codigo: unknown, descricao: unknown, principal: boolean): CnaeEmpresa | null {
+  const digitos = String(codigo ?? '').replace(/\D/g, '');
+  if (!digitos || /^0+$/.test(digitos) || digitos.length > 7) return null;
+  return { codigo: digitos.padStart(7, '0'), descricao: typeof descricao === 'string' ? descricao.trim() : '', principal };
+}
+
+export function mapearCnaes(json: Record<string, unknown>, estab: Record<string, unknown>): CnaeEmpresa[] {
+  const principalWs = (estab.atividade_principal && typeof estab.atividade_principal === 'object' ? estab.atividade_principal : {}) as Record<string, unknown>;
+  const principal = lerCnae(json.cnae_fiscal ?? principalWs.id, json.cnae_fiscal_descricao ?? principalWs.descricao, true);
+  const listaApi = Array.isArray(json.cnaes_secundarios) ? json.cnaes_secundarios as Record<string, unknown>[] : [];
+  const listaWs = Array.isArray(estab.atividades_secundarias) ? estab.atividades_secundarias as Record<string, unknown>[] : [];
+  const secundarios = [
+    ...listaApi.map(c => lerCnae(c?.codigo, c?.descricao, false)),
+    ...listaWs.map(c => lerCnae(c?.id, c?.descricao, false)),
+  ];
+  return [principal, ...secundarios].filter((c): c is CnaeEmpresa => !!c);
 }
 
 export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
@@ -321,6 +346,12 @@ export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
     opSimpNac = isMei ? 2 : isSimples ? 3 : 1;
   }
 
+  // Os provedores separam o tipo ("AVENIDA") do nome da via ("PAULISTA").
+  const nomeVia = texto(json.logradouro) || texto(estab.logradouro);
+  const tipoVia = texto(json.descricao_tipo_de_logradouro) || texto(estab.tipo_logradouro);
+  const jaTemTipo = !!nomeVia && !!tipoVia && nomeVia.toUpperCase().startsWith(`${tipoVia.toUpperCase()} `);
+  const digitosCep = (texto(json.cep) || texto(estab.cep) || '').replace(/\D/g, '');
+
   return {
     razaoSocial: texto(json.razao_social) || texto( json.nome ),
     nomeFantasia: texto(json.nome_fantasia) || texto(estab.nome_fantasia) || texto(json.fantasia),
@@ -328,8 +359,45 @@ export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
     opSimpNac,
     cidade: texto(json.municipio) || texto(cidadeObj.nome),
     uf: texto(json.uf) || texto(estadoObj.sigla),
-    cep: texto(json.cep) || texto(estab.cep),
+    cep: digitosCep.length === 8 ? digitosCep : null,
+    logradouro: nomeVia ? (tipoVia && !jaTemTipo ? `${tipoVia} ${nomeVia}` : nomeVia) : null,
+    numero: texto(json.numero) || texto(estab.numero),
+    bairro: texto(json.bairro) || texto(estab.bairro),
+    email: (texto(json.email) || texto(estab.email))?.toLowerCase() ?? null,
+    cnaes: mapearCnaes(json, estab),
   };
+}
+
+export interface EnderecoCep {
+  logradouro: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  codigoMunicipio: string | null;
+}
+
+export function mapearCep(json: Record<string, unknown>): EnderecoCep | null {
+  if (json.erro) return null;
+  const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const ibge = String(json.ibge ?? '');
+  return {
+    logradouro: texto(json.logradouro),
+    bairro: texto(json.bairro),
+    cidade: texto(json.localidade),
+    uf: texto(json.uf),
+    codigoMunicipio: /^\d{7}$/.test(ibge) ? ibge : null,
+  };
+}
+
+export async function consultarCep(cep: string): Promise<EnderecoCep | null> {
+  const digitos = apenasDigitos(cep);
+  if (digitos.length !== 8) return null;
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`, { signal: AbortSignal.timeout(8000) });
+    return res.ok ? mapearCep(await res.json()) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | null> {
@@ -356,9 +424,14 @@ export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | 
           cidade: acumulado.cidade || mapeado.cidade,
           uf: acumulado.uf || mapeado.uf,
           cep: acumulado.cep || mapeado.cep,
+          logradouro: acumulado.logradouro || mapeado.logradouro,
+          numero: acumulado.numero || mapeado.numero,
+          bairro: acumulado.bairro || mapeado.bairro,
+          email: acumulado.email || mapeado.email,
+          cnaes: acumulado.cnaes.length > 0 ? acumulado.cnaes : mapeado.cnaes,
         };
       }
-      if (acumulado.razaoSocial && acumulado.codigoMunicipio) return acumulado;
+      if (acumulado.razaoSocial && acumulado.codigoMunicipio && acumulado.logradouro) return acumulado;
     } catch {
       // Tenta o próximo provedor público
     }

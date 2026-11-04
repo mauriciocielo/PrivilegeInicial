@@ -77,19 +77,8 @@ export function certificadoPertenceAoCnpj(credencial: Pick<CredencialA1, 'cnpj'>
   return credencial.cnpj.slice(0, 8) === apenasDigitos(cnpjEmpresa).slice(0, 8);
 }
 
-/**
- * Assina o nó `noAssinado` (filho da raiz) e devolve o XML com prolog UTF-8 —
- * sem ele o Sefin rejeita com E1229. O XML não pode ser alterado depois disso (E0714).
- */
-export function assinarXml(xml: string, noAssinado: 'infDPS' | 'infPedReg', id: string, credencial: CredencialA1): string {
-  const abertura = `<${noAssinado} Id="${id}">`;
-  const inicio = xml.indexOf(abertura);
-  const fechamento = `</${noAssinado}>`;
-  const fim = xml.indexOf(fechamento);
-  if (inicio < 0 || fim < 0) throw new Error(`XML sem o nó ${noAssinado} com o Id informado.`);
-
-  // Na C14N inclusiva o nó assinado carrega o namespace herdado da raiz.
-  const canonico = `<${noAssinado} xmlns="${NS_NFSE}" Id="${id}">${xml.slice(inicio + abertura.length, fim)}${fechamento}`;
+/** Monta o elemento Signature (RSA-SHA1, C14N inclusiva) para um nó já em forma canônica. */
+export function gerarAssinatura(canonico: string, id: string, credencial: CredencialA1): string {
   const digest = crypto.createHash('sha1').update(canonico, 'utf8').digest('base64');
 
   const corpoSignedInfo =
@@ -105,10 +94,25 @@ export function assinarXml(xml: string, noAssinado: 'infDPS' | 'infPedReg', id: 
     .update(`<SignedInfo xmlns="${NS_DSIG}">${corpoSignedInfo}</SignedInfo>`, 'utf8')
     .sign(credencial.chavePem, 'base64');
 
-  const assinatura =
-    `<Signature xmlns="${NS_DSIG}"><SignedInfo>${corpoSignedInfo}</SignedInfo>` +
+  return `<Signature xmlns="${NS_DSIG}"><SignedInfo>${corpoSignedInfo}</SignedInfo>` +
     `<SignatureValue>${valor}</SignatureValue>` +
     `<KeyInfo><X509Data><X509Certificate>${credencial.certificadoB64}</X509Certificate></X509Data></KeyInfo></Signature>`;
+}
+
+/**
+ * Assina o nó `noAssinado` (filho da raiz) e devolve o XML com prolog UTF-8 —
+ * sem ele o Sefin rejeita com E1229. O XML não pode ser alterado depois disso (E0714).
+ */
+export function assinarXml(xml: string, noAssinado: 'infDPS' | 'infPedReg', id: string, credencial: CredencialA1): string {
+  const abertura = `<${noAssinado} Id="${id}">`;
+  const inicio = xml.indexOf(abertura);
+  const fechamento = `</${noAssinado}>`;
+  const fim = xml.indexOf(fechamento);
+  if (inicio < 0 || fim < 0) throw new Error(`XML sem o nó ${noAssinado} com o Id informado.`);
+
+  // Na C14N inclusiva o nó assinado carrega o namespace herdado da raiz.
+  const canonico = `<${noAssinado} xmlns="${NS_NFSE}" Id="${id}">${xml.slice(inicio + abertura.length, fim)}${fechamento}`;
+  const assinatura = gerarAssinatura(canonico, id, credencial);
 
   const posicaoFinal = fim + fechamento.length;
   return `<?xml version="1.0" encoding="UTF-8"?>${xml.slice(0, posicaoFinal)}${assinatura}${xml.slice(posicaoFinal)}`;

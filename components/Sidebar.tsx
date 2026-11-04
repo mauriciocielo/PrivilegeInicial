@@ -56,6 +56,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas via ERP', href: '/consultor/contas-erp', icon: Landmark },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
+      { label: 'Certidão Federal (CND)', href: '/consultor/cnd-federal', icon: ShieldCheck },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
@@ -240,37 +241,37 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setShowProfilePopover(false);
   }, [pathname]);
 
-  // Submenus recolhíveis — por padrão só o "Painel" começa aberto (menu
-  // limpo). Lembra o que o usuário abriu/fechou, e sempre mantém visível a
-  // seção da página atual (nunca esconde onde você está).
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean> | null>(null);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('cf_sidebar_expanded_sections');
-      setExpandedSections(saved ? JSON.parse(saved) : { 'Painel': true });
-    } catch {
-      setExpandedSections({ 'Painel': true });
-    }
-  }, []);
-
-  // `efetivo` é o estado visualmente aberto/fechado já considerando o
-  // fallback "seção da página atual abre sozinha" — sem isso, clicar numa
-  // seção que só está aberta pelo fallback (nunca teve toggle explícito)
-  // pareceria não fazer nada na primeira vez (undefined → true, já visível).
-  const toggleSection = (section: string, efetivo: boolean) => {
-    setExpandedSections(prev => {
-      const next = { ...(prev || {}), [section]: !efetivo };
-      try { localStorage.setItem('cf_sidebar_expanded_sections', JSON.stringify(next)); } catch {}
-      return next;
-    });
+  // Só um submenu aberto por vez, e nada fica salvo: um submenu que continua aberto
+  // cobre a página e bloqueia os cliques nela.
+  const timerFecharMenu = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelarFechamentoMenu = () => {
+    if (timerFecharMenu.current) clearTimeout(timerFecharMenu.current);
+    timerFecharMenu.current = null;
   };
+  useEffect(() => cancelarFechamentoMenu, []);
 
-  const handleSectionClick = (sectionName: string, isCurrentlyExpanded: boolean) => {
+  const handleSectionClick = (sectionName: string) => {
+    cancelarFechamentoMenu();
     setOpenDropdownSection(prev => (prev === sectionName ? null : sectionName));
     setShowCompanyDropdown(false);
     setShowProfilePopover(false);
-    toggleSection(sectionName, isCurrentlyExpanded);
+  };
+
+  // Abrir ao passar o mouse só faz sentido com mouse e na barra horizontal; no toque vale o clique.
+  const menuAbrePorHover = (e: React.PointerEvent) =>
+    e.pointerType === 'mouse' && window.matchMedia('(min-width: 769px)').matches;
+
+  const handleSectionEnter = (e: React.PointerEvent, sectionName: string) => {
+    if (!menuAbrePorHover(e)) return;
+    cancelarFechamentoMenu();
+    setOpenDropdownSection(sectionName);
+  };
+
+  // A pequena espera deixa o mouse atravessar o espaço entre o rótulo e o submenu.
+  const handleSectionLeave = (e: React.PointerEvent) => {
+    if (!menuAbrePorHover(e)) return;
+    cancelarFechamentoMenu();
+    timerFecharMenu.current = setTimeout(() => setOpenDropdownSection(null), 180);
   };
 
   useEffect(() => {
@@ -423,6 +424,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const handleEmpresaChange = async (id: string) => {
     setSelectedEmpresa(id);
     sessionStorage.setItem('cf_empresa_sel', id);
+    // Fecha antes de buscar os dados: o menu não pode ficar parado esperando o servidor.
+    setShowCompanyDropdown(false);
+    setSearchEmpresa('');
 
     // Hidratação de dados ao trocar de empresa
     console.log(`[SIDEBAR] Trocando para empresa ${id}, disparando pull remoto...`);
@@ -448,8 +452,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     sessionStorage.setItem('cf_app_mode', nextMode);
 
     window.dispatchEvent(new CustomEvent('empresaChange', { detail: id }));
-    setShowCompanyDropdown(false);
-    setSearchEmpresa('');
   };
 
   // Outras telas (ex.: emissores da NFS-e) pedem a troca por aqui, para o seletor não ficar defasado.
@@ -490,7 +492,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (item.href === '/consultor/dashboard') return true;
       if (item.href === '/consultor/administrativo') return true;
       // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
-      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas') return true;
+      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal') return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -633,14 +635,26 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         {nav.map(section => {
           const containsActive = section.items.some(item => item.href === pathname);
           const isClickedOpen = openDropdownSection === section.section;
-          const isExpanded = isClickedOpen || (expandedSections?.[section.section] ?? containsActive);
+          const isExpanded = isClickedOpen;
           return (
-            <div key={section.section} className={`${isExpanded ? 'expanded' : ''} ${isClickedOpen ? 'open' : ''}`}>
+            <div
+              key={section.section}
+              className={isClickedOpen ? 'expanded open' : ''}
+              onPointerEnter={e => handleSectionEnter(e, section.section)}
+              onPointerLeave={handleSectionLeave}
+            >
               <div
                 className="nav-section"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isClickedOpen}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleSectionClick(section.section, isExpanded);
+                  handleSectionClick(section.section);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSectionClick(section.section); }
+                  if (e.key === 'Escape') setOpenDropdownSection(null);
                 }}
               >
                 <span

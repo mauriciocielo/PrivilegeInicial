@@ -1,0 +1,36 @@
+name: Monitor NF-e Destinadas
+
+# Aciona uma rodada do monitor a cada 30 minutos. Fica aqui, e não no vercel.json,
+# porque o plano Hobby da Vercel recusa o deploy com agendamento mais de uma vez por dia.
+# Precisa do segredo CRON_SECRET no GitHub, com o mesmo valor configurado na Vercel.
+# A variável APP_URL é opcional e troca o endereço padrão.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rodada:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Acionar rodada
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://privilege-inicial.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Segredo CRON_SECRET não configurado: rodada não acionada."
+            exit 0
+          fi
+          status=$(curl -sS -o resposta.json -w '%{http_code}' --max-time 90 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/nfe/monitor/executar")
+          cat resposta.json; echo
+          # 409: outra rodada ainda está em andamento, a próxima continua a fila.
+          if [ "$status" != "200" ] && [ "$status" != "409" ]; then
+            echo "::error::O monitor respondeu HTTP $status."
+            exit 1
+          fi

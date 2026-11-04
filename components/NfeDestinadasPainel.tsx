@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import NfeCertificadoModal from './NfeCertificadoModal';
+import CertidaoFederalModal from './CertidaoFederalModal';
+import { confirmAsync } from './ConfirmProvider';
+import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
@@ -74,6 +77,8 @@ function formatChave(chave: string): string {
   return chave.replace(/(\d{4})/g, '$1 ').trim();
 }
 
+const podeDarCiencia = (n: NfeDestinadaItem) => !n.possuiXml && n.situacao === 'autorizada' && !n.manifestacao;
+
 export default function NfeDestinadasPainel() {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
@@ -101,6 +106,7 @@ export default function NfeDestinadasPainel() {
 
   // Modal de Gerenciamento do Certificado Digital A1
   const [empresaCertificadoModal, setEmpresaCertificadoModal] = useState<EmpresaMonitor | null>(null);
+  const [showCndModal, setShowCndModal] = useState(false);
 
   // Busca rápida de empresas no seletor
   const [filtroEmpresaTexto, setFiltroEmpresaTexto] = useState('');
@@ -110,13 +116,17 @@ export default function NfeDestinadasPainel() {
   const [formatoExportacao, setFormatoExportacao] = useState('ambos');
   const [exportando, setExportando] = useState(false);
 
+  // Manifestação e varredura
+  const [manifestando, setManifestando] = useState(false);
+  const [varrendo, setVarrendo] = useState(false);
+
   // Carrega empresas aptas para monitoramento
   const carregarEmpresas = useCallback(async () => {
     try {
       setCarregandoEmpresas(true);
       const res = await fetch('/api/nfe/monitor');
       if (!res.ok) throw new Error('Falha ao carregar empresas monitoradas.');
-      const data = await res.json();
+      const data = await lerJsonResposta(res);
       const lista: EmpresaMonitor[] = data.empresas || [];
       setEmpresas(lista);
       setEhHorarioNoturno(Boolean(data.ehHorarioNoturno));
@@ -154,7 +164,7 @@ export default function NfeDestinadasPainel() {
 
       const res = await fetch(`/api/nfe/destinadas?${params.toString()}`);
       if (!res.ok) throw new Error('Falha ao carregar notas destinadas.');
-      const data = await res.json();
+      const data = await lerJsonResposta(res);
       let lista: NfeDestinadaItem[] = data.notas || [];
       if (apenasComXml) {
         lista = lista.filter(n => n.possuiXml);
@@ -207,7 +217,7 @@ export default function NfeDestinadasPainel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresaId: empresaIdSelecionada }),
       });
-      const data = await res.json();
+      const data = await lerJsonResposta(res);
 
       if (!res.ok) {
         throw new Error(data.error || 'Erro na comunicação com a SEFAZ.');
@@ -314,15 +324,62 @@ export default function NfeDestinadasPainel() {
   // Disparo manual do lote global
   const handleDispararLote = async () => {
     try {
+      setVarrendo(true);
       const res = await fetch('/api/nfe/monitor/executar', { method: 'POST' });
-      const data = await res.json();
+      const data = await lerJsonResposta(res);
       if (res.ok) {
-        toast.success(data.mensagem || 'Rodada do monitor iniciada em segundo plano!');
+        toast.success(data.mensagem || 'Rodada do monitor concluída.');
+        await carregarEmpresas();
+        if (empresaIdSelecionada) await carregarNotas(empresaIdSelecionada);
       } else {
         toast.warning(data.mensagem || data.error || 'Aviso ao iniciar rodada.');
       }
     } catch (err: any) {
       toast.error('Erro ao acionar lote: ' + err.message);
+    } finally {
+      setVarrendo(false);
+    }
+  };
+
+  // Ciência da Operação: é um registro na SEFAZ em nome da empresa, sempre com confirmação
+  const handleDarCiencia = async (ids: string[]) => {
+    if (!empresaIdSelecionada || ids.length === 0) return;
+    const confirmado = await confirmAsync(
+      `Registrar na SEFAZ a Ciência da Operação de ${ids.length} nota(s), em nome de ${empresaAtual?.razaoSocial || 'esta empresa'}? `
+      + 'O registro não pode ser desfeito. A Ciência não confirma nem recusa a operação, e a manifestação conclusiva, quando exigida, continua pendente.',
+      { title: 'Dar ciência na SEFAZ', confirmText: 'Registrar ciência' },
+    );
+    if (!confirmado) return;
+
+    try {
+      setManifestando(true);
+      const res = await fetch('/api/nfe/destinadas/manifestar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: empresaIdSelecionada, ids }),
+      });
+      const data = await lerJsonResposta(res);
+      if (!res.ok) throw new Error(data.error || 'Não foi possível registrar a ciência.');
+
+      if (data.registradas > 0) {
+        toast.success(`${data.registradas} ciência(s) registrada(s). O XML completo chega nas próximas consultas à SEFAZ, o que pode levar 1 hora ou mais.`);
+      }
+      if (data.rejeitadas?.length > 0) {
+        const primeira = data.rejeitadas[0];
+        toast.error(`${data.rejeitadas.length} nota(s) recusada(s) pela SEFAZ. NF ${primeira.numero || primeira.chave}: [${primeira.cStat}] ${primeira.motivo}`);
+      }
+      if (data.erro) toast.error(data.erro);
+      if (data.naoEnviadas > 0) toast.warning(`${data.naoEnviadas} nota(s) não foram enviadas. Tente de novo.`);
+      if (data.registradas === 0 && !data.rejeitadas?.length && !data.erro && !data.naoEnviadas) {
+        toast.info('Nenhuma das notas precisava de ciência.');
+      }
+      setNotaDetalhe(null);
+      await carregarNotas(empresaIdSelecionada);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao registrar a ciência.');
+    } finally {
+      setManifestando(false);
     }
   };
 
@@ -362,7 +419,7 @@ export default function NfeDestinadasPainel() {
           : { empresaId: empresaIdSelecionada, formato: formatoExportacao, mes: mesFiltro, de: dataInicio, ate: dataFim, situacao: situacaoFiltro, busca }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await lerJsonResposta(res).catch(() => ({}));
         throw new Error(data.error || 'Não foi possível exportar as notas.');
       }
       const nome = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || 'notas-fiscais';
@@ -398,8 +455,10 @@ export default function NfeDestinadasPainel() {
     });
   };
 
-  const notasComXml = useMemo(() => notas.filter(n => n.possuiXml), [notas]);
-  const todasSelecionadas = notasComXml.length > 0 && notasComXml.every(n => selecionadas.has(n.id));
+  const notasSelecionaveis = useMemo(() => notas.filter(n => n.possuiXml || podeDarCiencia(n)), [notas]);
+  const todasSelecionadas = notasSelecionaveis.length > 0 && notasSelecionaveis.every(n => selecionadas.has(n.id));
+  const idsParaExportar = useMemo(() => notas.filter(n => n.possuiXml && selecionadas.has(n.id)).map(n => n.id), [notas, selecionadas]);
+  const idsParaCiencia = useMemo(() => notas.filter(n => podeDarCiencia(n) && selecionadas.has(n.id)).map(n => n.id), [notas, selecionadas]);
 
   const rotuloExportarFiltro = useMemo(() => {
     if (mesFiltro) {
@@ -497,15 +556,27 @@ export default function NfeDestinadasPainel() {
             </button>
           </div>
 
-          <button
-            onClick={handleDispararLote}
-            className="btn btn-secondary btn-sm"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
-            title="Aciona a rodada de varredura em segundo plano para todas as empresas ativas elegíveis"
-          >
-            <Play size={13} />
-            Varredura Agora
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setShowCndModal(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#0284c7', background: '#f0f9ff', borderColor: '#bae6fd' }}
+              title="Consultar Certidão Negativa de Débitos Federais (CND) no SERPRO / Receita Federal"
+            >
+              🏛️ CND Federal
+            </button>
+
+            <button
+              onClick={handleDispararLote}
+              disabled={varrendo}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+              title="Consulta as empresas ativas elegíveis por até 40 segundos. As que faltarem ficam para a próxima rodada."
+            >
+              <Play size={13} />
+              {varrendo ? 'Varrendo...' : 'Varredura Agora'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -842,13 +913,23 @@ export default function NfeDestinadasPainel() {
               <option value="pdf_unico">Um único PDF com todas</option>
             </select>
             <button
-              onClick={() => handleExportar([...selecionadas])}
-              disabled={exportando || selecionadas.size === 0}
+              onClick={() => handleExportar(idsParaExportar)}
+              disabled={exportando || idsParaExportar.length === 0}
               className="btn btn-primary btn-sm"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
             >
               <Download size={13} />
-              Exportar selecionadas ({selecionadas.size})
+              Exportar selecionadas ({idsParaExportar.length})
+            </button>
+            <button
+              onClick={() => handleDarCiencia(idsParaCiencia)}
+              disabled={manifestando || idsParaCiencia.length === 0}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+              title="Registra na SEFAZ a Ciência da Operação das notas selecionadas que só têm resumo"
+            >
+              <ShieldCheck size={13} />
+              {manifestando ? 'Registrando...' : `Dar ciência nas selecionadas (${idsParaCiencia.length})`}
             </button>
             <button
               onClick={() => handleExportar(null)}
@@ -862,7 +943,7 @@ export default function NfeDestinadasPainel() {
             {exportando && <span style={{ fontSize: 12.5, color: '#6b7280' }}>Gerando arquivo...</span>}
             {totais.apenasResumo > 0 && (
               <span style={{ fontSize: 12, color: '#a16207', flexBasis: '100%' }}>
-                {totais.apenasResumo} nota(s) só têm o resumo da SEFAZ. Elas não geram PDF nem entram na exportação até o XML completo ser liberado.
+                {totais.apenasResumo} nota(s) só têm o resumo da SEFAZ. Elas não geram PDF nem entram na exportação até o XML completo chegar. Para liberar, dê ciência e aguarde as próximas consultas.
               </span>
             )}
           </div>
@@ -879,10 +960,10 @@ export default function NfeDestinadasPainel() {
                     <input
                       type="checkbox"
                       checked={todasSelecionadas}
-                      disabled={notasComXml.length === 0}
-                      onChange={() => setSelecionadas(todasSelecionadas ? new Set() : new Set(notasComXml.map(n => n.id)))}
-                      aria-label="Selecionar todas as notas com XML completo"
-                      title="Selecionar todas as notas com XML completo"
+                      disabled={notasSelecionaveis.length === 0}
+                      onChange={() => setSelecionadas(todasSelecionadas ? new Set() : new Set(notasSelecionaveis.map(n => n.id)))}
+                      aria-label="Selecionar todas as notas"
+                      title="Selecionar todas as notas que podem ser exportadas ou receber ciência"
                       style={{ cursor: 'pointer', accentColor: '#2563eb' }}
                     />
                   </th>
@@ -925,11 +1006,11 @@ export default function NfeDestinadasPainel() {
                         <input
                           type="checkbox"
                           checked={selecionadas.has(n.id)}
-                          disabled={!n.possuiXml}
+                          disabled={!n.possuiXml && !podeDarCiencia(n)}
                           onChange={() => alternarSelecao(n.id)}
                           aria-label={`Selecionar nota ${n.numero || n.chaveAcesso}`}
-                          title={n.possuiXml ? 'Selecionar para exportar' : 'Só há o resumo da SEFAZ: não há o que exportar'}
-                          style={{ cursor: n.possuiXml ? 'pointer' : 'not-allowed', accentColor: '#2563eb' }}
+                          title={n.possuiXml ? 'Selecionar para exportar' : podeDarCiencia(n) ? 'Selecionar para dar ciência' : 'Ainda não há XML para exportar nem ciência a dar'}
+                          style={{ cursor: n.possuiXml || podeDarCiencia(n) ? 'pointer' : 'not-allowed', accentColor: '#2563eb' }}
                         />
                       </td>
                       <td style={{ padding: '12px 16px', color: '#111827', whiteSpace: 'nowrap' }}>
@@ -962,6 +1043,8 @@ export default function NfeDestinadasPainel() {
                       <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {n.possuiXml ? (
                           <span className="badge badge-blue" style={{ fontSize: 11 }}>XML Completo</span>
+                        ) : n.manifestacao ? (
+                          <span className="badge badge-yellow" style={{ fontSize: 11 }} title="A manifestação está registrada. O XML completo chega nas próximas consultas à SEFAZ.">Aguardando XML</span>
                         ) : (
                           <span className="badge" style={{ background: '#f3f4f6', color: '#6b7280', fontSize: 11 }}>Resumo</span>
                         )}
@@ -989,6 +1072,18 @@ export default function NfeDestinadasPainel() {
                                 XML
                               </button>
                             </>
+                          )}
+                          {podeDarCiencia(n) && (
+                            <button
+                              onClick={() => handleDarCiencia([n.id])}
+                              disabled={manifestando}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '5px 8px', fontSize: 12 }}
+                              title="Registrar a Ciência da Operação na SEFAZ para liberar o XML completo"
+                            >
+                              <ShieldCheck size={13} />
+                              Dar ciência
+                            </button>
                           )}
                           <button
                             onClick={() => setNotaDetalhe(n)}
@@ -1331,10 +1426,25 @@ export default function NfeDestinadasPainel() {
                     <div style={{ fontSize: 11.5, color: notaDetalhe.possuiXml ? '#3b82f6' : '#a16207' }}>
                       {notaDetalhe.possuiXml
                         ? 'O arquivo completo com todos os itens, produtos e tributos está pronto.'
-                        : 'Para obter o XML completo, efetue a Manifestação do Destinatário na SEFAZ.'}
+                        : notaDetalhe.manifestacao
+                          ? 'Manifestação registrada. O XML completo chega nas próximas consultas à SEFAZ.'
+                          : notaDetalhe.situacao === 'autorizada'
+                            ? 'Para liberar o XML completo, registre a Ciência da Operação na SEFAZ.'
+                            : 'Nota cancelada ou denegada: não recebe manifestação.'}
                     </div>
                   </div>
                 </div>
+
+                {podeDarCiencia(notaDetalhe) && (
+                  <button
+                    onClick={() => handleDarCiencia([notaDetalhe.id])}
+                    disabled={manifestando}
+                    className="btn btn-primary btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 10 }}
+                  >
+                    <ShieldCheck size={13} /> {manifestando ? 'Registrando...' : 'Dar ciência'}
+                  </button>
+                )}
 
                 {notaDetalhe.possuiXml && (
                   <div style={{ display: 'inline-flex', gap: 6, flexShrink: 0, marginLeft: 10 }}>
@@ -1381,6 +1491,14 @@ export default function NfeDestinadasPainel() {
             await carregarEmpresas();
             if (empresaIdSelecionada) await carregarNotas(empresaIdSelecionada);
           }}
+        />
+      )}
+
+      {/* Modal de Consulta da Certidão Negativa Federal (SITFIS / SERPRO) */}
+      {showCndModal && (
+        <CertidaoFederalModal
+          empresaIdInicial={empresaIdSelecionada}
+          onFechar={() => setShowCndModal(false)}
         />
       )}
     </div>
