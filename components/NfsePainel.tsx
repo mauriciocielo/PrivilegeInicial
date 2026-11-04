@@ -147,9 +147,12 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       const dados = await res.json().catch(() => ({}));
       if (res.ok && Array.isArray(dados.notas)) {
         const locais = new Map(store.getNfsE(eId).map(n => [n.id, n]));
-        dados.notas.forEach((n: NfsE) => {
-          store.saveNfsE({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) });
-        });
+        const mescladas: NfsE[] = dados.notas.map((n: NfsE) => ({
+          ...locais.get(n.id),
+          ...n,
+          createdAt: String(n.createdAt),
+        }));
+        store.saveManyNfsE(mescladas, true);
         setNfseList(store.getNfsE(eId));
       }
     } catch {
@@ -165,14 +168,14 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo && p.tipo === 'receita'));
     const proprio = dadosEmpresa || lerEmissorProprio();
-    const daLista = empresasDisponiveis.find(e => e.id === eId);
-    setEmpresa(
-      store.getEmpresas().find(e => e.id === eId)
-      || (daLista ? (daLista as unknown as Empresa) : null)
-      || (proprio?.id === eId ? (proprio as Empresa) : null),
+    const doStore = store.getEmpresas().find(e => e.id === eId);
+    setEmpresa(atual =>
+      doStore
+      || (proprio?.id === eId ? (proprio as Empresa) : null)
+      || (atual?.id === eId ? atual : null),
     );
     localStorage.removeItem(`cf_nfse_portal_config_${eId}`);
-  }, [empresasDisponiveis]);
+  }, []);
 
   const selecionarEmissorProprio = useCallback((escolhida: EmpresaNfseSelecionada) => {
     const registro: EmpresaNfseSelecionada = {
@@ -1704,7 +1707,8 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           onNotas={notas => {
             // Mescla com a cópia local: portador e vencimento de uma nota já conhecida são preservados.
             const locais = new Map(store.getNfsE(empresaId).map(n => [n.id, n]));
-            notas.forEach(n => store.saveNfsE({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) }));
+            const mescladas: NfsE[] = notas.map(n => ({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) }));
+            store.saveManyNfsE(mescladas, true);
             setNfseList(store.getNfsE(empresaId));
           }}
           onConcluir={() => carregarConfig(empresaId)}

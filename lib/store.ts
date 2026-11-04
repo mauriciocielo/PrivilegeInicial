@@ -2188,13 +2188,31 @@ class DataStore {
     const all = this.get<NfsE[]>('cf_nfse', []);
     return empresaId ? all.filter(n => n.empresaId === empresaId) : all;
   }
-  saveNfsE(nfse: NfsE) {
+  saveNfsE(nfse: NfsE, silent = false) {
     if (nfse && typeof nfse === "object") nfse.updatedAt = new Date().toISOString();
     const list = this.getNfsE();
     const idx = list.findIndex(n => n.id === nfse.id);
     if (idx >= 0) list[idx] = { ...nfse, updatedAt: new Date().toISOString() };
     else list.push(nfse);
-    this.set('cf_nfse', list);
+    this.set('cf_nfse', list, silent);
+  }
+  saveManyNfsE(notas: NfsE[], silent = true) {
+    if (!Array.isArray(notas) || notas.length === 0) return;
+    const list = [...this.getNfsE()];
+    const indexById = new Map(list.map((n, i) => [n.id, i]));
+    const now = new Date().toISOString();
+    for (const nota of notas) {
+      if (!nota || typeof nota !== 'object') continue;
+      const atualizada = { ...nota, updatedAt: now };
+      const idx = indexById.get(nota.id);
+      if (idx !== undefined) {
+        list[idx] = { ...list[idx], ...atualizada };
+      } else {
+        indexById.set(nota.id, list.length);
+        list.push(atualizada);
+      }
+    }
+    this.set('cf_nfse', list, silent);
   }
   deleteNfsE(id: string) {
     this.addDeletedRecord(id, "cf_nfse");
