@@ -18,7 +18,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const negado = await acessoNegado(auth.session, certidao.empresaId);
     if (negado) return negado;
 
-    if (certidao.tipo !== 'ESTADUAL' || !ehAnexoManual(certidao.pendencias)) {
+    // Só o que foi anexado sai por aqui. Consultas do SITFIS e registros antigos ficam protegidos.
+    if (!ehAnexoManual(certidao.pendencias)) {
       return NextResponse.json({ error: 'Só certidões anexadas podem ser removidas.' }, { status: 409 });
     }
     await db.certidaoFiscal.delete({ where: { id } });

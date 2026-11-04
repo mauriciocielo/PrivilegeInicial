@@ -248,9 +248,10 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
   const anoAtual = new Date().getFullYear();
   const anosParaBuscar = [anoAtual, anoAtual - 1];
 
-  let ultimasOperacoes: any[] = [];
-  let ultimoPeriodoEncontrado: any = null;
-
+  // Reúne TODAS as competências entregues (com operações) dos dois anos. A alíquota deve vir
+  // sempre da última competência entregue, então a escolha é pela maior competência (AAAAMM),
+  // e não pela ordem da lista: o Sefin não garante a ordenação dos períodos.
+  const entregues: { periodo: any; operacoes: any[] }[] = [];
   for (const ano of anosParaBuscar) {
     try {
       const res = await chamarIntegraContador('Consultar', cnpjLimpo, {
@@ -259,25 +260,30 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
         versaoSistema: '1.0',
         dados: JSON.stringify({ anoCalendario: String(ano) }),
       });
-
-      if (res.status === 200 && res.dados?.periodos?.length > 0) {
-        const periodos = res.dados.periodos;
-        ultimoPeriodoEncontrado = periodos[periodos.length - 1];
-        ultimasOperacoes = ultimoPeriodoEncontrado.operacoes || [];
-        if (ultimasOperacoes.length > 0) break;
+      const periodos = res.status === 200 && Array.isArray(res.dados?.periodos) ? res.dados.periodos : [];
+      for (const periodo of periodos) {
+        const operacoes = Array.isArray(periodo?.operacoes) ? periodo.operacoes : [];
+        if (operacoes.length > 0) entregues.push({ periodo, operacoes });
       }
     } catch (err) {
       console.warn(`[Integra Contador] Tentativa de consulta PGDASD para o ano ${ano} retornou erro:`, err);
     }
   }
 
-  if (!ultimoPeriodoEncontrado || ultimasOperacoes.length === 0) {
+  // periodoApuracao vem como AAAAMM: só dígitos e comparação numérica já dão a ordem correta.
+  const competencia = (p: any) => Number(String(p?.periodoApuracao ?? '').replace(/\D/g, '')) || 0;
+  entregues.sort((a, b) => competencia(b.periodo) - competencia(a.periodo));
+
+  const escolhido = entregues[0] || null;
+  if (!escolhido) {
     return {
       sucesso: false,
       aliquota: 0,
-      aviso: 'Nenhuma apuração recente do PGDAS-D foi encontrada para este CNPJ na Receita Federal.',
+      aviso: 'Nenhuma competência do PGDAS-D entregue foi encontrada para este CNPJ na Receita Federal.',
     };
   }
+  const ultimoPeriodoEncontrado = escolhido.periodo;
+  const ultimasOperacoes = escolhido.operacoes;
 
   // Tenta localizar um DAS emitido na última apuração para buscar o extrato com alíquotas oficiais
   const dasOp = ultimasOperacoes.find(o => o.indiceDas?.numeroDas);

@@ -84,11 +84,108 @@ function formatChave(chave: string): string {
 
 const podeDarCiencia = (n: NfeDestinadaItem) => !n.possuiXml && n.situacao === 'autorizada' && !n.manifestacao;
 
+export type TabSieg = 'clientes' | 'fila_a1' | 'fila_avulso' | 'baixados';
+
+function badgeCertCadastrado(emp: EmpresaMonitor) {
+  const agora = Date.now();
+  if (emp.certValidoAte) {
+    const d = new Date(emp.certValidoAte).getTime();
+    if (d < agora) {
+      return (
+        <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+          Vencido
+        </span>
+      );
+    }
+    return (
+      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        No Prazo
+      </span>
+    );
+  }
+  if (emp.certificado === 'escritorio' || emp.usarProcuracao) {
+    return (
+      <span style={{ background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        No Prazo
+      </span>
+    );
+  }
+  return (
+    <span style={{ background: '#ffe4e6', color: '#e11d48', border: '1px solid #fecdd3', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+      Não
+    </span>
+  );
+}
+
+function badgeStatusCert(emp: EmpresaMonitor) {
+  const agora = Date.now();
+  if (emp.certValidoAte) {
+    const d = new Date(emp.certValidoAte).getTime();
+    const diffDias = Math.ceil((d - agora) / (1000 * 60 * 60 * 24));
+    if (d < agora) {
+      return (
+        <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+          Vencido
+        </span>
+      );
+    }
+    if (diffDias <= 30) {
+      return (
+        <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+          Alerta
+        </span>
+      );
+    }
+    return (
+      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        Sucesso
+      </span>
+    );
+  }
+  if (emp.certificado === 'escritorio' || emp.usarProcuracao) {
+    return (
+      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        Sucesso
+      </span>
+    );
+  }
+  return <span style={{ color: '#9ca3af' }}>-</span>;
+}
+
+function badgeConfigSaida(emp: EmpresaMonitor) {
+  const ativo = emp.monitor?.ativo !== false;
+  if (ativo) {
+    return (
+      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        Sim
+      </span>
+    );
+  }
+  return (
+    <span style={{ background: '#ffe4e6', color: '#e11d48', border: '1px solid #fecdd3', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+      Não
+    </span>
+  );
+}
+
+function badgeStatusConfigSaida(emp: EmpresaMonitor) {
+  const ativo = emp.monitor?.ativo !== false;
+  if (ativo && (emp.monitor?.ultimoStatus || emp.totalNotas > 0)) {
+    return (
+      <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
+        Sucesso
+      </span>
+    );
+  }
+  return <span style={{ color: '#9ca3af' }}>-</span>;
+}
+
 export default function NfeDestinadasPainel() {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
-  const [modoVisao, setModoVisao] = useState<'empresa' | 'visao-geral'>('empresa');
+  const [tabSieg, setTabSieg] = useState<TabSieg>('clientes');
+  const [filtroCertStatus, setFiltroCertStatus] = useState<'todos' | 'noprazo' | 'vencidos' | 'semcert'>('todos');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
 
   // Filtros de busca de notas
@@ -506,135 +603,602 @@ export default function NfeDestinadasPainel() {
     };
   }, [notas]);
 
-  // Empresas filtradas para seleção
+  // Estatísticas do painel estilo SIEG
+  const statsSieg = useMemo(() => {
+    const totalEmpresas = empresas.length;
+    let vencidos = 0;
+    let noPrazo = 0;
+    let semCert = 0;
+    let comProcuracao = 0;
+    let monitorAtivo = 0;
+    let totalXmlsNfe = 0;
+    let totalXmlsNfse = 0;
+
+    const agora = Date.now();
+    for (const e of empresas) {
+      totalXmlsNfe += e.totalNotas || 0;
+      totalXmlsNfse += (e as any).totalNfse || 0;
+      if (e.monitor?.ativo !== false) monitorAtivo++;
+
+      if (e.certValidoAte) {
+        const d = new Date(e.certValidoAte).getTime();
+        if (d < agora) {
+          vencidos++;
+        } else {
+          noPrazo++;
+        }
+      } else if (e.certificado === 'escritorio' || e.usarProcuracao) {
+        comProcuracao++;
+        noPrazo++;
+      } else {
+        semCert++;
+      }
+    }
+
+    const totalCertificados = noPrazo + vencidos;
+    const percentualValidos = totalCertificados > 0 ? Math.round((noPrazo / totalCertificados) * 100) : 100;
+
+    return {
+      totalEmpresas,
+      totalCertificados,
+      vencidos,
+      noPrazo,
+      semCert,
+      comProcuracao,
+      monitorAtivo,
+      totalXmlsNfe,
+      totalXmlsNfse,
+      totalXmlsGeral: totalXmlsNfe + totalXmlsNfse,
+      percentualValidos,
+    };
+  }, [empresas]);
+
+  // Empresas filtradas para seleção e exibição na aba Clientes
   const empresasFiltradas = useMemo(() => {
-    if (!filtroEmpresaTexto) return empresas;
+    let lista = empresas;
+    const agora = Date.now();
+
+    if (filtroCertStatus === 'noprazo') {
+      lista = lista.filter(e => (e.certValidoAte && new Date(e.certValidoAte).getTime() >= agora) || e.certificado === 'escritorio' || e.usarProcuracao);
+    } else if (filtroCertStatus === 'vencidos') {
+      lista = lista.filter(e => e.certValidoAte && new Date(e.certValidoAte).getTime() < agora);
+    } else if (filtroCertStatus === 'semcert') {
+      lista = lista.filter(e => !e.certValidoAte && e.certificado === 'ausente' && !e.usarProcuracao);
+    }
+
+    if (!filtroEmpresaTexto) return lista;
     const txt = filtroEmpresaTexto.toLowerCase();
-    return empresas.filter(e =>
+    return lista.filter(e =>
       e.razaoSocial.toLowerCase().includes(txt) ||
       (e.nomeFantasia && e.nomeFantasia.toLowerCase().includes(txt)) ||
       e.cnpj.includes(txt)
     );
-  }, [empresas, filtroEmpresaTexto]);
+  }, [empresas, filtroEmpresaTexto, filtroCertStatus]);
 
   return (
     <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%', padding: '24px 28px' }}>
-      {/* Cabeçalho */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 38, height: 38, borderRadius: 10, background: '#eff6ff', color: '#2563eb'
-            }}>
-              <Inbox size={22} />
-            </span>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h1 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#171717', margin: 0, lineHeight: 1.1 }}>
-                  NF-e Destinadas
-                </h1>
-                {ehHorarioNoturno ? (
-                  <span className="badge" style={{ background: '#1e1b4b', color: '#c7d2fe', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '3px 8px' }}>
-                    <Moon size={11} /> Janela Noturna Ativa (22h - 05h)
-                  </span>
-                ) : (
-                  <span className="badge" style={{ background: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '3px 8px' }}>
-                    <Sun size={11} /> Horário Comercial (Noturno às 22h)
-                  </span>
-                )}
+      {/* =========================================================================
+          SIEG DASHBOARD - PAINEL SUPERIOR COM GAUGE E MÉTRICAS
+          ========================================================================= */}
+      <div style={{
+        background: '#ffffff',
+        borderRadius: 12,
+        border: '1px solid #e5e7eb',
+        padding: '20px 24px',
+        marginBottom: 20,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 24
+      }}>
+        {/* Lado Esquerdo: Gauge com Total de Certificados e Legenda */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          {/* Gauge semicircular estilo SIEG */}
+          <div style={{ position: 'relative', width: 140, height: 75, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <svg width="140" height="75" viewBox="0 0 140 75" style={{ overflow: 'visible' }}>
+              <path
+                d="M 15 70 A 55 55 0 0 1 125 70"
+                fill="none"
+                stroke="#f3f4f6"
+                strokeWidth="14"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 15 70 A 55 55 0 0 1 125 70"
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth="14"
+                strokeLinecap="round"
+                strokeDasharray="172"
+                strokeDashoffset={172 - (172 * (statsSieg.percentualValidos / 100))}
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+              />
+              {statsSieg.vencidos > 0 && (
+                <circle cx="125" cy="70" r="7" fill="#ef4444" />
+              )}
+            </svg>
+            <div style={{ position: 'absolute', bottom: 0, textAlign: 'center' }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', lineHeight: 1 }}>
+                {statsSieg.totalEmpresas}
               </div>
-              <span style={{ fontSize: 13, color: '#737373' }}>
-                Monitor automático de compras e notas fiscais de mercadorias emitidas para seus CNPJs (SEFAZ NT 2014.002)
-              </span>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>
+                Empresas
+              </div>
+            </div>
+          </div>
+
+          {/* Legenda detalhada estilo SIEG */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '6px 18px', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
+              <span style={{ color: '#4b5563' }}>Vencidos</span>
+            </div>
+            <div style={{ fontWeight: 700, color: statsSieg.vencidos > 0 ? '#b91c1c' : '#111827', textAlign: 'right' }}>
+              {statsSieg.vencidos}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} />
+              <span style={{ color: '#4b5563' }}>No Prazo</span>
+            </div>
+            <div style={{ fontWeight: 700, color: '#15803d', textAlign: 'right' }}>
+              {statsSieg.noPrazo}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} />
+              <span style={{ color: '#4b5563' }}>Total de Certificados</span>
+            </div>
+            <div style={{ fontWeight: 700, color: '#111827', textAlign: 'right' }}>
+              {statsSieg.totalCertificados}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#8b5cf6', display: 'inline-block' }} />
+              <span style={{ color: '#4b5563' }}>Integração Estadual (SEFAZ)</span>
+            </div>
+            <div style={{ fontWeight: 700, color: '#6d28d9', textAlign: 'right' }}>
+              {statsSieg.monitorAtivo}
             </div>
           </div>
         </div>
 
-        {/* Abas de Navegação / Ações do Topo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{
-            display: 'inline-flex', padding: 3, background: '#f4f4f5', borderRadius: 8, border: '1px solid #e4e4e7'
-          }}>
-            <button
-              onClick={() => setModoVisao('empresa')}
-              style={{
-                padding: '6px 14px', fontSize: 13, fontWeight: modoVisao === 'empresa' ? 600 : 500,
-                borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'all .15s',
-                background: modoVisao === 'empresa' ? '#fff' : 'transparent',
-                color: modoVisao === 'empresa' ? '#171717' : '#71717a',
-                boxShadow: modoVisao === 'empresa' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-              }}
-            >
-              Notas da Empresa
-            </button>
-            <button
-              onClick={() => setModoVisao('visao-geral')}
-              style={{
-                padding: '6px 14px', fontSize: 13, fontWeight: modoVisao === 'visao-geral' ? 600 : 500,
-                borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'all .15s',
-                background: modoVisao === 'visao-geral' ? '#fff' : 'transparent',
-                color: modoVisao === 'visao-geral' ? '#171717' : '#71717a',
-                boxShadow: modoVisao === 'visao-geral' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-              }}
-            >
-              Monitor Geral ({empresas.length})
-            </button>
+        {/* Lado Direito: Resumo de XMLs capturados e status de varredura */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, borderLeft: '1px solid #f3f4f6', paddingLeft: 24, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>
+              XML's Baixados na Carteira
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#111827' }}>
+              {statsSieg.totalXmlsGeral.toLocaleString('pt-BR')}
+            </div>
+            <div style={{ fontSize: 11.5, color: '#6b7280', display: 'flex', gap: 8, marginTop: 2 }}>
+              <span>📦 {statsSieg.totalXmlsNfe} NF-e</span>
+              {statsSieg.totalXmlsNfse > 0 && <span>• 🧾 {statsSieg.totalXmlsNfse} NFS-e</span>}
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setShowDifalModal(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#15803d', background: '#f0fdf4', borderColor: '#bbf7d0', fontWeight: 600 }}
-              title="Calcular e gerar relatório do Diferencial de Alíquota (DIFAL) nas compras interestaduais"
-            >
-              <Calculator size={13} color="#16a34a" /> Relatório DIFAL
-            </button>
-
-            <button
-              onClick={() => setShowIntegracaoModal(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#6d28d9', background: '#f5f3ff', borderColor: '#ddd6fe', fontWeight: 600 }}
-              title="API externa para compartilhar notas, consultar e fazer download de XMLs/PDFs com outro sistema"
-            >
-              <Globe size={13} color="#7c3aed" /> API Integração
-            </button>
-
-            <button
-              onClick={() => setShowImportarModal(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#0369a1', background: '#f0f9ff', borderColor: '#bae6fd', fontWeight: 600 }}
-              title="Importar arquivos XML de NF-e emitidas (vendas) ou recebidas (compras)"
-            >
-              <UploadCloud size={13} color="#0284c7" /> Importar XMLs
-            </button>
-
-            <button
-              onClick={() => setShowCndModal(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#0284c7', background: '#f0f9ff', borderColor: '#bae6fd' }}
-              title="Gerar o Relatório de Situação Fiscal (SITFIS) na Receita Federal e na PGFN"
-            >
-              🏛️ Situação Federal
-            </button>
-
-            <button
-              onClick={handleDispararLote}
-              disabled={varrendo}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
-              title="Consulta as empresas ativas elegíveis por até 40 segundos. As que faltarem ficam para a próxima rodada."
-            >
-              <Play size={13} />
-              {varrendo ? 'Varrendo...' : 'Varredura Agora'}
-            </button>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+              Status da Captura
+            </div>
+            {ehHorarioNoturno ? (
+              <span className="badge" style={{ background: '#1e1b4b', color: '#c7d2fe', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '4px 10px', borderRadius: 6 }}>
+                <Moon size={12} /> Janela Noturna (22h - 05h)
+              </span>
+            ) : (
+              <span className="badge" style={{ background: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '4px 10px', borderRadius: 6 }}>
+                <Sun size={12} /> Horário Diurno (24h)
+              </span>
+            )}
+            <div style={{ marginTop: 6 }}>
+              <button
+                onClick={handleDispararLote}
+                disabled={varrendo}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: 12, padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                title="Executar varredura agora em todas as empresas aptas"
+              >
+                <Play size={11} /> {varrendo ? 'Varrendo...' : 'Varredura Agora'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo: MODO 1 - NOTAS DA EMPRESA */}
-      {modoVisao === 'empresa' && (
+      {/* =========================================================================
+          BARRA AZUL SIEG "ReportS"
+          ========================================================================= */}
+      <div style={{
+        background: 'linear-gradient(90deg, #1e40af 0%, #2563eb 100%)',
+        borderRadius: '10px 10px 0 0',
+        padding: '12px 20px',
+        color: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Layers size={18} color="#bfdbfe" />
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '.02em' }}>ReportS</span>
+          <span style={{ fontSize: 13, color: '#dbeafe', fontWeight: 400 }}>
+            | Central de Documentos Fiscais (NF-e Mercadorias & NFS-e Serviços)
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowDifalModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            title="Relatório e Cálculo do DIFAL nas compras interestaduais"
+          >
+            <Calculator size={12} /> Relatório DIFAL
+          </button>
+          <button
+            onClick={() => setShowIntegracaoModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            title="API externa para outros ERPs consultarem e baixarem notas"
+          >
+            <Globe size={12} /> API Integração
+          </button>
+          <button
+            onClick={() => setShowImportarModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            title="Importar arquivos XML de NF-e emitidas ou recebidas"
+          >
+            <UploadCloud size={12} /> Importar XMLs
+          </button>
+          <button
+            onClick={() => setShowCndModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            title="Consultar Situação Fiscal Federal (SITFIS / CND)"
+          >
+            🏛️ Situação Fiscal
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          ABAS DO SIEG (Clientes, Xml's Fila A1, Xml's Fila Avulso, Xml's Baixados)
+          ========================================================================= */}
+      <div style={{
+        background: '#ffffff',
+        borderLeft: '1px solid #e5e7eb',
+        borderRight: '1px solid #e5e7eb',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        background: '#f8fafc'
+      }}>
+        <div style={{ display: 'flex', gap: 4, paddingTop: 6 }}>
+          {[
+            { id: 'clientes', label: 'Clientes' },
+            { id: 'fila_a1', label: "Xml's Fila A1" },
+            { id: 'fila_avulso', label: "Xml's Fila Avulso" },
+            { id: 'baixados', label: `Xml's Baixados ${empresaAtual ? `(${empresaAtual.razaoSocial.slice(0, 16)}...)` : ''}` },
+          ].map((tab) => {
+            const ativa = tabSieg === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setTabSieg(tab.id as TabSieg)}
+                style={{
+                  padding: '10px 22px',
+                  fontSize: 13,
+                  fontWeight: ativa ? 700 : 500,
+                  color: ativa ? '#1d4ed8' : '#4b5563',
+                  background: ativa ? '#dbeafe' : 'transparent',
+                  border: 'none',
+                  borderRadius: '6px 6px 0 0',
+                  cursor: 'pointer',
+                  borderBottom: ativa ? '2px solid #1d4ed8' : '2px solid transparent',
+                  transition: 'all .15s'
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Campo Pesquisar do SIEG na aba Clientes */}
+        {tabSieg === 'clientes' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+            <div style={{ position: 'relative', width: 230 }}>
+              <Search size={13} style={{ position: 'absolute', left: 10, top: 9, color: '#9ca3af' }} />
+              <input
+                type="text"
+                value={filtroEmpresaTexto}
+                onChange={(e) => setFiltroEmpresaTexto(e.target.value)}
+                placeholder="Pesquisar..."
+                style={{
+                  width: '100%',
+                  padding: '6px 10px 6px 30px',
+                  fontSize: 12.5,
+                  border: '1px solid #d1d5db',
+                  borderRadius: 4,
+                  outline: 'none',
+                  background: '#ffffff'
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================================
+          ABA 1: CLIENTES (TABELA IDÊNTICA AO SIEG)
+          ========================================================================= */}
+      {tabSieg === 'clientes' && (
+        <div style={{
+          background: '#ffffff',
+          borderLeft: '1px solid #e5e7eb',
+          borderRight: '1px solid #e5e7eb',
+          borderBottom: '1px solid #e5e7eb',
+          borderRadius: '0 0 10px 10px',
+          overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          marginBottom: 20
+        }}>
+          {/* Barra de Filtros por Situação do Certificado */}
+          <div style={{
+            padding: '12px 20px',
+            background: '#fafafa',
+            borderBottom: '1px solid #e5e7eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginRight: 4 }}>
+                Status:
+              </span>
+              {[
+                { id: 'todos', label: `Todos (${empresas.length})` },
+                { id: 'noprazo', label: `No Prazo (${statsSieg.noPrazo})`, cor: '#15803d', bg: '#dcfce7' },
+                { id: 'vencidos', label: `Vencidos (${statsSieg.vencidos})`, cor: '#b91c1c', bg: '#fee2e2' },
+                { id: 'semcert', label: `Sem Certificado (${statsSieg.semCert})`, cor: '#e11d48', bg: '#ffe4e6' },
+              ].map(f => {
+                const ativo = filtroCertStatus === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setFiltroCertStatus(f.id as any)}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: ativo ? 700 : 500,
+                      borderRadius: 6,
+                      border: '1px solid',
+                      borderColor: ativo ? (f.cor || '#1d4ed8') : '#e5e7eb',
+                      background: ativo ? (f.bg || '#dbeafe') : '#ffffff',
+                      color: ativo ? (f.cor || '#1d4ed8') : '#4b5563',
+                      cursor: 'pointer',
+                      transition: 'all .15s'
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ fontSize: 12, color: '#6b7280' }}>
+              Exibindo <strong>{empresasFiltradas.length}</strong> de <strong>{empresas.length}</strong> empresas
+            </div>
+          </div>
+
+          {/* Tabela de Clientes no Estilo Exato do SIEG */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa', borderBottom: '1px solid #e5e7eb', color: '#4b5563', fontSize: 12 }}>
+                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Clientes ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>Cert. Cadastrado ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>Status do Certificado ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>Config. de Saída ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>Status da Config. de Saída ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>Vencimento ^</th>
+                <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'center' }}>XMLs Baixados</th>
+                <th style={{ padding: '12px 18px', fontWeight: 600, textAlign: 'right' }}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carregandoEmpresas ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                    <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#2563eb' }} />
+                    Carregando carteira de empresas...
+                  </td>
+                </tr>
+              ) : empresasFiltradas.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                    Nenhuma empresa encontrada com os filtros informados.
+                  </td>
+                </tr>
+              ) : (
+                empresasFiltradas.map((emp) => {
+                  return (
+                    <tr
+                      key={emp.id}
+                      style={{ borderBottom: '1px solid #f3f4f6', transition: 'background .15s', cursor: 'pointer' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('button')) return;
+                        setEmpresaIdSelecionada(emp.id);
+                        setTabSieg('baixados');
+                      }}
+                    >
+                      {/* 1. Clientes: Razão Social em maiúsculas bold + CNPJ abaixo */}
+                      <td style={{ padding: '12px 18px' }}>
+                        <div style={{ fontWeight: 700, color: '#111827', textTransform: 'uppercase', fontSize: 12.5 }}>
+                          {emp.razaoSocial}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
+                          {emp.cnpj.replace(/\D/g, '')}
+                        </div>
+                      </td>
+
+                      {/* 2. Cert. Cadastrado (Pill badge: No Prazo / Vencido / Não / Procuração) */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        {badgeCertCadastrado(emp)}
+                      </td>
+
+                      {/* 3. Status do Certificado (Sucesso / Alerta / Vencido / -) */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        {badgeStatusCert(emp)}
+                      </td>
+
+                      {/* 4. Config. de Saída (Sim / Não) */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        {badgeConfigSaida(emp)}
+                      </td>
+
+                      {/* 5. Status da Config. de Saída (Sucesso / -) */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        {badgeStatusConfigSaida(emp)}
+                      </td>
+
+                      {/* 6. Vencimento (DD/MM/AAAA) */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#374151' }}>
+                        {emp.certValidoAte ? formatData(emp.certValidoAte) : (emp.usarProcuracao ? 'Procuração' : '-')}
+                      </td>
+
+                      {/* 7. XMLs Baixados */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <span style={{ fontWeight: 600, color: '#111827', fontSize: 13 }}>
+                          {emp.totalNotas}
+                        </span>
+                        {(emp as any).totalNfse > 0 && (
+                          <div style={{ fontSize: 10.5, color: '#6b7280' }}>
+                            +{(emp as any).totalNfse} NFS-e
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 8. Ações */}
+                      <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmpresaIdSelecionada(emp.id);
+                              setTabSieg('baixados');
+                            }}
+                            className="btn btn-primary btn-sm"
+                            style={{
+                              background: '#1d4ed8', border: 'none', borderRadius: 6,
+                              fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontWeight: 600
+                            }}
+                            title="Visualizar notas e XMLs desta empresa"
+                          >
+                            Ver XMLs <ChevronRight size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEmpresaCertificadoModal(emp)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6 }}
+                            title="Gerenciar Certificado A1"
+                          >
+                            <KeyRound size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* =========================================================================
+          ABA 3: XML'S FILA AVULSO (IMPORTAÇÃO, CONSULTA MANUAL E VARREDURA)
+          ========================================================================= */}
+      {tabSieg === 'fila_avulso' && (
+        <div style={{
+          background: '#ffffff',
+          borderLeft: '1px solid #e5e7eb',
+          borderRight: '1px solid #e5e7eb',
+          borderBottom: '1px solid #e5e7eb',
+          borderRadius: '0 0 10px 10px',
+          padding: 24,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          marginBottom: 20
+        }}>
+          <div style={{ maxWidth: 840, margin: '0 auto' }}>
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: '0 0 4px' }}>
+                Fila Avulsa e Importação de Arquivos XML
+              </h3>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                Faça upload de XMLs de NF-e emitidas ou recebidas, consulte chaves de acesso diretamente na SEFAZ ou execute uma varredura imediata.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 24 }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <UploadCloud size={20} color="#2563eb" />
+                  <strong style={{ fontSize: 14, color: '#1e293b' }}>Importar XMLs em Lote</strong>
+                </div>
+                <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                  Envie arquivos .xml de notas emitidas ou recebidas para indexação automática na carteira.
+                </p>
+                <button
+                  onClick={() => setShowImportarModal(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{ background: '#2563eb', border: 'none', borderRadius: 6, fontSize: 12.5, width: '100%' }}
+                >
+                  Abrir Importador de XMLs
+                </button>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <Play size={20} color="#16a34a" />
+                  <strong style={{ fontSize: 14, color: '#1e293b' }}>Varredura Geral Imediata</strong>
+                </div>
+                <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                  Dispara a sincronização de todas as empresas com certificado ativo na SEFAZ (NT 2014.002).
+                </p>
+                <button
+                  onClick={handleDispararLote}
+                  disabled={varrendo}
+                  className="btn btn-secondary btn-sm"
+                  style={{ borderRadius: 6, fontSize: 12.5, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <Play size={12} /> {varrendo ? 'Varrendo empresas...' : 'Executar Varredura Agora'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          ABA 4: XML'S BAIXADOS (NOTAS DA EMPRESA)
+          ========================================================================= */}
+      {tabSieg === 'baixados' && (
         <>
           {/* Seletor da Empresa Ativa e Controles */}
           <div style={{

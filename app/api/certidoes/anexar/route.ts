@@ -5,9 +5,9 @@ import { captureError } from '../../../../lib/sentry-helper';
 import { acessoNegado } from '../../../../lib/nfse/servidor';
 import { hojeBrasilia } from '../../../../lib/nfse/dps';
 import { UFS } from '../../../../lib/certidoes/portais-estaduais';
-import { ORIGEM_ANEXO, SITUACOES_ANEXO, TAMANHO_MAX_PDF, statusValidade } from '../../../../lib/certidoes/situacao';
+import { ORIGEM_ANEXO, TAMANHO_MAX_PDF, situacoesAnexo, statusValidade } from '../../../../lib/certidoes/situacao';
 
-/** Guarda a certidão estadual que a pessoa emitiu no portal do estado. Só armazena: não atesta a autenticidade. */
+/** Guarda a CND (federal ou estadual) que a pessoa emitiu no portal oficial. Só armazena: não atesta a autenticidade. */
 export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
@@ -20,11 +20,16 @@ export async function POST(request: Request) {
     const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
-    const uf = typeof body?.uf === 'string' ? body.uf.trim().toUpperCase() : '';
-    if (!UFS.includes(uf)) return NextResponse.json({ error: 'Selecione o estado da certidão.' }, { status: 422 });
+    const tipo = body?.tipo === 'FEDERAL' ? 'FEDERAL' : 'ESTADUAL';
+    // Federal cobre o país inteiro (uf = BR); estadual precisa de uma UF válida.
+    let uf = 'BR';
+    if (tipo === 'ESTADUAL') {
+      uf = typeof body?.uf === 'string' ? body.uf.trim().toUpperCase() : '';
+      if (!UFS.includes(uf)) return NextResponse.json({ error: 'Selecione o estado da certidão.' }, { status: 422 });
+    }
 
     const situacao = typeof body?.situacao === 'string' ? body.situacao : '';
-    if (!SITUACOES_ANEXO[situacao]) return NextResponse.json({ error: 'Selecione a situação que consta na certidão.' }, { status: 422 });
+    if (!situacoesAnexo(tipo)[situacao]) return NextResponse.json({ error: 'Selecione a situação que consta na certidão.' }, { status: 422 });
 
     const validoAte = typeof body?.validoAte === 'string' ? body.validoAte : '';
     const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(validoAte) && !Number.isNaN(Date.parse(`${validoAte}T12:00:00Z`));
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Informe a data de validade que consta na certidão.' }, { status: 422 });
     }
     if (dataValida && statusValidade(validoAte, hojeBrasilia()).status === 'vencida') {
-      return NextResponse.json({ error: 'Esta certidão já está vencida. Emita uma nova no portal do estado.' }, { status: 422 });
+      return NextResponse.json({ error: `Esta certidão já está vencida. Emita uma nova no portal ${tipo === 'FEDERAL' ? 'da Receita' : 'do estado'}.` }, { status: 422 });
     }
 
     const pdfBase64 = typeof body?.pdfBase64 === 'string' ? body.pdfBase64 : '';
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
     const registro = await db.certidaoFiscal.create({
       data: {
         empresaId,
-        tipo: 'ESTADUAL',
+        tipo,
         uf,
         situacao,
         emitidoEm: new Date(),

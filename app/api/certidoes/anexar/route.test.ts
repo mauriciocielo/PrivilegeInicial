@@ -73,6 +73,23 @@ describe('anexar certidão', () => {
   });
 });
 
+describe('anexar CND federal', () => {
+  const federal = { empresaId: 'e1', tipo: 'FEDERAL', situacao: 'NEGATIVA', validoAte: '2099-01-31', pdfBase64: PDF, nomeArquivo: 'cnd.pdf' };
+
+  it('guarda como FEDERAL com uf BR, sem precisar de estado', async () => {
+    expect((await anexar(federal)).status).toBe(200);
+    expect(db.certidaoFiscal.create.mock.calls[0][0].data).toMatchObject({ tipo: 'FEDERAL', uf: 'BR', situacao: 'NEGATIVA', pendencias: { origem: 'anexo_manual' } });
+  });
+
+  it('aceita positiva com efeito de negativa, mas recusa positiva pura e sempre exige validade', async () => {
+    expect((await anexar({ ...federal, situacao: 'POSITIVA_COM_EFEITO_NEGATIVA' })).status).toBe(200);
+    db.certidaoFiscal.create.mockClear();
+    expect((await anexar({ ...federal, situacao: 'POSITIVA' })).status).toBe(422);
+    expect((await anexar({ ...federal, validoAte: '' })).status).toBe(422);
+    expect(db.certidaoFiscal.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('baixar e remover', () => {
   const registro = (over = {}) => ({ id: 'c1abcdefgh', empresaId: 'e1', tipo: 'ESTADUAL', pdfBase64: PDF, pendencias: { origem: 'anexo_manual' }, empresa: { cnpj: '11222333000181' }, ...over });
 
@@ -89,7 +106,13 @@ describe('baixar e remover', () => {
     expect(db.certidaoFiscal.delete).toHaveBeenCalledTimes(1);
   });
 
-  it('não remove consulta federal nem registro antigo', async () => {
+  it('remove a CND federal anexada', async () => {
+    db.certidaoFiscal.findUnique.mockResolvedValue(registro({ tipo: 'FEDERAL', pendencias: { origem: 'anexo_manual' } }));
+    expect((await DELETE(new Request('http://x'), contexto)).status).toBe(200);
+    expect(db.certidaoFiscal.delete).toHaveBeenCalledTimes(1);
+  });
+
+  it('não remove a consulta SITFIS nem registro antigo', async () => {
     db.certidaoFiscal.findUnique.mockResolvedValue(registro({ tipo: 'FEDERAL', pendencias: { classificador: 2 } }));
     expect((await DELETE(new Request('http://x'), contexto)).status).toBe(409);
     db.certidaoFiscal.findUnique.mockResolvedValue(registro({ pendencias: null }));

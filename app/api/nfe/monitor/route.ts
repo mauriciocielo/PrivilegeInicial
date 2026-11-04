@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         id: true, razaoSocial: true, nomeFantasia: true, cnpj: true,
         nfseConfig: { select: { usarProcuracao: true, procuracaoStatus: true, certValidoAte: true, certTitular: true } },
         nfeDistribuicao: true,
-        _count: { select: { nfesDestinadas: true } },
+        _count: { select: { nfesDestinadas: true, nfsList: true } },
       },
       orderBy: { razaoSocial: 'asc' },
     });
@@ -54,6 +54,8 @@ export async function GET(request: Request) {
               }
             : null,
           totalNotas: e._count.nfesDestinadas,
+          totalNfse: e._count.nfsList,
+          totalDocumentos: e._count.nfesDestinadas + e._count.nfsList,
         })),
     });
   } catch (error) {

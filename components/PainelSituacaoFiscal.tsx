@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, CircleSlash, Copy, ExternalLink, FileText,
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 import { hojeBrasilia } from '../lib/nfse/dps';
-import { ORDEM_CATEGORIAS, SITUACOES_ANEXO, TAMANHO_MAX_PDF, URL_CND_RECEITA, statusValidade, temPdfRelatorio, type CategoriaFederal } from '../lib/certidoes/situacao';
+import { ORDEM_CATEGORIAS, SITUACOES_ANEXO, TAMANHO_MAX_PDF, URL_CND_RECEITA, ehAnexoManual, situacoesAnexo, statusValidade, temPdfRelatorio, type CategoriaFederal } from '../lib/certidoes/situacao';
 import { PORTAIS_ESTADUAIS, UFS, portalDaUf } from '../lib/certidoes/portais-estaduais';
 
 interface Consulta {
@@ -18,6 +18,7 @@ interface Consulta {
   emitidoEm?: string | null;
   validoAte?: string | null;
   observacoes?: string | null;
+  pendencias?: unknown;
   criadoAutomaticamente: boolean;
   createdAt: string;
 }
@@ -30,6 +31,7 @@ interface EmpresaSituacao {
   uf: string | null;
   cidade: string | null;
   federal: Consulta | null;
+  cndFederal: Consulta | null;
   categoria: CategoriaFederal;
   estaduais: Consulta[];
   historico: Consulta[];
@@ -129,15 +131,17 @@ export default function PainelSituacaoFiscal() {
 
   // Emitir no portal e anexar o PDF
   const [anexoEmpresa, setAnexoEmpresa] = useState<EmpresaSituacao | null>(null);
+  const [anexoTipo, setAnexoTipo] = useState<'FEDERAL' | 'ESTADUAL'>('ESTADUAL');
   const [anexoUf, setAnexoUf] = useState('');
   const [anexoSituacao, setAnexoSituacao] = useState('NEGATIVA');
   const [anexoValidade, setAnexoValidade] = useState('');
   const [anexoArquivo, setAnexoArquivo] = useState<File | null>(null);
   const [anexando, setAnexando] = useState(false);
 
-  const abrirAnexo = (e: EmpresaSituacao) => {
+  const abrirAnexo = (e: EmpresaSituacao, tipo: 'FEDERAL' | 'ESTADUAL') => {
     setAnexoEmpresa(e);
-    setAnexoUf((e.uf || '').trim().toUpperCase());
+    setAnexoTipo(tipo);
+    setAnexoUf(tipo === 'ESTADUAL' ? (e.uf || '').trim().toUpperCase() : 'BR');
     setAnexoSituacao('NEGATIVA');
     setAnexoValidade('');
     setAnexoArquivo(null);
@@ -145,7 +149,7 @@ export default function PainelSituacaoFiscal() {
 
   const enviarAnexo = async () => {
     if (!anexoEmpresa) return;
-    if (!anexoUf) { toast.error('Selecione o estado da certidão.'); return; }
+    if (anexoTipo === 'ESTADUAL' && !anexoUf) { toast.error('Selecione o estado da certidão.'); return; }
     if (!anexoArquivo) { toast.error('Selecione o PDF da certidão.'); return; }
     if (anexoSituacao !== 'POSITIVA' && !anexoValidade) { toast.error('Informe a validade que consta na certidão.'); return; }
     if (anexoArquivo.size > TAMANHO_MAX_PDF) { toast.error('O PDF precisa ter no máximo 3 MB.'); return; }
@@ -156,6 +160,7 @@ export default function PainelSituacaoFiscal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           empresaId: anexoEmpresa.id,
+          tipo: anexoTipo,
           uf: anexoUf,
           situacao: anexoSituacao,
           validoAte: anexoValidade,
@@ -176,7 +181,7 @@ export default function PainelSituacaoFiscal() {
   };
 
   const removerAnexo = async (id: string) => {
-    const confirmado = await confirmAsync('Remover esta certidão do sistema? O documento continua válido no estado, mas o PDF sai daqui.', {
+    const confirmado = await confirmAsync('Remover esta certidão do sistema? O documento continua válido no órgão que o emitiu, mas o PDF sai daqui.', {
       title: 'Remover certidão', confirmText: 'Remover', cancelText: 'Manter', danger: true,
     });
     if (!confirmado) return;
@@ -355,7 +360,7 @@ export default function PainelSituacaoFiscal() {
       </div>
 
       <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>
-        <strong>O relatório não é uma certidão.</strong> Ele mostra as pendências, mas a CND federal é emitida no portal da Receita. A certidão estadual é emitida no portal do estado: o sistema abre o portal certo, e você anexa o PDF para guardar e acompanhar a validade.
+        <strong>O relatório SITFIS não é uma certidão.</strong> Ele mostra as pendências, mas a CND vale só se emitida no portal oficial — a federal na Receita e a estadual na SEFAZ. O sistema abre o portal certo e guarda o PDF que você anexa, acompanhando a validade.
       </div>
 
       {/* Totais: cada um filtra a lista */}
@@ -465,11 +470,29 @@ export default function PainelSituacaoFiscal() {
                       <div style={{ fontWeight: 600, fontSize: 13.5 }}>{e.nomeFantasia || e.razaoSocial}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{e.cnpj}</div>
                     </td>
-                    <td style={{ maxWidth: 300 }}>
+                    <td style={{ maxWidth: 320 }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Relatório (SITFIS)</div>
                       <span className={`badge ${CATEGORIAS[e.categoria].classe}`} style={CATEGORIAS[e.categoria].classe ? undefined : { background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
                         {rotuloDaConsulta(e)}
                       </span>
                       {detalhe && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>{detalhe}</div>}
+
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 10 }}>CND federal</div>
+                      {e.cndFederal ? (() => {
+                        const validade = textoValidade(e.cndFederal.validoAte);
+                        return (
+                          <div>
+                            <span className={`badge ${CLASSE_ANEXO[e.cndFederal.situacao] || ''}`}>{SITUACOES_ANEXO[e.cndFederal.situacao] || e.cndFederal.situacao}</span>
+                            <div style={{ fontSize: 11.5, color: validade.cor, marginTop: 2 }}>
+                              {validade.texto}{' · '}
+                              <a href={`/api/certidoes/${e.cndFederal.id}/download`} target="_blank" rel="noreferrer">PDF</a>
+                            </div>
+                          </div>
+                        );
+                      })() : <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 4 }}>Não anexada</div>}
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirAnexo(e, 'FEDERAL')} style={{ ...linkStyle, marginTop: 4 }}>
+                        <Upload size={12} /> {e.cndFederal ? 'Atualizar CND' : 'Emitir e anexar CND'}
+                      </button>
                     </td>
                     <td style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>
                       {e.federal ? (
@@ -494,7 +517,7 @@ export default function PainelSituacaoFiscal() {
                             </div>
                           );
                         })}
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirAnexo(e)} style={linkStyle}>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirAnexo(e, 'ESTADUAL')} style={linkStyle}>
                           <Upload size={12} /> {(e.estaduais || []).length > 0 ? 'Atualizar' : 'Emitir e anexar'}
                         </button>
                       </div>
@@ -530,32 +553,40 @@ export default function PainelSituacaoFiscal() {
           <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <div>
-                <h2 className="modal-title">Certidão estadual</h2>
+                <h2 className="modal-title">{anexoTipo === 'FEDERAL' ? 'CND federal' : 'Certidão estadual'}</h2>
                 <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{anexoEmpresa.nomeFantasia || anexoEmpresa.razaoSocial} — {anexoEmpresa.cnpj}</div>
               </div>
               <button type="button" className="modal-close" onClick={() => setAnexoEmpresa(null)} disabled={anexando}>✕</button>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="anexo-uf">Estado</label>
-              <select id="anexo-uf" className="form-control" value={anexoUf} onChange={e => setAnexoUf(e.target.value)} disabled={anexando}>
-                <option value="">Selecione</option>
-                {UFS.map(uf => <option key={uf} value={uf}>{uf} — {PORTAIS_ESTADUAIS[uf].nome}</option>)}
-              </select>
-            </div>
+            {anexoTipo === 'ESTADUAL' && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="anexo-uf">Estado</label>
+                <select id="anexo-uf" className="form-control" value={anexoUf} onChange={e => setAnexoUf(e.target.value)} disabled={anexando}>
+                  <option value="">Selecione</option>
+                  {UFS.map(uf => <option key={uf} value={uf}>{uf} — {PORTAIS_ESTADUAIS[uf].nome}</option>)}
+                </select>
+              </div>
+            )}
 
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>1. Emita no portal do estado</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>1. Emita no portal {anexoTipo === 'FEDERAL' ? 'da Receita' : 'do estado'}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => copiarCnpj(anexoEmpresa.cnpj)} style={linkStyle}>
                 <Copy size={12} /> Copiar CNPJ
               </button>
-              {portalDaUf(anexoUf)?.links.map(l => (
+              {anexoTipo === 'FEDERAL' ? (
+                <a className="btn btn-secondary btn-sm" href={URL_CND_RECEITA} target="_blank" rel="noreferrer" style={linkStyle}>
+                  <ExternalLink size={12} /> Emitir CND na Receita
+                </a>
+              ) : portalDaUf(anexoUf)?.links.map(l => (
                 <a key={l.url} className="btn btn-secondary btn-sm" href={l.url} target="_blank" rel="noreferrer" style={linkStyle}>
                   <ExternalLink size={12} /> {l.rotulo}
                 </a>
               ))}
             </div>
-            {portalDaUf(anexoUf)?.observacao && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{portalDaUf(anexoUf)?.observacao}</div>}
+            {anexoTipo === 'FEDERAL'
+              ? <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>A CND federal cobre a Receita e a PGFN e vale para todos os estabelecimentos do CNPJ raiz.</div>
+              : portalDaUf(anexoUf)?.observacao && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{portalDaUf(anexoUf)?.observacao}</div>}
 
             <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>2. Anexe o PDF baixado</div>
             <div className="form-group">
@@ -566,7 +597,7 @@ export default function PainelSituacaoFiscal() {
               <div className="form-group">
                 <label className="form-label" htmlFor="anexo-situacao">Situação na certidão</label>
                 <select id="anexo-situacao" className="form-control" value={anexoSituacao} onChange={e => setAnexoSituacao(e.target.value)} disabled={anexando}>
-                  {Object.entries(SITUACOES_ANEXO).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
+                  {Object.entries(situacoesAnexo(anexoTipo)).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -575,7 +606,7 @@ export default function PainelSituacaoFiscal() {
               </div>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
-              Copie a situação e a validade do próprio documento. O sistema guarda o arquivo e registra quem anexou, mas não confere a autenticidade: ela é validada no portal do estado.
+              Copie a situação e a validade do próprio documento. O sistema guarda o arquivo e registra quem anexou, mas não confere a autenticidade: ela é validada no portal {anexoTipo === 'FEDERAL' ? 'da Receita' : 'do estado'}.
             </div>
 
             <div className="form-actions" style={{ marginTop: 14 }}>
@@ -672,31 +703,39 @@ export default function PainelSituacaoFiscal() {
               <button type="button" className="modal-close" onClick={() => setHistoricoEmpresa(null)}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 400, overflowY: 'auto' }}>
-              {historicoEmpresa.historico.map(h => (
-                <div key={h.id} style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>
-                      {h.tipo === 'ESTADUAL' ? `Estadual ${h.uf || ''}: ${SITUACOES_ANEXO[h.situacao] || h.situacao}` : 'Federal'} — {dataDaConsulta(h).toLocaleDateString('pt-BR')} às {dataDaConsulta(h).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      {h.criadoAutomaticamente && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — automática</span>}
+              {historicoEmpresa.historico.map(h => {
+                const anexo = ehAnexoManual(h.pendencias);
+                const titulo = h.tipo === 'ESTADUAL'
+                  ? `Certidão estadual ${h.uf || ''}: ${SITUACOES_ANEXO[h.situacao] || h.situacao}`
+                  : anexo
+                    ? `CND federal: ${SITUACOES_ANEXO[h.situacao] || h.situacao}`
+                    : 'Relatório federal (SITFIS)';
+                return (
+                  <div key={h.id} style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>
+                        {titulo} — {dataDaConsulta(h).toLocaleDateString('pt-BR')} às {dataDaConsulta(h).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        {h.criadoAutomaticamente && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — automática</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {anexo && h.validoAte ? `${textoValidade(h.validoAte).texto}. ` : ''}{h.observacoes || h.situacao}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {h.tipo === 'ESTADUAL' && h.validoAte ? `${textoValidade(h.validoAte).texto}. ` : ''}{h.observacoes || h.situacao}
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      {temPdfRelatorio(h.situacao) && (
+                        <a className="btn btn-secondary btn-sm" href={`/api/certidoes/${h.id}/download`} target="_blank" rel="noreferrer" style={linkStyle}>
+                          <FileText size={12} /> PDF
+                        </a>
+                      )}
+                      {anexo && (
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => removerAnexo(h.id)} aria-label="Remover certidão" title="Remover certidão" style={{ ...linkStyle, color: '#b91c1c' }}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    {temPdfRelatorio(h.situacao) && (
-                      <a className="btn btn-secondary btn-sm" href={`/api/certidoes/${h.id}/download`} target="_blank" rel="noreferrer" style={linkStyle}>
-                        <FileText size={12} /> PDF
-                      </a>
-                    )}
-                    {h.tipo === 'ESTADUAL' && (
-                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => removerAnexo(h.id)} aria-label="Remover certidão" title="Remover certidão" style={{ ...linkStyle, color: '#b91c1c' }}>
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setHistoricoEmpresa(null)}>Fechar</button>

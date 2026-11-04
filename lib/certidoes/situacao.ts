@@ -38,9 +38,10 @@ export function categoriaFederal(c: { situacao: string; pendencias?: unknown } |
   return 'atencao';
 }
 
-// ---------- Certidão estadual anexada ----------
-// Emitida pela pessoa no portal do estado e guardada aqui. Registros estaduais sem esta marca
-// são os antigos, gerados pelo sistema sem consultar a SEFAZ, e nunca aparecem nem são baixados.
+// ---------- Certidão anexada (federal ou estadual) ----------
+// Emitida pela pessoa no portal oficial e guardada aqui. Uma consulta federal (SITFIS) tem
+// `classificador`; uma CND anexada tem `origem`. Registros estaduais sem `origem` são os antigos,
+// gerados pelo sistema sem consultar a SEFAZ, e nunca aparecem nem são baixados.
 
 export const ORIGEM_ANEXO = 'anexo_manual';
 
@@ -51,6 +52,14 @@ export const SITUACOES_ANEXO: Record<string, string> = {
   POSITIVA_COM_EFEITO_NEGATIVA: 'Positiva com efeito de negativa',
   POSITIVA: 'Positiva (com débitos)',
 };
+
+/** A CND federal emitida só pode ser negativa ou positiva com efeito de negativa. */
+export const SITUACOES_ANEXO_FEDERAL: Record<string, string> = {
+  NEGATIVA: 'Negativa',
+  POSITIVA_COM_EFEITO_NEGATIVA: 'Positiva com efeito de negativa',
+};
+
+export const situacoesAnexo = (tipo: string) => (tipo === 'FEDERAL' ? SITUACOES_ANEXO_FEDERAL : SITUACOES_ANEXO);
 
 /** Limite do PDF: em base64 ele cresce um terço e precisa caber no limite de 4,5 MB da Vercel. */
 export const TAMANHO_MAX_PDF = 3 * 1024 * 1024;

@@ -4,7 +4,7 @@ import { requireAuth } from '../../../lib/api-auth';
 import { captureError } from '../../../lib/sentry-helper';
 import { filtroEmpresasNfse } from '../../../lib/nfse/escopo';
 import { cnpjValido } from '../../../lib/nfse/dps';
-import { ORIGEM_ANEXO, categoriaFederal, type CategoriaFederal } from '../../../lib/certidoes/situacao';
+import { ORIGEM_ANEXO, categoriaFederal, ehAnexoManual, type CategoriaFederal } from '../../../lib/certidoes/situacao';
 
 export async function GET(request: Request) {
   try {
@@ -26,34 +26,38 @@ export async function GET(request: Request) {
       id: true, empresaId: true, tipo: true, uf: true, situacao: true, protocolo: true, emitidoEm: true, validoAte: true,
       observacoes: true, pendencias: true, criadoAutomaticamente: true, createdAt: true,
     } as const;
-    const certidoes = await db.certidaoFiscal.findMany({
+    // Federal traz as consultas do SITFIS e as CNDs anexadas; estadual, só o que foi anexado.
+    // Os registros estaduais antigos foram gerados pelo sistema, sem consultar a SEFAZ, e ficam de fora.
+    const federaisTodas = await db.certidaoFiscal.findMany({
       where: { empresaId: { in: ids }, tipo: 'FEDERAL' },
       orderBy: { createdAt: 'desc' },
       select: colunas,
     });
-    // Só as anexadas: os registros estaduais antigos foram gerados pelo sistema, sem consultar a SEFAZ.
     const anexadas = await db.certidaoFiscal.findMany({
       where: { empresaId: { in: ids }, tipo: 'ESTADUAL', pendencias: { path: ['origem'], equals: ORIGEM_ANEXO } },
       orderBy: { createdAt: 'desc' },
       select: colunas,
     });
 
-    const agrupar = (registros: typeof certidoes) => {
-      const mapa = new Map<string, typeof certidoes>();
+    const agrupar = (registros: typeof anexadas) => {
+      const mapa = new Map<string, typeof anexadas>();
       for (const c of registros) {
         const lista = mapa.get(c.empresaId);
         if (lista) lista.push(c); else mapa.set(c.empresaId, [c]);
       }
       return mapa;
     };
-    const federaisPorEmpresa = agrupar(certidoes);
+    const federaisPorEmpresa = agrupar(federaisTodas);
     const anexadasPorEmpresa = agrupar(anexadas);
 
     const metricas: Record<CategoriaFederal, number> = { pendencias: 0, atencao: 0, nao_consultada: 0, com_efeito: 0, sem_pendencias: 0 };
     const lista = empresas.map(e => {
-      const federais = federaisPorEmpresa.get(e.id) || [];
+      const federaisTodasEmp = federaisPorEmpresa.get(e.id) || [];
+      const consultasFederais = federaisTodasEmp.filter(c => !ehAnexoManual(c.pendencias));
+      const cndFederal = federaisTodasEmp.find(c => ehAnexoManual(c.pendencias)) || null;
       const estaduaisTodas = anexadasPorEmpresa.get(e.id) || [];
-      const federal = federais[0] || null;
+
+      const federal = consultasFederais[0] || null;
       const categoria = categoriaFederal(federal);
       metricas[categoria]++;
       // Vale a mais recente de cada estado: uma empresa pode ter certidão de vários.
@@ -64,10 +68,10 @@ export async function GET(request: Request) {
         vistas.add(uf);
         return true;
       });
-      const historico = [...federais, ...estaduaisTodas]
+      const historico = [...federaisTodasEmp, ...estaduaisTodas]
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, 15);
-      return { ...e, federal, categoria, estaduais, historico };
+      return { ...e, federal, cndFederal, categoria, estaduais, historico };
     });
 
     const configAgendamento = await db.certidaoConfig.findFirst({ where: { empresaId: null } });
