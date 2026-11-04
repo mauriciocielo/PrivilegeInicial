@@ -10,15 +10,23 @@ import { lerCertificadoA1, type CredencialA1 } from './assinatura';
 import { decifrar } from './cofre';
 import type { ConfigFiscalNfse } from './dps';
 import type { ErroSefin } from './sefin';
+import { operaEmpresaDoCertificado } from './escopo';
 
 export const ID_CERT_ESCRITORIO = 'padrao';
 /** Dado autenticado da cifra do certificado do escritório (nas empresas, é o empresaId). */
 export const ESCOPO_CERT_ESCRITORIO = 'escritorio';
 
-/** A emissão fica na área do consultor: o perfil cliente não opera certificado nem nota fiscal. */
-export function acessoNegado(session: SessionPayload, empresaId: string): NextResponse | null {
+/**
+ * A emissão fica na área do consultor: o perfil cliente não opera certificado nem
+ * nota fiscal. O consultor opera a própria carteira e as empresas do certificado do
+ * escritório, se tiver a tela de NFS-e.
+ */
+export async function acessoNegado(session: SessionPayload, empresaId: string): Promise<NextResponse | null> {
   if (session.role === 'administrador') return null;
-  if (session.role !== 'cliente' && session.empresaIds.includes(empresaId)) return null;
+  if (session.role !== 'cliente') {
+    if (session.empresaIds.includes(empresaId)) return null;
+    if (await operaEmpresaDoCertificado(session.userId, empresaId)) return null;
+  }
   return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
 }
 

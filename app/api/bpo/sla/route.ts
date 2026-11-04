@@ -18,7 +18,7 @@ const STATUS_VALIDOS = ['ABERTO', 'EM_ANDAMENTO', 'ATRASADO', 'CONCLUIDO'];
  * status "ABERTO"/progresso 0 (sem criar linha no banco à toa).
  */
 export async function GET(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
 
   try {
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
 /** PUT /api/bpo/sla — upsert de uma linha (empresaId + competencia). */
 export async function PUT(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
 
   try {

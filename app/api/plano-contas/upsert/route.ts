@@ -12,7 +12,7 @@ export const revalidate = 0;
  * Evita o Inactivity Timeout do Vercel Free (10s).
  */
 export async function POST(req: Request) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   try {
     const pc = await req.json();

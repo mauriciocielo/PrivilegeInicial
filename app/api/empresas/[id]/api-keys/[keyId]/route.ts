@@ -6,7 +6,7 @@ import { captureError } from '../../../../../../lib/sentry-helper';
 /** Revoga uma credencial — nunca apaga a linha, para manter o histórico de auditoria. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; keyId: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId, keyId } = await params;
 

@@ -12,10 +12,10 @@ import { consultarCnpjPublico } from '../../../../../../lib/nfse/emissor';
 /** Consulta no ADN, com o certificado do contador, se ele pode agir em nome desta empresa. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
-    const negado = acessoNegado(auth.session, empresaId);
+    const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
     const empresa = await db.empresa.findUnique({

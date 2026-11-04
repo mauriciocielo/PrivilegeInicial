@@ -20,7 +20,7 @@ import {
  */
 export async function POST(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role !== 'administrador') {
       return NextResponse.json({ error: 'Só um administrador pode adicionar emissores.' }, { status: 403 });

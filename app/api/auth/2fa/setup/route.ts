@@ -10,7 +10,7 @@ import { captureError } from '../../../../../lib/sentry-helper';
  */
 export async function POST(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
     const secret = generateTwoFactorSecret();

@@ -3,6 +3,7 @@ import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
 import { ESCOPO_CERT_ESCRITORIO, ID_CERT_ESCRITORIO } from '../../../../lib/nfse/servidor';
+import { filtroEmpresasNfse } from '../../../../lib/nfse/escopo';
 import { cnpjValido } from '../../../../lib/nfse/dps';
 import { CertificadoInvalidoError, lerCertificadoA1 } from '../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError, cifrar } from '../../../../lib/nfse/cofre';
@@ -14,13 +15,15 @@ const certificadoPublico = { titular: true, documento: true, nomeArquivo: true, 
 /** Empresas que o usuário pode operar, com a situação da procuração, e o certificado do contador. */
 export async function GET(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
+    const filtroEmpresas = await filtroEmpresasNfse(auth.session);
+
     const [empresas, certificado, usuariosClientes] = await Promise.all([
       db.empresa.findMany({
-        where: auth.session.role === 'administrador' ? {} : { id: { in: auth.session.empresaIds } },
+        where: filtroEmpresas,
         select: {
           id: true,
           razaoSocial: true,
@@ -75,7 +78,7 @@ export async function GET(request: Request) {
 /** Troca o certificado do contador. Ele emite por todas as empresas: só administrador altera. */
 export async function PUT(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role !== 'administrador') {
       return NextResponse.json({ error: 'Só um administrador pode alterar o certificado do contador.' }, { status: 403 });

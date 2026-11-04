@@ -7,6 +7,7 @@ import { requireAuth } from '../../../lib/api-auth';
 import { hashPassword, isHashed } from '../../../lib/auth-hash';
 import type { SessionPayload } from '../../../lib/session';
 import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
+import { idsEmpresasDoCertificado } from '../../../lib/nfse/escopo';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -1960,24 +1961,6 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
 type EmpresaScope = string[] | null;
 type CollectionQuery = (scope: EmpresaScope, role: string, userId: string) => Promise<any>;
 
-/**
- * Empresas que emitem pelo certificado do escritório. Só o administrador as importa, então
- * não ficam em empresaIds de consultor nenhum; mesmo assim o consultor já opera a emissão
- * delas e libera login de cliente em /api/nfse/emissores/[id]/acesso.
- */
-async function idsEmissorasPorProcuracao(): Promise<string[]> {
-  const empresas = await db.empresa.findMany({
-    where: {
-      OR: [
-        { tipo: TIPO_EMPRESA_SO_EMISSOR },
-        { nfseConfig: { is: { usarProcuracao: true, procuracaoStatus: 'ativa' } } },
-      ],
-    },
-    select: { id: true },
-  });
-  return empresas.map(e => e.id);
-}
-
 const empresaWhere = (scope: EmpresaScope, field = 'empresaId') =>
   scope ? { [field]: { in: scope } } : {};
 
@@ -2034,7 +2017,7 @@ const QUERIES: Record<string, CollectionQuery> = {
     if (role === 'cliente') {
       raw = await db.user.findMany({ where: { id: userId } });
     } else if (scope) {
-      const visiveis = [...scope, ...(await idsEmissorasPorProcuracao())];
+      const visiveis = [...scope, ...(await idsEmpresasDoCertificado(userId))];
       raw = await db.user.findMany({
         where: {
           OR: [
@@ -2186,7 +2169,7 @@ for (const key of SYNC_COLLECTION_KEYS) {
 }
 
 export async function GET(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   try {
     // administrador enxerga tudo (scope null); qualquer outro papel só vê as
@@ -2308,8 +2291,8 @@ async function filterIncomingByAuth(collection: string, items: any[], session: S
       }];
     }
     // Consultor: pode atualizar seu próprio perfil (mantendo papel consultor e suas empresas)
-    // ou cadastrar/atualizar usuários 'cliente' apenas nas empresas que atende e nas emissoras por procuração.
-    const vinculaveis = new Set([...session.empresaIds, ...(await idsEmissorasPorProcuracao())]);
+    // ou cadastrar/atualizar usuários 'cliente' apenas nas empresas que atende e nas do certificado do escritório.
+    const vinculaveis = new Set([...session.empresaIds, ...(await idsEmpresasDoCertificado(session.userId))]);
     const safeUsers: any[] = [];
     for (const u of items) {
       if (!u || !u.email) continue;
@@ -2370,7 +2353,7 @@ async function filterIncomingByAuth(collection: string, items: any[], session: S
 }
 
 export async function POST(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   try {
     const body = await request.json();

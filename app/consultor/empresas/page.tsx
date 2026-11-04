@@ -21,6 +21,7 @@ const AVAILABLE_SCREENS = [
   { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
   { label: '💡 Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
   { label: '🔍 Diagnóstico 360º', route: '/consultor/diagnostico-360' },
+  { label: '🧭 Perfil Comportamental', route: '/consultor/perfil-disc' },
   { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
   { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
   { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },

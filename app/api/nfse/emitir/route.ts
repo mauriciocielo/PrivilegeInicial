@@ -29,7 +29,7 @@ async function reservarNDps(empresaId: string, ambiente: AmbienteNfse): Promise<
 
 export async function POST(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
     const body = await request.json().catch(() => ({}));

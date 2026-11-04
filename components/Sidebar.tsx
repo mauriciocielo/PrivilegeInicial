@@ -10,8 +10,8 @@ import {
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
-  UserCog, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, type LucideIcon,
+  UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, type LucideIcon,
 } from 'lucide-react';
 
 const getAvatarGradient = (name: string) => {
@@ -55,6 +55,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
       { label: 'Contas via ERP', href: '/consultor/contas-erp', icon: Landmark },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
+      { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
@@ -78,6 +79,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
       { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
       { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
+      { label: 'Perfil Comportamental', href: '/consultor/perfil-disc', icon: UserSearch },
       { label: 'Valuation & Real-Value', href: '/consultor/valuation', icon: Calculator },
       { label: 'Simulador de Cenários', href: '/consultor/simulador-cenarios', icon: Sliders },
       { label: 'Benchmarking Cloud', href: '/consultor/benchmarking', icon: Activity },

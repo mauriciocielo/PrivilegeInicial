@@ -52,6 +52,7 @@ app.prepare().then(() => {
   httpServer.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
     agendarRelatorioFiscalDiario(port);
+    agendarMonitorNfeDestinadas(port);
   });
 });
 
@@ -77,4 +78,33 @@ function agendarRelatorioFiscalDiario(port) {
       .then(d => console.log('[relatorio-fiscal]', d.mensagem || d.error))
       .catch(err => console.error('[relatorio-fiscal] Falha ao disparar:', err.message));
   }, 60 * 1000);
+}
+
+// Monitor contínuo de NF-e destinadas às empresas com certificado A1 ativo.
+// Consulta a SEFAZ respeitando estritamente a janela anti-bloqueio de 60-65 min.
+// NFE_MONITOR_DESATIVADO=1 desliga o agendador local.
+function agendarMonitorNfeDestinadas(port) {
+  if (process.env.NFE_MONITOR_DESATIVADO === '1') return;
+  const segredo = process.env.CRON_SECRET;
+  if (!segredo) {
+    console.warn('[nfe-monitor] CRON_SECRET não configurado: monitor em segundo plano desativado.');
+    return;
+  }
+  // Executa uma rodada 1 minuto após o boot do servidor e a cada 15 minutos em seguida.
+  setTimeout(() => {
+    disparar();
+    setInterval(disparar, 15 * 60 * 1000);
+  }, 60 * 1000);
+
+  function disparar() {
+    fetch(`http://127.0.0.1:${port}/api/nfe/monitor/executar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${segredo}` }
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.iniciado) console.log('[nfe-monitor]', d.mensagem);
+      })
+      .catch(err => console.error('[nfe-monitor] Falha ao acionar rodada:', err.message));
+  }
 }

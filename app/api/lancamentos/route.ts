@@ -7,7 +7,7 @@ import { registrarBaixaContaFinanceira } from '../../../lib/contas-financeiras-b
 import { dispararWebhook } from '../../../lib/webhook-dispatch';
 
 export async function GET(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
     const { searchParams } = new URL(request.url);
     const empresaId = searchParams.get('empresaId');
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
     try {
         const data = await request.json();
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

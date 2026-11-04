@@ -53,8 +53,8 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     }
     setCurrentUser(user);
 
-    // A tela de NFS-e opera de forma independente da empresa selecionada no menu lateral.
-    const isRotaIndependente = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/nfse');
+    // As telas de NFS-e e NF-e Destinadas operam de forma independente da empresa selecionada no menu lateral.
+    const isRotaIndependente = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/nfse') || pathname.startsWith('/consultor/nfe-destinadas');
 
     // Permissão da rota com base na empresa ativa
     let companyOk = true;

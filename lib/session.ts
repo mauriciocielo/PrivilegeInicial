@@ -6,22 +6,38 @@
 // Agora o login (e-mail/senha ou Google) emite este cookie, e as rotas
 // protegidas exigem ele via requireAuth() (ver lib/api-auth.ts).
 
+import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
 export const SESSION_COOKIE_NAME = 'cf_session';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 dias
+// Navegadores descartam, sem nenhum aviso, cookies acima de 4096 bytes: o login
+// responde 200 e a sessão simplesmente não existe (ou a anterior continua valendo).
+const TAMANHO_MAX_COOKIE = 3800;
 
 export interface SessionPayload {
   userId: string;
   email: string;
   role: string;
   empresaIds: string[];
+  /**
+   * Presente quando a lista de empresas não coube no cookie: requireAuth a lê do
+   * banco. Guarda a impressão digital da lista, para notar quando ela mudar.
+   */
+  carteiraNoBanco?: string;
+}
+
+export function impressaoCarteira(empresaIds: string[]): string {
+  return createHash('sha256').update([...empresaIds].sort().join(',')).digest('base64url').slice(0, 16);
 }
 
 export function createSessionToken(payload: SessionPayload): string {
   if (!SESSION_SECRET) throw new Error('SESSION_SECRET não configurado no servidor.');
-  return jwt.sign(payload, SESSION_SECRET, { expiresIn: SESSION_MAX_AGE_SECONDS });
+  const assinar = (dados: SessionPayload) => jwt.sign(dados, SESSION_SECRET, { expiresIn: SESSION_MAX_AGE_SECONDS });
+  const token = assinar(payload);
+  if (`${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`.length <= TAMANHO_MAX_COOKIE) return token;
+  return assinar({ ...payload, empresaIds: [], carteiraNoBanco: impressaoCarteira(payload.empresaIds) });
 }
 
 export function verifySessionToken(token: string): SessionPayload | null {

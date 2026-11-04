@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
-import { createSessionToken, sessionCookieHeader, clearSessionCookieHeader } from '../../../../lib/session';
+import { createSessionToken, impressaoCarteira, sessionCookieHeader, clearSessionCookieHeader } from '../../../../lib/session';
 import { captureError } from '../../../../lib/sentry-helper';
 
 // O cookie de sessão (JWT) carrega `role`/`empresaIds` congelados no momento
@@ -13,7 +13,7 @@ import { captureError } from '../../../../lib/sentry-helper';
 // usuário no banco mudaram, emite um cookie novo (e devolve o registro
 // atualizado) sem exigir logout/login.
 export async function GET(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
 
   try {
@@ -26,8 +26,10 @@ export async function GET(request: Request) {
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userSemSenha } = user;
 
-    const empresaIdsMudou = JSON.stringify([...user.empresaIds].sort())
-      !== JSON.stringify([...auth.session.empresaIds].sort());
+    // Com a lista fora do cookie, auth.session.empresaIds já veio do banco: só a impressão digital revela a mudança.
+    const empresaIdsMudou = auth.session.carteiraNoBanco
+      ? auth.session.carteiraNoBanco !== impressaoCarteira(user.empresaIds)
+      : JSON.stringify([...user.empresaIds].sort()) !== JSON.stringify([...auth.session.empresaIds].sort());
     const roleMudou = user.role !== auth.session.role;
     const mudou = empresaIdsMudou || roleMudou;
 

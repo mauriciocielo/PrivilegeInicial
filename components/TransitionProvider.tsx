@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 import { store } from '../lib/store';
 import { syncBackupInChunks } from '../lib/sync-helper';
 import { SYNC_COLLECTIONS, getCollectionForPath } from '../lib/sync-registry';
+import { ehRotaPublica } from '../lib/rotas-publicas';
 import { toast } from 'sonner';
 
 if (typeof window !== 'undefined') {
@@ -68,7 +69,7 @@ async function refreshUserSession(): Promise<boolean> {
 
 export default function TransitionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublicRoute = pathname === '/login' || pathname === '/' || pathname?.startsWith('/novo-layout');
+  const isPublicRoute = ehRotaPublica(pathname);
   const isPublicRouteRef = useRef(isPublicRoute);
   isPublicRouteRef.current = isPublicRoute;
   const [displayChildren, setDisplayChildren] = useState(children);

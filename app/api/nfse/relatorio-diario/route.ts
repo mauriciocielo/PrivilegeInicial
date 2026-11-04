@@ -7,10 +7,10 @@ import {
 
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-function autorizado(request: Request, token: string | null): boolean {
+async function autorizado(request: Request, token: string | null): Promise<boolean> {
   const segredo = process.env.CRON_SECRET;
   if (segredo && token === segredo) return true;
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   return !auth.error && auth.session.role !== 'cliente';
 }
 
@@ -29,7 +29,7 @@ function iniciar(opcoes: OpcoesRelatorioFiscal) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token') || request.headers.get('Authorization')?.replace('Bearer ', '') || null;
-  if (!autorizado(request, token)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  if (!(await autorizado(request, token))) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
   const dataInicio = searchParams.get('dataInicio');
   const dataFim = searchParams.get('dataFim');
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
 /** Disparo manual pela tela de NFS-e (período e destinatário opcionais). */
 export async function POST(request: Request) {
-  if (!autorizado(request, null)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  if (!(await autorizado(request, null))) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
   const body = await request.json().catch(() => ({}));
   const emails = typeof body?.email === 'string'
     ? body.email.split(/[;,]+/).map((s: string) => s.trim().toLowerCase()).filter((s: string) => s.includes('@'))

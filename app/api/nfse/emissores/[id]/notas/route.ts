@@ -22,7 +22,7 @@ const colunasDevolvidas = {
 /** Lista todas as notas fiscais (prestadas e tomadas) desta empresa salvas no servidor. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
     const negado = await acessoEmissaoNegado(auth.session, empresaId);
@@ -49,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
     const negado = await acessoEmissaoNegado(auth.session, empresaId);

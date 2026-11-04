@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const getFilePath = () => path.join(process.cwd(), '.ativas.json');
 
 export async function GET(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   try {
     const filePath = getFilePath();
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   if (auth.session.role === 'cliente') {
     return NextResponse.json({ error: 'Apenas equipe interna pode atualizar atividades ativas.' }, { status: 403 });

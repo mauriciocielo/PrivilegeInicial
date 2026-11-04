@@ -16,7 +16,7 @@ const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
  */
 export async function POST(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') {
       return NextResponse.json({ error: 'Apenas equipe interna pode enviar atas para assinatura.' }, { status: 403 });
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 /** Consulta a situação das assinaturas: /api/atas/assinatura?id=<documentoId> */
 export async function GET(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
     if (!autentiqueConfigurado()) {

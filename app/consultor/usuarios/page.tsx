@@ -14,6 +14,7 @@ const AVAILABLE_SCREENS = [
   { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
   { label: '💡 Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
   { label: '🔍 Diagnóstico 360º', route: '/consultor/diagnostico-360' },
+  { label: '🧭 Perfil Comportamental', route: '/consultor/perfil-disc' },
   { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
   { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
   { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
@@ -101,7 +102,6 @@ export default function UsuariosPage() {
   const [rawImageData, setRawImageData] = useState<string | null>(null);
   const [emissoresTodos, setEmissoresTodos] = useState<EmpresaEmissoraInfo[]>([]);
   const [emissoresEstado, setEmissoresEstado] = useState<'carregando' | 'ok' | 'erro'>('carregando');
-  const [ehAdmin, setEhAdmin] = useState(false);
 
   // As empresas só emissoras não vêm no cadastro local: sem esta lista elas não aparecem para seleção.
   const carregarEmissores = useCallback(() => {
@@ -119,7 +119,6 @@ export default function UsuariosPage() {
     const load = () => {
       setUsers(store.getUsers());
       setEmpresas(store.getEmpresas());
-      setEhAdmin(store.getCurrentUser()?.role === 'administrador');
     };
     load();
     window.addEventListener('cfDataChange', load);
@@ -142,8 +141,6 @@ export default function UsuariosPage() {
     }
     for (const em of emissoresTodos) {
       const atual = mapa.get(em.id);
-      // O consultor só consegue vincular as empresas que atende e as emissoras por procuração.
-      if (!atual && !ehAdmin && em.tipo !== TIPO_EMPRESA_SO_EMISSOR && !emiteViaProcuracao(em.nfseConfig)) continue;
       mapa.set(em.id, {
         id: em.id,
         razaoSocial: em.razaoSocial || atual?.razaoSocial || '',
@@ -156,7 +153,7 @@ export default function UsuariosPage() {
     return Array.from(mapa.values()).sort((a, b) =>
       (a.nomeFantasia || a.razaoSocial).localeCompare(b.nomeFantasia || b.razaoSocial)
     );
-  }, [empresas, emissoresTodos, ehAdmin]);
+  }, [empresas, emissoresTodos]);
 
   const ehUsuarioEmissorNfse = (u: User): boolean => {
     if (u.role !== 'cliente') return false;

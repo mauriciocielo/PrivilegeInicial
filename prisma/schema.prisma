@@ -95,6 +95,7 @@ model Empresa {
   contasBalanco              ContaBalanco[]
   balancosPatrimoniais       BalancoPatrimonial[]
   diagnosticos360            Diagnostico360[]
+  perfisDisc                 PerfilDiscAvaliacao[]
   imobilizados               Imobilizado[]
   curvaAbcConfig             CurvaAbcConfig?
   curvasAbc                  CurvaAbc[]
@@ -103,6 +104,8 @@ model Empresa {
   lotesPagamento             LotePagamento[]
   regrasCobranca             ReguaCobranca[]
   slasFechamento             SLAFechamento[]
+  nfeDistribuicao            NfeDistribuicao?
+  nfesDestinadas             NfeDestinada[]
 }
 
 model Unidade {
@@ -294,6 +297,34 @@ model Diagnostico360 {
   empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId])
+}
+
+// Perfil comportamental (DISC). Cada registro é um link de uso único, que dispensa
+// login: quem tem o token responde uma vez, e o resultado fica guardado aqui.
+model PerfilDiscAvaliacao {
+  id                 String    @id @default(uuid())
+  empresaId          String
+  // O token fica legível porque a equipe precisa copiar de novo o link ainda não
+  // respondido. Depois de respondido, ele não abre mais nada.
+  token              String    @unique
+  tipoRespondente    String    @default("colaborador")
+  nomeRespondente    String?
+  emailRespondente   String?
+  cargoRespondente   String?
+  status             String    @default("pendente")
+  versaoQuestionario Int       @default(1)
+  criadoPorId        String
+  consentimentoEm    DateTime?
+  iniciadoEm         DateTime?
+  concluidoEm        DateTime?
+  tempoRespostaSeg   Int?
+  respostas          Json?
+  resultado          Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+  empresa            Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, status])
 }
 
 model CurvaAbcConfig {
@@ -945,4 +976,52 @@ model SLAFechamento {
   empresa             Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@unique([empresaId, competencia])
+}
+
+// ---- NF-e destinadas (Distribuição DF-e / Manifestação do Destinatário) ----
+// Uma linha por CNPJ monitorado: guarda o ponteiro de NSU e quando a SEFAZ
+// permite consultar de novo (cStat 137 e 656 exigem esperar 1 hora).
+model NfeDistribuicao {
+  empresaId         String    @id
+  ultNsu            String    @default("0")
+  maxNsu            String    @default("0")
+  ativo             Boolean   @default(true)
+  ultimaConsultaEm  DateTime?
+  proximaConsultaEm DateTime?
+  ultimoStatus      String?
+  ultimaMensagem    String?
+  // propria | escritorio: de quem era o certificado na última consulta.
+  certOrigem        String?
+  totalDocumentos   Int       @default(0)
+  updatedAt         DateTime  @updatedAt
+  empresa           Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+}
+
+model NfeDestinada {
+  id             String    @id @default(uuid())
+  empresaId      String
+  chaveAcesso    String
+  nsu            String
+  numero         String?
+  serie          String?
+  emitenteCnpj   String
+  emitenteNome   String
+  emitenteIe     String?
+  dataEmissao    String
+  // 0 = entrada, 1 = saída (tpNF da nota).
+  tipoOperacao   Int?
+  valorNf        Float     @default(0)
+  // autorizada | denegada | cancelada
+  situacao       String    @default("autorizada")
+  protocolo      String?
+  // ciencia | confirmada | desconhecida | nao_realizada: só o que a SEFAZ já registrou.
+  manifestacao   String?
+  possuiXml      Boolean   @default(false)
+  xml            String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  empresa        Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, chaveAcesso])
+  @@index([empresaId, dataEmissao])
 }

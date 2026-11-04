@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { describe, it, expect, beforeAll } from 'vitest';
 
 // SESSION_SECRET precisa existir ANTES do módulo ser importado (é lido no
@@ -49,6 +50,38 @@ describe('session', () => {
     const { getSessionFromRequest } = await import('./session');
     const request = new Request('http://localhost/api/teste');
     expect(getSessionFromRequest(request)).toBeNull();
+  });
+
+  it('o cookie nunca passa do limite do navegador, com qualquer quantidade de empresas', async () => {
+    const { createSessionToken, sessionCookieHeader, verifySessionToken, impressaoCarteira } = await import('./session');
+    for (const quantidade of [0, 1, 14, 50, 60, 65, 70, 75, 80, 100, 428, 3000]) {
+      const empresaIds = Array.from({ length: quantidade }, () => randomUUID());
+      const token = createSessionToken({ userId: 'u1', email: 'alguem.com.email.longo@escritorio.com.br', role: 'consultor', empresaIds });
+      expect(sessionCookieHeader(token).split(';')[0].length).toBeLessThanOrEqual(4096);
+
+      const decoded = verifySessionToken(token)!;
+      if (decoded.carteiraNoBanco) {
+        expect(decoded.empresaIds).toEqual([]);
+        expect(decoded.carteiraNoBanco).toBe(impressaoCarteira(empresaIds));
+      } else {
+        expect(decoded.empresaIds).toEqual(empresaIds);
+      }
+    }
+  });
+
+  it('mantém no cookie a lista que cabe e só tira a que não cabe', async () => {
+    const { createSessionToken, verifySessionToken } = await import('./session');
+    const comEmpresas = (quantidade: number) => verifySessionToken(createSessionToken({
+      userId: 'u1', email: 'a@b.com', role: 'consultor', empresaIds: Array.from({ length: quantidade }, () => randomUUID()),
+    }))!;
+    expect(comEmpresas(14).carteiraNoBanco).toBeUndefined();
+    expect(comEmpresas(428).carteiraNoBanco).toBeTruthy();
+  });
+
+  it('a impressão digital da lista ignora a ordem e muda quando a lista muda', async () => {
+    const { impressaoCarteira } = await import('./session');
+    expect(impressaoCarteira(['a', 'b'])).toBe(impressaoCarteira(['b', 'a']));
+    expect(impressaoCarteira(['a', 'b'])).not.toBe(impressaoCarteira(['a', 'b', 'c']));
   });
 
   it('clearSessionCookieHeader zera o Max-Age (efetivamente apaga o cookie)', async () => {

@@ -11,13 +11,13 @@ const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 /** Lista os usuários com perfil "cliente" vinculados a esta empresa emissora. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') {
       return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
     }
     const { id: empresaId } = await params;
-    const negado = acessoNegado(auth.session, empresaId);
+    const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
     const usuarios = await db.user.findMany({
@@ -51,13 +51,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') {
       return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
     }
     const { id: empresaId } = await params;
-    const negado = acessoNegado(auth.session, empresaId);
+    const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
     const empresa = await db.empresa.findUnique({
@@ -164,13 +164,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 /** Remove o vínculo de um usuário cliente com esta empresa (ou exclui o usuário se só tinha ela). */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') {
       return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
     }
     const { id: empresaId } = await params;
-    const negado = acessoNegado(auth.session, empresaId);
+    const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
     const userId = new URL(request.url).searchParams.get('userId');

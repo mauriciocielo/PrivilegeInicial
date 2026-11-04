@@ -18,7 +18,7 @@ import { captureError } from '../../../../../lib/sentry-helper';
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { session } = auth;
 

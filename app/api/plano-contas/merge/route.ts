@@ -5,7 +5,7 @@ import { captureError } from '../../../../lib/sentry-helper';
 import { requireAuth } from '../../../../lib/api-auth';
 
 export async function POST(req: Request) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   try {
     const { empresaId, sourceId, targetId } = await req.json();

@@ -24,13 +24,27 @@ const cliente = (empresaIds: string[]) => ({
   id: 'cliente-1', email: 'cliente@x.com', name: 'Cliente', password: 'senha', role: 'cliente', empresaIds, allowedRoutes: ['/cliente/nfse'],
 });
 
+/** A permissão de tela é consultada com select; a busca do cadastro existente, sem ele. */
+const simularUsuarios = (opcoes: { telas?: string[]; existente?: unknown } = {}) => {
+  db.user.findUnique.mockImplementation(({ select }: { select?: { allowedRoutes?: boolean } }) =>
+    Promise.resolve(select?.allowedRoutes ? { allowedRoutes: opcoes.telas ?? ['/consultor/nfse'] } : opcoes.existente ?? null));
+};
+
 describe('consultor vinculando cliente a empresa por procuração', () => {
   beforeEach(() => {
     Object.values(db.user).forEach(fn => fn.mockReset());
     db.empresa.findMany.mockReset();
     db.empresa.findMany.mockResolvedValue([{ id: 'emissora' }]);
-    db.user.findUnique.mockResolvedValue(null);
+    simularUsuarios();
     db.user.findFirst.mockResolvedValue(null);
+  });
+
+  it('sem a tela de NFS-e, só vincula às empresas que atende', async () => {
+    simularUsuarios({ telas: ['/consultor/usuarios'] });
+    const res = await salvar(cliente(['emissora']));
+    expect(await res.json()).toEqual({ success: true, ignorados: 1 });
+    expect(db.user.upsert).not.toHaveBeenCalled();
+    expect(db.empresa.findMany).not.toHaveBeenCalled();
   });
 
   it('grava o vínculo com a emissora, mesmo fora das empresas que atende', async () => {
@@ -51,7 +65,7 @@ describe('consultor vinculando cliente a empresa por procuração', () => {
   });
 
   it('preserva vínculos do cliente que o consultor não enxerga', async () => {
-    db.user.findUnique.mockResolvedValue({ ...cliente(['oculta', 'emissora']), role: 'cliente' });
+    simularUsuarios({ existente: { ...cliente(['oculta', 'emissora']), role: 'cliente' } });
     await salvar(cliente(['atendida']));
     expect(db.user.upsert.mock.calls[0][0].update.empresaIds.sort()).toEqual(['atendida', 'oculta']);
   });

@@ -11,7 +11,7 @@ import { captureError } from '../../../../../lib/sentry-helper';
  * inexistente).
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   const { id: empresaId } = await params;
 
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
 

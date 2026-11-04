@@ -4,7 +4,7 @@ import { captureError } from '../../../lib/sentry-helper';
 import { requireAuth } from '../../../lib/api-auth';
 
 export async function DELETE(req: Request) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(req.url);

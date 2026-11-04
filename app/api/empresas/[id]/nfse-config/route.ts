@@ -82,7 +82,7 @@ function validarParametros(b: Record<string, unknown>): string | null {
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
     // O cliente lê para emitir; alterar segue restrito ao escritório (PUT).
@@ -100,10 +100,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
-    const negado = acessoNegado(auth.session, empresaId);
+    const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;

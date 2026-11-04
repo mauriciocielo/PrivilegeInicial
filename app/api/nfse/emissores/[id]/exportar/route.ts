@@ -30,7 +30,7 @@ function limparNomeArquivo(texto: string): string {
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id: empresaId } = await params;
     const negado = await acessoEmissaoNegado(auth.session, empresaId);

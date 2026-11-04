@@ -3,7 +3,7 @@ import { captureError } from '../../../lib/sentry-helper';
 import { requireAuth } from '../../../lib/api-auth';
 
 export async function POST(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   try {
     const { phone, message } = await request.json();

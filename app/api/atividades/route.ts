@@ -15,7 +15,7 @@ import { captureError } from '../../../lib/sentry-helper';
  * app/api/lancamentos/route.ts faz.
  */
 export async function POST(request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(request);
   if (auth.error) return auth.error;
 
   try {

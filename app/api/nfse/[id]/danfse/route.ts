@@ -10,7 +10,7 @@ import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } 
 /** DANFSe em PDF, gerado do XML autorizado. Com ?baixar=1, força o download. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const { id } = await params;
 

@@ -15,7 +15,7 @@ const VALIDADE_VERIFICACAO_MS = 24 * 60 * 60 * 1000;
  */
 export async function GET(request: Request) {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     if (auth.session.role !== 'cliente') return NextResponse.json({ liberado: false, empresas: [] });
 
