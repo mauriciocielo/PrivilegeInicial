@@ -179,16 +179,28 @@ const valorDe = (xml: string, nome: string) => {
   return Number.isFinite(v) ? v : 0;
 };
 
+export interface NotaLida extends NotaEmitida {
+  prestadorDocumento: string;
+  papel: 'prestado' | 'tomado';
+}
+
 /**
- * Lê uma NFS-e autorizada para guardá-la como base. Devolve null se a empresa
- * não for a prestadora ou se faltar o que identifica a nota.
+ * Lê uma NFS-e autorizada do ADN e identifica se a empresa é a prestadora
+ * ("prestado") ou a tomadora ("tomado"). Devolve null se não for nenhuma das duas
+ * ou se faltar o que identifica a nota.
  */
-export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
+export function lerNotaAdn(xml: string, cnpj: string): NotaLida | null {
   const doc = apenasDigitos(cnpj);
   const emit = bloco(xml, 'emit');
   const inf = bloco(xml, 'infDPS');
   const prest = bloco(inf, 'prest');
-  if ((tag(prest, 'CNPJ') || tag(emit, 'CNPJ')) !== doc) return null;
+  const toma = bloco(inf, 'toma');
+
+  const prestDoc = apenasDigitos(tag(prest, 'CNPJ') || tag(emit, 'CNPJ') || tag(prest, 'CPF') || tag(emit, 'CPF') || '');
+  const tomaDoc = apenasDigitos(tag(toma, 'CNPJ') || tag(toma, 'CPF') || '');
+
+  const papel: 'prestado' | 'tomado' | null = prestDoc === doc ? 'prestado' : tomaDoc === doc ? 'tomado' : null;
+  if (!papel) return null;
 
   const chaveAcesso = tag(xml, 'chNFSe') || xml.match(/<infNFSe[^>]*\sId="NFS(\d{50})"/)?.[1] || null;
   const dhEmi = tag(inf, 'dhEmi');
@@ -200,7 +212,6 @@ export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
   // Os valores calculados ficam no <valores> da NFS-e, antes do bloco da DPS.
   const antesDaDps = xml.slice(0, xml.indexOf('<DPS') >= 0 ? xml.indexOf('<DPS') : xml.length);
   const valoresNfse = bloco(antesDaDps, 'valores');
-  const toma = bloco(inf, 'toma');
   const endereco = bloco(toma, 'end');
   const tribMun = bloco(inf, 'tribMun');
   const tribFed = bloco(inf, 'tribFed');
@@ -208,6 +219,8 @@ export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
   const grupo = dividirRetencaoAgrupada(valorDe(tribFed, 'vRetCSLL'), tag(tribFed, 'tpRetPisCofins'));
 
   return {
+    papel,
+    prestadorDocumento: prestDoc ? formatarCnpj(prestDoc) : '',
     chaveAcesso,
     ambiente: tag(inf, 'tpAmb') === '2' ? 'homologacao' : 'producao',
     numero: tag(xml, 'nNFSe') || '',
@@ -216,9 +229,9 @@ export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
     idDps: inf.match(/<infDPS[^>]*\sId="([^"]+)"/)?.[1] || null,
     dataEmissao: dhEmi.slice(0, 10),
     dataCompetencia: dCompet.slice(0, 7),
-    prestadorRazaoSocial: tag(emit, 'xNome'),
-    prestadorInscricaoMunicipal: tag(prest, 'IM'),
-    tomadorDocumento: tag(toma, 'CNPJ') || tag(toma, 'CPF') || '',
+    prestadorRazaoSocial: tag(emit, 'xNome') || tag(prest, 'xNome'),
+    prestadorInscricaoMunicipal: tag(prest, 'IM') || tag(emit, 'IM'),
+    tomadorDocumento: tomaDoc,
     tomadorRazaoSocial: tag(toma, 'xNome') || '',
     tomadorEmail: tag(toma, 'email'),
     tomadorInscricaoMunicipal: tag(toma, 'IM'),
@@ -244,6 +257,17 @@ export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
     valorCofins: grupo.cofins,
     valorCsll: grupo.csll,
   };
+}
+
+/**
+ * Lê uma NFS-e autorizada para guardá-la como base. Devolve null se a empresa
+ * não for a prestadora ou se faltar o que identifica a nota.
+ */
+export function lerNotaEmitida(xml: string, cnpj: string): NotaEmitida | null {
+  const lida = lerNotaAdn(xml, cnpj);
+  if (!lida || lida.papel !== 'prestado') return null;
+  const { papel: _papel, prestadorDocumento: _prestDoc, ...resto } = lida;
+  return resto;
 }
 
 /**
@@ -274,15 +298,63 @@ export interface CnpjPublico {
 
 export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
   const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
-  const ibge = json.codigo_municipio_ibge;
-  const temRegime = typeof json.opcao_pelo_mei === 'boolean' && typeof json.opcao_pelo_simples === 'boolean';
+  const estab = (json.estabelecimento && typeof json.estabelecimento === 'object' ? json.estabelecimento : {}) as Record<string, unknown>;
+  const cidadeObj = (estab.cidade && typeof estab.cidade === 'object' ? estab.cidade : {}) as Record<string, unknown>;
+  const estadoObj = (estab.estado && typeof estab.estado === 'object' ? estab.estado : {}) as Record<string, unknown>;
+  const simplesObj = (json.simples && typeof json.simples === 'object' ? json.simples : null) as Record<string, unknown> | null;
+
+  const ibge = json.codigo_municipio_ibge ?? cidadeObj.ibge_id;
+  const temRegimeBool = typeof json.opcao_pelo_mei === 'boolean' && typeof json.opcao_pelo_simples === 'boolean';
+  let opSimpNac: number | null = null;
+  if (temRegimeBool) {
+    opSimpNac = json.opcao_pelo_mei ? 2 : json.opcao_pelo_simples ? 3 : 1;
+  } else if (simplesObj) {
+    const isMei = simplesObj.mei === 'Sim' || simplesObj.mei === true;
+    const isSimples = simplesObj.simples === 'Sim' || simplesObj.simples === true;
+    opSimpNac = isMei ? 2 : isSimples ? 3 : 1;
+  }
+
   return {
-    razaoSocial: texto(json.razao_social),
-    nomeFantasia: texto(json.nome_fantasia),
+    razaoSocial: texto(json.razao_social) || texto( json.nome ),
+    nomeFantasia: texto(json.nome_fantasia) || texto(estab.nome_fantasia) || texto(json.fantasia),
     codigoMunicipio: ibge !== null && ibge !== undefined && /^\d{7}$/.test(String(ibge)) ? String(ibge) : null,
-    opSimpNac: !temRegime ? null : json.opcao_pelo_mei ? 2 : json.opcao_pelo_simples ? 3 : 1,
-    cidade: texto(json.municipio),
-    uf: texto(json.uf),
-    cep: texto(json.cep),
+    opSimpNac,
+    cidade: texto(json.municipio) || texto(cidadeObj.nome),
+    uf: texto(json.uf) || texto(estadoObj.sigla),
+    cep: texto(json.cep) || texto(estab.cep),
   };
+}
+
+export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | null> {
+  const doc = apenasDigitos(cnpj);
+  const urls = [
+    `https://brasilapi.com.br/api/cnpj/v1/${doc}`,
+    `https://minhareceita.org/${doc}`,
+    `https://publica.cnpj.ws/cnpj/${doc}`,
+  ];
+  let acumulado: CnpjPublico | null = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const mapeado = mapearCnpjPublico(await res.json());
+      if (!acumulado) {
+        acumulado = mapeado;
+      } else {
+        acumulado = {
+          razaoSocial: acumulado.razaoSocial || mapeado.razaoSocial,
+          nomeFantasia: acumulado.nomeFantasia || mapeado.nomeFantasia,
+          codigoMunicipio: acumulado.codigoMunicipio || mapeado.codigoMunicipio,
+          opSimpNac: acumulado.opSimpNac ?? mapeado.opSimpNac,
+          cidade: acumulado.cidade || mapeado.cidade,
+          uf: acumulado.uf || mapeado.uf,
+          cep: acumulado.cep || mapeado.cep,
+        };
+      }
+      if (acumulado.razaoSocial && acumulado.codigoMunicipio) return acumulado;
+    } catch {
+      // Tenta o próximo provedor público
+    }
+  }
+  return acumulado;
 }

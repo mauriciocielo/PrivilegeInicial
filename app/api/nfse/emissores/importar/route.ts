@@ -9,17 +9,8 @@ import { CertificadoInvalidoError } from '../../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError } from '../../../../../lib/nfse/cofre';
 import { criarTransporteMtls, lerCaixaDfe, SefinIndisponivelError } from '../../../../../lib/nfse/sefin';
 import {
-  TIPO_EMPRESA_SO_EMISSOR, escolherSerie, extrairDadosEmissor, formatarCnpj, mapearCnpjPublico, type CnpjPublico,
+  TIPO_EMPRESA_SO_EMISSOR, consultarCnpjPublico, escolherSerie, extrairDadosEmissor, formatarCnpj,
 } from '../../../../../lib/nfse/emissor';
-
-async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | null> {
-  try {
-    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, { signal: AbortSignal.timeout(10000) });
-    return res.ok ? mapearCnpjPublico(await res.json()) : null;
-  } catch {
-    return null; // É só um complemento: sem ele, o usuário preenche à mão.
-  }
-}
 
 /**
  * Traz uma empresa pela procuração: confirma o vínculo no ADN e lê as notas já
@@ -50,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ cnpj, status: 'indeterminada', mensagem: error.message });
     }
 
-    const todas = await db.empresa.findMany({ select: { id: true, cnpj: true, tipo: true, nfseConfig: true } });
+    const todas = await db.empresa.findMany({ select: { id: true, cnpj: true, razaoSocial: true, nomeFantasia: true, tipo: true, nfseConfig: true } });
     const existente = todas.find(e => apenasDigitos(e.cnpj) === cnpj);
     const verificacao = { procuracaoStatus: caixa.status, procuracaoMensagem: caixa.mensagem, procuracaoVerificadaEm: new Date() };
 
@@ -65,10 +56,26 @@ export async function POST(request: Request) {
     // O cadastro público só entra para o que as notas não responderam.
     const publico = notas.razaoSocial && notas.codigoMunicipio && notas.opSimpNac ? null : await consultarCnpjPublico(cnpj);
 
+    const razaoReal = notas.razaoSocial || publico?.razaoSocial || null;
+    const fantasiaReal = notas.nomeFantasia || publico?.nomeFantasia || razaoReal || null;
+
+    if (existente && razaoReal && /^Empresa\s+\d/.test(existente.razaoSocial || '')) {
+      await db.empresa.update({
+        where: { id: existente.id },
+        data: {
+          razaoSocial: razaoReal,
+          nomeFantasia: fantasiaReal || razaoReal,
+          ...(publico?.cidade ? { cidade: publico.cidade } : {}),
+          ...(publico?.uf ? { uf: publico.uf } : {}),
+          ...(publico?.cep ? { cep: publico.cep } : {}),
+        },
+      });
+    }
+
     const empresaId = existente?.id ?? (await db.empresa.create({
       data: {
-        razaoSocial: notas.razaoSocial || publico?.razaoSocial || `Empresa ${formatarCnpj(cnpj)}`,
-        nomeFantasia: notas.nomeFantasia || publico?.nomeFantasia || notas.razaoSocial || publico?.razaoSocial || '',
+        razaoSocial: razaoReal || `Empresa ${formatarCnpj(cnpj)}`,
+        nomeFantasia: fantasiaReal || '',
         cnpj: formatarCnpj(cnpj),
         responsavel: '',
         email: '',

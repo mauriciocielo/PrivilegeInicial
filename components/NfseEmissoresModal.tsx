@@ -142,8 +142,14 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
       const res = await fetch(`/api/nfse/emissores/${empresaId}/verificar`, { method: 'POST' });
       const dados = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(dados.error || 'Não foi possível verificar a procuração.'); return false; }
+      const { razaoSocial, nomeFantasia, ...cfgDados } = dados;
       setEmpresas(lista => (lista || []).map(e => e.id === empresaId
-        ? { ...e, nfseConfig: { ambiente: 'homologacao', usarProcuracao: true, codigoMunicipio: null, ...e.nfseConfig, ...dados } }
+        ? {
+            ...e,
+            ...(typeof razaoSocial === 'string' ? { razaoSocial } : {}),
+            ...(typeof nomeFantasia === 'string' ? { nomeFantasia } : {}),
+            nfseConfig: { ambiente: 'homologacao', usarProcuracao: true, codigoMunicipio: null, ...e.nfseConfig, ...cfgDados },
+          }
         : e));
       return true;
     } catch {

@@ -17,6 +17,7 @@ interface Props {
 
 export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar, onNotas, onConcluir }: Props) {
   const [meses, setMeses] = useState(3);
+  const [reiniciar, setReiniciar] = useState(true);
   const [buscando, setBuscando] = useState(false);
   const [criadas, setCriadas] = useState(0);
   const [resultado, setResultado] = useState('');
@@ -26,13 +27,15 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
     setCriadas(0);
     setResultado('');
     let total = 0;
+    let totalEmitidas = 0;
+    let totalTomadas = 0;
     let fora = 0;
     try {
       for (let i = 0; i < MAX_CHAMADAS; i++) {
         const res = await fetch(`/api/nfse/emissores/${empresaId}/notas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ meses }),
+          body: JSON.stringify({ meses, reiniciar: i === 0 && reiniciar }),
         });
         const dados = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -41,11 +44,13 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
         }
         if (dados.notas?.length) onNotas(dados.notas);
         total += dados.criadas || 0;
+        totalEmitidas += dados.criadasEmitidas || 0;
+        totalTomadas += dados.criadasTomadas || 0;
         fora += dados.foraDoPeriodo || 0;
         setCriadas(total);
         if (!dados.temMais) {
           setResultado(total > 0
-            ? `${total} nota(s) nova(s) trazida(s) do portal.`
+            ? `${total} documento(s) novo(s) trazido(s) do portal (${totalEmitidas} emitido(s) e ${totalTomadas} serviço(s) tomado(s)).`
             : `Nenhuma nota nova neste período.${fora > 0 ? ` ${fora} nota(s) mais antiga(s) ficaram de fora.` : ''}`);
           toast.success('Busca no portal concluída.');
           onConcluir();
@@ -64,11 +69,11 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !buscando && onFechar()}>
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
-          <h2 className="modal-title">📥 Buscar notas do portal</h2>
+          <h2 className="modal-title">📥 Buscar notas e serviços tomados do portal</h2>
           <button className="modal-close" onClick={onFechar} disabled={buscando}>✕</button>
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
-          Traz as notas de <strong>{empresaNome}</strong> já emitidas no Portal Nacional, para servir de base: elas aparecem na lista e ficam disponíveis em Copiar Notas. Só lê as notas reais de produção, não altera nada no portal e não gera conta a receber.
+          Traz do Ambiente de Dados Nacional (ADN) tanto as <strong>notas emitidas</strong> quanto os <strong>serviços tomados</strong> por <strong>{empresaNome}</strong>. Só lê documentos reais de produção, com XML e PDF oficiais disponíveis para download.
         </div>
         <div className="form-group">
           <label className="form-label">Período</label>
@@ -79,6 +84,10 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
             <option value={12}>Últimos 12 meses</option>
           </select>
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={reiniciar} onChange={e => setReiniciar(e.target.checked)} disabled={buscando} />
+          Reler desde o início do lote no ADN (recomendado para capturar serviços tomados de períodos já consultados)
+        </label>
         {(buscando || resultado) && (
           <div style={{ fontSize: 13, marginTop: 8 }}>
             {buscando ? `⏳ Lendo o portal... ${criadas} nota(s) trazida(s) até agora.` : resultado}

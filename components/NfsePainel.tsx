@@ -9,17 +9,17 @@ import { confirmAsync } from './ConfirmProvider';
 import NfseConfigModal, { type NfseConfigResposta } from './NfseConfigModal';
 import NfseEmissoresModal, { type EmpresaEmissora } from './NfseEmissoresModal';
 import NfseAcessoClienteModal from './NfseAcessoClienteModal';
-import { TIPO_EMPRESA_SO_EMISSOR } from '../lib/nfse/emissor';
+import { formatarCnpj } from '../lib/nfse/emissor';
 import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse';
 import NfseCopiarModal from './NfseCopiarModal';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
-import { MOTIVOS_CANCELAMENTO, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
+import { MOTIVOS_CANCELAMENTO, apenasDigitos, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
 import { Instrument_Serif } from 'next/font/google';
-import { Search } from 'lucide-react';
+import { Search, Download, FileCode, FileText, ArrowLeftRight } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
@@ -27,6 +27,7 @@ import {
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 type ModalMode = 'novo' | 'ver' | null;
+type PapelFiltro = 'prestadas' | 'tomadas';
 
 type ResultadoEnvio =
   | { resultado: 'autorizada'; nota: NfsE; recuperada: boolean; alertas: string[] }
@@ -36,12 +37,14 @@ const secaoStyle = { background: 'var(--bg-card2)', borderRadius: 8, padding: 14
 
 const AVISO_FALE_COM_ESCRITORIO = 'O escritório ainda precisa concluir a configuração desta empresa para emitir.';
 
-// Empresa só emissora não existe no navegador nem na barra lateral: a escolha fica aqui.
-const CHAVE_EMISSOR_AVULSO = 'cf_nfse_emissor';
+// A tela de NFS-e opera de forma independente da empresa global selecionada no sistema.
+const CHAVE_EMISSOR_NFSE = 'cf_nfse_emissor_proprio';
 
-function lerEmissorAvulso(): Pick<Empresa, 'id' | 'razaoSocial' | 'nomeFantasia' | 'cnpj'> | null {
+type EmpresaNfseSelecionada = Pick<Empresa, 'id' | 'razaoSocial' | 'nomeFantasia' | 'cnpj'>;
+
+function lerEmissorProprio(): EmpresaNfseSelecionada | null {
   try {
-    return JSON.parse(sessionStorage.getItem(CHAVE_EMISSOR_AVULSO) || 'null');
+    return JSON.parse(sessionStorage.getItem(CHAVE_EMISSOR_NFSE) || 'null');
   } catch {
     return null;
   }
@@ -50,18 +53,42 @@ function lerEmissorAvulso(): Pick<Empresa, 'id' | 'razaoSocial' | 'nomeFantasia'
 // Notas anteriores à integração foram geradas pela simulação: nunca passaram pelo Sefin.
 const ehSimulada = (n: NfsE) => n.status !== 'rascunho' && !n.chaveAcesso;
 
-/** Tela de NFS-e. No modo cliente, escondem-se certificado, configuracao e limpeza: o servidor valida tudo de novo. */
+function ehNotaTomada(n: NfsE, cnpjEmpresa: string): boolean {
+  if (n.status === 'rascunho') return false;
+  const cnpjEmp = apenasDigitos(cnpjEmpresa || '');
+  const cnpjPrest = apenasDigitos(n.prestadorCnpj || '');
+  if (!cnpjEmp || !cnpjPrest) return false;
+  return cnpjPrest !== cnpjEmp;
+}
+
+/** Tela de NFS-e independente da empresa selecionada no restante do sistema. */
 export default function NfsePainel({ modoCliente = false }: { modoCliente?: boolean }) {
   const [empresaId, setEmpresaId] = useState('');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [empresasDisponiveis, setEmpresasDisponiveis] = useState<EmpresaEmissora[]>([]);
+  const [buscaEmpresaRapida, setBuscaEmpresaRapida] = useState('');
   const [nfseList, setNfseList] = useState<NfsE[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [viewItem, setViewItem] = useState<NfsE | null>(null);
+
+  // Filtros de visualização das notas já processadas em tela
+  const [papelFiltro, setPapelFiltro] = useState<PapelFiltro>('prestadas');
   const [search, setSearch] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<'' | 'rascunho' | 'emitida' | 'cancelada'>('');
+  const [mesFiltro, setMesFiltro] = useState<string>('');
+  const [dataInicioFiltro, setDataInicioFiltro] = useState<string>('');
+  const [dataFimFiltro, setDataFimFiltro] = useState<string>('');
+
+  // Modal de exportação mensal (XML / PDF)
+  const [showExportarModal, setShowExportarModal] = useState(false);
+  const [mesExportacao, setMesExportacao] = useState<string>(hojeBrasilia().slice(0, 7));
+  const [papelExportacao, setPapelExportacao] = useState<'prestadas' | 'tomadas' | 'todas'>('prestadas');
+  const [formatoExportacao, setFormatoExportacao] = useState<'ambos' | 'xml' | 'pdf' | 'pdf_unico'>('ambos');
+  const [incluirCanceladasExport, setIncluirCanceladasExport] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   const [config, setConfig] = useState<NfseConfigResposta | null>(null);
   const [erroConfig, setErroConfig] = useState('');
@@ -87,6 +114,19 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const [retencaoManual, setRetencaoManual] = useState(false);
   const [regraAplicada, setRegraAplicada] = useState('');
 
+  const carregarListaEmissores = useCallback(async () => {
+    if (modoCliente) return;
+    try {
+      const res = await fetch('/api/nfse/emissores');
+      const dados = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(dados.empresas)) {
+        setEmpresasDisponiveis(dados.empresas);
+      }
+    } catch {
+      // Silencioso: o modal de emissores tenta novamente ao abrir
+    }
+  }, [modoCliente]);
+
   const carregarConfig = useCallback(async (eId: string) => {
     setConfig(null);
     setErroConfig('');
@@ -100,82 +140,148 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     }
   }, []);
 
-  const load = useCallback((eId: string) => {
+  const carregarNotasServidor = useCallback(async (eId: string) => {
+    if (!eId) return;
+    try {
+      const res = await fetch(`/api/nfse/emissores/${eId}/notas`);
+      const dados = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(dados.notas)) {
+        const locais = new Map(store.getNfsE(eId).map(n => [n.id, n]));
+        dados.notas.forEach((n: NfsE) => {
+          store.saveNfsE({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) });
+        });
+        setNfseList(store.getNfsE(eId));
+      }
+    } catch {
+      // Mantém a lista local se offline
+    }
+  }, []);
+
+  const load = useCallback((eId: string, dadosEmpresa?: EmpresaNfseSelecionada | null) => {
     if (!eId) return;
     setEmpresaId(eId);
     setNfseList(store.getNfsE(eId));
     setClientes(store.getClientes(eId).filter(c => c.ativo));
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
     setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo && p.tipo === 'receita'));
-    const avulso = lerEmissorAvulso();
-    setEmpresa(store.getEmpresas().find(e => e.id === eId) || (avulso?.id === eId ? avulso as Empresa : null));
-    // A versão simulada guardava a senha do certificado em texto puro aqui.
+    const proprio = dadosEmpresa || lerEmissorProprio();
+    const daLista = empresasDisponiveis.find(e => e.id === eId);
+    setEmpresa(
+      store.getEmpresas().find(e => e.id === eId)
+      || (daLista ? (daLista as unknown as Empresa) : null)
+      || (proprio?.id === eId ? (proprio as Empresa) : null),
+    );
     localStorage.removeItem(`cf_nfse_portal_config_${eId}`);
-  }, []);
+  }, [empresasDisponiveis]);
+
+  const selecionarEmissorProprio = useCallback((escolhida: EmpresaNfseSelecionada) => {
+    const registro: EmpresaNfseSelecionada = {
+      id: escolhida.id,
+      razaoSocial: escolhida.razaoSocial,
+      nomeFantasia: escolhida.nomeFantasia,
+      cnpj: escolhida.cnpj,
+    };
+    sessionStorage.setItem(CHAVE_EMISSOR_NFSE, JSON.stringify(registro));
+    setSelecionadas(new Set());
+    load(registro.id, registro);
+    carregarConfig(registro.id);
+    carregarNotasServidor(registro.id);
+  }, [load, carregarConfig, carregarNotasServidor]);
 
   const acessoCliente = useAcessoNfse(modoCliente);
 
   const selecionarEmpresaCliente = useCallback((escolhida: EmpresaLiberada) => {
-    sessionStorage.setItem(CHAVE_EMISSOR_AVULSO, JSON.stringify(escolhida));
-    setSelecionadas(new Set());
-    load(escolhida.id);
-    carregarConfig(escolhida.id);
-  }, [load, carregarConfig]);
+    selecionarEmissorProprio(escolhida);
+  }, [selecionarEmissorProprio]);
 
   // O cliente só escolhe entre as próprias empresas com procuração, não importa o que esteja salvo.
   useEffect(() => {
     if (!modoCliente || acessoCliente.empresas.length === 0) return;
-    const salva = lerEmissorAvulso()?.id;
+    const salva = lerEmissorProprio()?.id;
     selecionarEmpresaCliente(acessoCliente.empresas.find(e => e.id === salva) || acessoCliente.empresas[0]);
-    const aoMudarDados = () => { const atual = lerEmissorAvulso()?.id; if (atual) load(atual); };
+    const aoMudarDados = () => { const atual = lerEmissorProprio()?.id; if (atual) load(atual); };
     window.addEventListener('cfDataChange', aoMudarDados);
     return () => window.removeEventListener('cfDataChange', aoMudarDados);
   }, [modoCliente, acessoCliente.empresas, selecionarEmpresaCliente, load]);
 
+  // No modo consultor/administrador, a tela de NFS-e usa apenas a seleção própria desta tela,
+  // sem herdar nem reagir à empresa selecionada no restante do sistema.
   useEffect(() => {
     if (modoCliente) return;
-    const saved = lerEmissorAvulso()?.id || sessionStorage.getItem('cf_empresa_sel') || '';
-    if (saved) { load(saved); carregarConfig(saved); }
-    const handler = (e: Event) => {
-      // Escolher uma empresa na barra lateral encerra o uso do emissor avulso.
-      sessionStorage.removeItem(CHAVE_EMISSOR_AVULSO);
-      const id = (e as CustomEvent).detail;
-      load(id);
-      carregarConfig(id);
-    };
+    carregarListaEmissores();
+    const proprio = lerEmissorProprio();
+    if (proprio?.id) {
+      load(proprio.id, proprio);
+      carregarConfig(proprio.id);
+      carregarNotasServidor(proprio.id);
+    }
     const dataChangeHandler = () => {
-      const current = lerEmissorAvulso()?.id || sessionStorage.getItem('cf_empresa_sel') || '';
-      if (current) load(current);
+      const atual = lerEmissorProprio();
+      if (atual?.id) load(atual.id, atual);
     };
-    window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);
     return () => {
-      window.removeEventListener('empresaChange', handler);
       window.removeEventListener('cfDataChange', dataChangeHandler);
     };
-  }, [modoCliente, load, carregarConfig]);
+  }, [modoCliente, carregarListaEmissores, load, carregarConfig, carregarNotasServidor]);
+
+  const cnpjEmpresaAtual = empresa?.cnpj || '';
+
+  // Notas que passam apenas pelo filtro de período (para alimentar contadores das abas e cards de resumo)
+  const notasNoPeriodo = useMemo(() => {
+    return nfseList.filter(n => {
+      if (mesFiltro && !n.dataEmissao.startsWith(mesFiltro) && n.dataCompetencia !== mesFiltro) return false;
+      if (dataInicioFiltro && n.dataEmissao < dataInicioFiltro) return false;
+      if (dataFimFiltro && n.dataEmissao > dataFimFiltro) return false;
+      return true;
+    });
+  }, [nfseList, mesFiltro, dataInicioFiltro, dataFimFiltro]);
+
+  const notasPrestadasNoPeriodo = useMemo(
+    () => notasNoPeriodo.filter(n => !ehNotaTomada(n, cnpjEmpresaAtual)),
+    [notasNoPeriodo, cnpjEmpresaAtual],
+  );
+
+  const notasTomadasNoPeriodo = useMemo(
+    () => notasNoPeriodo.filter(n => ehNotaTomada(n, cnpjEmpresaAtual)),
+    [notasNoPeriodo, cnpjEmpresaAtual],
+  );
+
+  const basePapel = papelFiltro === 'tomadas' ? notasTomadasNoPeriodo : notasPrestadasNoPeriodo;
 
   const filtered = useMemo(() => {
-    return nfseList.filter(n => {
+    return basePapel.filter(n => {
       if (statusFiltro && n.status !== statusFiltro) return false;
       if (!search) return true;
       const s = search.toLowerCase();
-      return n.numero.includes(s) || n.tomadorRazaoSocial.toLowerCase().includes(s) || n.discriminacao.toLowerCase().includes(s) || (n.chaveAcesso || '').includes(s);
-    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [nfseList, search, statusFiltro]);
+      return (
+        n.numero.toLowerCase().includes(s)
+        || n.tomadorRazaoSocial.toLowerCase().includes(s)
+        || (n.tomadorCnpjCpf || '').toLowerCase().includes(s)
+        || (n.prestadorRazaoSocial || '').toLowerCase().includes(s)
+        || (n.prestadorCnpj || '').toLowerCase().includes(s)
+        || n.discriminacao.toLowerCase().includes(s)
+        || (n.chaveAcesso || '').toLowerCase().includes(s)
+      );
+    }).sort((a, b) => b.dataEmissao.localeCompare(a.dataEmissao) || b.createdAt.localeCompare(a.createdAt));
+  }, [basePapel, search, statusFiltro]);
 
   const totais = useMemo(() => {
-    // Só nota real de produção conta como faturamento.
-    const reais = nfseList.filter(n => n.chaveAcesso && n.ambiente === 'producao');
-    const rascunhos = nfseList.filter(n => n.status === 'rascunho');
+    const reaisPrestadas = notasPrestadasNoPeriodo.filter(n => n.chaveAcesso && n.ambiente === 'producao');
+    const rascunhos = notasPrestadasNoPeriodo.filter(n => n.status === 'rascunho');
+    const tomadasValidas = notasTomadasNoPeriodo.filter(n => n.status === 'emitida');
+    const baseStatus = basePapel.filter(n => n.chaveAcesso || n.status === 'rascunho');
     return {
-      emitidas: reais.filter(n => n.status === 'emitida').reduce((a, n) => a + n.valorLiquido, 0),
-      qtdEmitidas: reais.filter(n => n.status === 'emitida').length,
-      qtdCanceladas: reais.filter(n => n.status === 'cancelada').length,
+      emitidas: reaisPrestadas.filter(n => n.status === 'emitida').reduce((a, n) => a + n.valorLiquido, 0),
+      qtdEmitidasPrestadas: reaisPrestadas.filter(n => n.status === 'emitida').length,
+      tomadasValor: tomadasValidas.reduce((a, n) => a + n.valorLiquido, 0),
+      qtdTomadas: tomadasValidas.length,
       pendentes: rascunhos.reduce((a, n) => a + n.valorServicos, 0),
       qtdRascunhos: rascunhos.length,
+      qtdEmitidasAba: baseStatus.filter(n => n.status === 'emitida').length,
+      qtdCanceladasAba: baseStatus.filter(n => n.status === 'cancelada').length,
     };
-  }, [nfseList]);
+  }, [notasPrestadasNoPeriodo, notasTomadasNoPeriodo, basePapel]);
 
   const parametros = config?.parametros || null;
   // Sem configuração salva, a empresa já nasce no modo por procuração.
@@ -226,6 +332,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   }, [modalMode, retencaoManual, regrasDaEmpresa, form.codigoServico, form.tomadorCnpjCpf, form.valorServicos]);
 
   const openNovo = () => {
+    setPapelFiltro('prestadas');
     setPercentuaisRetencao(SEM_RETENCAO);
     setRetencaoManual(false);
     setRegraAplicada('');
@@ -301,6 +408,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     });
     setNfseList(store.getNfsE(empresaId));
     setSelecionadas(new Set(ids));
+    setPapelFiltro('prestadas');
     setStatusFiltro('rascunho');
     setShowCopiarModal(false);
     setShowImportarModal(false);
@@ -582,6 +690,43 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     toast.success('Rascunhos e notas simuladas excluídos.');
   };
 
+  const handleExportarMes = async () => {
+    if (!empresaId) return;
+    setExportando(true);
+    try {
+      const params = new URLSearchParams({
+        mes: mesExportacao,
+        papel: papelExportacao,
+        formato: formatoExportacao,
+        incluirCanceladas: incluirCanceladasExport ? '1' : '0',
+      });
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}));
+        toast.error(erro.error || 'Não foi possível exportar as notas deste período.');
+        return;
+      }
+      const blob = await res.blob();
+      const disp = res.headers.get('Content-Disposition') || '';
+      const nomeMatch = disp.match(/filename="([^"]+)"/);
+      const nomeArquivo = nomeMatch?.[1] || `NFSe-${mesExportacao}.${formatoExportacao === 'pdf_unico' ? 'pdf' : 'zip'}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nomeArquivo;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Exportação concluída com sucesso!');
+      setShowExportarModal(false);
+    } catch {
+      toast.error('Erro de conexão ao exportar os arquivos.');
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const statusBadge = (n: NfsE) => {
     if (ehSimulada(n)) return <span className="badge" style={{ background: 'rgba(148,163,184,0.15)', color: 'var(--text-muted)' }}>Simulada</span>;
     if (n.cancelamentoEmAnalise) return <span className="badge badge-yellow">Canc. em análise</span>;
@@ -593,31 +738,36 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const modalEmissores = showEmissoresModal && (
     <NfseEmissoresModal
       empresaAtualId={empresaId}
-      onFechar={() => setShowEmissoresModal(false)}
-      onCertificadoAlterado={() => { if (empresaId) carregarConfig(empresaId); }}
+      onFechar={() => { setShowEmissoresModal(false); carregarListaEmissores(); }}
+      onCertificadoAlterado={() => { if (empresaId) carregarConfig(empresaId); carregarListaEmissores(); }}
       onSelecionar={(emissor: EmpresaEmissora) => {
         setShowEmissoresModal(false);
-        setSelecionadas(new Set());
-        if (emissor.tipo === TIPO_EMPRESA_SO_EMISSOR) {
-          const { id, razaoSocial, nomeFantasia, cnpj } = emissor;
-          sessionStorage.setItem(CHAVE_EMISSOR_AVULSO, JSON.stringify({ id, razaoSocial, nomeFantasia, cnpj }));
-          load(id);
-          carregarConfig(id);
-          return;
-        }
-        // A barra lateral faz a troca e avisa as telas pelo evento empresaChange.
-        window.dispatchEvent(new CustomEvent('selecionarEmpresa', { detail: emissor.id }));
+        selecionarEmissorProprio(emissor);
       }}
     />
   );
+
+  const emissoresAtivos = useMemo(() => {
+    const lista = empresasDisponiveis.filter(e => e.nfseConfig?.procuracaoStatus === 'ativa');
+    const base = lista.length > 0 ? lista : empresasDisponiveis;
+    if (!buscaEmpresaRapida.trim()) return base;
+    const termo = buscaEmpresaRapida.toLowerCase();
+    const digitos = apenasDigitos(buscaEmpresaRapida);
+    return base.filter(e =>
+      e.razaoSocial.toLowerCase().includes(termo)
+      || (e.nomeFantasia || '').toLowerCase().includes(termo)
+      || e.cnpj.includes(termo)
+      || (digitos && apenasDigitos(e.cnpj).includes(digitos)),
+    );
+  }, [empresasDisponiveis, buscaEmpresaRapida]);
 
   if (!empresaId) return (
     <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%' }}>
       <div
         style={{
-          maxWidth: 520,
-          margin: '64px auto',
-          padding: '44px 40px',
+          maxWidth: 780,
+          margin: '48px auto',
+          padding: '40px',
           background: '#fff',
           border: '1px solid #e5e5e5',
           borderRadius: 24,
@@ -635,39 +785,97 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           </>
         ) : (
           <>
-            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
-              Emissor Nacional
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+                  Módulo Independente • Emissor Nacional NFS-e
+                </div>
+                <h3 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: '0 0 6px', lineHeight: 1.1 }}>
+                  Escolha a empresa para operar NFS-e
+                </h3>
+                <p style={{ fontSize: 14, color: '#525252', margin: 0, lineHeight: 1.5 }}>
+                  Esta tela é independente da empresa selecionada no restante do sistema. Escolha abaixo qualquer cliente ou emissor por procuração.
+                </p>
+              </div>
+              <button
+                className="btn"
+                style={{ background: '#600000', color: '#fff', padding: '10px 18px', borderRadius: 8, fontWeight: 500, fontSize: 13.5, border: 'none' }}
+                onClick={() => setShowEmissoresModal(true)}
+              >
+                Gerenciar Procurações ({empresasDisponiveis.filter(e => e.nfseConfig?.procuracaoStatus === 'ativa').length || empresasDisponiveis.length})
+              </button>
             </div>
-            <h3 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: '0 0 12px', lineHeight: 1.1 }}>
-              Selecione uma empresa emissora
-            </h3>
-            <p style={{ fontSize: 15, color: '#525252', marginBottom: 24, lineHeight: 1.6 }}>
-              Escolha uma empresa no menu superior ou acesse a relação de empresas atendidas por procuração.
-            </p>
-            <button
-              className="btn"
-              style={{ background: '#600000', color: '#fff', padding: '11px 22px', borderRadius: 8, fontWeight: 500, fontSize: 14, border: 'none' }}
-              onClick={() => setShowEmissoresModal(true)}
+
+            <div
+              className="search-bar"
+              style={{
+                background: '#f9fafb',
+                border: '1px solid #e5e5e5',
+                borderRadius: 12,
+                padding: '10px 14px',
+                marginBottom: 16,
+              }}
             >
-              Emissores por Procuração
-            </button>
+              <Search size={16} style={{ color: '#525252' }} />
+              <input
+                placeholder="Pesquisar empresa por razão social, nome fantasia ou CNPJ..."
+                value={buscaEmpresaRapida}
+                onChange={e => setBuscaEmpresaRapida(e.target.value)}
+              />
+            </div>
+
+            <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e5e5e5', borderRadius: 14 }}>
+              {emissoresAtivos.length === 0 ? (
+                <div style={{ padding: '32px 20px', textAlign: 'center', color: '#525252', fontSize: 13.5 }}>
+                  Nenhuma empresa encontrada. Clique em <strong>Gerenciar Procurações</strong> para importar ou verificar CNPJs.
+                </div>
+              ) : (
+                <table style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Empresa</th>
+                      <th>CNPJ</th>
+                      <th>Situação</th>
+                      <th style={{ textAlign: 'right' }}>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emissoresAtivos.slice(0, 80).map(e => (
+                      <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => selecionarEmissorProprio(e)}>
+                        <td>
+                          <div style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{e.razaoSocial}</div>
+                          {e.nomeFantasia && e.nomeFantasia !== e.razaoSocial && (
+                            <div style={{ fontSize: 11.5, color: '#525252' }}>{e.nomeFantasia}</div>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
+                        <td>
+                          {e.nfseConfig?.procuracaoStatus === 'ativa' ? (
+                            <span className="badge badge-green">Procuração ativa</span>
+                          ) : (
+                            <span className="badge" style={{ background: '#f3f4f6', color: '#525252' }}>Cadastrada</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '5px 12px' }}
+                            onClick={ev => { ev.stopPropagation(); selecionarEmissorProprio(e); }}
+                          >
+                            Selecionar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </>
         )}
       </div>
       {modalEmissores}
-
-      {showAcessoClienteModal && empresa && (
-        <NfseAcessoClienteModal
-          empresa={{
-            id: empresa.id,
-            razaoSocial: empresa.razaoSocial,
-            nomeFantasia: empresa.nomeFantasia,
-            cnpj: empresa.cnpj,
-            procuracaoStatus: parametros?.procuracaoStatus ?? null,
-          }}
-          onFechar={() => setShowAcessoClienteModal(false)}
-        />
-      )}
     </div>
   );
 
@@ -683,7 +891,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       >
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
-            Sefin Nacional • NFS-e
+            Sefin Nacional • NFS-e (Tela Independente)
           </div>
           <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
             Notas Fiscais de Serviço
@@ -706,9 +914,32 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               ))}
             </select>
           ) : (
-            <div style={{ fontSize: 14, color: '#525252', marginTop: 4 }}>
-              {empresa?.nomeFantasia || empresa?.razaoSocial}
-              {empresa?.cnpj ? ` · CNPJ ${empresa.cnpj}` : ''}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 14, color: '#171717', fontWeight: 600 }}>
+                {empresa?.razaoSocial || empresa?.nomeFantasia}
+                {empresa?.cnpj ? <span style={{ fontWeight: 400, color: '#525252' }}>{` · CNPJ ${formatarCnpj(empresa.cnpj)}`}</span> : ''}
+              </div>
+              {!modoCliente && (
+                <button
+                  type="button"
+                  onClick={() => setShowEmissoresModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    background: '#f3f4f6',
+                    border: '1px solid #d4d4d8',
+                    color: '#171717',
+                    borderRadius: 99,
+                    padding: '3px 11px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeftRight size={12} /> Trocar Empresa
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -754,7 +985,18 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             onClick={() => setShowBuscarNotas(true)}
             disabled={!config}
           >
-            Buscar no Portal
+            Buscar Emitidas / Tomadas
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            onClick={() => {
+              setMesExportacao(mesFiltro || hojeBrasilia().slice(0, 7));
+              setPapelExportacao(papelFiltro);
+              setShowExportarModal(true);
+            }}
+          >
+            <Download size={14} /> Exportar Mês (XML/PDF)
           </button>
           <button
             className="btn btn-secondary"
@@ -842,20 +1084,20 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           </div>
         )}
 
-        {/* Resumo no padrão editorial da Tela Inicial (card escuro principal + cards brancos com borda fina) */}
+        {/* Resumo no padrão editorial da Tela Inicial */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: '1.35fr repeat(3, 1fr)',
             gap: 20,
-            marginBottom: 28,
+            marginBottom: 24,
           }}
         >
           <div
             style={{
               background: '#0a0a0a',
               color: '#fff',
-              padding: '28px 32px',
+              padding: '26px 30px',
               borderRadius: 20,
               display: 'flex',
               flexDirection: 'column',
@@ -863,13 +1105,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             }}
           >
             <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>
-              Total Emitido em Produção
+              Notas Emitidas (Prestadas)
             </span>
-            <div className={serif.className} style={{ fontSize: 40, fontWeight: 400, margin: '8px 0 4px', lineHeight: 1 }}>
+            <div className={serif.className} style={{ fontSize: 38, fontWeight: 400, margin: '8px 0 4px', lineHeight: 1 }}>
               {fmt.currency(totais.emitidas)}
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-              {totais.qtdEmitidas} nota(s) autorizada(s) pelo Sefin
+              {totais.qtdEmitidasPrestadas} nota(s) autorizada(s) no período
             </div>
           </div>
 
@@ -877,7 +1119,29 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             style={{
               background: '#fff',
               border: '1px solid #e5e5e5',
-              padding: '28px 28px',
+              padding: '26px 26px',
+              borderRadius: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Serviços Tomados (Recebidas)
+            </span>
+            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+              {fmt.currency(totais.tomadasValor)}
+            </div>
+            <div style={{ fontSize: 13, color: '#525252' }}>
+              {totais.qtdTomadas} nota(s) tomada(s) de fornecedores
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              padding: '26px 26px',
               borderRadius: 20,
               display: 'flex',
               flexDirection: 'column',
@@ -887,7 +1151,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               Em Rascunho
             </span>
-            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
               {fmt.currency(totais.pendentes)}
             </div>
             <div style={{ fontSize: 13, color: '#525252' }}>
@@ -899,29 +1163,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             style={{
               background: '#fff',
               border: '1px solid #e5e5e5',
-              padding: '28px 28px',
-              borderRadius: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Total de Notas
-            </span>
-            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
-              {nfseList.length}
-            </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
-              Registros cadastrados na empresa
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e5e5e5',
-              padding: '28px 28px',
+              padding: '26px 26px',
               borderRadius: 20,
               display: 'flex',
               flexDirection: 'column',
@@ -931,16 +1173,124 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               Canceladas
             </span>
-            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: totais.qtdCanceladas > 0 ? '#600000' : '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
-              {totais.qtdCanceladas}
+            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: totais.qtdCanceladasAba > 0 ? '#600000' : '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+              {totais.qtdCanceladasAba}
             </div>
             <div style={{ fontSize: 13, color: '#525252' }}>
-              Notas canceladas no Sefin
+              Notas canceladas na visão atual
             </div>
           </div>
         </div>
 
-        {/* Barra de Busca e Abas no estilo .tabs-container da Tela Inicial */}
+        {/* Seletor principal: Notas Emitidas (Prestador) vs Serviços Tomados (Tomador) + Filtro de Período em Tela */}
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e5e5',
+            borderRadius: 16,
+            padding: '14px 18px',
+            marginBottom: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 14,
+          }}
+        >
+          <div style={{ display: 'inline-flex', background: '#f3f4f6', padding: 4, borderRadius: 12, gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => { setPapelFiltro('prestadas'); setStatusFiltro(''); }}
+              style={{
+                background: papelFiltro === 'prestadas' ? '#600000' : 'transparent',
+                color: papelFiltro === 'prestadas' ? '#fff' : '#374151',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Notas Emitidas — Prestador ({notasPrestadasNoPeriodo.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPapelFiltro('tomadas'); if (statusFiltro === 'rascunho') setStatusFiltro(''); }}
+              style={{
+                background: papelFiltro === 'tomadas' ? '#600000' : 'transparent',
+                color: papelFiltro === 'tomadas' ? '#fff' : '#374151',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Serviços Tomados — Tomador ({notasTomadasNoPeriodo.length})
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Mês:</span>
+              <input
+                type="month"
+                className="form-control"
+                style={{ width: 155, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                value={mesFiltro}
+                onChange={e => {
+                  setMesFiltro(e.target.value);
+                  if (e.target.value) {
+                    setDataInicioFiltro('');
+                    setDataFimFiltro('');
+                  }
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>De:</span>
+              <input
+                type="date"
+                className="form-control"
+                style={{ width: 140, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                value={dataInicioFiltro}
+                onChange={e => {
+                  setDataInicioFiltro(e.target.value);
+                  if (e.target.value) setMesFiltro('');
+                }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Até:</span>
+              <input
+                type="date"
+                className="form-control"
+                style={{ width: 140, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                value={dataFimFiltro}
+                onChange={e => {
+                  setDataFimFiltro(e.target.value);
+                  if (e.target.value) setMesFiltro('');
+                }}
+              />
+            </div>
+            {(mesFiltro || dataInicioFiltro || dataFimFiltro) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: 12, padding: '5px 10px', height: 34 }}
+                onClick={() => {
+                  setMesFiltro('');
+                  setDataInicioFiltro('');
+                  setDataFimFiltro('');
+                }}
+              >
+                Limpar período
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Barra de Busca e Abas de Situação */}
         <div
           style={{
             display: 'flex',
@@ -965,7 +1315,11 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           >
             <Search size={15} style={{ color: '#525252' }} />
             <input
-              placeholder="Buscar por número, chave, tomador ou descrição..."
+              placeholder={
+                papelFiltro === 'tomadas'
+                  ? 'Buscar por número, chave, prestador/fornecedor ou descrição...'
+                  : 'Buscar por número, chave, tomador ou descrição...'
+              }
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -981,12 +1335,19 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               border: '1px solid #e5e5e5',
             }}
           >
-            {([
-              { key: '', label: `Todas (${nfseList.length})` },
-              { key: 'rascunho', label: `Rascunhos (${totais.qtdRascunhos})` },
-              { key: 'emitida', label: `Emitidas (${totais.qtdEmitidas})` },
-              { key: 'cancelada', label: `Canceladas (${totais.qtdCanceladas})` },
-            ] as const).map(item => {
+            {(papelFiltro === 'tomadas'
+              ? ([
+                  { key: '', label: `Todas (${basePapel.length})` },
+                  { key: 'emitida', label: `Autorizadas (${totais.qtdEmitidasAba})` },
+                  { key: 'cancelada', label: `Canceladas (${totais.qtdCanceladasAba})` },
+                ] as const)
+              : ([
+                  { key: '', label: `Todas (${basePapel.length})` },
+                  { key: 'rascunho', label: `Rascunhos (${totais.qtdRascunhos})` },
+                  { key: 'emitida', label: `Emitidas (${totais.qtdEmitidasAba})` },
+                  { key: 'cancelada', label: `Canceladas (${totais.qtdCanceladasAba})` },
+                ] as const)
+            ).map(item => {
               const ativo = statusFiltro === item.key;
               return (
                 <button
@@ -1014,7 +1375,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         </div>
 
         {/* Barra de Transmissão em Lote */}
-        {rascunhosSelecionados.length > 0 && (
+        {papelFiltro === 'prestadas' && rascunhosSelecionados.length > 0 && (
           <div
             style={{
               padding: '14px 20px',
@@ -1070,17 +1431,19 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>
-                    <input
-                      type="checkbox"
-                      aria-label="Selecionar todos os rascunhos"
-                      disabled={!!progressoLote}
-                      checked={filtered.some(n => n.status === 'rascunho') && filtered.filter(n => n.status === 'rascunho').every(n => selecionadas.has(n.id))}
-                      onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.filter(n => n.status === 'rascunho').map(n => n.id)) : new Set())}
-                    />
+                    {papelFiltro === 'prestadas' && (
+                      <input
+                        type="checkbox"
+                        aria-label="Selecionar todos os rascunhos"
+                        disabled={!!progressoLote}
+                        checked={filtered.some(n => n.status === 'rascunho') && filtered.filter(n => n.status === 'rascunho').every(n => selecionadas.has(n.id))}
+                        onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.filter(n => n.status === 'rascunho').map(n => n.id)) : new Set())}
+                      />
+                    )}
                   </th>
                   <th>Número</th>
                   <th>Emissão</th>
-                  <th>Tomador</th>
+                  <th>{papelFiltro === 'tomadas' ? 'Prestador (Fornecedor)' : 'Tomador (Cliente)'}</th>
                   <th>Serviço</th>
                   <th>Competência</th>
                   <th>Situação</th>
@@ -1094,111 +1457,220 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                     <td colSpan={9}>
                       <div style={{ padding: '56px 24px', textAlign: 'center' }}>
                         <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
-                          Nenhuma nota fiscal encontrada
+                          {papelFiltro === 'tomadas'
+                            ? 'Nenhum serviço tomado encontrado neste período'
+                            : 'Nenhuma nota fiscal emitida encontrada neste período'}
                         </h3>
                         <p style={{ fontSize: 14, color: '#525252', margin: 0 }}>
-                          Crie uma nota manual, busque notas emitidas no portal nacional ou importe uma planilha.
+                          {papelFiltro === 'tomadas'
+                            ? 'Clique em "Buscar Emitidas / Tomadas" no topo para sincronizar os serviços tomados no ADN Nacional.'
+                            : 'Crie uma nota manual, busque notas no portal nacional ou ajuste o filtro de período.'}
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filtered.map(n => (
-                    <tr key={n.id} style={{ opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.6 : 1 }}>
-                      <td>
-                        {n.status === 'rascunho' && (
-                          <input
-                            type="checkbox"
-                            aria-label={`Selecionar rascunho de ${n.tomadorRazaoSocial}`}
-                            disabled={!!progressoLote}
-                            checked={selecionadas.has(n.id)}
-                            onChange={() => alternarSelecao(n.id)}
-                          />
-                        )}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
-                        {n.status === 'rascunho' ? <span style={{ color: '#9ca3af' }}>—</span> : n.numero}
-                      </td>
-                      <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
-                      <td>
-                        <div style={{ fontWeight: 600, color: '#171717', fontSize: 13.5 }}>{n.tomadorRazaoSocial}</div>
-                        <div style={{ fontSize: 11.5, color: '#525252', fontFamily: 'monospace' }}>{n.tomadorCnpjCpf}</div>
-                      </td>
-                      <td style={{ fontSize: 12.5, color: '#525252', maxWidth: 240 }}>
-                        <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>
-                        <div style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
-                      </td>
-                      <td style={{ fontSize: 13, color: '#525252' }}>{n.dataCompetencia}</td>
-                      <td>
-                        {statusBadge(n)}
-                        {n.chaveAcesso && n.ambiente === 'homologacao' && (
-                          <div style={{ fontSize: 10.5, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
-                        )}
-                        {n.gerarContaReceber && (
-                          <div style={{ fontSize: 10.5, color: '#525252', marginTop: 3 }}>
-                            {n.lancamentoId ? 'Conta a receber gerada' : 'Gera conta a receber'}
-                          </div>
-                        )}
-                        {n.status === 'rascunho' && n.ultimoErro && (
-                          <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 3, maxWidth: 240 }}>{n.ultimoErro}</div>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13.5, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
-                        {fmt.currency(n.valorLiquido)}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
-                            onClick={() => { setViewItem(n); setModalMode('ver'); }}
-                          >
-                            Ver
-                          </button>
-                          {n.status === 'rascunho' && (
-                            <>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
-                                onClick={() => {
-                                  setForm({ ...n });
-                                  setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
-                                  setRetencaoManual(true);
-                                  setRegraAplicada('');
-                                  setModalMode('novo');
-                                }}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                className="btn btn-sm"
-                                style={{ fontSize: 12, padding: '5px 12px', background: '#600000', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500 }}
-                                onClick={() => handleTransmitir(n)}
-                                disabled={!!transmitindoId}
-                              >
-                                {transmitindoId === n.id ? 'Enviando...' : 'Transmitir'}
-                              </button>
-                            </>
+                  filtered.map(n => {
+                    const tomada = ehNotaTomada(n, cnpjEmpresaAtual);
+                    const nomeContraparte = tomada ? (n.prestadorRazaoSocial || 'Prestador') : n.tomadorRazaoSocial;
+                    const docContraparte = tomada ? n.prestadorCnpj : n.tomadorCnpjCpf;
+                    return (
+                      <tr key={n.id} style={{ opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.6 : 1 }}>
+                        <td>
+                          {!tomada && n.status === 'rascunho' && (
+                            <input
+                              type="checkbox"
+                              aria-label={`Selecionar rascunho de ${n.tomadorRazaoSocial}`}
+                              disabled={!!progressoLote}
+                              checked={selecionadas.has(n.id)}
+                              onChange={() => alternarSelecao(n.id)}
+                            />
                           )}
-                          {n.status === 'emitida' && !n.cancelamentoEmAnalise && (
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
+                          {n.status === 'rascunho' ? <span style={{ color: '#9ca3af' }}>—</span> : n.numero}
+                        </td>
+                        <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#171717', fontSize: 13.5 }}>{nomeContraparte}</div>
+                          <div style={{ fontSize: 11.5, color: '#525252', fontFamily: 'monospace' }}>{docContraparte}</div>
+                        </td>
+                        <td style={{ fontSize: 12.5, color: '#525252', maxWidth: 240 }}>
+                          <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>
+                          <div style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
+                        </td>
+                        <td style={{ fontSize: 13, color: '#525252' }}>{n.dataCompetencia}</td>
+                        <td>
+                          {statusBadge(n)}
+                          {n.chaveAcesso && n.ambiente === 'homologacao' && (
+                            <div style={{ fontSize: 10.5, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
+                          )}
+                          {n.gerarContaReceber && (
+                            <div style={{ fontSize: 10.5, color: '#525252', marginTop: 3 }}>
+                              {n.lancamentoId ? 'Conta a receber gerada' : 'Gera conta a receber'}
+                            </div>
+                          )}
+                          {n.status === 'rascunho' && n.ultimoErro && (
+                            <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 3, maxWidth: 240 }}>{n.ultimoErro}</div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13.5, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
+                          {fmt.currency(n.valorLiquido)}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
-                              onClick={() => abrirCancelamento(n)}
+                              style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                              onClick={() => { setViewItem(n); setModalMode('ver'); }}
                             >
-                              Cancelar
+                              Ver
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {n.chaveAcesso && (
+                              <>
+                                <a
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontSize: 11.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  href={`/api/nfse/${n.id}/danfse?baixar=1`}
+                                  title="Baixar DANFSe em PDF"
+                                >
+                                  <FileText size={12} /> PDF
+                                </a>
+                                <a
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontSize: 11.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  href={`/api/nfse/${n.id}/xml`}
+                                  download
+                                  title="Baixar XML Oficial"
+                                >
+                                  <FileCode size={12} /> XML
+                                </a>
+                              </>
+                            )}
+                            {!tomada && n.status === 'rascunho' && (
+                              <>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                                  onClick={() => {
+                                    setForm({ ...n });
+                                    setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
+                                    setRetencaoManual(true);
+                                    setRegraAplicada('');
+                                    setModalMode('novo');
+                                  }}
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  className="btn btn-sm"
+                                  style={{ fontSize: 12, padding: '5px 12px', background: '#600000', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500 }}
+                                  onClick={() => handleTransmitir(n)}
+                                  disabled={!!transmitindoId}
+                                >
+                                  {transmitindoId === n.id ? 'Enviando...' : 'Transmitir'}
+                                </button>
+                              </>
+                            )}
+                            {!tomada && n.status === 'emitida' && !n.cancelamentoEmAnalise && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
+                                onClick={() => abrirCancelamento(n)}
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      {/* ======================== MODAL EXPORTAR MÊS (XML / PDF) ======================== */}
+      {showExportarModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !exportando && setShowExportarModal(false)}>
+          <div className="modal" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <h2 className="modal-title">📦 Exportar Notas Fiscais (XML e PDF)</h2>
+              <button className="modal-close" onClick={() => setShowExportarModal(false)} disabled={exportando}>✕</button>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              Gera um pacote com os arquivos XML oficiais e/ou DANFSe em PDF de <strong>{empresa?.razaoSocial}</strong> para enviar à contabilidade ou guardar em arquivo.
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Mês de Emissão / Competência</label>
+                <input
+                  type="month"
+                  className="form-control"
+                  value={mesExportacao}
+                  onChange={e => setMesExportacao(e.target.value)}
+                  disabled={exportando}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tipo de Notas</label>
+                <select
+                  className="form-control"
+                  value={papelExportacao}
+                  onChange={e => setPapelExportacao(e.target.value as 'prestadas' | 'tomadas' | 'todas')}
+                  disabled={exportando}
+                >
+                  <option value="prestadas">Notas Emitidas (Prestador)</option>
+                  <option value="tomadas">Serviços Tomados (Tomador)</option>
+                  <option value="todas">Todas (Emitidas + Tomadas)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Formato de Exportação</label>
+              <select
+                className="form-control"
+                value={formatoExportacao}
+                onChange={e => setFormatoExportacao(e.target.value as 'ambos' | 'xml' | 'pdf' | 'pdf_unico')}
+                disabled={exportando}
+              >
+                <option value="ambos">ZIP completo (pastas XML + PDF separadas)</option>
+                <option value="xml">Apenas arquivos XML (em ZIP)</option>
+                <option value="pdf">Apenas DANFSe em PDF individuais (em ZIP)</option>
+                <option value="pdf_unico">PDF Único consolidado (todas as notas em 1 PDF)</option>
+              </select>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 12, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={incluirCanceladasExport}
+                onChange={e => setIncluirCanceladasExport(e.target.checked)}
+                disabled={exportando}
+              />
+              Incluir também notas canceladas no pacote
+            </label>
+
+            <div className="form-actions" style={{ marginTop: 22 }}>
+              <button className="btn btn-secondary" onClick={() => setShowExportarModal(false)} disabled={exportando}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#600000', borderColor: '#600000' }}
+                onClick={handleExportarMes}
+                disabled={exportando}
+              >
+                {exportando ? '⏳ Gerando arquivos...' : '⬇️ Baixar Exportação'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showConfigModal && (
         <NfseConfigModal
@@ -1241,7 +1713,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {showCopiarModal && (
         <NfseCopiarModal
-          notas={nfseList}
+          notas={notasPrestadasNoPeriodo}
           ambiente={parametros?.ambiente || 'homologacao'}
           portadores={portadores}
           planoContas={planoContas}
@@ -1252,7 +1724,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {showImportarModal && (
         <NfseImportarModal
-          notas={nfseList}
+          notas={notasPrestadasNoPeriodo}
           clientes={clientes}
           padroes={{
             cTribNac: parametros?.cTribNacPadrao,

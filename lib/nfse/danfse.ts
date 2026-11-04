@@ -385,8 +385,7 @@ const ALTURA_CANHOTO = 0.67;
  * Arial nos títulos e Microsoft Sans Serif nos conteúdos, que não podem ser embutidas
  * sem licença; o desenho é o mesmo.
  */
-export function gerarDanfsePdf(d: DadosDanfse, opcoes: { logoPng: Buffer; qrPng: Buffer; marcaDagua: MarcaDagua }): Buffer {
-  const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait', compress: true });
+export function desenharPaginaDanfse(pdf: jsPDF, d: DadosDanfse, opcoes: { logoPng: Buffer; qrPng: Buffer; marcaDagua: MarcaDagua }): void {
   const PT = 0.03528; // 1 ponto em centímetros
 
   const texto = (t: string, x: number, y: number, pts: number, estilo: 'bold' | 'normal' = 'normal', opc?: { align?: 'center' | 'left' | 'right'; maxWidth?: number }) => {
@@ -641,7 +640,20 @@ export function gerarDanfsePdf(d: DadosDanfse, opcoes: { logoPng: Buffer; qrPng:
   texto('IDENTIFICAÇÃO E ASSINATURA', X[1] + 0.05, Y_CANHOTO + 0.26, 7, 'bold');
   texto('Nº NFS-e / CHAVE NFS-e', X[2] + 0.05, Y_CANHOTO + 0.26, 7, 'bold');
   texto(caber(`${d.numero} / ${d.chave}`, 10.1, 7), X[2] + 0.05, Y_CANHOTO + 0.56, 7);
+}
 
+export function gerarDanfsePdf(d: DadosDanfse, opcoes: { logoPng: Buffer; qrPng: Buffer; marcaDagua: MarcaDagua }): Buffer {
+  const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait', compress: true });
+  desenharPaginaDanfse(pdf, d, opcoes);
+  return Buffer.from(pdf.output('arraybuffer'));
+}
+
+export function gerarDanfsePdfUnico(itens: Array<{ dados: DadosDanfse; opcoes: { logoPng: Buffer; qrPng: Buffer; marcaDagua: MarcaDagua } }>): Buffer {
+  const pdf = new jsPDF({ unit: 'cm', format: 'a4', orientation: 'portrait', compress: true });
+  itens.forEach((item, index) => {
+    if (index > 0) pdf.addPage('a4', 'portrait');
+    desenharPaginaDanfse(pdf, item.dados, item.opcoes);
+  });
   return Buffer.from(pdf.output('arraybuffer'));
 }
 

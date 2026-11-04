@@ -8,7 +8,7 @@ import { apenasDigitos, hojeBrasilia } from '../../../../../../lib/nfse/dps';
 import { CertificadoInvalidoError } from '../../../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError } from '../../../../../../lib/nfse/cofre';
 import { criarTransporteMtls, lerCaixaDfe, SefinIndisponivelError } from '../../../../../../lib/nfse/sefin';
-import { eventoCancelaNota, extrairDadosEmissor, lerNotaEmitida, mesclarServicos, type ServicoConhecido } from '../../../../../../lib/nfse/emissor';
+import { eventoCancelaNota, extrairDadosEmissor, lerNotaAdn, mesclarServicos, type ServicoConhecido } from '../../../../../../lib/nfse/emissor';
 
 const MESES_PERMITIDOS = [1, 3, 6, 12];
 
@@ -29,9 +29,32 @@ const colunasDevolvidas = {
   ambiente: true, nDps: true, idDps: true, chaveAcesso: true, gerarContaReceber: true, cancelamentoEmAnalise: true, lancamentoId: true, createdAt: true,
 } as const;
 
+/** Lista todas as notas fiscais (prestadas e tomadas) desta empresa salvas no servidor. */
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = requireAuth(request);
+    if (auth.error) return auth.error;
+    const { id: empresaId } = await params;
+    const negado = await acessoEmissaoNegado(auth.session, empresaId);
+    if (negado) return negado;
+
+    const notas = await db.nfsE.findMany({
+      where: { empresaId },
+      select: colunasDevolvidas,
+      orderBy: [{ dataEmissao: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    return NextResponse.json({ notas });
+  } catch (error) {
+    console.error('Erro em GET nfse/emissores/notas:', error);
+    captureError(error);
+    return NextResponse.json({ error: 'Erro ao listar as notas da empresa.' }, { status: 500 });
+  }
+}
+
 /**
- * Traz as notas emitidas no portal, para servir de base. Só lê: cada chamada avança
- * até 10 páginas a partir de onde parou e avisa se ainda há mais. Nota que já existe
+ * Traz as notas emitidas e tomadas no portal (ADN). Só lê: cada chamada avança
+ * até 3 páginas a partir de onde parou e avisa se ainda há mais. Nota que já existe
  * no sistema é mantida; só o cancelamento é atualizado. Não gera conta a receber.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -72,24 +95,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const idsAlterados: string[] = [];
     let foraDoPeriodo = 0;
     let criadas = 0;
+    let criadasEmitidas = 0;
+    let criadasTomadas = 0;
     // O XML do evento fica guardado: o DANFSe distingue "CANCELADA" de "SUBSTITUÍDA" por ele.
     const eventoPorChave = new Map(caixa.eventos.filter(e => eventoCancelaNota(e.xml)).map(e => [e.chave, e.xml]));
     const cancelamentos = new Set(eventoPorChave.keys());
 
     for (const xml of caixa.xmls) {
-      const nota = lerNotaEmitida(xml, cnpj);
-      // A caixa também traz o que a empresa recebeu como tomador: isso não é nota emitida.
+      const nota = lerNotaAdn(xml, cnpj);
+      // Traz tanto as notas emitidas (prestador) quanto os serviços tomados (tomador).
       if (!nota) continue;
       if (nota.dataEmissao < corte) { foraDoPeriodo++; continue; }
 
-      const existente = await db.nfsE.findUnique({ where: { chaveAcesso: nota.chaveAcesso }, select: { id: true } });
+      const existente = await db.nfsE.findUnique({ where: { chaveAcesso: nota.chaveAcesso }, select: { id: true, empresaId: true } });
       if (existente) {
-        // Os dados do sistema prevalecem, mas a tela pode ainda não ter esta nota.
-        idsAlterados.push(existente.id);
+        if (existente.empresaId === empresaId) {
+          idsAlterados.push(existente.id);
+        }
         continue;
       }
 
       const id = `nfse_${nota.chaveAcesso}`;
+      const ehTomada = nota.papel === 'tomado';
       await db.nfsE.create({
         data: {
           id,
@@ -97,12 +124,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           numero: nota.numero,
           serie: nota.serie,
           status: cancelamentos.has(nota.chaveAcesso) ? 'cancelada' : 'emitida',
-          prestadorCnpj: empresa.cnpj,
-          prestadorRazaoSocial: nota.prestadorRazaoSocial || empresa.razaoSocial,
+          prestadorCnpj: ehTomada ? (nota.prestadorDocumento || '') : empresa.cnpj,
+          prestadorRazaoSocial: nota.prestadorRazaoSocial || (ehTomada ? 'Prestador não informado' : empresa.razaoSocial),
           prestadorInscricaoMunicipal: nota.prestadorInscricaoMunicipal,
-          clienteId: clientePorDoc.get(nota.tomadorDocumento) ?? null,
-          tomadorCnpjCpf: nota.tomadorDocumento,
-          tomadorRazaoSocial: nota.tomadorRazaoSocial,
+          clienteId: ehTomada ? null : (clientePorDoc.get(nota.tomadorDocumento) ?? null),
+          tomadorCnpjCpf: ehTomada ? empresa.cnpj : nota.tomadorDocumento,
+          tomadorRazaoSocial: nota.tomadorRazaoSocial || (ehTomada ? empresa.razaoSocial : ''),
           tomadorEmail: nota.tomadorEmail,
           tomadorEndereco: nota.tomadorEndereco,
           tomadorCep: nota.tomadorCep,
@@ -138,6 +165,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
       idsAlterados.push(id);
       criadas++;
+      if (ehTomada) criadasTomadas++;
+      else criadasEmitidas++;
     }
 
     // O cancelamento pode chegar em leitura posterior à da nota.
@@ -175,7 +204,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       ? await db.nfsE.findMany({ where: { id: { in: [...new Set(idsAlterados)] } }, select: colunasDevolvidas })
       : [];
 
-    return NextResponse.json({ notas, criadas, foraDoPeriodo, servicos, temMais: caixa.parcial });
+    return NextResponse.json({ notas, criadas, criadasEmitidas, criadasTomadas, foraDoPeriodo, servicos, temMais: caixa.parcial });
   } catch (error) {
     if (error instanceof SefinIndisponivelError) {
       return NextResponse.json({ error: `${error.message} Tente de novo: a leitura continua de onde parou.` }, { status: 503 });
