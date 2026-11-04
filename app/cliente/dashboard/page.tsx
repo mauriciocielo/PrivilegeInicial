@@ -240,16 +240,10 @@ export default function ClienteDashboard() {
 
   return (
     <>
-      <div className="page-header glass-header" style={{
-        background: 'rgba(255, 255, 255, 0.4)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid rgba(255,255,255,0.3)',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.05)'
-      }}>
+      <div className="page-header">
         <div>
-          <div className="page-title text-gradient" style={{ fontSize: '22px', fontWeight: 800 }}>Painel Executivo — {empresa?.nomeFantasia}</div>
-          <div className="page-subtitle" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+          <div className="page-title">Painel Executivo — {empresa?.nomeFantasia}</div>
+          <div className="page-subtitle">
             Evolução Mensal • {mesAtualLabel}
           </div>
         </div>
@@ -259,12 +253,12 @@ export default function ClienteDashboard() {
             value={mesSelecionado} 
             onChange={e => setMesSelecionado(e.target.value)}
             style={{ 
-              width: '200px', 
-              background: 'rgba(255,255,255,0.96)', 
-              borderRadius: '12px',
-              border: '1px solid rgba(0,0,0,0.1)',
-              fontWeight: 600,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+              width: '185px', 
+              background: '#ffffff', 
+              borderRadius: '99px',
+              border: '1px solid #e5e5e5',
+              fontWeight: 500,
+              padding: '8px 14px',
             }}
           >
             {meses.map(m => {
@@ -280,60 +274,93 @@ export default function ClienteDashboard() {
         </div>
       </div>
 
-      <div className="page-body" style={{
-        backgroundImage: 'radial-gradient(circle at 15% 10%, rgba(140, 26, 34, 0.04) 0%, transparent 40%), radial-gradient(circle at 85% 90%, rgba(199, 167, 92, 0.05) 0%, transparent 40%)',
-        minHeight: '100%',
-      }}>
-        {/* Welcome Banner Premium */}
-        <div className="glass-card animate-slide-up" style={{
-          padding: '32px 40px',
-          marginBottom: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.3) 100%)',
-          border: '1px solid rgba(255,255,255,0.8)',
-          boxShadow: '0 8px 32px rgba(140, 26, 34, 0.05)',
-          position: 'relative',
-          overflow: 'hidden'
+      <div className="page-body">
+        {/* Card Editorial Principal (Padrão Home: #0a0a0a + Card Claro) */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.15fr 1fr',
+          gap: 20,
+          marginBottom: 28,
         }}>
-          {/* Decoração de Fundo no Banner */}
-          <div style={{ position: 'absolute', right: '-10%', top: '-50%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(140,26,34,0.06) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%' }} />
-
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              {saudacao}, <span className="text-gradient" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #d4af37 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{primeiroNome}</span>!
+          <div style={{
+            background: '#0a0a0a',
+            color: '#ffffff',
+            borderRadius: 24,
+            padding: '28px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a3a3a3' }}>
+                Saldo Disponível nas Contas
+              </span>
+              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.1)', color: '#e5e5e5' }}>
+                {primeiroNome ? `${saudacao}, ${primeiroNome}` : mesAtualLabel}
+              </span>
             </div>
-            <div style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 500 }}>
-              Aqui está o pulso financeiro em tempo real da <strong>{empresa?.razaoSocial}</strong>.
+            <div style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: 44,
+              fontWeight: 400,
+              lineHeight: 1.05,
+              letterSpacing: '-0.02em',
+              color: '#ffffff',
+              margin: '16px 0 12px',
+            }}>
+              <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
+            </div>
+            <div style={{ fontSize: 12.5, color: '#a3a3a3' }}>
+              Posição consolidada de liquidez da <strong style={{ color: '#fff' }}>{empresa?.razaoSocial}</strong>.
             </div>
           </div>
-          <div style={{ 
-            textAlign: 'right', 
-            background: 'rgba(255,255,255,0.8)', 
-            padding: '20px 28px', 
-            borderRadius: '20px', 
-            boxShadow: '0 10px 25px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(255,255,255,0.9)',
-            position: 'relative',
-            zIndex: 1
+
+          <div className="card" style={{
+            borderRadius: 24,
+            padding: '28px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
           }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>Saldo Disponível (Contas)</div>
-            <div style={{ fontSize: 36, fontWeight: 900, color: totais.portadores >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 4, letterSpacing: '-1px' }}>
-              <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+                Valuation Estimado do Negócio ({valuation.mult}x EBITDA)
+              </div>
+              <div style={{
+                fontFamily: "'Instrument Serif', Georgia, serif",
+                fontSize: 38,
+                fontWeight: 400,
+                lineHeight: 1.1,
+                color: '#000000',
+              }}>
+                <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
+              </div>
+              <div style={{ fontSize: 12.5, color: '#525252', marginTop: 8 }}>
+                Valor estimado construindo um EBITDA médio consistente de <strong><AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} /></strong>/mês.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 24, paddingTop: 14, marginTop: 14, borderTop: '1px solid #f0f0f0', fontSize: 12 }}>
+              <div>
+                <span style={{ color: '#737373' }}>Entradas na Semana: </span>
+                <strong style={{ color: 'var(--green)' }}>{fmt.currency(entradasSemana)}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#737373' }}>Saídas na Semana: </span>
+                <strong style={{ color: 'var(--red)' }}>{fmt.currency(saidasSemana)}</strong>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Próximos compromissos — sempre visível (com estado vazio), próximos 14 dias */}
-        <div className="glass-card card-dynamic animate-slide-up" style={{
-          marginBottom: 32, padding: '24px 32px', borderLeft: '4px solid var(--accent)', animationDelay: '150ms',
+        <div className="card" style={{
+          marginBottom: 28, padding: '22px 28px',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: agendasSemana.length > 0 ? 16 : 4, flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#000000', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <CalendarDays size={18} style={{ color: 'var(--accent)' }} /> Próximos Compromissos
             </h3>
-            <a href="/cliente/agenda" style={{ fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>
+            <a href="/cliente/agenda" style={{ fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
               Ver agenda completa →
             </a>
           </div>
@@ -349,22 +376,22 @@ export default function ClienteDashboard() {
                 const isHoje = rotulo === 'Hoje';
                 return (
                   <div key={ag.id} style={{
-                    padding: 16, borderRadius: 12, background: isHoje ? 'rgba(140,26,34,0.05)' : 'rgba(255,255,255,0.7)',
-                    border: `1px solid ${isHoje ? 'rgba(140,26,34,0.25)' : 'var(--border-light)'}`,
+                    padding: 16, borderRadius: 14, background: isHoje ? 'rgba(96,0,0,0.03)' : '#fafafa',
+                    border: `1px solid ${isHoje ? 'rgba(96,0,0,0.2)' : '#e5e5e5'}`,
                   }}>
-                    <div style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 800, marginBottom: 4, textTransform: 'capitalize' }}>
+                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 4, textTransform: 'capitalize' }}>
                       {rotulo} às {ag.horario}
                     </div>
-                    <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{ag.title}</div>
-                    {ag.location && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {ag.location}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#171717', marginBottom: 4 }}>{ag.title}</div>
+                    {ag.location && <div style={{ fontSize: 11.5, color: '#737373' }}>{ag.location}</div>}
                   </div>
                 );
               })}
               {agendasSemana.length > 6 && (
                 <a href="/cliente/agenda" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none',
-                  padding: 16, borderRadius: 12, background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--border-light)',
-                  fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)',
+                  padding: 16, borderRadius: 14, background: '#fafafa', border: '1px dashed #d4d4d4',
+                  fontSize: 13, fontWeight: 600, color: '#525252',
                 }}>
                   +{agendasSemana.length - 6} mais →
                 </a>
@@ -379,83 +406,37 @@ export default function ClienteDashboard() {
           dataFim={dataFim}
           contextKey={mesSelecionado}
         />
-
-        {/* Valuation Module (Elite CFO) */}
-        <div className="glass-card card-dynamic animate-slide-up" style={{
-          marginBottom: 32, padding: '32px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'linear-gradient(135deg, #FDF9F1 0%, #E8DCC4 100%)', border: '1px solid #D4C3A3', boxShadow: '0 20px 50px rgba(0,0,0,0.08)', animationDelay: '200ms'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{ fontSize: 24 }}>💎</span>
-              <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 2, color: '#977A42', fontWeight: 800 }}>Valuation do Negócio (Estimativa Base)</div>
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#4A3B18', letterSpacing: '-1px' }}>
-              <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
-            </div>
-            <div style={{ fontSize: 13, color: '#73603C', marginTop: 8, display: 'flex', alignItems: 'center' }}>
-              <span>O quanto a sua empresa vale construindo um EBITDA consistente de&nbsp;</span>
-              <strong><AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} /></strong>
-              <span>&nbsp;/mês.</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 32, textAlign: 'right' }}>
-            <div>
-              <div style={{ fontSize: 11, color: '#73603C', textTransform: 'uppercase', letterSpacing: 1 }}>Múltiplo Projetado</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#4A3B18' }}>
-                 <AnimatedCounter target={valuation.mult} suffix="x" decimals={0} />
-              </div>
-            </div>
-          </div>
-        </div>
         
         {/* Painel de IA / Inteligência */}
         <AIInsights empresaId={empresaId} mesSelecionado={mesSelecionado} />
 
         {/* Foco na Semana */}
-        {/* O cliente não tem a tela dedicada de projeção; aqui é onde ele vê
-            para onde o caixa caminha. */}
         <ProjecaoCaixaResumo empresaId={empresaId} meses={6} href={null} />
 
-        <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '200ms' }}>Esta Semana (Sobrevivência)</h3>
-        <div className="grid-2" style={{ marginBottom: 32 }}>
-           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px', borderLeft: '4px solid var(--green)', animationDelay: '300ms' }}>
-             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Entradas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)', marginTop: 8 }}><AnimatedCounter target={entradasSemana} prefix="R$ " decimals={2} /></div>
-             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que está previsto para entrar até sábado.</div>
-           </div>
-           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px', borderLeft: '4px solid var(--red)', animationDelay: '400ms' }}>
-             <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Saídas da Semana</div>
-             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red)', marginTop: 8 }}><AnimatedCounter target={saidasSemana} prefix="R$ " decimals={2} /></div>
-             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>Tudo que precisa ser pago até sábado.</div>
-           </div>
-        </div>
-
-        <h3 className="animate-slide-up" style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', animationDelay: '500ms' }}>Resumo do Mês ({mesAtualLabel})</h3>
-        <div className="stat-grid" style={{ marginBottom: 32 }}>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '600ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
-            <div className="stat-icon green animate-float"><TrendingUp size={20} /></div>
+        <div className="stat-grid" style={{ marginBottom: 28 }}>
+          <div className="stat-card" style={{ opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
+            <div className="stat-icon green"><TrendingUp size={18} /></div>
             <div className="stat-label">Entradas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.receitas} prefix="R$ " decimals={2} /></div>
             {carregado && <TrendBadge atual={totais.receitas} anterior={totaisAnterior.receitas} favoravelSeMaior={true} />}
           </div>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '700ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
-            <div className="stat-icon red animate-float"><TrendingDown size={20} /></div>
+          <div className="stat-card" style={{ opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
+            <div className="stat-icon red"><TrendingDown size={18} /></div>
             <div className="stat-label">Saídas no Mês</div>
             <div className="stat-value"><AnimatedCounter target={totais.despesas} prefix="R$ " decimals={2} /></div>
             {carregado && <TrendBadge atual={totais.despesas} anterior={totaisAnterior.despesas} favoravelSeMaior={false} />}
           </div>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '800ms', opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
-            <div className={`stat-icon animate-float ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={20} /></div>
-            <div className="stat-label">O que Sobrou (Fôlego)</div>
+          <div className="stat-card" style={{ opacity: carregado ? 1 : 0.4, transition: 'opacity .3s' }}>
+            <div className={`stat-icon ${totais.saldo >= 0 ? 'blue' : 'red'}`}><Activity size={18} /></div>
+            <div className="stat-label">Resultado Líquido (Mês)</div>
             <div className="stat-value" style={{ color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               <AnimatedCounter target={totais.saldo} prefix="R$ " decimals={2} />
             </div>
             {carregado && <TrendBadge atual={totais.saldo} anterior={totaisAnterior.receitas - totaisAnterior.despesas} favoravelSeMaior={true} />}
           </div>
-          <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '20px', animationDelay: '900ms' }}>
-            <div className="stat-icon purple animate-float"><Percent size={20} /></div>
-            <div className="stat-label">Margem Limpa</div>
+          <div className="stat-card">
+            <div className="stat-icon purple"><Percent size={18} /></div>
+            <div className="stat-label">Margem Operacional</div>
             <div className="stat-value" style={{ color: margem >= 20 ? 'var(--green)' : margem >= 0 ? 'var(--yellow)' : 'var(--red)' }}>
               {margem.toFixed(1)}%
             </div>

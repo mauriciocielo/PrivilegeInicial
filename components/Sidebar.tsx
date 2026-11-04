@@ -40,53 +40,17 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     section: 'Painel',
     items: [
       { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
-      { label: 'Ecossistema BPO (IA)', href: '/consultor/bpo', icon: Activity },
-      { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
-    ],
-  },
-  {
-    section: 'Operação Diária',
-    items: [
-      { label: 'Lançamentos', href: '/consultor/lancamentos', icon: NotebookPen },
-      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
+      { label: 'Ecossistema BPO', href: '/consultor/bpo', icon: Activity },
       { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
       { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
-    ],
-  },
-  {
-    section: 'Inteligência & Diagnóstico',
-    items: [
-      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
-      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
-      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
-    ],
-  },
-  {
-    section: 'Auditoria & C-Level',
-    items: [
-      { label: 'Valuation & Real-Value', href: '/consultor/valuation', icon: Calculator },
-      { label: 'Budget & Orçamento', href: '/consultor/controle-orcamentario', icon: Presentation },
-      { label: 'Benchmarking Cloud', href: '/consultor/benchmarking', icon: Activity },
-      { label: 'Malha Fina & Risco', href: '/consultor/risco-fiscal', icon: AlertTriangle },
-      { label: 'Simulador de Cenários', href: '/consultor/simulador-cenarios', icon: Sliders },
-    ]
-  },
-  {
-    section: 'Planejamento & Indicadores',
-    items: [
-      { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
-      { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
-      { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
-      { label: 'Projeção de Caixa', href: '/consultor/projecao-caixa', icon: Activity },
-      { label: 'Imobilizado', href: '/consultor/imobilizado', icon: Building },
-      { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
-      { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
+      { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
     ],
   },
   {
     section: 'Financeiro',
     items: [
-      { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
+      { label: 'Lançamentos', href: '/consultor/lancamentos', icon: NotebookPen },
+      { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
       { label: 'Contas a Pagar', href: '/consultor/contas-pagar', icon: CreditCard },
       { label: 'Contas a Receber', href: '/consultor/contas-receber', icon: Banknote },
       { label: 'Contas via ERP', href: '/consultor/contas-erp', icon: Landmark },
@@ -96,49 +60,70 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
-    section: 'Cadastros',
+    section: 'Planejamento',
+    items: [
+      { label: 'Projeção de Caixa', href: '/consultor/projecao-caixa', icon: Activity },
+      { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
+      { label: 'Budget & Orçamento', href: '/consultor/controle-orcamentario', icon: Presentation },
+      { label: 'Indicadores', href: '/consultor/indicadores', icon: Target },
+      { label: 'Endividamento', href: '/consultor/endividamento', icon: Scale },
+      { label: 'Balanço Patrimonial', href: '/consultor/balanco-patrimonial', icon: BookOpen },
+      { label: 'Curva ABC', href: '/consultor/curva-abc', icon: BarChart2 },
+      { label: 'Imobilizado', href: '/consultor/imobilizado', icon: Building },
+    ],
+  },
+  {
+    section: 'Inteligência',
+    items: [
+      { label: 'Inteligência Financeira', href: '/consultor/inteligencia', icon: BrainCircuit },
+      { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
+      { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
+      { label: 'Valuation & Real-Value', href: '/consultor/valuation', icon: Calculator },
+      { label: 'Simulador de Cenários', href: '/consultor/simulador-cenarios', icon: Sliders },
+      { label: 'Benchmarking Cloud', href: '/consultor/benchmarking', icon: Activity },
+      { label: 'Malha Fina & Risco', href: '/consultor/risco-fiscal', icon: AlertTriangle },
+    ],
+  },
+  {
+    section: 'Cadastros & Gestão',
     items: [
       { label: 'Empresas', href: '/consultor/empresas', icon: Building2 },
+      { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
       { label: 'Usuários', href: '/consultor/usuarios', icon: UserCog },
       { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: ListTree },
       { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: Tag },
-      { label: 'Atas de Atendimento', href: '/consultor/atas', icon: FileText },
       { label: 'Portadores', href: '/consultor/portadores', icon: Wallet },
-      { label: 'Segurança & Auditoria', href: '/consultor/configuracoes-avancadas', icon: ShieldCheck, adminOnly: true },
-    ],
-  },
-  {
-    section: 'Relatórios & Auditoria',
-    items: [
+      { label: 'Atas de Atendimento', href: '/consultor/atas', icon: FileText },
       { label: 'Relatórios Financeiros', href: '/consultor/relatorios', icon: BarChart3 },
       { label: 'Trilha de Auditoria (Logs)', href: '/consultor/auditoria', icon: ShieldCheck },
-    ],
-  },
-  {
-    section: 'Logística',
-    items: [
-      { label: 'Dashboard Frota', href: '/consultor/logistica/dashboard', icon: Truck },
-      { label: 'Veículos e Motoristas', href: '/consultor/logistica/veiculos', icon: Car },
-      { label: 'Controle de Gastos', href: '/consultor/logistica/despesas', icon: Fuel },
-      { label: 'Orçamentos', href: '/consultor/logistica/orcamentos', icon: Target },
+      { label: 'Segurança & Auditoria', href: '/consultor/configuracoes-avancadas', icon: ShieldCheck, adminOnly: true },
+      { label: 'Frota — Dashboard', href: '/consultor/logistica/dashboard', icon: Truck },
+      { label: 'Frota — Veículos', href: '/consultor/logistica/veiculos', icon: Car },
+      { label: 'Frota — Gastos', href: '/consultor/logistica/despesas', icon: Fuel },
+      { label: 'Frota — Orçamentos', href: '/consultor/logistica/orcamentos', icon: Target },
     ],
   },
 ];
 
 const clienteNav: { section: string; items: NavItem[] }[] = [
   {
-    section: 'Minha Empresa',
+    section: 'Visão Geral',
     items: [
       { label: 'Dashboard', href: '/cliente/dashboard', icon: LayoutDashboard },
       { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
+      { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
+    ],
+  },
+  {
+    section: 'Financeiro',
+    items: [
       { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
       { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },
       { label: 'Importar OFX', href: '/cliente/importar-ofx', icon: FolderInput },
       { label: 'Contas via ERP', href: '/cliente/contas-erp', icon: Landmark },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: FileText },
       { label: 'Políticas Financeiras', href: '/cliente/politicas', icon: ClipboardList },
-      { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
     ],
   },
   {
@@ -492,50 +477,41 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          cursor: 'pointer'
+          cursor: 'pointer',
+          padding: '0 16px 0 0',
+          flexShrink: 0,
         }}
         onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}
       >
-        <BrandLogo size={64} subtitle={isConsultorOrAdmin ? 'Portal do Consultor' : 'Portal do Cliente'} />
+        <BrandLogo size={42} />
       </div>
 
-
-
-      {/*
-        Seletor de empresa — antes existia só um comentário aqui dizendo que
-        isso "foi movido pro Painel Administrativo", mas nunca foi reconstruído
-        lá (nem em nenhum outro lugar): sem isso, ninguém tinha como trocar de
-        empresa pela interface — nem consultor com acesso total, nem restrito.
-        Fica na Sidebar (não numa tela específica) justamente porque ela
-        aparece em toda página, independente das permissões de rota do
-        usuário — reaproveita o estado que já existia pronto (busca,
-        recentes, grupos econômicos) só sem UI nenhuma.
-      */}
       {isConsultorOrAdmin && selectableEmpresas.length > 0 && (
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => setShowCompanyDropdown(o => !o)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-              padding: '8px 14px', borderRadius: 10, background: 'var(--bg-card2)',
-              border: '1px solid var(--border-light)', maxWidth: 220,
+              display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 99, background: '#ffffff',
+              border: '1px solid #e5e5e5', maxWidth: 195,
+              transition: 'border-color 0.2s',
             }}
             title="Trocar de empresa"
           >
-            <Building2 size={14} style={{ flexShrink: 0, color: 'var(--accent)' }} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Building2 size={13} style={{ flexShrink: 0, color: '#600000' }} />
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial || 'Selecionar empresa'}
             </span>
-            <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.6, transform: showCompanyDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+            <ChevronDown size={13} style={{ flexShrink: 0, color: '#737373', transform: showCompanyDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
           </div>
 
           {showCompanyDropdown && (
             <div
               className="dropdown-anim-up"
               style={{
-                position: 'absolute', top: '100%', left: 0, marginTop: 8, width: 300, maxHeight: 420,
-                overflowY: 'auto', background: '#fff', border: '1px solid var(--border-light)',
-                borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', zIndex: 1001, padding: 12,
+                position: 'absolute', top: '100%', left: 0, marginTop: 8, width: 290, maxHeight: 420,
+                overflowY: 'auto', background: '#ffffff', border: '1px solid #e5e5e5',
+                borderRadius: 16, boxShadow: '0 16px 36px rgba(0,0,0,0.08)', zIndex: 1001, padding: 12,
               }}
             >
               <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -546,22 +522,22 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                   value={searchEmpresa}
                   onChange={e => setSearchEmpresa(e.target.value)}
                   style={{
-                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 12.5, borderRadius: 8,
-                    border: '1px solid var(--border-light)', outline: 'none', color: 'var(--text-primary)',
+                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 12.5, borderRadius: 10,
+                    border: '1px solid #e5e5e5', outline: 'none', color: '#171717',
                   }}
                 />
               </div>
 
               {!searchEmpresa && recentEmpresas.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Clock size={11} /> Recentes
                   </div>
                   {recentEmpresas.map(id => {
                     const e = selectableEmpresas.find(x => x.id === id);
                     if (!e) return null;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 800 : 500, background: e.id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         {e.nomeFantasia || e.razaoSocial}
                       </div>
                     );
@@ -571,13 +547,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               {!searchEmpresa && gruposEconomicos.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Globe size={11} /> Grupos econômicos
                   </div>
                   {gruposEconomicos.map(g => {
                     const id = `grupo:${g}`;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: id === selectedEmpresa ? 800 : 500, background: id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: id === selectedEmpresa ? 600 : 400, background: id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         Grupo {g}
                       </div>
                     );
@@ -586,18 +562,18 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
 
               <div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                <div style={{ fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                   Todas as empresas ({selectableEmpresas.length})
                 </div>
                 {selectableEmpresas
                   .filter(e => !searchEmpresa || `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase()))
                   .map(e => (
-                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 800 : 500, background: e.id === selectedEmpresa ? 'var(--bg-card2)' : 'transparent' }}>
+                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                       {e.nomeFantasia || e.razaoSocial}
                     </div>
                   ))}
                 {searchEmpresa && selectableEmpresas.filter(e => `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase())).length === 0 && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
+                  <div style={{ fontSize: 12, color: '#737373', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
                 )}
               </div>
             </div>
@@ -608,16 +584,20 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       <nav className="sidebar-nav">
         {nav.map(section => {
           const containsActive = section.items.some(item => item.href === pathname);
-          // No desktop (topbar) isso não importa — o hover é quem manda lá.
-          // No celular (accordion vertical), a seção da página atual abre
-          // sozinha até o usuário tocar nela explicitamente.
           const isExpanded = expandedSections?.[section.section] ?? containsActive;
           return (
             <div key={section.section} className={isExpanded ? 'expanded' : ''}>
               <div className="nav-section" onClick={() => toggleSection(section.section, isExpanded)}>
-                <span className="nav-section-label">
+                <span
+                  className="nav-section-label"
+                  style={{
+                    color: containsActive ? '#000000' : undefined,
+                    fontWeight: containsActive ? 600 : undefined,
+                    background: containsActive ? '#f4f4f5' : undefined,
+                  }}
+                >
                   {section.section}
-                  <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }} />
+                  <ChevronDown size={13} style={{ opacity: 0.5, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }} />
                 </span>
               </div>
 
@@ -632,7 +612,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                       onClick={e => { e.preventDefault(); router.push(item.href); }}
                     >
                       <span className="nav-icon">
-                        <item.icon size={16} strokeWidth={2.2} />
+                        <item.icon size={15} strokeWidth={1.9} />
                       </span>
                       {item.label}
                     </a>
@@ -644,67 +624,61 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         })}
       </nav>
 
-      <div className="sidebar-footer" style={{ padding: isSidebarCompact ? '12px' : '16px' }}>
-        {/* Central de Notificações — pendências de conciliação */}
+      <div className="sidebar-footer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 0, flexShrink: 0 }}>
+        {/* Central de Notificações — pendências de conciliação (compacta) */}
         {pendenciasReconciliacao > 0 && (
           <div
             onClick={() => router.push(role === 'cliente' ? '/cliente/extrato' : '/consultor/importar-ofx')}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: isSidebarCompact ? 'center' : 'flex-start',
-              gap: 8,
-              fontSize: 11,
+              gap: 6,
+              fontSize: 11.5,
               fontWeight: 600,
-              padding: '8px 12px',
-              borderRadius: '8px',
-              background: 'rgba(245,158,11,0.12)',
-              color: 'var(--yellow)',
-              border: '1px solid rgba(245,158,11,0.22)',
-              marginBottom: 12,
-              cursor: 'pointer'
+              padding: '5px 10px',
+              borderRadius: 99,
+              background: '#fffbeb',
+              color: '#b45309',
+              border: '1px solid #fde68a',
+              cursor: 'pointer',
             }}
-            title={`${pendenciasReconciliacao} conciliações pendentes!`}
+            title={`${pendenciasReconciliacao} conciliações pendentes`}
           >
-            <Bell size={14} className="pulse-glow" style={{ flexShrink: 0 }} />
-            {!isSidebarCompact && (
-              <span style={{ flex: 1 }}>{pendenciasReconciliacao} Pendentes</span>
-            )}
+            <Bell size={13} style={{ flexShrink: 0 }} />
+            <span>{pendenciasReconciliacao}</span>
           </div>
         )}
 
-        {/* Glow Sync status indicator */}
-        {syncStatus !== 'idle' && !isSidebarCompact && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 10,
-            fontWeight: 600,
-            padding: '6px 12px',
-            borderRadius: 20,
-            background: syncStatus === 'synced' ? 'var(--green-bg)' : syncStatus === 'syncing' ? 'var(--yellow-bg)' : 'var(--red-bg)',
-            color: syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)',
-            border: `1px solid ${syncStatus === 'synced' ? 'rgba(16, 185, 129, 0.2)' : syncStatus === 'syncing' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-            marginBottom: 12,
-            justifyContent: 'center',
-          }}>
-            <span 
-              className={syncStatus === 'syncing' ? 'pulse-glow' : ''}
+        {/* Indicador discreto de sincronização na nuvem */}
+        {syncStatus !== 'idle' && (
+          <div
+            title={syncStatus === 'synced' ? 'Nuvem atualizada' : syncStatus === 'syncing' ? 'Salvando na nuvem...' : 'Erro ao sincronizar'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: syncStatus === 'synced' ? '6px' : '4px 10px',
+              borderRadius: 99,
+              background: syncStatus === 'synced' ? 'transparent' : syncStatus === 'syncing' ? '#fffbeb' : '#fef2f2',
+              color: syncStatus === 'synced' ? '#16a34a' : syncStatus === 'syncing' ? '#d97706' : '#dc2626',
+              fontSize: 11,
+              fontWeight: 500,
+            }}
+          >
+            <span
               style={{
-                width: 6,
-                height: 6,
+                width: 7,
+                height: 7,
                 borderRadius: '50%',
-                background: syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)',
+                background: syncStatus === 'synced' ? '#16a34a' : syncStatus === 'syncing' ? '#d97706' : '#dc2626',
                 display: 'inline-block',
-                boxShadow: `0 0 8px ${syncStatus === 'synced' ? 'var(--green)' : syncStatus === 'syncing' ? 'var(--yellow)' : 'var(--red)'}`
-              }} 
+              }}
             />
-            {syncStatus === 'synced' ? 'NUVEM ATUALIZADA' : syncStatus === 'syncing' ? 'SALVANDO NA NUVEM...' : 'ERRO AO SALVAR'}
+            {syncStatus !== 'synced' && (syncStatus === 'syncing' ? 'Salvando...' : 'Erro sync')}
           </div>
         )}
 
-        {/* Popover de Perfil */}
+        {/* Popover de Perfil Compacto */}
         <div style={{ position: 'relative' }}>
           <div 
             className="user-card" 
@@ -713,14 +687,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               cursor: 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '10px', 
-              padding: isSidebarCompact ? '6px' : '10px 12px', 
-              justifyContent: isSidebarCompact ? 'center' : 'flex-start',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-sidebar)',
-              borderRadius: '12px',
-              transition: 'background 0.2s',
-              color: '#000'
+              gap: 8, 
+              padding: '4px 10px 4px 5px', 
+              background: '#ffffff',
+              border: '1px solid #e5e5e5',
+              borderRadius: 99,
+              transition: 'border-color 0.2s',
+              color: '#171717'
             }}
           >
             <div 
@@ -731,15 +704,15 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
-                width: '32px', 
-                height: '32px', 
-                minWidth: '32px',
-                background: user ? getAvatarGradient(user.name) : undefined,
+                width: 26, 
+                height: 26, 
+                minWidth: 26,
+                background: '#171717',
                 color: '#fff',
-                fontWeight: 700,
-                fontSize: '12px',
+                fontWeight: 600,
+                fontSize: 11,
                 borderRadius: '50%',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                border: 'none',
               }}
             >
               {user?.avatarData ? (
@@ -753,13 +726,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
             </div>
             {!isSidebarCompact && (
-              <div className="user-info" style={{ flex: 1, overflow: 'hidden' }}>
-                <div className="user-name" style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-                <div className="user-role" style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {role === 'administrador' ? <><Gem size={10} /> Administrador</> : role === 'consultor' ? <><Briefcase size={10} /> Consultor Especialista</> : <><Building2 size={10} /> Cliente Ativo</>}
-                </div>
-              </div>
+              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.name?.split(' ')[0] || 'Conta'}
+              </span>
             )}
+            <ChevronDown size={12} style={{ color: '#737373' }} />
           </div>
 
           {showProfilePopover && (
@@ -768,27 +739,27 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               style={{
                 position: 'absolute',
                 top: '100%',
-                right: '0',
-                width: '220px',
-                background: '#1f2540',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px',
-                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.6)',
-                padding: '14px',
+                right: 0,
+                width: 230,
+                background: '#ffffff',
+                border: '1px solid #e5e5e5',
+                borderRadius: 16,
+                boxShadow: '0 16px 36px rgba(0,0,0,0.08)',
+                padding: 14,
                 zIndex: 1001,
-                marginTop: '8px'
+                marginTop: 8
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{user?.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{user?.email}</div>
-              <div style={{ height: '1px', background: 'var(--border-light)', margin: '8px 0' }} />
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 2 }}>{user?.name}</div>
+              <div style={{ fontSize: 11.5, color: '#737373', marginBottom: 8 }}>{user?.email}</div>
+              <div style={{ height: 1, background: '#f0f0f0', margin: '8px 0' }} />
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Tema</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
+                  <span style={{ fontSize: 12, color: '#525252' }}>Tema</span>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ padding: '4px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    style={{ padding: '4px 10px', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                     onClick={toggleTheme}
                   >
                     {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}
@@ -796,12 +767,16 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 </div>
                 <button
                   className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }}
+                  style={{ width: '100%', textAlign: 'left', display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-start' }}
                   onClick={() => { setShowProfilePopover(false); setShowTwoFactorModal(true); }}
                 >
-                  <ShieldCheck size={13} /> {user?.twoFactorEnabled ? 'Verificação em 2 Etapas (Ativa)' : 'Ativar Verificação em 2 Etapas'}
+                  <ShieldCheck size={13} /> {user?.twoFactorEnabled ? '2FA Ativo' : 'Verificação em 2 Etapas'}
                 </button>
-                <button className="btn btn-secondary btn-sm" style={{ width: '100%', textAlign: 'left', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={handleLogout}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', textAlign: 'left', display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-start', color: '#dc2626' }}
+                  onClick={handleLogout}
+                >
                   <LogOut size={13} /> Sair da Conta
                 </button>
               </div>
