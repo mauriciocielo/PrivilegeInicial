@@ -7,7 +7,7 @@ import {
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
   ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
   Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft,
-  Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight
+  Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
@@ -17,6 +17,7 @@ import NfeDifalModal from './NfeDifalModal';
 import NfeIntegracaoModal from './NfeIntegracaoModal';
 import NfeImportarXmlModal from './NfeImportarXmlModal';
 import CadastrarCnpjModal from './CadastrarCnpjModal';
+import NfeGraficoMensalArquivos, { type GraficoMensalDados } from './NfeGraficoMensalArquivos';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
@@ -111,9 +112,14 @@ export default function NfeDestinadasPainel() {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
-  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'certificados' | 'carteira'>('recebidas');
+  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'grafico' | 'certificados' | 'carteira'>('recebidas');
   const [filtroStatusRapido, setFiltroStatusRapido] = useState<string>('todas');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
+
+  // Estado do Gráfico Mensal de Arquivos do Cliente
+  const [dadosGraficoMensal, setDadosGraficoMensal] = useState<GraficoMensalDados | null>(null);
+  const [carregandoGrafico, setCarregandoGrafico] = useState(false);
+  const [mostrarGraficoInline, setMostrarGraficoInline] = useState(false);
 
   // Filtros da aba de Controle de Certificados
   const [filtroCertificadoStatus, setFiltroCertificadoStatus] = useState<'todos' | 'validos' | 'vencendo' | 'vencidos' | 'procuracao' | 'sem_cert'>('todos');
@@ -231,11 +237,29 @@ export default function NfeDestinadasPainel() {
     }
   }, [mesFiltro, dataInicio, dataFim, situacaoFiltro, busca]);
 
+  // Carrega Gráfico Mensal de Arquivos do Cliente
+  const carregarGraficoMensal = useCallback(async (id: string) => {
+    if (!id) return;
+    try {
+      setCarregandoGrafico(true);
+      const res = await fetch(`/api/nfe/destinadas/grafico-mensal?empresaId=${id}`);
+      const data = await lerJsonResposta(res);
+      if (res.ok) {
+        setDadosGraficoMensal(data);
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar dados do gráfico mensal:', err);
+    } finally {
+      setCarregandoGrafico(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (empresaIdSelecionada) {
       carregarNotas(empresaIdSelecionada);
+      carregarGraficoMensal(empresaIdSelecionada);
     }
-  }, [empresaIdSelecionada, carregarNotas]);
+  }, [empresaIdSelecionada, carregarNotas, carregarGraficoMensal]);
 
   const empresaAtual = useMemo(() => {
     return empresas.find(e => e.id === empresaIdSelecionada) || null;
@@ -264,6 +288,7 @@ export default function NfeDestinadasPainel() {
         if (resSefaz.value.ok) {
           toast.success(data.mensagem || 'Consulta realizada com sucesso na SEFAZ e SEFIN!');
           await carregarNotas(empresaIdSelecionada);
+          await carregarGraficoMensal(empresaIdSelecionada);
           await carregarEmpresas();
         } else {
           toast.error(data.error || 'Falha ao consultar a SEFAZ.');
@@ -1163,6 +1188,26 @@ export default function NfeDestinadasPainel() {
             </button>
             <button
               type="button"
+              onClick={() => setAbaPrincipal('grafico')}
+              style={{
+                background: abaPrincipal === 'grafico' ? '#600000' : 'transparent',
+                color: abaPrincipal === 'grafico' ? '#fff' : '#374151',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <BarChart3 size={14} />
+              Gráfico Mensal de Arquivos {dadosGraficoMensal?.resumo?.totalGeral ? `(${dadosGraficoMensal.resumo.totalGeral})` : ''}
+            </button>
+            <button
+              type="button"
               onClick={() => setAbaPrincipal('certificados')}
               style={{
                 background: abaPrincipal === 'certificados' ? '#600000' : 'transparent',
@@ -1216,7 +1261,7 @@ export default function NfeDestinadasPainel() {
           </div>
 
           {/* Filtros de Data e Competência */}
-          {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && (
+          {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 12, color: '#525252', fontWeight: 600 }}>Mês:</span>
@@ -1258,10 +1303,42 @@ export default function NfeDestinadasPainel() {
         {/* =========================================================================
             VISÃO 1: NOTAS FISCAIS (RECEBIDAS, EMITIDAS OU TODAS)
             ========================================================================= */}
-        {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' ? (
+        {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' ? (
           <>
+            {/* Gráfico Mensal de Arquivos Inline (Opcional via Toggle) */}
+            {mostrarGraficoInline && (
+              <NfeGraficoMensalArquivos
+                dados={dadosGraficoMensal}
+                carregando={carregandoGrafico}
+                mesSelecionadoFiltro={mesFiltro}
+                onSelecionarMes={(m) => {
+                  setMesFiltro(m);
+                  toast.success(`Filtrando notas do mês ${m}`);
+                }}
+              />
+            )}
+
             {/* Barra de Busca e Filtros Rápidos de Status */}
             <div style={{ display: 'flex', gap: 12, marginBottom: 18, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarGraficoInline(prev => !prev)}
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12.5,
+                  padding: '9px 14px',
+                  background: mostrarGraficoInline ? '#600000' : '#ffffff',
+                  color: mostrarGraficoInline ? '#ffffff' : '#374151',
+                  borderColor: mostrarGraficoInline ? '#600000' : '#e5e5e5',
+                }}
+                title={mostrarGraficoInline ? 'Recolher gráfico mensal de arquivos' : 'Expandir gráfico mensal de arquivos'}
+              >
+                <BarChart3 size={14} /> {mostrarGraficoInline ? 'Ocultar Gráfico' : 'Ver Gráfico Mensal'}
+              </button>
+
               <div
                 className="search-bar"
                 style={{
@@ -1561,6 +1638,20 @@ export default function NfeDestinadasPainel() {
               </div>
             </div>
           </>
+        ) : abaPrincipal === 'grafico' ? (
+          /* =========================================================================
+             VISÃO 4: ANÁLISE GRÁFICA MENSAL DE ARQUIVOS DO CLIENTE
+             ========================================================================= */
+          <NfeGraficoMensalArquivos
+            dados={dadosGraficoMensal}
+            carregando={carregandoGrafico}
+            mesSelecionadoFiltro={mesFiltro}
+            onSelecionarMes={(m) => {
+              setMesFiltro(m);
+              setAbaPrincipal('recebidas');
+              toast.success(`Filtrando notas do mês ${m}`);
+            }}
+          />
         ) : abaPrincipal === 'certificados' ? (
           /* =========================================================================
              VISÃO 3: CONTROLE DE CERTIFICADOS DIGITAIS
