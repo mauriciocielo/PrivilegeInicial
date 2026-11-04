@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     const [empresas, certificado, usuariosClientes] = await Promise.all([
       db.empresa.findMany({
-        where: {},
+        where: auth.session.role === 'administrador' ? {} : { id: { in: auth.session.empresaIds } },
         select: {
           id: true,
           razaoSocial: true,

@@ -17,7 +17,7 @@ export const ESCOPO_CERT_ESCRITORIO = 'escritorio';
 
 /** A emissão fica na área do consultor: o perfil cliente não opera certificado nem nota fiscal. */
 export function acessoNegado(session: SessionPayload, empresaId: string): NextResponse | null {
-  if (session.role === 'administrador' || session.role === 'consultor') return null;
+  if (session.role === 'administrador') return null;
   if (session.role !== 'cliente' && session.empresaIds.includes(empresaId)) return null;
   return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
 }

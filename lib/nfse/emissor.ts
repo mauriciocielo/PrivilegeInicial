@@ -12,6 +12,13 @@ import { dividirRetencaoAgrupada } from './retencao';
 /** Empresa que só emite nota: não é cliente e fica fora das demais telas. */
 export const TIPO_EMPRESA_SO_EMISSOR = 'emissor_nfse';
 
+/** Mesma condição de acessoEmissaoNegado: fora dela, o cliente vinculado não consegue emitir. */
+export function emiteViaProcuracao(
+  config?: { usarProcuracao?: boolean | null; procuracaoStatus?: string | null } | null,
+): boolean {
+  return !!config && config.usarProcuracao !== false && config.procuracaoStatus === 'ativa';
+}
+
 export const SERIE_PADRAO = 10;
 
 export function extrairCnpjs(texto: string): { validos: string[]; invalidos: string[] } {

@@ -1,79 +1,57 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
-import { EMAIL_SETOR_FISCAL_PADRAO, enviarRelatorioFiscalDiario } from '../../../../lib/nfse/relatorio-fiscal';
+import {
+  enviarRelatorioFiscalDiario, relatorioEmAndamento, type OpcoesRelatorioFiscal,
+} from '../../../../lib/nfse/relatorio-fiscal';
 
-/**
- * GET /api/nfse/relatorio-diario
- * Executado pelo Cron diário (com CRON_SECRET) ou por usuário autenticado do escritório.
- */
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function autorizado(request: Request, token: string | null): boolean {
+  const segredo = process.env.CRON_SECRET;
+  if (segredo && token === segredo) return true;
+  const auth = requireAuth(request);
+  return !auth.error && auth.session.role !== 'cliente';
+}
+
+function iniciar(opcoes: OpcoesRelatorioFiscal) {
+  if (relatorioEmAndamento()) {
+    return NextResponse.json({ iniciado: false, mensagem: 'Já existe um envio em andamento. O e-mail chega ao terminar.' }, { status: 409 });
+  }
+  // A leitura do ADN de centenas de empresas leva minutos: roda em segundo plano e envia o e-mail ao terminar.
+  enviarRelatorioFiscalDiario(opcoes)
+    .then(r => console.log(`[relatorio-fiscal] ${r.mensagem} Emitidas: ${r.qtdEmitidas}, tomadas: ${r.qtdTomadas}.`))
+    .catch(err => { console.error('[relatorio-fiscal] Falha no envio:', err); captureError(err); });
+  return NextResponse.json({ iniciado: true, mensagem: 'Envio iniciado. O e-mail chega ao setor fiscal assim que a leitura terminar.' }, { status: 202 });
+}
+
+/** Disparo do agendador diário: lê o ADN de todas as empresas e envia as notas de ontem. */
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const clientToken = searchParams.get('token') || request.headers.get('Authorization')?.replace('Bearer ', '');
-    const cronSecret = process.env.CRON_SECRET;
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token') || request.headers.get('Authorization')?.replace('Bearer ', '') || null;
+  if (!autorizado(request, token)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
 
-    if (cronSecret && clientToken !== cronSecret) {
-      const auth = requireAuth(request);
-      if (auth.error || auth.session.role === 'cliente') {
-        return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-      }
-    }
-
-    const resultado = await enviarRelatorioFiscalDiario({
-      dataInicio: searchParams.get('dataInicio') || undefined,
-      dataFim: searchParams.get('dataFim') || undefined,
-      empresaId: searchParams.get('empresaId') || undefined,
-      sincronizarAdn: searchParams.get('sincronizarAdn') !== '0',
-      anexarZip: searchParams.get('anexarZip') !== '0',
-    });
-
-    if (!resultado.sucesso) {
-      return NextResponse.json({ error: resultado.mensagem, ...resultado }, { status: 500 });
-    }
-    return NextResponse.json(resultado);
-  } catch (error) {
-    console.error('Erro em GET /api/nfse/relatorio-diario:', error);
-    captureError(error);
-    return NextResponse.json({ error: (error as Error).message || 'Erro ao enviar relatório fiscal diário.' }, { status: 500 });
-  }
+  const dataInicio = searchParams.get('dataInicio');
+  const dataFim = searchParams.get('dataFim');
+  return iniciar({
+    dataInicio: dataInicio && DATA_ISO.test(dataInicio) ? dataInicio : undefined,
+    dataFim: dataFim && DATA_ISO.test(dataFim) ? dataFim : undefined,
+    sincronizarAdn: searchParams.get('sincronizarAdn') !== '0',
+  });
 }
 
-/**
- * POST /api/nfse/relatorio-diario
- * Disparo sob demanda a partir da tela de NFS-e para fiscal@privilegecontabilidade.com.br (ou outros destinatários).
- */
+/** Disparo manual pela tela de NFS-e (período e destinatário opcionais). */
 export async function POST(request: Request) {
-  try {
-    const auth = requireAuth(request);
-    if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') {
-      return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const emailInformado = typeof body?.email === 'string' ? body.email.trim() : '';
-    const destinatarios = emailInformado
-      ? emailInformado.split(/[;,]+/).map((s: string) => s.trim()).filter(Boolean)
-      : [EMAIL_SETOR_FISCAL_PADRAO];
-
-    const resultado = await enviarRelatorioFiscalDiario({
-      dataInicio: body?.dataInicio || undefined,
-      dataFim: body?.dataFim || undefined,
-      empresaId: body?.empresaId || undefined,
-      destinatarios,
-      sincronizarAdn: Boolean(body?.sincronizarAdn),
-      anexarZip: body?.anexarZip !== false,
-    });
-
-    if (!resultado.sucesso) {
-      return NextResponse.json({ error: resultado.mensagem, ...resultado }, { status: 500 });
-    }
-    return NextResponse.json(resultado);
-  } catch (error) {
-    console.error('Erro em POST /api/nfse/relatorio-diario:', error);
-    captureError(error);
-    return NextResponse.json({ error: (error as Error).message || 'Erro ao enviar relatório fiscal.' }, { status: 500 });
-  }
+  if (!autorizado(request, null)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  const body = await request.json().catch(() => ({}));
+  const emails = typeof body?.email === 'string'
+    ? body.email.split(/[;,]+/).map((s: string) => s.trim().toLowerCase()).filter((s: string) => s.includes('@'))
+    : [];
+  return iniciar({
+    dataInicio: DATA_ISO.test(body?.dataInicio || '') ? body.dataInicio : undefined,
+    dataFim: DATA_ISO.test(body?.dataFim || '') ? body.dataFim : undefined,
+    empresaId: typeof body?.empresaId === 'string' && body.empresaId ? body.empresaId : undefined,
+    destinatarios: emails.length ? emails : undefined,
+    sincronizarAdn: body?.sincronizarAdn === true,
+  });
 }
-

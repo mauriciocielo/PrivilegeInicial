@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { store, User, Empresa, uid } from '../../../lib/store';
-import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
+import { TIPO_EMPRESA_SO_EMISSOR, emiteViaProcuracao } from '../../../lib/nfse/emissor';
 import { hashPassword } from '../../../lib/auth-hash';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
@@ -66,11 +66,20 @@ interface EmpresaEmissoraInfo {
   cnpj: string;
   tipo: string;
   nfseConfig?: {
+    usarProcuracao?: boolean;
     procuracaoStatus?: 'ativa' | 'sem_procuracao' | 'indeterminada' | null;
   } | null;
 }
 
 type ModoCliente = 'nfse' | 'bpo';
+
+function situacaoProcuracao(config: EmpresaEmissoraInfo['nfseConfig']): { texto: string; classe: string } {
+  if (emiteViaProcuracao(config)) return { texto: 'Procuração ativa', classe: 'badge-green' };
+  if (config?.usarProcuracao === false) return { texto: 'Certificado próprio', classe: 'badge-gray' };
+  if (config?.procuracaoStatus === 'sem_procuracao') return { texto: 'Sem procuração', classe: 'badge-red' };
+  if (config?.procuracaoStatus === 'indeterminada') return { texto: 'Não confirmada', classe: 'badge-yellow' };
+  return { texto: 'Não verificada', classe: 'badge-gray' };
+}
 
 function gerarSenhaSugerida(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -91,20 +100,32 @@ export default function UsuariosPage() {
   const [search, setSearch] = useState('');
   const [rawImageData, setRawImageData] = useState<string | null>(null);
   const [emissoresTodos, setEmissoresTodos] = useState<EmpresaEmissoraInfo[]>([]);
+  const [emissoresEstado, setEmissoresEstado] = useState<'carregando' | 'ok' | 'erro'>('carregando');
+  const [ehAdmin, setEhAdmin] = useState(false);
+
+  // As empresas só emissoras não vêm no cadastro local: sem esta lista elas não aparecem para seleção.
+  const carregarEmissores = useCallback(() => {
+    setEmissoresEstado('carregando');
+    fetch('/api/nfse/emissores')
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error('falha ao listar emissores'))))
+      .then(d => {
+        setEmissoresTodos(d?.empresas || []);
+        setEmissoresEstado('ok');
+      })
+      .catch(() => setEmissoresEstado('erro'));
+  }, []);
 
   useEffect(() => {
     const load = () => {
       setUsers(store.getUsers());
       setEmpresas(store.getEmpresas());
+      setEhAdmin(store.getCurrentUser()?.role === 'administrador');
     };
     load();
     window.addEventListener('cfDataChange', load);
-    fetch('/api/nfse/emissores')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => setEmissoresTodos(d?.empresas || []))
-      .catch(() => { /* sem a lista, a tela segue com as empresas do cadastro */ });
+    carregarEmissores();
     return () => window.removeEventListener('cfDataChange', load);
-  }, []);
+  }, [carregarEmissores]);
 
   // Lista unificada de empresas (BPO + Só Emissor) com status de procuração NFS-e
   const todasEmpresasUnificadas = useMemo(() => {
@@ -121,6 +142,8 @@ export default function UsuariosPage() {
     }
     for (const em of emissoresTodos) {
       const atual = mapa.get(em.id);
+      // O consultor só consegue vincular as empresas que atende e as emissoras por procuração.
+      if (!atual && !ehAdmin && em.tipo !== TIPO_EMPRESA_SO_EMISSOR && !emiteViaProcuracao(em.nfseConfig)) continue;
       mapa.set(em.id, {
         id: em.id,
         razaoSocial: em.razaoSocial || atual?.razaoSocial || '',
@@ -133,13 +156,13 @@ export default function UsuariosPage() {
     return Array.from(mapa.values()).sort((a, b) =>
       (a.nomeFantasia || a.razaoSocial).localeCompare(b.nomeFantasia || b.razaoSocial)
     );
-  }, [empresas, emissoresTodos]);
+  }, [empresas, emissoresTodos, ehAdmin]);
 
   const ehUsuarioEmissorNfse = (u: User): boolean => {
     if (u.role !== 'cliente') return false;
     if ((u.allowedRoutes || []).includes(ROTA_CLIENTE_NFSE)) return true;
     const vinculadas = todasEmpresasUnificadas.filter(e => u.empresaIds?.includes(e.id));
-    return vinculadas.some(e => e.tipo === TIPO_EMPRESA_SO_EMISSOR || e.nfseConfig?.procuracaoStatus === 'ativa');
+    return vinculadas.some(e => e.tipo === TIPO_EMPRESA_SO_EMISSOR || emiteViaProcuracao(e.nfseConfig));
   };
 
   const openNew = (modoInicial: ModoCliente = 'bpo') => {
@@ -162,7 +185,7 @@ export default function UsuariosPage() {
     const isNfse = ehUsuarioEmissorNfse(u);
     setModoCliente(isNfse ? 'nfse' : 'bpo');
     setBuscaEmpresa('');
-    setFiltroEmpresa('todas');
+    setFiltroEmpresa(isNfse ? 'procuracao' : 'todas');
     setCredencialRecente(null);
     setForm({ ...u, newPassword: '', allowedRoutes: u.allowedRoutes || [] });
     setShowModal(true);
@@ -216,6 +239,13 @@ export default function UsuariosPage() {
       toast.error('Selecione pelo menos uma empresa vinculada para este usuário.');
       return;
     }
+    // O servidor substitui quem já usa o e-mail: um cadastro novo apagaria o login e os vínculos atuais.
+    const emailNormalizado = form.email.trim().toLowerCase();
+    const donoDoEmail = users.find(x => x.id !== edit?.id && x.email.trim().toLowerCase() === emailNormalizado);
+    if (donoDoEmail) {
+      toast.error(`Este e-mail já é de ${donoDoEmail.name}. Edite esse usuário para vincular mais empresas.`);
+      return;
+    }
 
     const rotasFinais = form.role === 'administrador'
       ? undefined
@@ -227,7 +257,7 @@ export default function UsuariosPage() {
     const u: User = {
       id: edit?.id || uid(),
       name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
+      email: emailNormalizado,
       password: senhaPlana ? hashPassword(senhaPlana) : (edit?.password || ''),
       role: (form.role || 'cliente') as any,
       empresaIds: form.role === 'administrador' ? [] : (form.empresaIds || []),
@@ -240,14 +270,23 @@ export default function UsuariosPage() {
 
     setSalvando(true);
     try {
-      store.saveUser(u);
-      // Persiste imediatamente no PostgreSQL para que o login funcione na mesma hora
-      await fetch('/api/migrate-backup', {
+      // Grava primeiro no PostgreSQL: é de lá que o login lê, e só confirma o que o servidor aceitou.
+      const res = await fetch('/api/migrate-backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ collection: 'cf_users', data: [u] }),
-      }).catch(() => {});
+      }).catch(() => null);
+      const resposta = res?.ok ? await res.json().catch(() => null) : null;
+      if (!resposta) {
+        toast.error('Não foi possível gravar o usuário no servidor. Nada foi salvo; tente novamente.');
+        return;
+      }
+      if (resposta.ignorados > 0) {
+        toast.error('O servidor recusou este cadastro: seu perfil não tem permissão para este usuário ou para estas empresas.');
+        return;
+      }
 
+      store.saveUser(u);
       setUsers(store.getUsers());
 
       if (senhaPlana && u.role === 'cliente') {
@@ -275,7 +314,7 @@ export default function UsuariosPage() {
       // Sempre exibe as que já estão marcadas no formulário
       const jaMarcada = (form.empresaIds || []).includes(e.id);
       if (!jaMarcada) {
-        if (filtroEmpresa === 'procuracao' && e.nfseConfig?.procuracaoStatus !== 'ativa' && e.tipo !== TIPO_EMPRESA_SO_EMISSOR) {
+        if (filtroEmpresa === 'procuracao' && !emiteViaProcuracao(e.nfseConfig)) {
           return false;
         }
         if (filtroEmpresa === 'so_emissor' && e.tipo !== TIPO_EMPRESA_SO_EMISSOR) {
@@ -290,6 +329,10 @@ export default function UsuariosPage() {
       );
     });
   }, [todasEmpresasUnificadas, buscaEmpresa, filtroEmpresa, form.empresaIds]);
+
+  const selecionadas = todasEmpresasUnificadas.filter(e => (form.empresaIds || []).includes(e.id));
+  const selecionadasComEmissao = selecionadas.filter(e => emiteViaProcuracao(e.nfseConfig));
+  const selecionadasSemEmissao = selecionadas.filter(e => !emiteViaProcuracao(e.nfseConfig));
 
   const filtered = users.filter(
     u => !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
@@ -660,7 +703,7 @@ export default function UsuariosPage() {
                         { id: 'todas', label: `Todas (${todasEmpresasUnificadas.length})` },
                         {
                           id: 'procuracao',
-                          label: `🧾 Com Procuração / Emissores (${todasEmpresasUnificadas.filter(e => e.nfseConfig?.procuracaoStatus === 'ativa' || e.tipo === TIPO_EMPRESA_SO_EMISSOR).length})`,
+                          label: `🧾 Com procuração ativa (${todasEmpresasUnificadas.filter(e => emiteViaProcuracao(e.nfseConfig)).length})`,
                         },
                         {
                           id: 'so_emissor',
@@ -680,6 +723,15 @@ export default function UsuariosPage() {
                     ))}
                   </div>
                 </div>
+
+                {emissoresEstado === 'erro' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
+                    ⚠️ Não foi possível carregar as empresas com procuração. A lista abaixo está incompleta.
+                    <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px' }} onClick={carregarEmissores}>
+                      Tentar de novo
+                    </button>
+                  </div>
+                )}
 
                 <div className="search-bar" style={{ marginBottom: 10 }}>
                   <span>🔍</span>
@@ -703,12 +755,16 @@ export default function UsuariosPage() {
                 }}>
                   {empresasFiltradasModal.length === 0 ? (
                     <div style={{ gridColumn: '1 / -1', fontSize: 12.5, color: 'var(--text-muted)', padding: 8 }}>
-                      Nenhuma empresa encontrada neste filtro. Clique em &quot;Todas&quot; ou importe o CNPJ em <strong>NFS-e → Emissores por Procuração</strong>.
+                      {emissoresEstado === 'carregando'
+                        ? '⏳ Carregando empresas com procuração...'
+                        : <>Nenhuma empresa encontrada neste filtro. Clique em &quot;Todas&quot; ou importe o CNPJ em <strong>NFS-e → Emissores por Procuração</strong>.</>}
                     </div>
                   ) : empresasFiltradasModal.map(e => {
                     const checked = (form.empresaIds || []).includes(e.id);
                     const soEmissor = e.tipo === TIPO_EMPRESA_SO_EMISSOR;
-                    const procAtiva = e.nfseConfig?.procuracaoStatus === 'ativa';
+                    const situacao = situacaoProcuracao(e.nfseConfig);
+                    // No cadastro de BPO, a situação só interessa quando a procuração muda o que o cliente acessa.
+                    const mostrarSituacao = soEmissor || emiteViaProcuracao(e.nfseConfig) || (form.role === 'cliente' && modoCliente === 'nfse');
                     return (
                       <label
                         key={e.id}
@@ -732,13 +788,23 @@ export default function UsuariosPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 20, flexWrap: 'wrap' }}>
                           {e.cnpj && <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.cnpj}</span>}
-                          {procAtiva && <span className="badge badge-green" style={{ fontSize: 9, padding: '1px 5px' }}>Procuração ativa</span>}
+                          {mostrarSituacao && <span className={`badge ${situacao.classe}`} style={{ fontSize: 9, padding: '1px 5px' }}>{situacao.texto}</span>}
                           {soEmissor && <span className="badge badge-gray" style={{ fontSize: 9, padding: '1px 5px' }}>Só emissor</span>}
                         </div>
                       </label>
                     );
                   })}
                 </div>
+                {form.role === 'cliente' && modoCliente === 'nfse' && emissoresEstado === 'ok' && selecionadasSemEmissao.length > 0 && (
+                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
+                    ⚠️ Sem procuração ativa: {selecionadasSemEmissao.map(e => e.nomeFantasia || e.razaoSocial).join(', ')}. O cliente só emite por essas empresas depois que a procuração for confirmada.
+                  </div>
+                )}
+                {form.role === 'cliente' && modoCliente === 'bpo' && emissoresEstado === 'ok' && selecionadasComEmissao.length > 0 && (
+                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
+                    ⚠️ {selecionadasComEmissao.map(e => e.nomeFantasia || e.razaoSocial).join(', ')} tem procuração ativa: com esse vínculo, o cliente entra só na emissão de NFS-e e não vê as telas do Portal BPO.
+                  </div>
+                )}
                 {form.role === 'cliente' && modoCliente === 'nfse' && (
                   <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
                     💡 Dica: você também pode criar o login do cliente direto na tela de <strong>NFS-e → 🔑 Login do Cliente</strong> ou em <strong>🏢 Emissores por Procuração</strong>.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gzipSync } from 'zlib';
-import { escolherSerie, extrairCnpjs, extrairDadosEmissor, mapearCnpjPublico } from './emissor';
+import { emiteViaProcuracao, escolherSerie, extrairCnpjs, extrairDadosEmissor, mapearCnpjPublico } from './emissor';
 import { lerCaixaDfe, type RespostaHttp, type Transporte } from './sefin';
 
 const CNPJ = '11222333000181';
@@ -15,6 +15,17 @@ function nota(opcoes: { prestador?: string; serie?: string; cTribNac?: string; c
     + `<serv><cServ><cTribNac>${opcoes.cTribNac ?? '170101'}</cTribNac>${mun}<xDescServ>${opcoes.desc ?? 'Consultoria'}</xDescServ><cNBS>123456789</cNBS></cServ></serv>`
     + `<valores><trib><tribFed><piscofins><CST>08</CST></piscofins></tribFed><totTrib><pTotTribSN>6.00</pTotTribSN></totTrib></trib></valores></infDPS></DPS></infNFSe></NFSe>`;
 }
+
+describe('emissão por procuração', () => {
+  it('exige procuração ativa e uso do certificado do escritório', () => {
+    expect(emiteViaProcuracao({ usarProcuracao: true, procuracaoStatus: 'ativa' })).toBe(true);
+    expect(emiteViaProcuracao({ usarProcuracao: false, procuracaoStatus: 'ativa' })).toBe(false);
+    expect(emiteViaProcuracao({ usarProcuracao: true, procuracaoStatus: 'sem_procuracao' })).toBe(false);
+    expect(emiteViaProcuracao({ usarProcuracao: true, procuracaoStatus: 'indeterminada' })).toBe(false);
+    expect(emiteViaProcuracao({ usarProcuracao: true, procuracaoStatus: null })).toBe(false);
+    expect(emiteViaProcuracao(null)).toBe(false);
+  });
+});
 
 describe('colagem de CNPJs', () => {
   it('aceita formatos variados, remove repetidos e aponta os inválidos', () => {

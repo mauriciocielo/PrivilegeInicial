@@ -1960,6 +1960,24 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
 type EmpresaScope = string[] | null;
 type CollectionQuery = (scope: EmpresaScope, role: string, userId: string) => Promise<any>;
 
+/**
+ * Empresas que emitem pelo certificado do escritório. Só o administrador as importa, então
+ * não ficam em empresaIds de consultor nenhum; mesmo assim o consultor já opera a emissão
+ * delas e libera login de cliente em /api/nfse/emissores/[id]/acesso.
+ */
+async function idsEmissorasPorProcuracao(): Promise<string[]> {
+  const empresas = await db.empresa.findMany({
+    where: {
+      OR: [
+        { tipo: TIPO_EMPRESA_SO_EMISSOR },
+        { nfseConfig: { is: { usarProcuracao: true, procuracaoStatus: 'ativa' } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return empresas.map(e => e.id);
+}
+
 const empresaWhere = (scope: EmpresaScope, field = 'empresaId') =>
   scope ? { [field]: { in: scope } } : {};
 
@@ -2016,14 +2034,16 @@ const QUERIES: Record<string, CollectionQuery> = {
     if (role === 'cliente') {
       raw = await db.user.findMany({ where: { id: userId } });
     } else if (scope) {
+      const visiveis = [...scope, ...(await idsEmissorasPorProcuracao())];
       raw = await db.user.findMany({
         where: {
           OR: [
             { id: userId },
-            { role: 'cliente', empresaIds: { hasSome: scope } },
+            { role: 'cliente', empresaIds: { hasSome: visiveis } },
           ],
         },
       });
+      return raw.map(u => sanitizeUserRecord(u, visiveis, role, userId));
     } else {
       raw = await db.user.findMany();
     }
@@ -2288,7 +2308,8 @@ async function filterIncomingByAuth(collection: string, items: any[], session: S
       }];
     }
     // Consultor: pode atualizar seu próprio perfil (mantendo papel consultor e suas empresas)
-    // ou cadastrar/atualizar usuários 'cliente' apenas dentro das empresas que o consultor atende.
+    // ou cadastrar/atualizar usuários 'cliente' apenas nas empresas que atende e nas emissoras por procuração.
+    const vinculaveis = new Set([...session.empresaIds, ...(await idsEmissorasPorProcuracao())]);
     const safeUsers: any[] = [];
     for (const u of items) {
       if (!u || !u.email) continue;
@@ -2298,7 +2319,7 @@ async function filterIncomingByAuth(collection: string, items: any[], session: S
       const byEmail = await db.user.findFirst({ where: { email: cleanEmail } });
       if (existing && existing.role === 'administrador') continue;
       if (byEmail && byEmail.id !== uid && byEmail.role !== 'cliente') continue;
-      if (byEmail && byEmail.id !== uid && !byEmail.empresaIds.every((id: string) => allowedSet.has(id))) continue;
+      if (byEmail && byEmail.id !== uid && !byEmail.empresaIds.every((id: string) => vinculaveis.has(id))) continue;
       if (uid === session.userId && existing) {
         safeUsers.push({
           ...u,
@@ -2312,9 +2333,9 @@ async function filterIncomingByAuth(collection: string, items: any[], session: S
       }
       if (String(u.role || 'cliente') !== 'cliente') continue;
       if (existing && existing.role !== 'cliente') continue;
-      const incomingEmpIds = Array.isArray(u.empresaIds) ? u.empresaIds.map(String).filter((id: string) => allowedSet.has(id)) : [];
+      const incomingEmpIds = Array.isArray(u.empresaIds) ? u.empresaIds.map(String).filter((id: string) => vinculaveis.has(id)) : [];
       const preservedOtherEmpIds = existing
-        ? existing.empresaIds.filter((id: string) => !allowedSet.has(id))
+        ? existing.empresaIds.filter((id: string) => !vinculaveis.has(id))
         : [];
       const mergedEmpIds = Array.from(new Set([...preservedOtherEmpIds, ...incomingEmpIds]));
       if (mergedEmpIds.length === 0) continue;
@@ -2416,8 +2437,11 @@ export async function POST(request: Request) {
       if (!migrator) {
         return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
+      // Quem salva precisa saber quando a autorização recusou um registro: a resposta segue 200.
+      let ignorados = 0;
       if (Array.isArray(data)) {
         const allowedItems = await filterIncomingByAuth(collection, data, auth.session);
+        ignorados = data.length - allowedItems.length;
         if (allowedItems.length > 0) await migrator(allowedItems);
       }
 
@@ -2432,7 +2456,7 @@ export async function POST(request: Request) {
         }
       }
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, ignorados });
     } else {
       console.log('Iniciando migração de backup (monolítico) para o PostgreSQL...');
 
