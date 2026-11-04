@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
-    const [empresas, certificado] = await Promise.all([
+    const [empresas, certificado, usuariosClientes] = await Promise.all([
       db.empresa.findMany({
         where: auth.session.role === 'administrador' ? {} : { id: { in: auth.session.empresaIds } },
         select: {
@@ -38,13 +38,32 @@ export async function GET(request: Request) {
         orderBy: { razaoSocial: 'asc' },
       }),
       db.nfseCertificadoEscritorio.findUnique({ where: { id: ID_CERT_ESCRITORIO }, select: certificadoPublico }),
+      db.user.findMany({
+        where: { role: 'cliente' },
+        select: { id: true, name: true, email: true, empresaIds: true },
+        orderBy: { name: 'asc' },
+      }),
     ]);
+
+    const usuariosPorEmpresa = new Map<string, Array<{ id: string; name: string; email: string }>>();
+    for (const u of usuariosClientes) {
+      for (const empId of u.empresaIds || []) {
+        const lista = usuariosPorEmpresa.get(empId) || [];
+        lista.push({ id: u.id, name: u.name, email: u.email });
+        usuariosPorEmpresa.set(empId, lista);
+      }
+    }
 
     return NextResponse.json({
       certificado,
       podeAlterarCertificado: auth.session.role === 'administrador',
       // Cadastros sem CNPJ real (ex.: criados por sincronização) não podem emitir.
-      empresas: empresas.filter(e => cnpjValido(e.cnpj)),
+      empresas: empresas
+        .filter(e => cnpjValido(e.cnpj))
+        .map(e => ({
+          ...e,
+          usuariosCliente: usuariosPorEmpresa.get(e.id) || [],
+        })),
     });
   } catch (error) {
     console.error('Erro em GET nfse/emissores:', error);

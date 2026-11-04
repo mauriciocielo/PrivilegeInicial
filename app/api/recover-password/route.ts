@@ -36,13 +36,7 @@ export async function POST(request: Request) {
     // 2. Gerar uma nova senha aleatória (6 dígitos)
     const newPassword = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. Atualizar a senha no banco de dados PostgreSQL (hash, nunca texto puro)
-    await db.user.update({
-      where: { id: user.id },
-      data: { password: hashPassword(newPassword) }
-    });
-
-    // 4. Configurar e Enviar E-mail usando SMTP
+    // 3. Configurar e Enviar E-mail usando SMTP antes de sobrescrever a senha
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = Number(process.env.SMTP_PORT) || 587;
     const smtpUser = process.env.SMTP_USER;
@@ -87,6 +81,12 @@ export async function POST(request: Request) {
             </div>
           `
         });
+
+        // 4. Atualizar a senha no banco somente após envio confirmado (hash, nunca texto puro)
+        await db.user.update({
+          where: { id: user.id },
+          data: { password: hashPassword(newPassword) }
+        });
         emailSent = true;
       } catch (err) {
         console.error('Erro ao enviar e-mail via SMTP:', err);
@@ -94,26 +94,21 @@ export async function POST(request: Request) {
         emailErrorMsg = (err as Error).message;
       }
     } else {
-      console.warn('Configurações de SMTP ausentes. E-mail não enviado. Nova senha gerada: ' + newPassword);
+      console.warn('Configurações de SMTP ausentes. E-mail de recuperação não enviado.');
       emailErrorMsg = 'Serviço de e-mail (SMTP) não configurado nas variáveis de ambiente.';
     }
 
-    // 5. Backup PARCIAL (somente usuários) para o navegador atualizar sua cópia local
-    // com a nova senha (hash) imediatamente — nunca o banco inteiro da empresa.
-    const cf_users = await db.user.findMany();
+    if (!emailSent) {
+      return NextResponse.json(
+        { error: emailErrorMsg || 'Não foi possível enviar o e-mail de recuperação de senha.' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      emailSent,
-      emailError: emailErrorMsg || null,
-      backup: {
-        version: '7',
-        timestamp: new Date().toISOString(),
-        isPartial: true,
-        data: { cf_users }
-      },
-      // Retorna a senha em ambiente de desenvolvimento ou se o SMTP não estiver configurado para facilitar o teste
-      tempPassword: (!smtpHost || process.env.NODE_ENV !== 'production') ? newPassword : null
+      emailSent: true,
+      emailError: null,
     });
 
   } catch (error) {

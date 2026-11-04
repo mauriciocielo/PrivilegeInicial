@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { TIPO_EMPRESA_SO_EMISSOR, extrairCnpjs, formatarCnpj } from '../lib/nfse/emissor';
+import NfseAcessoClienteModal from './NfseAcessoClienteModal';
 
 type StatusProcuracao = 'ativa' | 'sem_procuracao' | 'indeterminada';
 
@@ -11,6 +12,7 @@ export interface EmpresaEmissora {
   nomeFantasia: string;
   cnpj: string;
   tipo: string;
+  usuariosCliente?: Array<{ id: string; name: string; email: string }>;
   nfseConfig: {
     ambiente: string;
     usarProcuracao: boolean;
@@ -90,6 +92,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [senha, setSenha] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [empresaAcessoModal, setEmpresaAcessoModal] = useState<EmpresaEmissora | null>(null);
 
   const carregar = useCallback(async () => {
     setErro('');
@@ -320,6 +323,15 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                           {c.codigoMunicipio ? `IBGE ${c.codigoMunicipio}` : 'Falta o código IBGE'} · {(c.servicosConhecidos || []).length} serviço(s)
                         </div>
                       )}
+                      {(e.usuariosCliente?.length || 0) > 0 ? (
+                        <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
+                          👤 Login cliente: {e.usuariosCliente!.map(u => u.email).join(', ')}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          👤 Sem login de cliente criado
+                        </div>
+                      )}
                     </td>
                     <td style={{ fontSize: 12, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{e.cnpj}</td>
                     <td>
@@ -334,10 +346,15 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
                           onClick={() => verificar(e.id)} disabled={ocupado || !certificado || certVencido}>
                           {verificando === e.id ? '⏳' : '🔄'} Verificar
+                        </button>
+                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
+                          onClick={() => setEmpresaAcessoModal(e)} disabled={ocupado}
+                          title="Criar ou gerenciar o login para o cliente emitir NFS-e desta empresa">
+                          🔑 Login Cliente {(e.usuariosCliente?.length || 0) > 0 ? `(${e.usuariosCliente!.length})` : ''}
                         </button>
                         <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
                           onClick={() => onSelecionar(e)} disabled={ocupado || e.id === empresaAtualId}>
@@ -352,6 +369,19 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
           </table>
         </div>
       </div>
+      {empresaAcessoModal && (
+        <NfseAcessoClienteModal
+          empresa={{
+            id: empresaAcessoModal.id,
+            razaoSocial: empresaAcessoModal.razaoSocial,
+            nomeFantasia: empresaAcessoModal.nomeFantasia,
+            cnpj: empresaAcessoModal.cnpj,
+            procuracaoStatus: empresaAcessoModal.nfseConfig?.procuracaoStatus ?? null,
+          }}
+          onFechar={() => setEmpresaAcessoModal(null)}
+          onAtualizado={() => carregar()}
+        />
+      )}
     </div>
   );
 }

@@ -18,10 +18,15 @@ export async function GET(request: Request) {
     const atividade = await db.atividade.findUnique({
       where: { id },
       select: {
+        empresaId: true,
         fotoInicio: true,
         fotoFim: true,
       },
     });
+
+    if (atividade && auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(atividade.empresaId)) {
+      return NextResponse.json({ error: 'Sem permissão para esta empresa.' }, { status: 403 });
+    }
 
     const fotoData = tipo === 'inicio' ? atividade?.fotoInicio : atividade?.fotoFim;
 

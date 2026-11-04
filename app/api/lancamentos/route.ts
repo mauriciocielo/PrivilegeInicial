@@ -82,6 +82,13 @@ export async function POST(request: Request) {
         }
 
         for (const l of items) {
+            const existing = await db.lancamento.findUnique({
+                where: { id: l.id }
+            });
+            if (existing && !isAdmin && !auth.session.empresaIds.includes(existing.empresaId)) {
+                return NextResponse.json({ error: 'Conflito de ID com lançamento de outra empresa.' }, { status: 403 });
+            }
+
             // Garantir que as entidades relacionadas existem no banco de dados para evitar violação de chaves estrangeiras
             await db.empresa.upsert({
                 where: { id: l.empresaId },
@@ -122,10 +129,6 @@ export async function POST(request: Request) {
                     empresaId: l.empresaId,
                     ativo: true
                 }
-            });
-
-            const existing = await db.lancamento.findUnique({
-                where: { id: l.id }
             });
 
             // Upsert do Lançamento
@@ -238,4 +241,4 @@ export async function DELETE(request: Request) {
         captureError(error);
         return NextResponse.json({ error: 'Erro ao excluir' }, { status: 500 });
     }
-}
+}

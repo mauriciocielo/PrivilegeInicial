@@ -40,6 +40,13 @@ const removePendingKeys = (keys: string[]) => {
   localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(Array.from(current)));
 };
 
+const canAccessEmpresa = (empresaId?: string): boolean => {
+  const u = store.getCurrentUser();
+  if (!u) return false;
+  if (u.role === 'administrador') return true;
+  return Boolean(empresaId && Array.isArray(u.empresaIds) && u.empresaIds.includes(empresaId));
+};
+
 // O cookie de sessão e o cache local do usuário (`cf_current_user`) são uma
 // foto tirada no momento do login — se um administrador muda depois quais
 // empresas este usuário atende, a sessão já aberta ficava presa à lista
@@ -219,7 +226,10 @@ export default function TransitionProvider({ children }: { children: React.React
           return;
         }
 
-        if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && backup.data.cf_empresas.length > 0) {
+        const currentUser = store.getCurrentUser();
+        const isAdmin = currentUser?.role === 'administrador';
+
+        if (backup && backup.data && Array.isArray(backup.data.cf_empresas) && (backup.data.cf_empresas.length > 0 || !isAdmin)) {
           store.importBackup(JSON.stringify(backup));
           store.pruneLancamentosAttachmentData();
           store.pruneEmpresasPolicyData();
@@ -236,7 +246,8 @@ export default function TransitionProvider({ children }: { children: React.React
               const res = await fetch('/api/migrate-backup');
               if (!res.ok) return;
               const retryBackup = await res.json();
-              if (retryBackup?.data?.cf_empresas?.length > 0) {
+              const retryIsAdmin = store.getCurrentUser()?.role === 'administrador';
+              if (retryBackup?.data && Array.isArray(retryBackup.data.cf_empresas) && (retryBackup.data.cf_empresas.length > 0 || !retryIsAdmin)) {
                 store.importBackup(JSON.stringify(retryBackup));
                 store.pruneLancamentosAttachmentData();
                 store.pruneEmpresasPolicyData();
@@ -246,8 +257,8 @@ export default function TransitionProvider({ children }: { children: React.React
             } catch { /* silencioso */ }
           }, 5000);
           return;
-        } else {
-          // Banco vazio — inicializa com dados locais
+        } else if (isAdmin) {
+          // Banco vazio (somente administrador) — inicializa com dados locais
           console.log('☁️ Banco de dados remoto vazio. Inicializando com dados locais...');
           const backupData = store.exportBackup();
           const syncResult = await syncBackupInChunks(backupData);
@@ -408,36 +419,27 @@ export default function TransitionProvider({ children }: { children: React.React
         console.log(`🔌 WebSocket: Coleção ${payload.collection} atualizada via WS, sincronizando...`);
         sessionStorage.setItem('cf_sync_in_progress', 'true');
 
-        if (payload.triggerFetch) {
-          fetch(`/api/migrate-backup?collection=${payload.collection}&t=${Date.now()}`, { cache: 'no-store' })
-            .then(res => res.ok ? res.json() : null)
-            .then(backup => {
-              if (backup && backup.data && backup.data[payload.collection]) {
-                 store.importBackup(JSON.stringify(backup));
-              }
-              sessionStorage.setItem('cf_sync_in_progress', 'false');
-            }).catch(() => {
-              sessionStorage.setItem('cf_sync_in_progress', 'false');
-            });
-          return;
-        }
-
         if (payload.collection === '__mapa_atividade') {
-          localStorage.setItem('cf_atividades_ativas', JSON.stringify(payload.data || []));
+          const filtered = Array.isArray(payload.data)
+            ? payload.data.filter((item: any) => canAccessEmpresa(item?.empresaId))
+            : [];
+          localStorage.setItem('cf_atividades_ativas', JSON.stringify(filtered));
           window.dispatchEvent(new Event('cfMapDataReceived'));
           sessionStorage.setItem('cf_sync_in_progress', 'false');
           return;
         }
 
-        store.importBackup(JSON.stringify({
-          version: '7',
-          isPartial: true,
-          data: {
-            [payload.collection]: payload.data
-          }
-        }));
-
-        sessionStorage.setItem('cf_sync_in_progress', 'false');
+        // Busca sempre pela API autenticada para garantir recorte por empresa do usuário logado
+        fetch(`/api/migrate-backup?collection=${encodeURIComponent(payload.collection)}&t=${Date.now()}`, { cache: 'no-store' })
+          .then(res => res.ok ? res.json() : null)
+          .then(backup => {
+            if (backup && backup.data && backup.data[payload.collection]) {
+              store.importBackup(JSON.stringify(backup));
+            }
+            sessionStorage.setItem('cf_sync_in_progress', 'false');
+          }).catch(() => {
+            sessionStorage.setItem('cf_sync_in_progress', 'false');
+          });
       } catch (err) {
         console.error(`Erro ao processar colecao_atualizada do WebSocket para ${payload.collection}:`, err);
         sessionStorage.setItem('cf_sync_in_progress', 'false');
@@ -446,6 +448,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
     socket.on('lancamento_criado', (novo: any) => {
       if (!novo || !novo.id) return;
+      if (!canAccessEmpresa(novo.empresaId)) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
@@ -468,6 +471,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
     socket.on('lancamento_atualizado', (atualizado: any) => {
       if (!atualizado || !atualizado.id) return;
+      if (!canAccessEmpresa(atualizado.empresaId)) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
 
       try {
@@ -494,8 +498,8 @@ export default function TransitionProvider({ children }: { children: React.React
 
       try {
         const list = store.getLancamentos();
-        const exists = list.some(l => l.id === id);
-        if (!exists) return;
+        const target = list.find(l => l.id === id);
+        if (!target || !canAccessEmpresa(target.empresaId)) return;
 
         console.log('🔌 WebSocket: Lançamento excluído:', id);
         sessionStorage.setItem('cf_sync_in_progress', 'true');
@@ -563,7 +567,9 @@ export default function TransitionProvider({ children }: { children: React.React
               const lancamentos = await res.json();
               if (Array.isArray(lancamentos) && lancamentos.length > 0) {
                 sessionStorage.setItem('cf_sync_in_progress', 'true');
-                lancamentos.forEach((l: any) => store.importSingleLancamento(l));
+                lancamentos.forEach((l: any) => {
+                  if (canAccessEmpresa(l?.empresaId)) store.importSingleLancamento(l);
+                });
                 sessionStorage.setItem('cf_sync_in_progress', 'false');
                 console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem.`);
               }
@@ -656,8 +662,10 @@ export default function TransitionProvider({ children }: { children: React.React
   }, [pathname]);
 
   useEffect(() => {
-    // Backup completo de segurança a cada 1 hora
+    // Backup completo de segurança a cada 1 hora (somente administrador com sync concluído)
     const hourlyInterval = setInterval(() => {
+      if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
+      if (store.getCurrentUser()?.role !== 'administrador') return;
       console.log('⏰ Executando backup completo de segurança (1 hora)...');
       try {
         const backupStr = store.exportBackup();

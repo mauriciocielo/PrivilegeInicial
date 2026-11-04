@@ -66,10 +66,19 @@ export async function POST(request: Request) {
 
       const cnpjDigits = cleanCnpj(cnpj);
       // Emissor por procuração não é cliente: ninguém entra no sistema vinculando-se a ele.
-      const empresas = await db.empresa.findMany({ where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR } }, select: { id: true, cnpj: true } });
+      const empresas = await db.empresa.findMany({ where: { tipo: { not: TIPO_EMPRESA_SO_EMISSOR } }, select: { id: true, cnpj: true, email: true } });
       const empresa = empresas.find(e => cleanCnpj(e.cnpj) === cnpjDigits);
       if (!empresa) {
         return NextResponse.json({ error: 'Nenhuma empresa encontrada com este CNPJ.' }, { status: 404 });
+      }
+      // Segurança: o CNPJ é público; só vincula automaticamente se o e-mail Google
+      // bater com o e-mail cadastrado na própria empresa. Caso contrário, o vínculo
+      // precisa ser feito pelo escritório em Cadastros -> Usuários.
+      if (!empresa.email || empresa.email.trim().toLowerCase() !== email) {
+        return NextResponse.json(
+          { error: 'Este e-mail Google não corresponde ao e-mail cadastrado da empresa. Solicite a liberação do acesso ao escritório.' },
+          { status: 403 }
+        );
       }
 
       if (!user) {

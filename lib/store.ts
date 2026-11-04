@@ -1192,6 +1192,31 @@ class DataStore {
 
 
 
+  clearLocalData() {
+    if (typeof window === 'undefined') return;
+    this.cache = {};
+    this._lancamentosCache = [];
+    for (const key of SYNC_COLLECTION_KEYS) {
+      try { localStorage.removeItem(key); } catch { }
+    }
+    const extraKeys = [
+      'cf_deleted_records',
+      'cf_pending_sync_keys',
+      'cf_atividades_ativas',
+      'cf_lancamentos',
+      'cf_empresa_sel',
+      'cf_app_mode',
+      'cf_orcamentos_mensais',
+    ];
+    for (const key of extraKeys) {
+      try { localStorage.removeItem(key); } catch { }
+      try { sessionStorage.removeItem(key); } catch { }
+    }
+    try { sessionStorage.removeItem('cf_postgres_synced'); } catch { }
+    try { sessionStorage.removeItem('cf_sync_in_progress'); } catch { }
+    idbSaveAllLancamentos([]).catch(() => { });
+  }
+
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') return null;
     let raw = localStorage.getItem('cf_current_user');
@@ -1202,7 +1227,13 @@ class DataStore {
 
   setCurrentUser(user: User | null) {
     if (typeof window === 'undefined') return;
+    const prevUser = this.getCurrentUser();
     if (user) {
+      if (prevUser && prevUser.id !== user.id) {
+        // Troca de usuário no mesmo navegador: limpa imediatamente todo o cache
+        // local e IndexedDB para nunca vazar dados do usuário anterior.
+        this.clearLocalData();
+      }
       const payload = JSON.stringify(user);
       try {
         localStorage.setItem('cf_current_user', payload);
@@ -1218,9 +1249,8 @@ class DataStore {
         }
       }
     } else {
+      this.clearLocalData();
       localStorage.removeItem('cf_current_user');
-      localStorage.removeItem('cf_empresa_sel');
-      localStorage.removeItem('cf_app_mode');
       // Também limpa a cópia de fallback — senão o logout não desloga de fato.
       try { sessionStorage.removeItem('cf_current_user'); } catch { }
     }
@@ -2596,6 +2626,7 @@ class DataStore {
             );
             localStorage.removeItem('cf_lancamentos');
           } else if (key.startsWith('cf_') && value !== null) {
+            this.cache[key] = value;
             localStorage.setItem(key, JSON.stringify(value));
           }
         });

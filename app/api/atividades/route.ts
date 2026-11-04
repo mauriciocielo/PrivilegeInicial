@@ -27,6 +27,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Payload incompleto.' }, { status: 422 });
     }
 
+    if (auth.session.role !== 'administrador') {
+      const existing = await db.atividade.findUnique({ where: { id: String(body.id) }, select: { empresaId: true } });
+      if (existing && !auth.session.empresaIds.includes(existing.empresaId)) {
+        return NextResponse.json({ error: 'Conflito de ID com atividade de outra empresa.' }, { status: 403 });
+      }
+    }
+
     await db.atividade.upsert({
       where: { id: body.id },
       update: {

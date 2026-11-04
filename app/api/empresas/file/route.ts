@@ -14,6 +14,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'ID ou tipo de arquivo inválido/ausente' }, { status: 400 });
   }
 
+  if (auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(id)) {
+    return NextResponse.json({ error: 'Sem permissão para esta empresa.' }, { status: 403 });
+  }
+
   try {
     const empresa = await db.empresa.findUnique({
       where: { id },

@@ -23,11 +23,17 @@ export async function POST(req: Request) {
 
     const empresaId = String(pc.empresaId || 'empresa_default');
 
-    // Garante que a empresa existe
-    const empresaExists = await db.empresa.findUnique({ where: { id: empresaId }, select: { id: true } });
-    if (empresaExists && auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(empresaId)) {
+    if (auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(empresaId)) {
       return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
     }
+
+    const existingPc = await db.planoConta.findUnique({ where: { id: String(pc.id) }, select: { empresaId: true } });
+    if (existingPc && auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(existingPc.empresaId)) {
+      return NextResponse.json({ error: 'Conflito de ID com plano de contas de outra empresa.' }, { status: 403 });
+    }
+
+    // Garante que a empresa existe
+    const empresaExists = await db.empresa.findUnique({ where: { id: empresaId }, select: { id: true } });
     if (!empresaExists) {
       await db.empresa.upsert({
         where: { id: empresaId },

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const lancamento = await db.lancamento.findUnique({
       where: { id },
       select: {
+        empresaId: true,
         attachmentName: true,
         attachmentData: true,
       },
@@ -24,6 +25,10 @@ export async function GET(request: Request) {
 
     if (!lancamento || !lancamento.attachmentData) {
       return NextResponse.json({ error: 'Anexo não encontrado' }, { status: 404 });
+    }
+
+    if (auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(lancamento.empresaId)) {
+      return NextResponse.json({ error: 'Sem permissão para esta empresa.' }, { status: 403 });
     }
 
     let base64Data = lancamento.attachmentData;

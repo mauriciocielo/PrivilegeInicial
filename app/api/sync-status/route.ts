@@ -14,7 +14,11 @@ export async function GET(request: Request) {
     const collection = searchParams.get('collection');
 
     if (collection === 'cf_lancamentos') {
+      const whereClause = auth.session.role === 'administrador'
+        ? undefined
+        : { empresaId: { in: auth.session.empresaIds } };
       const lastUpdated = await db.lancamento.findFirst({
+        where: whereClause,
         orderBy: { updatedAt: 'desc' },
         select: { updatedAt: true }
       });

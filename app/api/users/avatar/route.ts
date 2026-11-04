@@ -13,6 +13,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'ID do usuário não fornecido' }, { status: 400 });
   }
 
+  if (auth.session.role === 'cliente' && id !== auth.session.userId) {
+    return NextResponse.json({ error: 'Sem permissão para visualizar este avatar.' }, { status: 403 });
+  }
+
   try {
     const user = await db.user.findUnique({
       where: { id },

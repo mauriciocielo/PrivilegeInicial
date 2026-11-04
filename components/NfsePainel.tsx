@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { confirmAsync } from './ConfirmProvider';
 import NfseConfigModal, { type NfseConfigResposta } from './NfseConfigModal';
 import NfseEmissoresModal, { type EmpresaEmissora } from './NfseEmissoresModal';
+import NfseAcessoClienteModal from './NfseAcessoClienteModal';
 import { TIPO_EMPRESA_SO_EMISSOR } from '../lib/nfse/emissor';
 import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse';
 import NfseCopiarModal from './NfseCopiarModal';
@@ -17,9 +18,13 @@ import { MOTIVOS_CANCELAMENTO, enderecoTomadorCompleto, exigeAliquotaNaDps, hoje
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
+import { Instrument_Serif } from 'next/font/google';
+import { Search } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
+
+const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 type ModalMode = 'novo' | 'ver' | null;
 
@@ -63,6 +68,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [transmitindoId, setTransmitindoId] = useState<string | null>(null);
   const [showEmissoresModal, setShowEmissoresModal] = useState(false);
+  const [showAcessoClienteModal, setShowAcessoClienteModal] = useState(false);
   const [showCopiarModal, setShowCopiarModal] = useState(false);
   const [showImportarModal, setShowImportarModal] = useState(false);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
@@ -606,154 +612,471 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   );
 
   if (!empresaId) return (
-    <div className="page-body">
-      <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+    <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%' }}>
+      <div
+        style={{
+          maxWidth: 520,
+          margin: '64px auto',
+          padding: '44px 40px',
+          background: '#fff',
+          border: '1px solid #e5e5e5',
+          borderRadius: 24,
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)',
+        }}
+      >
         {modoCliente ? (
-          <h3>⏳ Carregando sua empresa...</h3>
+          <>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
+              Emissor Nacional
+            </div>
+            <h3 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#000', margin: 0 }}>
+              Carregando dados da empresa...
+            </h3>
+          </>
         ) : (
           <>
-            <h3>Selecione uma empresa emissora</h3>
-            <p>Use o seletor no menu lateral ou escolha entre as empresas por procuração.</p>
-            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => setShowEmissoresModal(true)}>🏢 Emissores por Procuração</button>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
+              Emissor Nacional
+            </div>
+            <h3 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: '0 0 12px', lineHeight: 1.1 }}>
+              Selecione uma empresa emissora
+            </h3>
+            <p style={{ fontSize: 15, color: '#525252', marginBottom: 24, lineHeight: 1.6 }}>
+              Escolha uma empresa no menu superior ou acesse a relação de empresas atendidas por procuração.
+            </p>
+            <button
+              className="btn"
+              style={{ background: '#600000', color: '#fff', padding: '11px 22px', borderRadius: 8, fontWeight: 500, fontSize: 14, border: 'none' }}
+              onClick={() => setShowEmissoresModal(true)}
+            >
+              Emissores por Procuração
+            </button>
           </>
         )}
       </div>
       {modalEmissores}
+
+      {showAcessoClienteModal && empresa && (
+        <NfseAcessoClienteModal
+          empresa={{
+            id: empresa.id,
+            razaoSocial: empresa.razaoSocial,
+            nomeFantasia: empresa.nomeFantasia,
+            cnpj: empresa.cnpj,
+            procuracaoStatus: parametros?.procuracaoStatus ?? null,
+          }}
+          onFechar={() => setShowAcessoClienteModal(false)}
+        />
+      )}
     </div>
   );
 
   return (
     <>
-      <div className="page-header">
+      <div
+        className="page-header"
+        style={{
+          background: '#fdfdfd',
+          borderBottom: '1px solid #e5e5e5',
+          padding: '24px 32px',
+        }}
+      >
         <div>
-          <div className="page-title">🧾 NFS-e — Emissor Nacional</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
+            Sefin Nacional • NFS-e
+          </div>
+          <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
+            Notas Fiscais de Serviço
+          </h1>
           {modoCliente && acessoCliente.empresas.length > 1 ? (
-            <select className="form-control" style={{ marginTop: 6, maxWidth: 360 }} aria-label="Empresa emissora" value={empresaId}
-              onChange={e => { const escolhida = acessoCliente.empresas.find(x => x.id === e.target.value); if (escolhida) selecionarEmpresaCliente(escolhida); }}>
-              {acessoCliente.empresas.map(e => <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>)}
+            <select
+              className="form-control"
+              style={{ marginTop: 8, maxWidth: 360, fontWeight: 500 }}
+              aria-label="Empresa emissora"
+              value={empresaId}
+              onChange={e => {
+                const escolhida = acessoCliente.empresas.find(x => x.id === e.target.value);
+                if (escolhida) selecionarEmpresaCliente(escolhida);
+              }}
+            >
+              {acessoCliente.empresas.map(e => (
+                <option key={e.id} value={e.id}>
+                  {e.nomeFantasia || e.razaoSocial}
+                </option>
+              ))}
             </select>
           ) : (
-            <div className="page-subtitle">{empresa?.nomeFantasia || empresa?.razaoSocial}</div>
+            <div style={{ fontSize: 14, color: '#525252', marginTop: 4 }}>
+              {empresa?.nomeFantasia || empresa?.razaoSocial}
+              {empresa?.cnpj ? ` · CNPJ ${empresa.cnpj}` : ''}
+            </div>
           )}
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+
+        <div className="header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
           {!modoCliente && (
             <>
-              <button className="btn btn-secondary" onClick={() => setShowEmissoresModal(true)}>🏢 Emissores por Procuração</button>
-              <button className="btn btn-secondary" onClick={() => setShowConfigModal(true)} disabled={!config}>
-                ⚙️ Configurar Emissor
+              <button
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+                onClick={() => setShowEmissoresModal(true)}
+              >
+                Emissores por Procuração
               </button>
-              <button className="btn btn-danger" onClick={handleLimparSemChave}>
-                🗑️ Limpar Rascunhos e Simuladas
+              <button
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+                onClick={() => setShowAcessoClienteModal(true)}
+                disabled={!empresa}
+              >
+                Login do Cliente
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+                onClick={() => setShowConfigModal(true)}
+                disabled={!config}
+              >
+                Configurar Emissor
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#7f1d1d', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+                onClick={handleLimparSemChave}
+              >
+                Limpar Rascunhos
               </button>
             </>
           )}
-          <button className="btn btn-secondary" onClick={() => setShowBuscarNotas(true)} disabled={!config}>📥 Buscar Notas do Portal</button>
-          <button className="btn btn-secondary" onClick={() => setShowCopiarModal(true)}>📋 Copiar Notas</button>
-          <button className="btn btn-secondary" onClick={() => setShowImportarModal(true)}>📥 Importar Lista</button>
-          <button className="btn btn-primary" onClick={openNovo}>＋ Nota Manual</button>
+          <button
+            className="btn btn-secondary"
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            onClick={() => setShowBuscarNotas(true)}
+            disabled={!config}
+          >
+            Buscar no Portal
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            onClick={() => setShowCopiarModal(true)}
+          >
+            Copiar Notas
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            onClick={() => setShowImportarModal(true)}
+          >
+            Importar Lista
+          </button>
+          <button
+            className="btn"
+            style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 13.5 }}
+            onClick={openNovo}
+          >
+            Nova Nota Manual
+          </button>
         </div>
       </div>
 
-      <div className="page-body">
-        {/* Situação da integração */}
+      <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%' }}>
+        {/* Faixa de Situação da Integração — sóbria e direta */}
         {erroConfig ? (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13 }}>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #fca5a5',
+              borderLeft: '3px solid #b91c1c',
+              borderRadius: 12,
+              padding: '12px 18px',
+              marginBottom: 24,
+              fontSize: 13.5,
+              color: '#7f1d1d',
+            }}
+          >
             {erroConfig}
           </div>
         ) : config && (
-          <div style={{
-            background: emProducao ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.08)',
-            border: `1px solid ${emProducao ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
-            borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: 'var(--text-secondary)',
-          }}>
-            <strong>{emProducao ? '🟢 Produção: as notas transmitidas têm valor fiscal.' : '🧪 Produção restrita: notas de teste, sem valor fiscal.'}</strong>
-            {' '}
-            {modoCliente ? (
-              <>
-                {certificado && !certVencido && `Emissão por procuração, com o certificado de ${certificado.titular?.replace(/:\d+$/, '') || 'seu contador'}. `}
-                {!prontoParaEmitir && AVISO_FALE_COM_ESCRITORIO}
-              </>
-            ) : (
-              <>
-                {!certificado && (porProcuracao ? 'Envie o certificado do contador em Emissores por Procuração. ' : 'Envie o certificado da empresa em Configurar Emissor. ')}
-                {certVencido && 'O certificado está vencido. '}
-                {certificado && !certVencido && porProcuracao && `Por procuração, com o certificado do contador (válido até ${new Date(certificado.validoAte!).toLocaleDateString('pt-BR')}). `}
-                {certificado && !certVencido && !porProcuracao && `Certificado próprio, válido até ${new Date(certificado.validoAte!).toLocaleDateString('pt-BR')}. `}
-                {porProcuracao && parametros?.procuracaoStatus === 'sem_procuracao' && <strong style={{ color: 'var(--red)' }}>O contador não tem procuração desta empresa. </strong>}
-                {porProcuracao && !parametros?.procuracaoStatus && 'Procuração ainda não verificada. '}
-                {!parametros?.codigoMunicipio && 'Informe o código IBGE do município em Configurar Emissor. '}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* KPI Cards */}
-        <div className="stat-grid" style={{ marginBottom: 20 }}>
-          <div className="stat-card green">
-            <div className="stat-icon green">✅</div>
-            <div className="stat-label">Total Emitido</div>
-            <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>{fmt.currency(totais.emitidas)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{totais.qtdEmitidas} nota(s) em produção</div>
-          </div>
-          <div className="stat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
-            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>📝</div>
-            <div className="stat-label">Em Rascunho</div>
-            <div className="stat-value" style={{ fontSize: 18, color: '#f59e0b' }}>{fmt.currency(totais.pendentes)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{totais.qtdRascunhos} nota(s)</div>
-          </div>
-          <div className="stat-card purple">
-            <div className="stat-icon purple">🧾</div>
-            <div className="stat-label">Total de Notas</div>
-            <div className="stat-value" style={{ fontSize: 24 }}>{nfseList.length}</div>
-          </div>
-          <div className="stat-card red">
-            <div className="stat-icon red">❌</div>
-            <div className="stat-label">Canceladas</div>
-            <div className="stat-value" style={{ fontSize: 24, color: 'var(--red)' }}>{totais.qtdCanceladas}</div>
-          </div>
-        </div>
-
-        {/* Filtros */}
-        <div className="card card-sm" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="search-bar" style={{ flex: 1, minWidth: 220 }}>
-              <span>🔍</span>
-              <input placeholder="Buscar por nº, chave, tomador ou descrição..." value={search} onChange={e => setSearch(e.target.value)} />
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              borderLeft: `3px solid ${emProducao ? '#15803d' : '#b45309'}`,
+              borderRadius: 12,
+              padding: '12px 18px',
+              marginBottom: 24,
+              fontSize: 13.5,
+              color: '#525252',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div>
+              <strong style={{ color: '#171717' }}>
+                {emProducao ? 'Ambiente de Produção (com validade fiscal)' : 'Produção Restrita (ambiente de testes, sem valor fiscal)'}
+              </strong>
+              {' — '}
+              {modoCliente ? (
+                <>
+                  {certificado && !certVencido && `Emissão por procuração com o certificado de ${certificado.titular?.replace(/:\d+$/, '') || 'seu contador'}. `}
+                  {!prontoParaEmitir && AVISO_FALE_COM_ESCRITORIO}
+                </>
+              ) : (
+                <>
+                  {!certificado && (porProcuracao ? 'Envie o certificado do contador em Emissores por Procuração. ' : 'Envie o certificado da empresa em Configurar Emissor. ')}
+                  {certVencido && 'Certificado digital vencido. '}
+                  {certificado && !certVencido && porProcuracao && `Emissão por procuração (certificado válido até ${new Date(certificado.validoAte!).toLocaleDateString('pt-BR')}). `}
+                  {certificado && !certVencido && !porProcuracao && `Certificado próprio (válido até ${new Date(certificado.validoAte!).toLocaleDateString('pt-BR')}). `}
+                  {porProcuracao && parametros?.procuracaoStatus === 'sem_procuracao' && (
+                    <strong style={{ color: '#b91c1c' }}>O contador não possui procuração ativa desta empresa. </strong>
+                  )}
+                  {porProcuracao && !parametros?.procuracaoStatus && 'Procuração ainda não verificada. '}
+                  {!parametros?.codigoMunicipio && 'Informe o código IBGE do município em Configurar Emissor.'}
+                </>
+              )}
             </div>
-            {(['', 'rascunho', 'emitida', 'cancelada'] as const).map(s => (
-              <button key={s} className={`btn ${statusFiltro === s ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }}
-                onClick={() => setStatusFiltro(s)}>
-                {s === '' ? '📋 Todas' : s === 'rascunho' ? '📝 Rascunhos' : s === 'emitida' ? '✅ Emitidas' : '❌ Canceladas'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {rascunhosSelecionados.length > 0 && (
-          <div className="card card-sm" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13 }}>
-              <strong>{rascunhosSelecionados.length}</strong> rascunho(s) selecionado(s) — {fmt.currency(rascunhosSelecionados.reduce((soma, n) => soma + n.valorServicos, 0))}
-            </span>
-            <button className="btn btn-primary" style={{ marginLeft: 'auto', background: 'var(--green)', borderColor: 'var(--green)' }}
-              onClick={handleTransmitirLote} disabled={!!transmitindoId || !!progressoLote}>
-              {progressoLote ? `⏳ Transmitindo ${progressoLote.feitas + 1} de ${progressoLote.total}...` : emProducao ? '🚀 Emitir Selecionadas' : '🧪 Emitir Selecionadas (teste)'}
-            </button>
-            <button className="btn btn-secondary" onClick={() => setSelecionadas(new Set())} disabled={!!progressoLote}>Limpar seleção</button>
           </div>
         )}
 
-        {/* Tabela */}
-        <div className="card">
+        {/* Resumo no padrão editorial da Tela Inicial (card escuro principal + cards brancos com borda fina) */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.35fr repeat(3, 1fr)',
+            gap: 20,
+            marginBottom: 28,
+          }}
+        >
+          <div
+            style={{
+              background: '#0a0a0a',
+              color: '#fff',
+              padding: '28px 32px',
+              borderRadius: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>
+              Total Emitido em Produção
+            </span>
+            <div className={serif.className} style={{ fontSize: 40, fontWeight: 400, margin: '8px 0 4px', lineHeight: 1 }}>
+              {fmt.currency(totais.emitidas)}
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+              {totais.qtdEmitidas} nota(s) autorizada(s) pelo Sefin
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              padding: '28px 28px',
+              borderRadius: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Em Rascunho
+            </span>
+            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+              {fmt.currency(totais.pendentes)}
+            </div>
+            <div style={{ fontSize: 13, color: '#525252' }}>
+              {totais.qtdRascunhos} nota(s) pendente(s) de envio
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              padding: '28px 28px',
+              borderRadius: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Total de Notas
+            </span>
+            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+              {nfseList.length}
+            </div>
+            <div style={{ fontSize: 13, color: '#525252' }}>
+              Registros cadastrados na empresa
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              padding: '28px 28px',
+              borderRadius: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Canceladas
+            </span>
+            <div className={serif.className} style={{ fontSize: 36, fontWeight: 400, color: totais.qtdCanceladas > 0 ? '#600000' : '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+              {totais.qtdCanceladas}
+            </div>
+            <div style={{ fontSize: 13, color: '#525252' }}>
+              Notas canceladas no Sefin
+            </div>
+          </div>
+        </div>
+
+        {/* Barra de Busca e Abas no estilo .tabs-container da Tela Inicial */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 16,
+            flexWrap: 'wrap',
+            marginBottom: 20,
+          }}
+        >
+          <div
+            className="search-bar"
+            style={{
+              flex: 1,
+              minWidth: 260,
+              maxWidth: 460,
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              borderRadius: 99,
+              padding: '8px 16px',
+            }}
+          >
+            <Search size={15} style={{ color: '#525252' }} />
+            <input
+              placeholder="Buscar por número, chave, tomador ou descrição..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div
+            style={{
+              background: '#f0f0f2',
+              padding: 4,
+              borderRadius: 99,
+              display: 'inline-flex',
+              gap: 4,
+              border: '1px solid #e5e5e5',
+            }}
+          >
+            {([
+              { key: '', label: `Todas (${nfseList.length})` },
+              { key: 'rascunho', label: `Rascunhos (${totais.qtdRascunhos})` },
+              { key: 'emitida', label: `Emitidas (${totais.qtdEmitidas})` },
+              { key: 'cancelada', label: `Canceladas (${totais.qtdCanceladas})` },
+            ] as const).map(item => {
+              const ativo = statusFiltro === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setStatusFiltro(item.key)}
+                  style={{
+                    background: ativo ? '#fff' : 'transparent',
+                    color: ativo ? '#000' : '#525252',
+                    border: 'none',
+                    padding: '8px 18px',
+                    borderRadius: 99,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: ativo ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Barra de Transmissão em Lote */}
+        {rascunhosSelecionados.length > 0 && (
+          <div
+            style={{
+              padding: '14px 20px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              background: '#fff',
+              border: '1px solid #171717',
+              borderRadius: 14,
+            }}
+          >
+            <span style={{ fontSize: 13.5, color: '#171717' }}>
+              <strong>{rascunhosSelecionados.length}</strong> rascunho(s) selecionado(s) —{' '}
+              <strong>{fmt.currency(rascunhosSelecionados.reduce((soma, n) => soma + n.valorServicos, 0))}</strong>
+            </span>
+            <button
+              className="btn"
+              style={{ marginLeft: 'auto', background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 18px', fontSize: 13 }}
+              onClick={handleTransmitirLote}
+              disabled={!!transmitindoId || !!progressoLote}
+            >
+              {progressoLote
+                ? `Transmitindo ${progressoLote.feitas + 1} de ${progressoLote.total}...`
+                : emProducao
+                ? 'Emitir Selecionadas'
+                : 'Emitir Selecionadas (Teste)'}
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 13 }}
+              onClick={() => setSelecionadas(new Set())}
+              disabled={!!progressoLote}
+            >
+              Limpar seleção
+            </button>
+          </div>
+        )}
+
+        {/* Tabela Principal */}
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e5e5',
+            borderRadius: 20,
+            overflow: 'hidden',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+          }}
+        >
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>
-                    <input type="checkbox" aria-label="Selecionar todos os rascunhos" disabled={!!progressoLote}
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos os rascunhos"
+                      disabled={!!progressoLote}
                       checked={filtered.some(n => n.status === 'rascunho') && filtered.filter(n => n.status === 'rascunho').every(n => selecionadas.has(n.id))}
-                      onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.filter(n => n.status === 'rascunho').map(n => n.id)) : new Set())} />
+                      onChange={e => setSelecionadas(e.target.checked ? new Set(filtered.filter(n => n.status === 'rascunho').map(n => n.id)) : new Set())}
+                    />
                   </th>
                   <th>Número</th>
                   <th>Emissão</th>
@@ -761,85 +1084,116 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                   <th>Serviço</th>
                   <th>Competência</th>
                   <th>Situação</th>
-                  <th style={{ textAlign: 'right' }}>Valor Líq.</th>
-                  <th>Ações</th>
+                  <th style={{ textAlign: 'right' }}>Valor Líquido</th>
+                  <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9}>
-                    <div className="empty-state">
-                      <div className="empty-state-icon">🧾</div>
-                      <h3>Nenhuma NFS-e encontrada</h3>
-                      <p>Crie uma nota manual, copie notas emitidas ou importe uma lista.</p>
-                    </div>
-                  </td></tr>
-                ) : filtered.map(n => (
-                  <tr key={n.id} style={{ opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.6 : 1 }}>
-                    <td>
-                      {n.status === 'rascunho' && (
-                        <input type="checkbox" aria-label={`Selecionar rascunho de ${n.tomadorRazaoSocial}`} disabled={!!progressoLote}
-                          checked={selecionadas.has(n.id)} onChange={() => alternarSelecao(n.id)} />
-                      )}
-                    </td>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>
-                      {n.status === 'rascunho' ? '—' : n.numero}
-                    </td>
-                    <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{fmt.date(n.dataEmissao)}</td>
-                    <td>
-                      <div style={{ fontWeight: 500 }}>{n.tomadorRazaoSocial}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{n.tomadorCnpjCpf}</div>
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 200 }}>
-                      <div style={{ fontWeight: 600 }}>{n.codigoServico}</div>
-                      <div style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
-                    </td>
-                    <td style={{ fontSize: 12 }}>{n.dataCompetencia}</td>
-                    <td>
-                      {statusBadge(n)}
-                      {n.chaveAcesso && n.ambiente === 'homologacao' && (
-                        <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 3 }}>Teste, sem valor fiscal</div>
-                      )}
-                      {n.gerarContaReceber && (
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
-                          {n.lancamentoId ? '📥 Conta a receber gerada' : '📥 Gera conta a receber'}
-                        </div>
-                      )}
-                      {n.status === 'rascunho' && n.ultimoErro && (
-                        <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 3, maxWidth: 240 }}>{n.ultimoErro}</div>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: n.status === 'cancelada' ? 'var(--red)' : 'var(--green)' }}>
-                      {fmt.currency(n.valorLiquido)}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
-                          onClick={() => { setViewItem(n); setModalMode('ver'); }}>🧾 Ver</button>
-                        {n.status === 'rascunho' && (
-                          <>
-                            <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
-                              onClick={() => {
-                                setForm({ ...n });
-                                setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
-                                setRetencaoManual(true);
-                                setRegraAplicada('');
-                                setModalMode('novo');
-                              }}>✏️ Editar</button>
-                            <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: '4px 8px', background: 'var(--green)', borderColor: 'var(--green)' }}
-                              onClick={() => handleTransmitir(n)} disabled={!!transmitindoId}>
-                              {transmitindoId === n.id ? '⏳ Enviando...' : '🚀 Transmitir'}
-                            </button>
-                          </>
-                        )}
-                        {n.status === 'emitida' && !n.cancelamentoEmAnalise && (
-                          <button className="btn btn-danger btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
-                            onClick={() => abrirCancelamento(n)}>❌ Cancelar</button>
-                        )}
+                  <tr>
+                    <td colSpan={9}>
+                      <div style={{ padding: '56px 24px', textAlign: 'center' }}>
+                        <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
+                          Nenhuma nota fiscal encontrada
+                        </h3>
+                        <p style={{ fontSize: 14, color: '#525252', margin: 0 }}>
+                          Crie uma nota manual, busque notas emitidas no portal nacional ou importe uma planilha.
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filtered.map(n => (
+                    <tr key={n.id} style={{ opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.6 : 1 }}>
+                      <td>
+                        {n.status === 'rascunho' && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar rascunho de ${n.tomadorRazaoSocial}`}
+                            disabled={!!progressoLote}
+                            checked={selecionadas.has(n.id)}
+                            onChange={() => alternarSelecao(n.id)}
+                          />
+                        )}
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
+                        {n.status === 'rascunho' ? <span style={{ color: '#9ca3af' }}>—</span> : n.numero}
+                      </td>
+                      <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#171717', fontSize: 13.5 }}>{n.tomadorRazaoSocial}</div>
+                        <div style={{ fontSize: 11.5, color: '#525252', fontFamily: 'monospace' }}>{n.tomadorCnpjCpf}</div>
+                      </td>
+                      <td style={{ fontSize: 12.5, color: '#525252', maxWidth: 240 }}>
+                        <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>
+                        <div style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
+                      </td>
+                      <td style={{ fontSize: 13, color: '#525252' }}>{n.dataCompetencia}</td>
+                      <td>
+                        {statusBadge(n)}
+                        {n.chaveAcesso && n.ambiente === 'homologacao' && (
+                          <div style={{ fontSize: 10.5, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
+                        )}
+                        {n.gerarContaReceber && (
+                          <div style={{ fontSize: 10.5, color: '#525252', marginTop: 3 }}>
+                            {n.lancamentoId ? 'Conta a receber gerada' : 'Gera conta a receber'}
+                          </div>
+                        )}
+                        {n.status === 'rascunho' && n.ultimoErro && (
+                          <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 3, maxWidth: 240 }}>{n.ultimoErro}</div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13.5, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
+                        {fmt.currency(n.valorLiquido)}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                            onClick={() => { setViewItem(n); setModalMode('ver'); }}
+                          >
+                            Ver
+                          </button>
+                          {n.status === 'rascunho' && (
+                            <>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                                onClick={() => {
+                                  setForm({ ...n });
+                                  setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
+                                  setRetencaoManual(true);
+                                  setRegraAplicada('');
+                                  setModalMode('novo');
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                style={{ fontSize: 12, padding: '5px 12px', background: '#600000', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500 }}
+                                onClick={() => handleTransmitir(n)}
+                                disabled={!!transmitindoId}
+                              >
+                                {transmitindoId === n.id ? 'Enviando...' : 'Transmitir'}
+                              </button>
+                            </>
+                          )}
+                          {n.status === 'emitida' && !n.cancelamentoEmAnalise && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
+                              onClick={() => abrirCancelamento(n)}
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -856,6 +1210,19 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       )}
 
       {modalEmissores}
+
+      {showAcessoClienteModal && empresa && (
+        <NfseAcessoClienteModal
+          empresa={{
+            id: empresa.id,
+            razaoSocial: empresa.razaoSocial,
+            nomeFantasia: empresa.nomeFantasia,
+            cnpj: empresa.cnpj,
+            procuracaoStatus: parametros?.procuracaoStatus ?? null,
+          }}
+          onFechar={() => setShowAcessoClienteModal(false)}
+        />
+      )}
 
       {showBuscarNotas && (
         <NfseBuscarNotasModal
@@ -905,7 +1272,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMode(null)}>
           <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
-              <h2 className="modal-title">🧾 {form.id ? 'Editar rascunho de NFS-e' : 'Nota manual'}</h2>
+              <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : 'Nova nota manual'}</h2>
               <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
             </div>
 
@@ -917,7 +1284,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
             {/* prestador */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>🏢 Prestador</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#600000', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.6 }}>Prestador</div>
               <div style={{ fontSize: 13 }}>
                 {empresa?.razaoSocial} — {empresa?.cnpj}
                 {parametros?.inscricaoMunicipal ? ` — IM ${parametros.inscricaoMunicipal}` : ''}
@@ -927,7 +1294,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
             {/* tomador */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>👤 Tomador (Cliente)</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Tomador (Cliente)</div>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label className="form-label">Selecionar cliente cadastrado</label>
                 <select className="form-control" value={form.clienteId || ''} onChange={e => { if (e.target.value) fillTomador(e.target.value); else setForm(f => ({ ...f, clienteId: undefined })); }}>
@@ -990,7 +1357,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
             {/* serviço */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>⚙️ Serviço</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Serviço</div>
               {(parametros?.servicosConhecidos?.length || 0) > 0 && (
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label className="form-label">Serviços que esta empresa já emitiu</label>
@@ -1049,7 +1416,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
             {/* valores */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>💰 Valores</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#600000', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Valores e Retenções</div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Valor do serviço (R$) *</label>
@@ -1109,7 +1476,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
             {/* financeiro */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>📥 Financeiro (opcional)</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Financeiro (opcional)</div>
               <NfseFinanceiroCampos
                 valor={financeiroForm}
                 portadores={portadores}
@@ -1121,8 +1488,8 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             <div className="form-actions" style={{ marginTop: 24, gap: 10 }}>
               <button className="btn btn-secondary" onClick={() => setModalMode(null)}>Cancelar</button>
               <button className="btn btn-secondary" onClick={() => handleSave(false)} disabled={!!transmitindoId}>Salvar Rascunho</button>
-              <button className="btn btn-primary" style={{ background: 'var(--green)', borderColor: 'var(--green)' }} onClick={() => handleSave(true)} disabled={!!transmitindoId}>
-                {transmitindoId ? '⏳ Transmitindo ao Sefin...' : emProducao ? '🚀 Emitir Nota Real' : '🧪 Emitir Nota de Teste'}
+              <button className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} onClick={() => handleSave(true)} disabled={!!transmitindoId}>
+                {transmitindoId ? 'Transmitindo ao Sefin...' : emProducao ? 'Emitir Nota Real' : 'Emitir Nota de Teste'}
               </button>
             </div>
           </div>
@@ -1134,10 +1501,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMode(null)}>
           <div className="modal" style={{ maxWidth: 900, width: '95vw', height: '95vh', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8, flexWrap: 'wrap' }}>
-              <h2 className="modal-title" style={{ margin: 0 }}>🧾 NFS-e Nº {viewItem.numero}</h2>
+              <h2 className="modal-title" style={{ margin: 0 }}>NFS-e Nº {viewItem.numero}</h2>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <a className="btn btn-primary" href={`/api/nfse/${viewItem.id}/danfse?baixar=1`}>⬇️ Baixar PDF</a>
-                <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>📄 Baixar XML</a>
+                <a className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} href={`/api/nfse/${viewItem.id}/danfse?baixar=1`}>Baixar PDF</a>
+                <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>Baixar XML</a>
                 <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
               </div>
             </div>
@@ -1163,14 +1530,14 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             {/* Header actions */}
             <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
-                🧾 {viewItem.status === 'rascunho' ? 'Rascunho de NFS-e' : `NFS-e Nº ${viewItem.numero}`} &nbsp;
-                {ehSimulada(viewItem) ? <span style={{ color: '#6b7280', fontSize: 13 }}>Simulada</span> : viewItem.status === 'emitida' ? <span style={{ color: '#16a34a', fontSize: 13 }}>✅ Emitida</span> : viewItem.status === 'cancelada' ? <span style={{ color: '#dc2626', fontSize: 13 }}>❌ Cancelada</span> : <span style={{ color: '#d97706', fontSize: 13 }}>📝 Rascunho</span>}
+                {viewItem.status === 'rascunho' ? 'Rascunho de NFS-e' : `NFS-e Nº ${viewItem.numero}`} &nbsp;
+                {ehSimulada(viewItem) ? <span style={{ color: '#6b7280', fontSize: 13 }}>Simulada</span> : viewItem.status === 'emitida' ? <span style={{ color: '#16a34a', fontSize: 13 }}>Emitida</span> : viewItem.status === 'cancelada' ? <span style={{ color: '#dc2626', fontSize: 13 }}>Cancelada</span> : <span style={{ color: '#d97706', fontSize: 13 }}>Rascunho</span>}
               </h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 {viewItem.chaveAcesso && (
-                  <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>📄 Baixar XML</a>
+                  <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>Baixar XML</a>
                 )}
-                <button className="btn btn-primary" style={{ background: '#1e293b' }} onClick={() => window.print()}>🖨️ Imprimir</button>
+                <button className="btn btn-primary" style={{ background: '#1e293b' }} onClick={() => window.print()}>Imprimir</button>
                 <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
               </div>
             </div>
@@ -1302,7 +1669,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               {/* Cancelamento info */}
               {viewItem.status === 'cancelada' && (
                 <div style={{ background: '#fef2f2', border: '2px solid #fca5a5', borderRadius: 8, padding: '12px 16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: '#dc2626' }}>⚠️ NOTA FISCAL CANCELADA</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#dc2626' }}>NOTA FISCAL CANCELADA</div>
                   {viewItem.motivoCancelamento && <div style={{ fontSize: 12, color: '#7f1d1d', marginTop: 4 }}>Motivo: {viewItem.motivoCancelamento}</div>}
                 </div>
               )}
@@ -1310,16 +1677,16 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               {/* Rascunho info */}
               {viewItem.status === 'rascunho' && (
                 <div style={{ border: '2px dashed #d97706', borderRadius: 8, padding: '12px 16px', textAlign: 'center', background: '#fffbeb' }}>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: '#d97706', marginBottom: 12 }}>📝 RASCUNHO — Esta nota ainda não foi autorizada pelo Sefin</div>
-                  <button className="btn btn-primary no-print" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={() => handleTransmitir(viewItem)} disabled={!!transmitindoId}>
-                    🚀 Transmitir ao Sefin
+                  <div style={{ fontSize: 14, fontWeight: 900, color: '#d97706', marginBottom: 12 }}>RASCUNHO — Esta nota ainda não foi autorizada pelo Sefin</div>
+                  <button className="btn btn-primary no-print" style={{ background: '#600000', borderColor: '#600000' }} onClick={() => handleTransmitir(viewItem)} disabled={!!transmitindoId}>
+                    Transmitir ao Sefin
                   </button>
                 </div>
               )}
 
               {viewItem.lancamentoId && (
                 <div style={{ marginTop: 12, padding: '8px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, fontSize: 11, color: '#166534' }}>
-                  ✅ Conta a Receber gerada automaticamente — ID: {viewItem.lancamentoId}
+                  Conta a Receber gerada automaticamente — ID: {viewItem.lancamentoId}
                   {viewItem.vencimento && ` | Vencimento: ${fmt.date(viewItem.vencimento)}`}
                 </div>
               )}
@@ -1333,7 +1700,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setCancelModal(null)}>
           <div className="modal" style={{ maxWidth: 500 }}>
             <div className="modal-header">
-              <h2 className="modal-title">❌ Cancelar NFS-e Nº {cancelModal.numero}</h2>
+              <h2 className="modal-title">Cancelar NFS-e Nº {cancelModal.numero}</h2>
               <button className="modal-close" onClick={() => setCancelModal(null)}>✕</button>
             </div>
             <div style={{ marginBottom: 8, padding: '12px 14px', background: 'var(--bg-card2)', borderRadius: 8, fontSize: 13 }}>
@@ -1362,7 +1729,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             <div className="form-actions" style={{ marginTop: 20 }}>
               <button className="btn btn-secondary" onClick={() => setCancelModal(null)}>Voltar</button>
               <button className="btn btn-danger" onClick={handleCancelar} disabled={cancelando}>
-                {cancelando ? '⏳ Enviando...' : exigeAnalise ? '📨 Solicitar Análise Fiscal' : '❌ Confirmar Cancelamento'}
+                {cancelando ? 'Enviando...' : exigeAnalise ? 'Solicitar Análise Fiscal' : 'Confirmar Cancelamento'}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { checkRateLimit, getClientKey } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
@@ -17,6 +18,9 @@ export async function POST(request: Request) {
   try {
     const auth = requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role === 'cliente') {
+      return NextResponse.json({ error: 'Apenas equipe interna pode enviar atas para assinatura.' }, { status: 403 });
+    }
 
     if (!autentiqueConfigurado()) {
       return NextResponse.json(
@@ -92,6 +96,16 @@ export async function GET(request: Request) {
     // disponível — é assim que o botão de assinatura aparece ou não na tela.
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return NextResponse.json({ configurado: true });
+
+    if (auth.session.role !== 'administrador') {
+      const ata = await db.ataAtendimento.findFirst({
+        where: { assinaturaId: id },
+        select: { empresaId: true },
+      });
+      if (!ata || !auth.session.empresaIds.includes(ata.empresaId)) {
+        return NextResponse.json({ error: 'Sem permissão para consultar esta ata.' }, { status: 403 });
+      }
+    }
 
     const doc = await consultarDocumento(id);
     return NextResponse.json({ configurado: true, documento: doc });

@@ -14,6 +14,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Parâmetros id e tipo são obrigatórios' }, { status: 400 });
   }
 
+  if (auth.session.role !== 'administrador' && !auth.session.empresaIds.includes(id)) {
+    return NextResponse.json({ error: 'Sem permissão para esta empresa.' }, { status: 403 });
+  }
+
   try {
     let selectFields: Record<string, boolean> = {};
     if (type === 'receber') {

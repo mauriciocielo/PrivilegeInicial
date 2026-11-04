@@ -17,7 +17,13 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
     const data = fs.readFileSync(filePath, 'utf-8');
-    return NextResponse.json(JSON.parse(data));
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return NextResponse.json([]);
+    if (auth.session.role === 'administrador') {
+      return NextResponse.json(parsed);
+    }
+    const allowed = new Set(auth.session.empresaIds);
+    return NextResponse.json(parsed.filter((item: any) => item && allowed.has(item.empresaId)));
   } catch (error) {
     console.error('Error reading ativas.json', error);
     captureError(error);
@@ -28,10 +34,33 @@ export async function GET(request: Request) {
 export async function POST(req: Request) {
   const auth = requireAuth(req);
   if (auth.error) return auth.error;
+  if (auth.session.role === 'cliente') {
+    return NextResponse.json({ error: 'Apenas equipe interna pode atualizar atividades ativas.' }, { status: 403 });
+  }
   try {
     const list = await req.json();
+    if (!Array.isArray(list)) {
+      return NextResponse.json({ error: 'Formato inválido' }, { status: 400 });
+    }
     const filePath = getFilePath();
-    fs.writeFileSync(filePath, JSON.stringify(list), 'utf-8');
+    if (auth.session.role === 'administrador') {
+      fs.writeFileSync(filePath, JSON.stringify(list), 'utf-8');
+    } else {
+      const allowed = new Set(auth.session.empresaIds);
+      const filteredIncoming = list.filter((item: any) => item && allowed.has(item.empresaId));
+      let existingOther: any[] = [];
+      if (fs.existsSync(filePath)) {
+        try {
+          const current = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          if (Array.isArray(current)) {
+            existingOther = current.filter((item: any) => item && !allowed.has(item.empresaId));
+          }
+        } catch {
+          // ignore
+        }
+      }
+      fs.writeFileSync(filePath, JSON.stringify([...existingOther, ...filteredIncoming]), 'utf-8');
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error writing ativas.json', error);

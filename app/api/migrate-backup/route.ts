@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import { SYNC_COLLECTION_KEYS } from '../../../lib/sync-registry';
 import { captureError } from '../../../lib/sentry-helper';
 import { requireAuth } from '../../../lib/api-auth';
+import { hashPassword, isHashed } from '../../../lib/auth-hash';
+import type { SessionPayload } from '../../../lib/session';
 import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
 
 export const dynamic = 'force-dynamic';
@@ -480,13 +482,17 @@ async function migrateUsers(users: any[]) {
       }
 
       const existing = await db.user.findUnique({ where: { id: userId } });
+      const rawPw = String(u.password || '').trim();
+      const passwordToSave = !rawPw || rawPw === '__REDACTED__'
+        ? (existing?.password || '')
+        : (isHashed(rawPw) ? rawPw : hashPassword(rawPw));
 
       await db.user.upsert({
         where: { id: userId },
         update: {
           email: email,
           name: String(u.name || ''),
-          password: String(u.password || ''),
+          password: passwordToSave,
           role: String(u.role || 'cliente'),
           empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
           avatarData: u.avatarData && u.avatarData !== '__PRUNED_IN_LOCAL_STAGE__' ? String(u.avatarData) : (existing?.avatarData || null),
@@ -498,7 +504,7 @@ async function migrateUsers(users: any[]) {
           id: userId,
           email: email,
           name: String(u.name || ''),
-          password: String(u.password || ''),
+          password: passwordToSave,
           role: String(u.role || 'cliente'),
           empresaIds: Array.isArray(u.empresaIds) ? u.empresaIds.map(String) : [],
           avatarData: u.avatarData ? String(u.avatarData) : null,
@@ -1952,10 +1958,26 @@ const MIGRATORS: Record<string, CollectionMigrator> = {
 // explicitamente o que fazer com `scope`, então não tem como uma coleção nova
 // "esquecer" o filtro silenciosamente.
 type EmpresaScope = string[] | null;
-type CollectionQuery = (scope: EmpresaScope, role: string) => Promise<any>;
+type CollectionQuery = (scope: EmpresaScope, role: string, userId: string) => Promise<any>;
 
 const empresaWhere = (scope: EmpresaScope, field = 'empresaId') =>
   scope ? { [field]: { in: scope } } : {};
+
+const sanitizeUserRecord = (u: any, scope: EmpresaScope, role: string, userId: string) => {
+  const { twoFactorSecret: _s, twoFactorBackupCodes: _b, password: _p, ...rest } = u;
+  // Clientes nunca veem empresas de terceiros mesmo no próprio registro;
+  // consultores só veem os vínculos de empresas que eles mesmos atendem.
+  const filteredEmpresaIds = Array.isArray(rest.empresaIds)
+    ? (scope && role !== 'administrador' && u.id !== userId
+        ? rest.empresaIds.filter((id: string) => scope.includes(id))
+        : rest.empresaIds)
+    : [];
+  return {
+    ...rest,
+    password: '',
+    empresaIds: filteredEmpresaIds,
+  };
+};
 
 const QUERIES: Record<string, CollectionQuery> = {
   cf_empresas: (scope) => db.empresa.findMany({
@@ -1986,12 +2008,27 @@ const QUERIES: Record<string, CollectionQuery> = {
       politicaCobrancaName: true,
     }
   }),
-  // Usuários são sensíveis (inclui hash de senha) — usuário comum só vê o
-  // próprio registro; administrador vê todos; consultor vê os usuários das
-  // empresas que ele atende (mais o próprio registro).
-  cf_users: (scope) => db.user.findMany({
-    where: scope ? { OR: [{ empresaIds: { hasSome: scope } }] } : {},
-  }),
+  // Usuários são sensíveis (inclui hash de senha e segredo 2FA) — cliente só vê
+  // o próprio registro; consultor vê o próprio registro e os usuários clientes
+  // das empresas que atende; administrador vê todos (sem expor hash/2FA).
+  cf_users: async (scope, role, userId) => {
+    let raw: any[] = [];
+    if (role === 'cliente') {
+      raw = await db.user.findMany({ where: { id: userId } });
+    } else if (scope) {
+      raw = await db.user.findMany({
+        where: {
+          OR: [
+            { id: userId },
+            { role: 'cliente', empresaIds: { hasSome: scope } },
+          ],
+        },
+      });
+    } else {
+      raw = await db.user.findMany();
+    }
+    return raw.map(u => sanitizeUserRecord(u, scope, role, userId));
+  },
   cf_unidades: (scope) => db.unidade.findMany({ where: empresaWhere(scope, 'condominioId') }),
   cf_plano_contas: (scope) => db.planoConta.findMany({ where: empresaWhere(scope) }),
   cf_portadores: (scope) => db.portador.findMany({ where: empresaWhere(scope) }),
@@ -2136,6 +2173,7 @@ export async function GET(request: Request) {
     // empresas atribuídas a ele na sessão — nunca o banco inteiro.
     const scope: EmpresaScope = auth.session.role === 'administrador' ? null : auth.session.empresaIds;
     const role = auth.session.role;
+    const userId = auth.session.userId;
 
     const { searchParams } = new URL(request.url);
     const requestedCollection = searchParams.get('collection');
@@ -2145,7 +2183,7 @@ export async function GET(request: Request) {
       if (!query) {
         return NextResponse.json({ error: `Coleção desconhecida: ${requestedCollection}` }, { status: 400 });
       }
-      const collectionData = await query(scope, role);
+      const collectionData = await query(scope, role, userId);
       return NextResponse.json({
         version: '7',
         isPartial: true,
@@ -2157,7 +2195,7 @@ export async function GET(request: Request) {
     // Sem "collection" na query string: busca tudo de uma vez (usado no sync
     // inicial ao carregar o site e na inicialização de banco vazio).
     const entries = Object.entries(QUERIES);
-    const results = await Promise.all(entries.map(([, fn]) => fn(scope, role)));
+    const results = await Promise.all(entries.map(([, fn]) => fn(scope, role, userId)));
     const backupData = Object.fromEntries(entries.map(([key], i) => [key, results[i]]));
 
     return NextResponse.json({
@@ -2172,6 +2210,144 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Mapeia cada coleção com escopo por empresa para o delegate Prisma correspondente,
+ * permitindo verificar se um ID enviado por usuário não-admin já pertence a outra empresa.
+ */
+const SCOPED_MODELS: Record<string, { model: any; field: 'empresaId' | 'condominioId' }> = {
+  cf_unidades: { model: db.unidade, field: 'condominioId' },
+  cf_plano_contas: { model: db.planoConta, field: 'empresaId' },
+  cf_portadores: { model: db.portador, field: 'empresaId' },
+  cf_clientes: { model: db.cliente, field: 'empresaId' },
+  cf_lancamentos: { model: db.lancamento, field: 'empresaId' },
+  cf_endividamentos: { model: db.endividamento, field: 'empresaId' },
+  cf_atas: { model: db.ataAtendimento, field: 'empresaId' },
+  cf_indicadores: { model: db.indicadorMensal, field: 'empresaId' },
+  cf_orcamentos: { model: db.orcamentoMensal, field: 'empresaId' },
+  cf_contas_balanco: { model: db.contaBalanco, field: 'empresaId' },
+  cf_balancos_patrimoniais: { model: db.balancoPatrimonial, field: 'empresaId' },
+  cf_diagnosticos_360: { model: db.diagnostico360, field: 'empresaId' },
+  cf_curva_abc_config: { model: db.curvaAbcConfig, field: 'empresaId' },
+  cf_curvas_abc: { model: db.curvaAbc, field: 'empresaId' },
+  cf_imobilizados: { model: db.imobilizado, field: 'empresaId' },
+  cf_projecao_faturamento: { model: db.projecaoFaturamento, field: 'empresaId' },
+  cf_nfse: { model: db.nfsE, field: 'empresaId' },
+  cf_situacao_fiscal: { model: db.situacaoFiscal, field: 'empresaId' },
+  cf_transaction_patterns: { model: db.transactionPattern, field: 'empresaId' },
+  cf_atividades_log: { model: db.atividade, field: 'empresaId' },
+  cf_audit_logs: { model: db.auditLog, field: 'empresaId' },
+  cf_centros_custo: { model: db.centroCusto, field: 'empresaId' },
+  cf_agenda_semanal: { model: db.agendaTask, field: 'empresaId' },
+};
+
+async function filterIncomingByAuth(collection: string, items: any[], session: SessionPayload): Promise<any[]> {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  if (session.role === 'administrador') return items;
+
+  const allowedSet = new Set(session.empresaIds);
+
+  // Coleções globais / administrativas que clientes não podem alterar
+  if (collection === 'cf_politicas_globais' || collection === 'cf_inteligencia_docs') {
+    if (session.role === 'cliente') return [];
+    return items;
+  }
+
+  if (collection === 'cf_empresas') {
+    if (session.role === 'cliente') return [];
+    // Consultor só pode atualizar empresas às quais já está vinculado e sem colidir CNPJ de outra empresa
+    const safeEmpresas: any[] = [];
+    for (const e of items) {
+      if (!e || !e.id || !allowedSet.has(String(e.id))) continue;
+      if (e.cnpj) {
+        const conflict = await db.empresa.findFirst({
+          where: { cnpj: String(e.cnpj), NOT: { id: String(e.id) } },
+          select: { id: true },
+        });
+        if (conflict) continue;
+      }
+      safeEmpresas.push(e);
+    }
+    return safeEmpresas;
+  }
+
+  if (collection === 'cf_users') {
+    if (session.role === 'cliente') {
+      // Cliente só pode atualizar seu próprio cadastro (nome, telefone, avatar, preferência de e-mail),
+      // nunca escalar papel, trocar e-mail, nem adicionar empresas.
+      const own = items.find(u => u && String(u.id) === session.userId);
+      if (!own) return [];
+      const existing = await db.user.findUnique({ where: { id: session.userId } });
+      if (!existing) return [];
+      return [{
+        ...own,
+        id: existing.id,
+        email: existing.email,
+        role: 'cliente',
+        empresaIds: existing.empresaIds,
+        allowedRoutes: existing.allowedRoutes,
+      }];
+    }
+    // Consultor: pode atualizar seu próprio perfil (mantendo papel consultor e suas empresas)
+    // ou cadastrar/atualizar usuários 'cliente' apenas dentro das empresas que o consultor atende.
+    const safeUsers: any[] = [];
+    for (const u of items) {
+      if (!u || !u.email) continue;
+      const uid = String(u.id || '');
+      const cleanEmail = String(u.email).trim().toLowerCase();
+      const existing = uid ? await db.user.findUnique({ where: { id: uid } }) : null;
+      const byEmail = await db.user.findFirst({ where: { email: cleanEmail } });
+      if (existing && existing.role === 'administrador') continue;
+      if (byEmail && byEmail.id !== uid && byEmail.role !== 'cliente') continue;
+      if (byEmail && byEmail.id !== uid && !byEmail.empresaIds.every((id: string) => allowedSet.has(id))) continue;
+      if (uid === session.userId && existing) {
+        safeUsers.push({
+          ...u,
+          id: existing.id,
+          email: existing.email,
+          role: existing.role,
+          empresaIds: existing.empresaIds,
+          allowedRoutes: existing.allowedRoutes,
+        });
+        continue;
+      }
+      if (String(u.role || 'cliente') !== 'cliente') continue;
+      if (existing && existing.role !== 'cliente') continue;
+      const incomingEmpIds = Array.isArray(u.empresaIds) ? u.empresaIds.map(String).filter((id: string) => allowedSet.has(id)) : [];
+      const preservedOtherEmpIds = existing
+        ? existing.empresaIds.filter((id: string) => !allowedSet.has(id))
+        : [];
+      const mergedEmpIds = Array.from(new Set([...preservedOtherEmpIds, ...incomingEmpIds]));
+      if (mergedEmpIds.length === 0) continue;
+      safeUsers.push({
+        ...u,
+        role: 'cliente',
+        empresaIds: mergedEmpIds,
+      });
+    }
+    return safeUsers;
+  }
+
+  const scopedMeta = SCOPED_MODELS[collection];
+  if (!scopedMeta) return [];
+
+  const field = scopedMeta.field;
+  const scopedItems = items.filter(item => item && item.id && allowedSet.has(String(item[field] || '')));
+  if (scopedItems.length === 0) return [];
+
+  // Proteção anti-IDOR em upsert: impede que um item com ID existente de outra empresa seja sobrescrito
+  const ids = scopedItems.map(item => String(item.id));
+  const foreignRecords = await scopedMeta.model.findMany({
+    where: {
+      id: { in: ids },
+      NOT: { [field]: { in: session.empresaIds } },
+    },
+    select: { id: true },
+  });
+  if (foreignRecords.length === 0) return scopedItems;
+  const foreignIds = new Set(foreignRecords.map((r: { id: string }) => r.id));
+  return scopedItems.filter(item => !foreignIds.has(String(item.id)));
+}
+
 export async function POST(request: Request) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -2179,6 +2355,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const collection = body.collection;
     const data = body.data;
+    const isAdmin = auth.session.role === 'administrador';
+    const scopeFilter = isAdmin ? {} : { empresaId: { in: auth.session.empresaIds } };
 
     if (!data) {
       return NextResponse.json({ error: 'Nenhum dado fornecido' }, { status: 400 });
@@ -2190,28 +2368,38 @@ export async function POST(request: Request) {
         if (!record.id || !record.collection) continue;
         try {
           switch(record.collection) {
-            case 'cf_empresas': await db.empresa.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_users': await db.user.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_plano_contas': await db.planoConta.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_portadores': await db.portador.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_clientes': await db.cliente.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_lancamentos': await db.lancamento.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_endividamentos': await db.endividamento.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_atas': await db.ataAtendimento.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_indicadores': await db.indicadorMensal.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_orcamentos': await db.orcamentoMensal.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_empresas':
+              if (isAdmin) await db.empresa.deleteMany({ where: { id: record.id } });
+              break;
+            case 'cf_users':
+              if (isAdmin) await db.user.deleteMany({ where: { id: record.id } });
+              break;
+            case 'cf_plano_contas': await db.planoConta.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_portadores': await db.portador.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_clientes': await db.cliente.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_lancamentos': await db.lancamento.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_endividamentos': await db.endividamento.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_atas': await db.ataAtendimento.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_indicadores': await db.indicadorMensal.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_orcamentos': await db.orcamentoMensal.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
             // Documento fiscal autorizado não é apagado pela sincronização.
-            case 'cf_nfse': await db.nfsE.deleteMany({ where: { id: record.id, chaveAcesso: null } }); break;
-            case 'cf_situacao_fiscal': await db.situacaoFiscal.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_transaction_patterns': await db.transactionPattern.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_atividades_log': await db.atividade.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_audit_logs': await db.auditLog.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_centros_custo': await db.centroCusto.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_agenda_semanal': await db.agendaTask.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_inteligencia_docs': await db.inteligenciaDoc.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_unidades': await db.unidade.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_imobilizados': await db.imobilizado.deleteMany({ where: { id: record.id } }); break;
-            case 'cf_projecao_faturamento': await db.projecaoFaturamento.deleteMany({ where: { id: record.id } }); break;
+            case 'cf_nfse': await db.nfsE.deleteMany({ where: { id: record.id, chaveAcesso: null, ...scopeFilter } }); break;
+            case 'cf_situacao_fiscal': await db.situacaoFiscal.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_transaction_patterns': await db.transactionPattern.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_atividades_log': await db.atividade.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_audit_logs': await db.auditLog.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_centros_custo': await db.centroCusto.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_agenda_semanal': await db.agendaTask.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_inteligencia_docs':
+              if (auth.session.role !== 'cliente') await db.inteligenciaDoc.deleteMany({ where: { id: record.id } });
+              break;
+            case 'cf_unidades':
+              await db.unidade.deleteMany({
+                where: { id: record.id, ...(isAdmin ? {} : { condominioId: { in: auth.session.empresaIds } }) }
+              });
+              break;
+            case 'cf_imobilizados': await db.imobilizado.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_projecao_faturamento': await db.projecaoFaturamento.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
           }
         } catch(e) {
           console.error('Falha ao excluir ' + record.id, e);
@@ -2228,16 +2416,16 @@ export async function POST(request: Request) {
       if (!migrator) {
         return NextResponse.json({ error: `Coleção desconhecida para migração: ${collection}` }, { status: 400 });
       }
-      if (Array.isArray(data)) await migrator(data);
+      if (Array.isArray(data)) {
+        const allowedItems = await filterIncomingByAuth(collection, data, auth.session);
+        if (allowedItems.length > 0) await migrator(allowedItems);
+      }
 
       console.log(`[Chunked Migration] ✅ Sincronização da coleção ${collection} concluída com sucesso.`);
 
-      // Propaga a atualização da coleção via WebSocket para todos os clientes conectados
-      // ATENÇÃO: Desabilitado durante importação/chunking para evitar sobrecarga de memória no banco de dados e OOM timeouts no Vercel (fetching completo da coleção após cada lote de 25 é muito pesado)
       if ((global as any).io) {
         try {
             console.log(`🔌 WebSocket: Migração da coleção ${collection} efetuada de forma silenciosa e performática (sem broadcast massivo).`);
-            // Os clientes têm sistema próprio de Polling para verificar atualizações, então não necessita broadcast de toda a tabela.
         } catch (wsErr) {
           console.error(`Erro no processamento WebSocket silencioso de ${collection}:`, wsErr);
           captureError(wsErr);
@@ -2249,7 +2437,10 @@ export async function POST(request: Request) {
       console.log('Iniciando migração de backup (monolítico) para o PostgreSQL...');
 
       for (const [key, migrator] of Object.entries(MIGRATORS)) {
-        if (Array.isArray(data[key])) await migrator(data[key]);
+        if (Array.isArray(data[key])) {
+          const allowedItems = await filterIncomingByAuth(key, data[key], auth.session);
+          if (allowedItems.length > 0) await migrator(allowedItems);
+        }
       }
 
       console.log('✅ Migração de backup (monolítico) concluída com sucesso!');
