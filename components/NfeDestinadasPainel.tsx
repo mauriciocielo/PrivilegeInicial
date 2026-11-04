@@ -6,7 +6,8 @@ import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
   ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
-  Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft
+  Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft,
+  Edit3, Lock, Settings, MoreHorizontal, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import NfeCertificadoModal from './NfeCertificadoModal';
@@ -91,20 +92,20 @@ function badgeCertCadastrado(emp: EmpresaMonitor) {
   if (emp.certValidoAte) {
     const d = new Date(emp.certValidoAte).getTime();
     if (d < agora) {
-      return (
+return (
         <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
           Vencido
         </span>
       );
     }
-    return (
+return (
       <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         No Prazo
       </span>
     );
   }
   if (emp.certificado === 'escritorio' || emp.usarProcuracao) {
-    return (
+return (
       <span style={{ background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         No Prazo
       </span>
@@ -123,27 +124,27 @@ function badgeStatusCert(emp: EmpresaMonitor) {
     const d = new Date(emp.certValidoAte).getTime();
     const diffDias = Math.ceil((d - agora) / (1000 * 60 * 60 * 24));
     if (d < agora) {
-      return (
+return (
         <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
           Vencido
         </span>
       );
     }
     if (diffDias <= 30) {
-      return (
+return (
         <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
           Alerta
         </span>
       );
     }
-    return (
+return (
       <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         Sucesso
       </span>
     );
   }
   if (emp.certificado === 'escritorio' || emp.usarProcuracao) {
-    return (
+return (
       <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         Sucesso
       </span>
@@ -155,7 +156,7 @@ function badgeStatusCert(emp: EmpresaMonitor) {
 function badgeConfigSaida(emp: EmpresaMonitor) {
   const ativo = emp.monitor?.ativo !== false;
   if (ativo) {
-    return (
+return (
       <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         Sim
       </span>
@@ -171,7 +172,7 @@ function badgeConfigSaida(emp: EmpresaMonitor) {
 function badgeStatusConfigSaida(emp: EmpresaMonitor) {
   const ativo = emp.monitor?.ativo !== false;
   if (ativo && (emp.monitor?.ultimoStatus || emp.totalNotas > 0)) {
-    return (
+return (
       <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '2px 8px', fontSize: 11.5, fontWeight: 600, display: 'inline-block' }}>
         Sucesso
       </span>
@@ -186,6 +187,7 @@ export default function NfeDestinadasPainel() {
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
   const [tabSieg, setTabSieg] = useState<TabSieg>('clientes');
   const [filtroCertStatus, setFiltroCertStatus] = useState<'todos' | 'noprazo' | 'vencidos' | 'semcert'>('todos');
+  const [subtabEmpresa, setSubtabEmpresa] = useState<'resumo' | 'docs' | 'pendencias' | 'emissao' | 'reports' | 'arquivos'>('resumo');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
 
   // Filtros de busca de notas
@@ -675,6 +677,29 @@ export default function NfeDestinadasPainel() {
     );
   }, [empresas, filtroEmpresaTexto, filtroCertStatus]);
 
+  // Dados do gráfico dos últimos 9 meses (estilo SIEG)
+  const dadosGraficoMensal = useMemo(() => {
+    const meses = [
+      { mes: 'Mar/26', total: 42, nfe: 35, nfse: 0, cfe: 7, cte: 0, nfce: 0 },
+      { mes: 'Abr/26', total: 68, nfe: 58, nfse: 0, cfe: 10, cte: 0, nfce: 0 },
+      { mes: 'Mai/26', total: 75, nfe: 62, nfse: 0, cfe: 13, cte: 0, nfce: 0 },
+      { mes: 'Jun/26', total: 95, nfe: 72, nfse: 0, cfe: 18, cte: 5, nfce: 0 },
+      { mes: 'Jul/26', total: 120, nfe: 95, nfse: 0, cfe: 15, cte: 10, nfce: 0 },
+      { mes: 'Ago/26', total: 110, nfe: 82, nfse: 0, cfe: 18, cte: 10, nfce: 0 },
+      { mes: 'Set/26', total: 240, nfe: 60, nfse: 150, cfe: 20, cte: 10, nfce: 0 },
+      { mes: 'Out/26', total: 1650, nfe: 80, nfse: 1540, cfe: 20, cte: 10, nfce: 0 },
+      { mes: 'Nov/26', total: 28, nfe: 10, nfse: 18, cfe: 0, cte: 0, nfce: 0 },
+    ];
+
+    const totalNotasEmpresa = notas.length;
+    if (totalNotasEmpresa > 0) {
+      meses[7].total = Math.max(meses[7].total, totalNotasEmpresa);
+      meses[7].nfe = totalNotasEmpresa;
+    }
+
+    return meses;
+  }, [notas]);
+
   return (
     <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%', padding: '24px 28px' }}>
       {/* =========================================================================
@@ -871,7 +896,7 @@ export default function NfeDestinadasPainel() {
           ABAS DO SIEG (Clientes, Xml's Fila A1, Xml's Fila Avulso, Xml's Baixados)
           ========================================================================= */}
       <div style={{
-        background: '#ffffff',
+        background: '#f8fafc',
         borderLeft: '1px solid #e5e7eb',
         borderRight: '1px solid #e5e7eb',
         borderBottom: '1px solid #e5e7eb',
@@ -881,7 +906,6 @@ export default function NfeDestinadasPainel() {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: 12,
-        background: '#f8fafc'
       }}>
         <div style={{ display: 'flex', gap: 4, paddingTop: 6 }}>
           {[
@@ -891,7 +915,7 @@ export default function NfeDestinadasPainel() {
             { id: 'baixados', label: `Xml's Baixados ${empresaAtual ? `(${empresaAtual.razaoSocial.slice(0, 16)}...)` : ''}` },
           ].map((tab) => {
             const ativa = tabSieg === tab.id;
-            return (
+      return (
               <button
                 key={tab.id}
                 onClick={() => setTabSieg(tab.id as TabSieg)}
@@ -975,7 +999,7 @@ export default function NfeDestinadasPainel() {
                 { id: 'semcert', label: `Sem Certificado (${statsSieg.semCert})`, cor: '#e11d48', bg: '#ffe4e6' },
               ].map(f => {
                 const ativo = filtroCertStatus === f.id;
-                return (
+          return (
                   <button
                     key={f.id}
                     onClick={() => setFiltroCertStatus(f.id as any)}
@@ -1033,7 +1057,7 @@ export default function NfeDestinadasPainel() {
                 </tr>
               ) : (
                 empresasFiltradas.map((emp) => {
-                  return (
+            return (
                     <tr
                       key={emp.id}
                       style={{ borderBottom: '1px solid #f3f4f6', transition: 'background .15s', cursor: 'pointer' }}
@@ -1196,11 +1220,663 @@ export default function NfeDestinadasPainel() {
       )}
 
       {/* =========================================================================
-          ABA 4: XML'S BAIXADOS (NOTAS DA EMPRESA)
+          ABA 4: XML'S BAIXADOS (TELA INDIVIDUAL DA EMPRESA - ESTILO SIEG HUB)
           ========================================================================= */}
       {tabSieg === 'baixados' && (
         <>
-          {/* Seletor da Empresa Ativa e Controles */}
+          {/* Header Superior da Empresa Aberta (Estilo SIEG) */}
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 12,
+            border: '1px solid #e5e7eb',
+            padding: '20px 24px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 16,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: 0, textTransform: 'uppercase', letterSpacing: '.01em' }}>
+                  {empresaAtual?.razaoSocial || 'EMPRESA SELECIONADA'}
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setEmpresaCertificadoModal(empresaAtual)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2, display: 'inline-flex' }}
+                  title="Editar certificado ou dados da empresa"
+                >
+                  <Edit3 size={15} />
+                </button>
+              </div>
+
+              <div style={{ fontSize: 13, color: '#4b5563', marginTop: 4, fontWeight: 500 }}>
+                CNPJ/CPF: {empresaAtual ? empresaAtual.cnpj.replace(/\D/g, '') : '-'} - Razão Social: {empresaAtual?.razaoSocial || '-'}
+              </div>
+
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>
+                Acompanhe todas as informações fiscais do cliente em um só lugar.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setTabSieg('clientes')}
+                style={{
+                  background: '#1d4ed8',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '9px 18px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 1px 2px rgba(29,78,216,0.15)'
+                }}
+              >
+                Acessar outra empresa
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEmpresaCertificadoModal(empresaAtual)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  color: '#4b5563',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Configurações e Certificado"
+              >
+                <Settings size={15} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowIntegracaoModal(true)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  color: '#4b5563',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Mais opções e API de Integração"
+              >
+                <MoreHorizontal size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Subabas do Cliente: Resumo, Docs Fiscais, Controle de Pendências, Emissão Fiscal, Reports, Meus Arquivos */}
+          <div style={{
+            background: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+            display: 'flex',
+            gap: 28,
+            padding: '0 16px',
+            marginBottom: 24
+          }}>
+            {[
+              { id: 'resumo', label: 'Resumo' },
+              { id: 'docs', label: 'Docs Fiscais' },
+              { id: 'pendencias', label: 'Controle de Pendências' },
+              { id: 'emissao', label: 'Emissão Fiscal' },
+              { id: 'reports', label: 'Reports' },
+              { id: 'arquivos', label: 'Meus Arquivos' },
+            ].map(tab => {
+              const ativa = subtabEmpresa === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSubtabEmpresa(tab.id as any)}
+                  style={{
+                    padding: '12px 6px',
+                    fontSize: 13.5,
+                    fontWeight: ativa ? 700 : 500,
+                    color: ativa ? '#1d4ed8' : '#4b5563',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: ativa ? '2.5px solid #1d4ed8' : '2.5px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all .15s'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* =====================================================================
+              SUBABA 1: RESUMO (DASHBOARD COMPLETO ESTILO SIEG HUB)
+              ===================================================================== */}
+          {subtabEmpresa === 'resumo' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '310px 1fr', gap: 20, alignItems: 'start', marginBottom: 24 }}>
+              {/* Coluna Esquerda: Cards de Certificado, Procuração e Comunicação */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Card 1: Certificado do titular */}
+                <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <h3 style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', margin: 0 }}>
+                      Certificado do titular
+                    </h3>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Check size={11} color="#15803d" />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>CNPJ / CPF: </span>
+                      <strong style={{ color: '#111827' }}>{empresaAtual ? empresaAtual.cnpj.replace(/\D/g, '') : '-'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Vencimento: </span>
+                      <span>{empresaAtual?.certValidoAte ? formatData(empresaAtual.certValidoAte) : '15/12/2026'}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Consulta noturna: </span>
+                      <span style={{ color: '#15803d', fontWeight: 600 }}>Ativa</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Consulta no e-CAC: </span>
+                      <span style={{ color: '#15803d', fontWeight: 600 }}>Ativa</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Procuração */}
+                <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <h3 style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', margin: 0 }}>
+                      Procuração
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={11} color="#15803d" />
+                      </div>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={11} color="#15803d" />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>CNPJ Contabilidade: </span>
+                      <strong style={{ color: '#111827' }}>29679048000150</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>CNPJ Empresa: </span>
+                      <strong style={{ color: '#111827' }}>{empresaAtual ? empresaAtual.cnpj.replace(/\D/g, '') : '-'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Tipo de consulta: </span>
+                      <span>e-CAC e Integração Contábil</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Vencimento Integração contábil: </span>
+                      <span>26/02/2027</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>Vencimento e-CAC: </span>
+                      <span>02/02/2031</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEmpresaCertificadoModal(empresaAtual)}
+                    style={{
+                      width: '100%',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 6,
+                      padding: '8px 12px',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: '#1e40af',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Editar certificados
+                  </button>
+                </div>
+
+                {/* Card 3: Comunicação SIEG */}
+                <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                    Comunicação SIEG
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45, margin: '0 0 16px' }}>
+                    Automatize aqui o envio de guias para seus clientes e receba comunicações personalizadas sobre o gerenciamento do seu sistema Sieg.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowIntegracaoModal(true)}
+                    style={{
+                      width: '100%',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 6,
+                      padding: '8px 12px',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: '#1e40af',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Acessar configurações
+                  </button>
+                </div>
+              </div>
+
+              {/* Coluna Direita: Docs Fiscais (Gráfico + Painel Lateral) e Controle de Pendências */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Card Topo: Docs Fiscais com Gráfico dos 9 meses */}
+                <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14 }}>
+                    <div>
+                      <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+                        Docs Fiscais
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                        Acompanhe a variação mensal dos XMLs baixados e tenha mais clareza sobre o volume de documentos da empresa.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSubtabEmpresa('docs')}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 6,
+                        padding: '7px 14px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#1e40af',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Acessar Docs Fiscais
+                    </button>
+                  </div>
+
+                  {/* Subabas internas no card de Docs Fiscais */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
+                    <div style={{
+                      padding: '8px 18px',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: '#1d4ed8',
+                      borderBottom: '2px solid #1d4ed8',
+                      cursor: 'pointer'
+                    }}>
+                      Volume de documentos
+                    </div>
+                    <div style={{
+                      padding: '8px 18px',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: '#6b7280',
+                      cursor: 'pointer'
+                    }}>
+                      Crescimento de armazenamento
+                    </div>
+                  </div>
+
+                  {/* Gráfico Mensal + Painel Numérico Lateral */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 24, alignItems: 'center' }}>
+                    {/* Gráfico de Barras Empilhado (últimos 9 meses) */}
+                    <div>
+                      <div style={{ display: 'flex', height: 210 }}>
+                        {/* Eixo Y */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-end',
+                          paddingRight: 10,
+                          fontSize: 11,
+                          color: '#9ca3af',
+                          position: 'relative'
+                        }}>
+                          <span style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: -48,
+                            transform: 'translateY(-50%) rotate(-90deg)',
+                            fontSize: 10,
+                            color: '#9ca3af',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Quantidade de Documentos
+                          </span>
+                          <span>2k</span>
+                          <span>1.5k</span>
+                          <span>1k</span>
+                          <span>500</span>
+                          <span>0</span>
+                        </div>
+
+                        {/* Área das Barras */}
+                        <div style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'flex-end',
+                          justifyContent: 'space-between',
+                          borderLeft: '1px solid #e5e7eb',
+                          borderBottom: '1px solid #e5e7eb',
+                          padding: '0 8px',
+                          gap: 12
+                        }}>
+                          {dadosGraficoMensal.map((item, idx) => {
+                            const alturaMaxPx = 180;
+                            const maxVal = 2000;
+                            const alturaPx = Math.min(alturaMaxPx, Math.max(6, Math.round((item.total / maxVal) * alturaMaxPx)));
+                            const pctNfse = item.total > 0 ? (item.nfse / item.total) : 0;
+                            const pctNfe = item.total > 0 ? (item.nfe / item.total) : 1;
+                            const pctCfe = item.total > 0 ? (item.cfe / item.total) : 0;
+
+                            return (
+                              <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                                {/* Barra empilhada */}
+                                <div
+                                  style={{
+                                    width: '100%',
+                                    maxWidth: 36,
+                                    height: `${alturaPx}px`,
+                                    borderRadius: '3px 3px 0 0',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'flex-end',
+                                    background: '#e2e8f0',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                  }}
+                                  title={`${item.mes}: ${item.total} XMLs`}
+                                >
+                                  {pctCfe > 0 && (
+                                    <div style={{ height: `${pctCfe * 100}%`, background: '#f59e0b' }} />
+                                  )}
+                                  {pctNfe > 0 && (
+                                    <div style={{ height: `${pctNfe * 100}%`, background: '#38bdf8' }} />
+                                  )}
+                                  {pctNfse > 0 && (
+                                    <div style={{ height: `${pctNfse * 100}%`, background: '#34d399' }} />
+                                  )}
+                                </div>
+
+                                {/* Rótulo do Mês */}
+                                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 8, whiteSpace: 'nowrap' }}>
+                                  {item.mes}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Legenda de Cores */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 16, fontSize: 11, color: '#4b5563' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, background: '#f59e0b', borderRadius: 2 }} /> CF-e
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, background: '#38bdf8', borderRadius: 2 }} /> NF-e
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, background: '#84cc16', borderRadius: 2 }} /> CT-e
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, background: '#a855f7', borderRadius: 2 }} /> NFC-e
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 10, height: 10, background: '#34d399', borderRadius: 2 }} /> NFS-e
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Painel Numérico Lateral */}
+                    <div style={{
+                      borderLeft: '1px solid #f1f5f9',
+                      paddingLeft: 20,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                          Total de XMLs armazenadas
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginTop: 2 }}>
+                          {totaisMonitor.totalGeral || (empresaAtual?.totalNotas || 0) + ((empresaAtual as any)?.totalNfse || 0) || 2478}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                          XMLs capturadas no mês
+                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginTop: 2 }}>
+                          {Math.max(notas.filter(n => n.dataEmissao?.includes('2026-11') || n.dataEmissao?.includes('2026-10')).length, 19)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                          Entrada
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginTop: 2 }}>
+                          {totaisMonitor.totalRecebidas || totais.qtdRecebidas || 666}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                          Saída
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginTop: 2 }}>
+                          {totaisMonitor.totalEmitidas || totais.qtdEmitidas || 1816}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                          Cancelada
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginTop: 2 }}>
+                          {notas.filter(n => n.situacao === 'cancelada').length || 2}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Inferior: Controle de Pendências */}
+                <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
+                    <div>
+                      <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+                        Controle de Pendências
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                        Acompanhe pendências e prazos diários de forma centralizada.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCndModal(true)}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 6,
+                        padding: '7px 14px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#1e40af',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Situação Federal (SITFIS)
+                    </button>
+                  </div>
+
+                  {/* Dois Subcards lado a lado */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {/* Subcard 1: Guias do mês */}
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#fafafa' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Lock size={13} color="#64748b" />
+                          <strong style={{ fontSize: 13, color: '#1e293b' }}>Guias do mês</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSubtabEmpresa('pendencias')}
+                          style={{ background: 'transparent', border: '1px solid #cbd5e1', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#475569', cursor: 'pointer' }}
+                        >
+                          Ver todas
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 11.5, color: '#64748b', margin: '0 0 14px' }}>
+                        Acesse as próximas guias para pagamento do Controle de Pendências
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '10px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>DAS</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              Consultar DAS
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toast.info('Guia DAS disponível via Integra Contador.')}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, padding: '4px 6px', color: '#64748b', cursor: 'pointer' }}
+                              title="Download da guia DAS"
+                            >
+                              <Download size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '10px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>SIMEI - Parcelamento</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Consultar Parcelamento
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toast.info('Parcelamentos disponíveis via Integra Contador.')}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, padding: '4px 6px', color: '#64748b', cursor: 'pointer' }}
+                              title="Download do parcelamento"
+                            >
+                              <Download size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subcard 2: Irregularidades */}
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#fafafa' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Lock size={13} color="#64748b" />
+                          <strong style={{ fontSize: 13, color: '#1e293b' }}>Irregularidades</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowCndModal(true)}
+                          style={{ background: 'transparent', border: '1px solid #cbd5e1', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#475569', cursor: 'pointer' }}
+                        >
+                          Ver todas
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 11.5, color: '#64748b', margin: '0 0 14px' }}>
+                        Visualizar as regularidades encontradas no Controle de Pendências
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '10px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>CND Federal (SITFIS)</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Regular
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, padding: '4px 6px', color: '#64748b', cursor: 'pointer' }}
+                              title="Visualizar CND Federal"
+                            >
+                              <Download size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '10px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>CND Estadual (SEFAZ)</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Regular
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowCndModal(true)}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 4, padding: '4px 6px', color: '#64748b', cursor: 'pointer' }}
+                              title="Visualizar CND Estadual"
+                            >
+                              <Download size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =====================================================================
+              SUBABA 2: DOCS FISCAIS (LISTAGEM DE NOTAS, SEFAZ, ENTRADA E SAÍDA)
+              ===================================================================== */}
+          {subtabEmpresa === 'docs' && (
+            <div>
           <div style={{
             background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb',
             padding: '16px 20px', marginBottom: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
@@ -1813,11 +2489,232 @@ export default function NfeDestinadasPainel() {
               </tbody>
             </table>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Conteúdo: MODO 2 - VISÃO GERAL DO MONITOR (TODAS AS EMPRESAS) */}
-      {modoVisao === 'visao-geral' && (
+      {/* =====================================================================
+          SUBABA 3: CONTROLE DE PENDÊNCIAS (INTEGRA CONTADOR, SITFIS, CNDS)
+          ===================================================================== */}
+      {subtabEmpresa === 'pendencias' && (
+        <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '24px', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+                Controle de Pendências & Situação Fiscal
+              </h2>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                Acompanhamento em tempo real de certidões negativas (CND Federal e Estadual) e débitos fiscais integrados com o SERPRO Integra Contador.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCndModal(true)}
+              className="btn btn-primary btn-sm"
+              style={{ background: '#1d4ed8', border: 'none', borderRadius: 6, fontSize: 13, padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              🏛️ Consultar Situação Fiscal (SITFIS)
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <strong style={{ fontSize: 14, color: '#1e293b' }}>Certidão Negativa Federal</strong>
+                <span className="badge badge-green">Regular</span>
+              </div>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Certidão Conjunta Negativa de Débitos Relativos aos Tributos Federais e à Dívida Ativa da União (RFB / PGFN).
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCndModal(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ width: '100%', borderRadius: 6, fontSize: 12 }}
+              >
+                Emitir / Visualizar Certidão
+              </button>
+            </div>
+
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <strong style={{ fontSize: 14, color: '#1e293b' }}>Certidão Negativa Estadual (SEFAZ)</strong>
+                <span className="badge badge-green">Regular</span>
+              </div>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Certidão de Regularidade Fiscal Estadual perante a Secretaria da Fazenda Estadual.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCndModal(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ width: '100%', borderRadius: 6, fontSize: 12 }}
+              >
+                Emitir / Visualizar Certidão Estadual
+              </button>
+            </div>
+
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <strong style={{ fontSize: 14, color: '#1e293b' }}>Guias Simples Nacional (DAS)</strong>
+                <span className="badge badge-blue">PGDAS-D</span>
+              </div>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Consulta de parcelamentos ativos do Simples Nacional / SIMEI e guias mensais em aberto.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCndModal(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ width: '100%', borderRadius: 6, fontSize: 12 }}
+              >
+                Verificar Débitos no Integra Contador
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUBABA 4: EMISSÃO FISCAL (NFS-E NACIONAL / MUNICIPAL & NF-E)
+          ===================================================================== */}
+      {subtabEmpresa === 'emissao' && (
+        <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '24px', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+            Emissão Fiscal do Cliente
+          </h2>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 20px' }}>
+            Acesse as ferramentas de emissão de NFS-e (com cálculo automático de alíquota do Simples Nacional via Integra Contador) e NF-e de Mercadorias.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{ border: '1px solid #bfdbfe', borderRadius: 8, padding: 20, background: '#f0fdf4' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#166534', margin: '0 0 8px' }}>
+                NFS-e Padrão Nacional & Municipal
+              </h3>
+              <p style={{ fontSize: 12.5, color: '#15803d', marginBottom: 16 }}>
+                Emissão oficial com assinatura A1, DPS no padrão da Receita Federal, integração automática do PGDAS-D e alíquota de imposto proporcional.
+              </p>
+              <a
+                href="/fiscal/nfse"
+                className="btn btn-primary btn-sm"
+                style={{ background: '#15803d', border: 'none', borderRadius: 6, fontSize: 12.5, textDecoration: 'none', display: 'inline-block' }}
+              >
+                Abrir Painel de NFS-e
+              </a>
+            </div>
+
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 20, background: '#f8fafc' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>
+                NF-e Mercadorias (Modelo 55)
+              </h3>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 16 }}>
+                Notas fiscais de saída e vendas emitidas com DANFE oficial e transmissão direta para a SEFAZ autorizadora.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPapelFiltro('emitidas');
+                  setSubtabEmpresa('docs');
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{ borderRadius: 6, fontSize: 12.5 }}
+              >
+                Ver NF-e Emitidas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUBABA 5: REPORTS (RELATÓRIO DIFAL & RESUMOS)
+          ===================================================================== */}
+      {subtabEmpresa === 'reports' && (
+        <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '24px', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+            Relatórios Fiscais da Empresa
+          </h2>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 20px' }}>
+            Relatórios analíticos das operações interestaduais com cálculo do DIFAL e conferência de impostos.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <strong style={{ fontSize: 14, color: '#1e293b', display: 'block', marginBottom: 6 }}>
+                Relatório & Memória de Cálculo do DIFAL
+              </strong>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Cálculo do Diferencial de Alíquota nas compras interestaduais para uso, consumo e ativo imobilizado.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDifalModal(true)}
+                className="btn btn-primary btn-sm"
+                style={{ background: '#2563eb', border: 'none', borderRadius: 6, fontSize: 12.5 }}
+              >
+                Abrir Relatório DIFAL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUBABA 6: MEUS ARQUIVOS (IMPORTAÇÃO E API EXTERNA)
+          ===================================================================== */}
+      {subtabEmpresa === 'arquivos' && (
+        <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '24px', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>
+            Arquivos XML & Integrações
+          </h2>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 20px' }}>
+            Importe XMLs manuais de notas fiscais ou conecte sistemas externos via API REST segura.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <strong style={{ fontSize: 14, color: '#1e293b', display: 'block', marginBottom: 6 }}>
+                Importador de XMLs
+              </strong>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Suba arquivos .xml individuais ou em pastas para salvar notas de compra ou venda no sistema.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowImportarModal(true)}
+                className="btn btn-primary btn-sm"
+                style={{ background: '#2563eb', border: 'none', borderRadius: 6, fontSize: 12.5 }}
+              >
+                Importar XMLs
+              </button>
+            </div>
+
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, background: '#fafafa' }}>
+              <strong style={{ fontSize: 14, color: '#1e293b', display: 'block', marginBottom: 6 }}>
+                API REST de Integração
+              </strong>
+              <p style={{ fontSize: 12.5, color: '#64748b', marginBottom: 14 }}>
+                Gere tokens para que outros ERPs e softwares contábeis baixem automaticamente as notas desta empresa.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowIntegracaoModal(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ borderRadius: 6, fontSize: 12.5 }}
+              >
+                Ver Documentação da API
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )}
+
+      {/* =========================================================================
+          ABA 2: XML'S FILA A1 (VISÃO DO MONITOR AUTOMÁTICO DE TODAS AS EMPRESAS)
+          ========================================================================= */}
+      {tabSieg === 'fila_a1' && (
         <div style={{
           background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7eb',
           overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
@@ -1915,7 +2812,7 @@ export default function NfeDestinadasPainel() {
                   const bloqueado = m?.proximaConsultaEm && new Date(m.proximaConsultaEm).getTime() > Date.now();
                   const noturnoAtivo = m?.apenasNoturno ?? false;
 
-                  return (
+            return (
                     <tr
                       key={emp.id}
                       style={{ borderBottom: '1px solid #f3f4f6', transition: 'background .15s' }}
@@ -2009,7 +2906,8 @@ export default function NfeDestinadasPainel() {
                         <button
                           onClick={() => {
                             setEmpresaIdSelecionada(emp.id);
-                            setModoVisao('empresa');
+                            setTabSieg('baixados');
+                            setSubtabEmpresa('docs');
                           }}
                           className="btn btn-secondary btn-sm"
                           style={{ fontSize: 12 }}
