@@ -252,7 +252,7 @@ export async function emitirNfse(transporte: Transporte, pedido: PedidoEmissao):
 
 export type StatusProcuracao = 'ativa' | 'sem_procuracao' | 'indeterminada';
 
-const CODIGO_SEM_DOCUMENTOS = 'E2230';
+const CODIGOS_SEM_DOCUMENTOS = ['E2220', 'E2230'];
 
 /**
  * Não há API para listar quem outorgou procuração. O que dá para saber é, CNPJ a
@@ -266,8 +266,11 @@ export async function verificarProcuracao(transporteAdn: Transporte, cnpj: strin
   if (erros.some(e => e.codigo === 'E2245')) {
     return { status: 'sem_procuracao', mensagem: erros.find(e => e.codigo === 'E2245')?.descricao || null };
   }
-  // E2230 é "nenhum documento": sem procuração a resposta teria sido E2245, então o acesso existe.
-  if (erros.some(e => e.codigo === CODIGO_SEM_DOCUMENTOS)) return { status: 'ativa', mensagem: null };
+  const statusLido = String(dados?.StatusProcessamento ?? '').replace(/_/g, '').toLowerCase();
+  // E2220 / E2230 é "nenhum documento": sem procuração a resposta teria sido E2245, então o acesso existe.
+  if (statusLido === 'nenhumdocumentolocalizado' || erros.some(e => e.codigo && CODIGOS_SEM_DOCUMENTOS.includes(e.codigo))) {
+    return { status: 'ativa', mensagem: null };
+  }
   if (erros.length > 0) return { status: 'indeterminada', mensagem: erros.map(e => [e.codigo, e.descricao].filter(Boolean).join(' ')).join(' | ') };
   // Caixa vazia pode voltar como 404, com o corpo JSON normal: a consulta foi aceita.
   if (r.status === 200 || (r.status === 404 && dados)) return { status: 'ativa', mensagem: null };
@@ -323,8 +326,8 @@ export async function lerCaixaDfe(
 
     const lote = dados && Array.isArray(dados.LoteDFe) ? dados.LoteDFe as Record<string, unknown>[] : [];
     const statusLido = String(dados?.StatusProcessamento ?? '').replace(/_/g, '').toLowerCase();
-    // O fim da caixa pode vir como status ou como o erro E2230, conforme a resposta.
-    const caixaVazia = statusLido === 'nenhumdocumentolocalizado' || erros.some(e => e.codigo === CODIGO_SEM_DOCUMENTOS);
+    // O fim da caixa pode vir como status ou como o erro E2220/E2230, conforme a resposta.
+    const caixaVazia = statusLido === 'nenhumdocumentolocalizado' || erros.some(e => e.codigo && CODIGOS_SEM_DOCUMENTOS.includes(e.codigo));
     const aceita = caixaVazia || (r.status === 200 && erros.length === 0);
 
     if (!aceita) {

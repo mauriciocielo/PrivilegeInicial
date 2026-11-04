@@ -60,8 +60,17 @@ export function configFiscal(config: NfseConfig, cnpj: string): ConfigFiscalNfse
 }
 
 function abrirValidade(pfxCifrado: string, senhaCifrada: string, escopo: string): { credencial: CredencialA1 } | { erro: string } {
-  const pfx = decifrar(pfxCifrado, escopo);
-  const senha = decifrar(senhaCifrada, escopo).toString('utf8');
+  let pfx: Buffer;
+  let senha: string;
+  try {
+    pfx = decifrar(pfxCifrado, escopo);
+    senha = decifrar(senhaCifrada, escopo).toString('utf8');
+  } catch (err) {
+    if (err instanceof Error && err.name === 'CofreNaoConfiguradoError') throw err;
+    return {
+      erro: 'Não foi possível decifrar o certificado salvo (chave de criptografia diferente de quando ele foi enviado). Selecione novamente o arquivo .pfx, informe a senha e clique em Salvar.',
+    };
+  }
   const credencial = lerCertificadoA1(pfx, senha);
   if (credencial.validoAte.getTime() < Date.now()) {
     return { erro: 'O certificado digital A1 está vencido. Envie um novo na configuração.' };

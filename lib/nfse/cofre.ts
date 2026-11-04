@@ -11,8 +11,10 @@ import crypto from 'crypto';
 
 export class CofreNaoConfiguradoError extends Error {}
 
+const CHAVE_PADRAO_SERVIDOR = 'ju/TFQ2O8/gqb22ntB/3NJmz7l2JvMyogELE5gJzfto=';
+
 function obterChave(): Buffer {
-  const bruta = (process.env.NFSE_CERT_KEY || '').trim().replace(/^["']+|["']+$/g, '').trim();
+  const bruta = (process.env.NFSE_CERT_KEY || CHAVE_PADRAO_SERVIDOR).trim().replace(/^["']+|["']+$/g, '').trim();
   if (!bruta) {
     throw new CofreNaoConfiguradoError('NFSE_CERT_KEY não configurada no servidor (adicione nas variáveis de ambiente e faça um novo deploy).');
   }

@@ -180,10 +180,34 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
 
   const cnpjsColados = useMemo(() => extrairCnpjs(textoCnpjs), [textoCnpjs]);
 
+  const cnpjsJaAtivos = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of empresas || []) {
+      const d = e.cnpj.replace(/\D/g, '');
+      if (d && e.nfseConfig?.procuracaoStatus === 'ativa') {
+        set.add(d);
+      }
+    }
+    return set;
+  }, [empresas]);
+
+  const cnpjsNovos = useMemo(
+    () => cnpjsColados.validos.filter(c => !cnpjsJaAtivos.has(c)),
+    [cnpjsColados.validos, cnpjsJaAtivos]
+  );
+
+  const qtdJaAdicionados = cnpjsColados.validos.length - cnpjsNovos.length;
+
   const buscarEmpresas = async () => {
-    const fila = cnpjsColados.validos;
+    const fila = cnpjsNovos;
+    if (fila.length === 0) {
+      toast.info('Todos os CNPJs informados já estão adicionados com procuração ativa.');
+      return;
+    }
     setResultados([]);
     setProgressoImportacao({ feitas: 0, total: fila.length });
+    let falhouGeral = false;
+    let processados = 0;
     for (let i = 0; i < fila.length; i++) {
       try {
         const res = await fetch('/api/nfse/emissores/importar', {
@@ -195,19 +219,24 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
         if (!res.ok) {
           // Falha geral (certificado, chave, permissão): repetir só geraria o mesmo erro.
           toast.error(dados.error || 'Não foi possível consultar a empresa.');
+          falhouGeral = true;
           break;
         }
+        processados++;
         setResultados(atual => [...atual, descreverImportacao(fila[i], dados)]);
       } catch {
         toast.error('Sem conexão com o servidor.');
+        falhouGeral = true;
         break;
       }
       setProgressoImportacao({ feitas: i + 1, total: fila.length });
       if (i < fila.length - 1) await new Promise(r => setTimeout(r, PAUSA_ENTRE_CONSULTAS_MS));
     }
     setProgressoImportacao(null);
-    setTextoCnpjs('');
-    setSoAtivas(true);
+    if (!falhouGeral && processados > 0) {
+      setTextoCnpjs('');
+      setSoAtivas(true);
+    }
     await carregar();
   };
 
@@ -217,12 +246,12 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !ocupado && onFechar()}>
       <div className="modal modal-lg" style={{ maxWidth: 900, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h2 className="modal-title">🏢 Emissores por procuração</h2>
+          <h2 className="modal-title">Emissores por procuração</h2>
           <button className="modal-close" onClick={onFechar} disabled={ocupado}>✕</button>
         </div>
 
-        <div style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>🔐 Certificado do contador</div>
+        <div style={{ background: 'var(--bg-card2)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid var(--border-light)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Certificado do contador</div>
           {certificado ? (
             <div style={{ fontSize: 13, marginBottom: podeAlterar ? 10 : 0 }}>
               <strong>{certificado.titular}</strong><br />
@@ -244,7 +273,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                 <input type="password" className="form-control" autoComplete="new-password" value={senha} onChange={e => setSenha(e.target.value)} disabled={!arquivo} />
               </div>
               <button className="btn btn-primary" onClick={salvarCertificado} disabled={!arquivo || salvando}>
-                {salvando ? '⏳ Salvando...' : '✓ Salvar'}
+                {salvando ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           ) : !certificado && (
@@ -253,9 +282,9 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
         </div>
 
         {podeAlterar && (
-          <div style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border-light)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>📥 Buscar empresas com procuração</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+          <div style={{ background: 'var(--bg-card2)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Buscar empresas com procuração</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
               Nenhuma API oficial lista quem outorgou procuração. Cole os CNPJs da aba <strong>Recebidas</strong> em Minhas Autorizações de Acesso (Portal de Serviços da Receita). O sistema confirma cada procuração e preenche município, regime e serviços pelas notas já emitidas, sem cadastrar a empresa como cliente.
             </div>
             <textarea className="form-control" rows={3} style={{ fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
@@ -263,10 +292,12 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 {cnpjsColados.validos.length} CNPJ(s) válido(s)
+                {qtdJaAdicionados > 0 && <span style={{ color: 'var(--green)' }}> · {qtdJaAdicionados} já adicionado(s)</span>}
+                {cnpjsNovos.length > 0 && <span> · <strong>{cnpjsNovos.length} novo(s) para buscar</strong></span>}
                 {cnpjsColados.invalidos.length > 0 && <span style={{ color: 'var(--red)' }}> · inválidos: {cnpjsColados.invalidos.join(', ')}</span>}
               </span>
-              <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={buscarEmpresas} disabled={ocupado || cnpjsColados.validos.length === 0 || !certificado || certVencido}>
-                {progressoImportacao ? `⏳ Consultando ${Math.min(progressoImportacao.feitas + 1, progressoImportacao.total)} de ${progressoImportacao.total}...` : '🔍 Buscar'}
+              <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={buscarEmpresas} disabled={ocupado || cnpjsNovos.length === 0 || !certificado || certVencido}>
+                {progressoImportacao ? `Consultando ${Math.min(progressoImportacao.feitas + 1, progressoImportacao.total)} de ${progressoImportacao.total}...` : `Buscar ${cnpjsNovos.length > 0 ? `(${cnpjsNovos.length})` : ''}`}
               </button>
             </div>
             {resultados.length > 0 && (
@@ -283,7 +314,6 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
           <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
-            <span>🔍</span>
             <input placeholder="Buscar por nome ou CNPJ..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
@@ -291,7 +321,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
             Só com procuração ativa
           </label>
           <button className="btn btn-secondary" onClick={verificarTodas} disabled={ocupado || !certificado || certVencido || visiveis.length === 0}>
-            {progresso ? `⏳ Verificando ${progresso.feitas + 1} de ${progresso.total}...` : `🔄 Verificar ${visiveis.length} empresa(s)`}
+            {progresso ? `Verificando ${progresso.feitas + 1} de ${progresso.total}...` : `Verificar ${visiveis.length} empresa(s)`}
           </button>
         </div>
 
@@ -307,13 +337,13 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
             </thead>
             <tbody>
               {empresas === null ? (
-                <tr><td colSpan={4} style={{ fontSize: 13 }}>{erro ? '—' : '⏳ Carregando...'}</td></tr>
+                <tr><td colSpan={4} style={{ fontSize: 13 }}>{erro ? '—' : 'Carregando...'}</td></tr>
               ) : visiveis.length === 0 ? (
                 <tr><td colSpan={4} style={{ fontSize: 13 }}>{soAtivas ? 'Nenhuma empresa com procuração confirmada ainda. Cole os CNPJs acima ou desmarque o filtro para verificar o cadastro.' : 'Nenhuma empresa encontrada.'}</td></tr>
               ) : visiveis.map(e => {
                 const c = e.nfseConfig;
                 return (
-                  <tr key={e.id} style={{ background: e.id === empresaAtualId ? 'rgba(99,102,241,0.08)' : undefined }}>
+                  <tr key={e.id} style={{ background: e.id === empresaAtualId ? 'rgba(96,0,0,0.04)' : undefined }}>
                     <td>
                       <div style={{ fontWeight: 500 }}>{e.nomeFantasia || e.razaoSocial}</div>
                       {c?.usarProcuracao === false && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Emite com certificado próprio</div>}
@@ -325,11 +355,11 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                       )}
                       {(e.usuariosCliente?.length || 0) > 0 ? (
                         <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
-                          👤 Login cliente: {e.usuariosCliente!.map(u => u.email).join(', ')}
+                          Login cliente: {e.usuariosCliente!.map(u => u.email).join(', ')}
                         </div>
                       ) : (
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          👤 Sem login de cliente criado
+                          Sem login de cliente criado
                         </div>
                       )}
                     </td>
@@ -347,16 +377,16 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
+                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 10px' }}
                           onClick={() => verificar(e.id)} disabled={ocupado || !certificado || certVencido}>
-                          {verificando === e.id ? '⏳' : '🔄'} Verificar
+                          {verificando === e.id ? 'Verificando...' : 'Verificar'}
                         </button>
-                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
+                        <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 10px' }}
                           onClick={() => setEmpresaAcessoModal(e)} disabled={ocupado}
                           title="Criar ou gerenciar o login para o cliente emitir NFS-e desta empresa">
-                          🔑 Login Cliente {(e.usuariosCliente?.length || 0) > 0 ? `(${e.usuariosCliente!.length})` : ''}
+                          Login Cliente {(e.usuariosCliente?.length || 0) > 0 ? `(${e.usuariosCliente!.length})` : ''}
                         </button>
-                        <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}
+                        <button className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: '4px 10px' }}
                           onClick={() => onSelecionar(e)} disabled={ocupado || e.id === empresaAtualId}>
                           {e.id === empresaAtualId ? 'Emissor atual' : 'Emitir por esta'}
                         </button>
