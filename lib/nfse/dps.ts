@@ -21,8 +21,10 @@ export const LEIAUTE_NT009 = '20261020';
 export type LeiauteNfse = typeof LEIAUTE_PRODUCAO | typeof LEIAUTE_NT009;
 
 export function leiauteDoAmbiente(ambiente: AmbienteNfse, forcado?: string | null): LeiauteNfse {
+  // No ambiente oficial de produção, utiliza sempre o esquema oficial estável homologado pela Receita Federal
+  if (ambiente === 'producao') return LEIAUTE_PRODUCAO;
   if (forcado === LEIAUTE_PRODUCAO || forcado === LEIAUTE_NT009) return forcado;
-  return ambiente === 'producao' ? LEIAUTE_PRODUCAO : LEIAUTE_NT009;
+  return LEIAUTE_NT009;
 }
 
 export interface ConfigFiscalNfse {
@@ -332,7 +334,6 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
     txt('nDPS', d.nDps),
     txt('dCompet', dataCompetenciaFiscal(d.dataCompetencia, agora)),
     txt('tpEmit', '1'),
-    nt009 && txt('finNFSe', '0'),
     txt('cLocEmi', apenasDigitos(cfg.codigoMunicipio)),
     // Com tpEmit=1 o Sefin puxa nome e endereço do cadastro: enviá-los dá E0128/E0121.
     tag('prest',

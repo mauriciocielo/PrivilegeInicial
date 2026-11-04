@@ -15,6 +15,7 @@ import CertidaoFederalModal from './CertidaoFederalModal';
 import NfeDifalModal from './NfeDifalModal';
 import NfeIntegracaoModal from './NfeIntegracaoModal';
 import NfeImportarXmlModal from './NfeImportarXmlModal';
+import CadastrarCnpjModal from './CadastrarCnpjModal';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
@@ -222,6 +223,7 @@ export default function NfeDestinadasPainel() {
   // Modal de Gerenciamento do Certificado Digital A1
   const [empresaCertificadoModal, setEmpresaCertificadoModal] = useState<EmpresaMonitor | null>(null);
   const [showCndModal, setShowCndModal] = useState(false);
+  const [showCadastrarCnpjModal, setShowCadastrarCnpjModal] = useState(false);
 
   // Busca rápida de empresas no seletor
   const [filtroEmpresaTexto, setFiltroEmpresaTexto] = useState('');
@@ -858,6 +860,14 @@ export default function NfeDestinadasPainel() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button
+            onClick={() => setShowCadastrarCnpjModal(true)}
+            className="btn btn-sm"
+            style={{ background: '#10b981', color: '#fff', border: '1px solid #059669', borderRadius: 6, fontSize: 12.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+            title="Cadastrar novo CNPJ individual ou em lote para monitorar notas"
+          >
+            + Cadastrar CNPJ
+          </button>
+          <button
             onClick={() => setShowDifalModal(true)}
             className="btn btn-sm"
             style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
@@ -938,10 +948,10 @@ export default function NfeDestinadasPainel() {
           })}
         </div>
 
-        {/* Campo Pesquisar do SIEG na aba Clientes */}
+        {/* Campo Pesquisar do SIEG na aba Clientes e Ações Rápidas */}
         {tabSieg === 'clientes' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-            <div style={{ position: 'relative', width: 230 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', width: 200 }}>
               <Search size={13} style={{ position: 'absolute', left: 10, top: 9, color: '#9ca3af' }} />
               <input
                 type="text"
@@ -959,6 +969,26 @@ export default function NfeDestinadasPainel() {
                 }}
               />
             </div>
+
+            <button
+              onClick={() => setShowCadastrarCnpjModal(true)}
+              style={{
+                background: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 4,
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5
+              }}
+              title="Cadastrar novo CNPJ individual ou em lote para monitorar na SEFAZ"
+            >
+              + Cadastrar CNPJ
+            </button>
           </div>
         )}
       </div>
@@ -1067,6 +1097,8 @@ export default function NfeDestinadasPainel() {
                         if ((e.target as HTMLElement).closest('button')) return;
                         setEmpresaIdSelecionada(emp.id);
                         setTabSieg('baixados');
+                        setSubtabEmpresa('resumo');
+                        setSubtabEmpresa('resumo');
                       }}
                     >
                       {/* 1. Clientes: Razão Social em maiúsculas bold + CNPJ abaixo */}
@@ -1124,6 +1156,7 @@ export default function NfeDestinadasPainel() {
                             onClick={() => {
                               setEmpresaIdSelecionada(emp.id);
                               setTabSieg('baixados');
+                              setSubtabEmpresa('docs');
                             }}
                             className="btn btn-primary btn-sm"
                             style={{
@@ -3134,6 +3167,14 @@ export default function NfeDestinadasPainel() {
             setShowImportarModal(false);
             if (empresaIdSelecionada) carregarNotas(empresaIdSelecionada);
           }}
+        />
+      )}
+
+      {/* Modal de Cadastro de CNPJ / Importação de Carteira */}
+      {showCadastrarCnpjModal && (
+        <CadastrarCnpjModal
+          onFechar={() => setShowCadastrarCnpjModal(false)}
+          onEmpresaCadastrada={carregarEmpresas}
         />
       )}
     </div>

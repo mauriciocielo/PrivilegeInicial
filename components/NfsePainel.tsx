@@ -1932,7 +1932,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {/* ======================== MODAL EXPORTAR MÊS (XML / PDF) ======================== */}
       {showExportarModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !exportando && setShowExportarModal(false)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <h2 className="modal-title">📦 Exportar Notas Fiscais (XML e PDF)</h2>
@@ -2079,9 +2079,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
         />
       )}
 
-      {/* ======================== MODAL NOVA / EDITAR ======================== */}
+      {/* ======================== MODAL NOVA / EDITAR (NÃO FECHA AO CLICAR FORA) ======================== */}
       {modalMode === 'novo' && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMode(null)}>
+        <div className="modal-overlay">
           <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
               <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : 'Nova nota manual'}</h2>
@@ -2452,7 +2452,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {/* ======================== DANFSe (nota autorizada) ======================== */}
       {modalMode === 'ver' && viewItem?.chaveAcesso && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMode(null)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 900, width: '95vw', height: '95vh', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8, flexWrap: 'wrap' }}>
               <h2 className="modal-title" style={{ margin: 0 }}>NFS-e Nº {viewItem.numero}</h2>
@@ -2469,7 +2469,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {/* ======================== MODAL VISUALIZAR ======================== */}
       {modalMode === 'ver' && viewItem && !viewItem.chaveAcesso && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalMode(null)}>
+        <div className="modal-overlay">
           <div className="modal nfse-doc-container" style={{ maxWidth: 800, padding: 0, background: '#fff', color: '#000', fontFamily: 'Arial, sans-serif', maxHeight: '95vh', overflowY: 'auto' }}>
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -2651,7 +2651,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
       {/* ======================== MODAL CANCELAR ======================== */}
       {cancelModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setCancelModal(null)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 500 }}>
             <div className="modal-header">
               <h2 className="modal-title">Cancelar NFS-e Nº {cancelModal.numero}</h2>

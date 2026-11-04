@@ -78,7 +78,7 @@ export default function CertidaoFederalModal({ empresaIdInicial, onFechar, empre
   const rotulo = resultado ? ROTULOS[resultado.situacao] : null;
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !carregando && onFechar()}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 620 }}>
         <div className="modal-header">
           <h2 className="modal-title">Situação Fiscal Federal</h2>
