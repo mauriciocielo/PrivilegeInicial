@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '../../../../../lib/api-auth';
 import { captureError } from '../../../../../lib/sentry-helper';
 import { consultarLoteNfeDestinadas, loteNfeEmAndamento } from '../../../../../lib/nfe/monitor';
+import { sincronizarLoteNfseAdn } from '../../../../../lib/nfse/sincronizar-adn';
 
 // 60 s é aceito em todos os planos da Vercel. A rodada para antes disso e a fila continua na próxima.
 export const maxDuration = 60;
-const TEMPO_DA_RODADA_MS = 40_000;
+const TEMPO_DA_RODADA_MS = 38_000;
 
 async function autorizado(request: Request, token: string | null): Promise<boolean> {
   const segredo = process.env.CRON_SECRET;
@@ -20,13 +21,27 @@ async function executar() {
   }
   // Na Vercel a função congela ao responder: a rodada precisa terminar antes da resposta.
   try {
-    const r = await consultarLoteNfeDestinadas(150, TEMPO_DA_RODADA_MS);
-    const mensagem = `${r.consultadas} empresa(s) consultada(s), ${r.novas} nota(s) nova(s), ${r.falhas} falha(s)`
-      + (r.restantes > 0 ? `, ${r.restantes} para a próxima rodada.` : '.');
-    console.log(`[nfe-monitor] ${mensagem}`);
-    return NextResponse.json({ iniciado: true, mensagem, resumo: r });
+    // 1. Executa busca automática de NF-e Mercadorias (Destinadas & Emitidas) na SEFAZ
+    // 2. Executa busca automática de NFS-e Serviços (Emitidas & Tomadas/Destinadas) no ADN SEFIN
+    const [resNfe, resNfse] = await Promise.allSettled([
+      consultarLoteNfeDestinadas(150, 24_000),
+      sincronizarLoteNfseAdn(30, 18_000),
+    ]);
+
+    const rNfe = resNfe.status === 'fulfilled' ? resNfe.value : { consultadas: 0, novas: 0, falhas: 1, restantes: 0 };
+    const rNfse = resNfse.status === 'fulfilled' ? resNfse.value : { consultadas: 0, novas: 0, novasEmitidas: 0, novasTomadas: 0, falhas: 1 };
+
+    const mensagem = `Monitor Fiscal: ${rNfe.consultadas} empresa(s) NF-e (${rNfe.novas} novas mercadorias); ${rNfse.consultadas} empresa(s) NFS-e (${rNfse.novas} novos serviços: ${rNfse.novasEmitidas} emitidos / ${rNfse.novasTomadas} tomados).`;
+    console.log(`[monitor-fiscal] ${mensagem}`);
+
+    return NextResponse.json({
+      iniciado: true,
+      mensagem,
+      nfe: rNfe,
+      nfse: rNfse,
+    });
   } catch (err) {
-    console.error('[nfe-monitor] Falha na rodada:', err);
+    console.error('[monitor-fiscal] Falha na rodada:', err);
     captureError(err);
     return NextResponse.json({ iniciado: false, mensagem: 'Falha na rodada do monitor.' }, { status: 500 });
   }

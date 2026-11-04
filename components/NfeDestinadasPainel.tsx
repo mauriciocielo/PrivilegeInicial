@@ -162,7 +162,7 @@ export default function NfeDestinadasPainel() {
   const carregarEmpresas = useCallback(async () => {
     try {
       setCarregandoEmpresas(true);
-      const res = await fetch('/api/nfe/destinadas/empresas');
+      const res = await fetch('/api/nfe/monitor');
       const data = await lerJsonResposta(res);
       if (res.ok && Array.isArray(data.empresas)) {
         setEmpresas(data.empresas);
@@ -232,28 +232,39 @@ export default function NfeDestinadasPainel() {
     return empresas.find(e => e.id === empresaIdSelecionada) || null;
   }, [empresas, empresaIdSelecionada]);
 
-  // Consulta Imediata na SEFAZ
+  // Consulta Imediata na SEFAZ (NF-e Mercadorias) e SEFIN (NFS-e Serviços)
   const handleConsultarSefaz = async () => {
     if (!empresaIdSelecionada) return;
     try {
       setConsultandoSefaz(true);
-      const res = await fetch('/api/nfe/destinadas/consultar-sefaz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId: empresaIdSelecionada }),
-      });
-      const data = await lerJsonResposta(res);
+      const [resSefaz] = await Promise.allSettled([
+        fetch('/api/nfe/destinadas/consultar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empresaId: empresaIdSelecionada }),
+        }),
+        fetch(`/api/nfse/emissores/${empresaIdSelecionada}/notas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meses: 3 }),
+        }),
+      ]);
 
-      if (res.ok) {
-        toast.success(data.mensagem || 'Consulta realizada com sucesso na SEFAZ!');
-        await carregarNotas(empresaIdSelecionada);
-        await carregarEmpresas();
+      if (resSefaz.status === 'fulfilled') {
+        const data = await lerJsonResposta(resSefaz.value);
+        if (resSefaz.value.ok) {
+          toast.success(data.mensagem || 'Consulta realizada com sucesso na SEFAZ e SEFIN!');
+          await carregarNotas(empresaIdSelecionada);
+          await carregarEmpresas();
+        } else {
+          toast.error(data.error || 'Falha ao consultar a SEFAZ.');
+        }
       } else {
-        toast.error(data.error || 'Falha ao consultar a SEFAZ.');
+        toast.error('Erro de conexão ao consultar o WebService.');
       }
     } catch (err: any) {
       console.error(err);
-      toast.error('Erro de conexão ao consultar o WebService da SEFAZ.');
+      toast.error('Erro de conexão ao consultar os órgãos emissores.');
     } finally {
       setConsultandoSefaz(false);
     }

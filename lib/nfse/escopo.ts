@@ -49,7 +49,7 @@ export async function operaEmpresaDoCertificado(userId: string, empresaId: strin
 
 /** Filtro das empresas listadas no módulo fiscal: todas as empresas para administradores e equipe fiscal/consultores. */
 export async function filtroEmpresasNfse(session: SessionPayload): Promise<Prisma.EmpresaWhereInput> {
-  if (session.role === 'administrador') return {};
+  if (session.role === 'administrador' || session.role === 'consultor') return {};
   
   // Usuários do setor fiscal ou consultores com acesso aos módulos fiscais operam toda a carteira
   const usuario = await db.user.findUnique({ where: { id: session.userId }, select: { allowedRoutes: true } });

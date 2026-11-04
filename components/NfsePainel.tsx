@@ -173,6 +173,25 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     }
   }, []);
 
+  // Busca automática e silenciosa no portal SEFIN (ADN) de novas notas emitidas e tomadas
+  const sincronizarNotasAdnSilencioso = useCallback(async (eId: string) => {
+    if (!eId) return;
+    try {
+      const res = await fetch(`/api/nfse/emissores/${eId}/notas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meses: 3 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.criadas > 0 || (Array.isArray(data.idsAlterados) && data.idsAlterados.length > 0))) {
+        toast.success(`Busca automática: ${data.criadas || 0} nova(s) NFS-e identificada(s) no portal SEFIN!`);
+        await carregarNotasServidor(eId);
+      }
+    } catch {
+      // Silencioso em background
+    }
+  }, [carregarNotasServidor]);
+
   const load = useCallback((eId: string, dadosEmpresa?: EmpresaNfseSelecionada | null) => {
     if (!eId) return;
     setEmpresaId(eId);
@@ -202,7 +221,17 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     load(registro.id, registro);
     carregarConfig(registro.id);
     carregarNotasServidor(registro.id);
-  }, [load, carregarConfig, carregarNotasServidor]);
+    sincronizarNotasAdnSilencioso(registro.id);
+  }, [load, carregarConfig, carregarNotasServidor, sincronizarNotasAdnSilencioso]);
+
+  // Polling automático e suave a cada 3 minutos para manter notas emitidas e tomadas sempre atualizadas
+  useEffect(() => {
+    if (!empresaId) return;
+    const timer = setInterval(() => {
+      sincronizarNotasAdnSilencioso(empresaId);
+    }, 180_000);
+    return () => clearInterval(timer);
+  }, [empresaId, sincronizarNotasAdnSilencioso]);
 
   const acessoCliente = useAcessoNfse(modoCliente);
 

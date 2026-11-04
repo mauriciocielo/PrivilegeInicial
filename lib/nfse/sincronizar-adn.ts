@@ -285,3 +285,86 @@ export async function sincronizarSequenciaOficial(
   };
 }
 
+export interface ResultadoLoteNfse {
+  consultadas: number;
+  novas: number;
+  novasEmitidas: number;
+  novasTomadas: number;
+  falhas: number;
+  detalhes: { empresaId: string; razaoSocial: string; novas: number; erro?: string }[];
+}
+
+/**
+ * Executa uma rodada automática do monitor de NFS-e (ADN Nacional) para empresas aptas.
+ * Lê a caixa postal DF-e das empresas e persiste novas notas emitidas (prestadas)
+ * e tomadas (destinadas) automaticamente no banco de dados.
+ */
+export async function sincronizarLoteNfseAdn(
+  limiteEmpresas = 30,
+  tempoMaximoMs = 25_000,
+): Promise<ResultadoLoteNfse> {
+  const inicio = Date.now();
+  const limite = () => Date.now() - inicio > tempoMaximoMs;
+
+  // Busca configurações aptas (procuração ativa ou certificado próprio válido)
+  const configs = await db.nfseConfig.findMany({
+    where: {
+      OR: [
+        { usarProcuracao: true, procuracaoStatus: { not: 'sem_procuracao' } },
+        { usarProcuracao: false, certValidoAte: { gt: new Date() } },
+      ],
+    },
+    include: {
+      empresa: { select: { id: true, razaoSocial: true, cnpj: true } },
+    },
+    take: limiteEmpresas,
+    orderBy: { updatedAt: 'asc' }, // Prioriza as menos recentemente sincronizadas
+  });
+
+  const res: ResultadoLoteNfse = {
+    consultadas: 0,
+    novas: 0,
+    novasEmitidas: 0,
+    novasTomadas: 0,
+    falhas: 0,
+    detalhes: [],
+  };
+
+  for (const cfg of configs) {
+    if (limite()) break;
+    try {
+      const sync = await sincronizarNotasAdn(cfg.empresaId, { meses: 3 });
+      if (sync.ok) {
+        res.consultadas++;
+        res.novas += sync.criadas;
+        res.novasEmitidas += sync.criadasEmitidas;
+        res.novasTomadas += sync.criadasTomadas;
+        res.detalhes.push({
+          empresaId: cfg.empresaId,
+          razaoSocial: cfg.empresa.razaoSocial,
+          novas: sync.criadas,
+        });
+      } else {
+        res.falhas++;
+        res.detalhes.push({
+          empresaId: cfg.empresaId,
+          razaoSocial: cfg.empresa.razaoSocial,
+          novas: 0,
+          erro: sync.error,
+        });
+      }
+    } catch (e: any) {
+      res.falhas++;
+      res.detalhes.push({
+        empresaId: cfg.empresaId,
+        razaoSocial: cfg.empresa.razaoSocial,
+        novas: 0,
+        erro: e?.message || 'Erro inesperado',
+      });
+    }
+  }
+
+  return res;
+}
+
+

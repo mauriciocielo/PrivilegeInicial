@@ -21,6 +21,7 @@ export default function CadastrarCnpjModal({ onFechar, onEmpresaCadastrada }: Pr
   // Lote
   const [textoLote, setTextoLote] = useState('');
   const [resultadoLote, setResultadoLote] = useState<{ totalProcessadas?: number; totalErros?: number; erros?: any[] } | null>(null);
+  const [progressoLote, setProgressoLote] = useState<{ processados: number; total: number } | null>(null);
 
   // Consulta individual de dados da Receita
   const handleBuscarReceita = async () => {
@@ -74,32 +75,55 @@ export default function CadastrarCnpjModal({ onFechar, onEmpresaCadastrada }: Pr
     }
   };
 
-  // Salvar em Lote
+  // Salvar em Lote (em pedaços de 25 para alta performance e segurança total)
   const handleSalvarLote = async () => {
-    const linhas = textoLote.split(/[\n,;]+/).map(s => s.trim().replace(/\D/g, '')).filter(s => s.length === 14);
-    if (linhas.length === 0) {
+    const rawTokens = textoLote.split(/[\n,;\s]+/).map(s => s.trim().replace(/\D/g, '')).filter(s => s.length === 14);
+    const listaUnica = Array.from(new Set(rawTokens));
+    if (listaUnica.length === 0) {
       toast.warning('Nenhum CNPJ válido com 14 dígitos encontrado no texto colado.');
       return;
     }
 
     setSalvando(true);
     setResultadoLote(null);
-    try {
-      const res = await fetch('/api/empresas/cadastrar-cnpj', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cnpjs: linhas }),
-      });
-      const data = await lerJsonResposta(res);
-      if (!res.ok) throw new Error(data.error || 'Erro ao importar lote de CNPJs.');
+    setProgressoLote({ processados: 0, total: listaUnica.length });
 
-      setResultadoLote(data);
-      toast.success(data.mensagem || `${data.totalProcessadas} CNPJs processados com sucesso!`);
+    const TAMANHO_LOTE = 25;
+    let totalProcessadas = 0;
+    let totalNovas = 0;
+    let totalExistentes = 0;
+    let totalErros = 0;
+    const todosErros: any[] = [];
+
+    try {
+      for (let i = 0; i < listaUnica.length; i += TAMANHO_LOTE) {
+        const pedaco = listaUnica.slice(i, i + TAMANHO_LOTE);
+        const res = await fetch('/api/empresas/cadastrar-cnpj', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cnpjs: pedaco }),
+        });
+        const data = await lerJsonResposta(res);
+        if (!res.ok) throw new Error(data.error || 'Erro ao importar lote de CNPJs.');
+
+        totalProcessadas += data.totalProcessadas || 0;
+        totalNovas += data.totalNovas || 0;
+        totalExistentes += data.totalExistentes || 0;
+        totalErros += data.totalErros || 0;
+        if (Array.isArray(data.erros)) todosErros.push(...data.erros);
+
+        const processadosAteAgora = Math.min(i + TAMANHO_LOTE, listaUnica.length);
+        setProgressoLote({ processados: processadosAteAgora, total: listaUnica.length });
+      }
+
+      setResultadoLote({ totalProcessadas, totalErros, erros: todosErros });
+      toast.success(`${totalProcessadas} CNPJs processados (${totalNovas} novos cadastrados e ${totalExistentes} já existentes assegurados)!`);
       onEmpresaCadastrada();
     } catch (err: any) {
       toast.error(err.message || 'Falha ao importar lote.');
     } finally {
       setSalvando(false);
+      setProgressoLote(null);
     }
   };
 
@@ -274,6 +298,18 @@ export default function CadastrarCnpjModal({ onFechar, onEmpresaCadastrada }: Pr
               <div style={{ fontSize: 12, color: '#64748b' }}>
                 O sistema fará a validação dos 14 dígitos e cadastrará cada empresa no banco de dados automaticamente.
               </div>
+
+              {progressoLote && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12, fontSize: 13, color: '#166534' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <strong>Processando Lote de CNPJs...</strong>
+                    <span>{progressoLote.processados} de {progressoLote.total} ({Math.round((progressoLote.processados / progressoLote.total) * 100)}%)</span>
+                  </div>
+                  <div style={{ height: 6, background: '#dcfce7', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#16a34a', width: `${Math.round((progressoLote.processados / progressoLote.total) * 100)}%`, transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+              )}
 
               {resultadoLote && (
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, fontSize: 12 }}>

@@ -6,15 +6,15 @@ import { cnpjValido, apenasDigitos } from '../../../../lib/nfse/dps';
 
 export const maxDuration = 60;
 
-/** Consulta dados cadastrais do CNPJ na Receita Federal via provedores públicos */
-async function buscarDadosCnpjReceita(cnpj: string) {
+/** Consulta rápida de dados cadastrais na Receita Federal via provedores públicos */
+async function buscarDadosCnpjReceita(cnpj: string, timeoutMs = 2500) {
   const limpo = apenasDigitos(cnpj);
   if (limpo.length !== 14) return null;
 
   try {
     const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${limpo}`, {
       headers: { 'User-Agent': 'CashflowFiscal/1.0' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (res.ok) {
       const data = await res.json();
@@ -31,15 +31,15 @@ async function buscarDadosCnpjReceita(cnpj: string) {
         atividade: data.cnae_fiscal_descricao || 'Serviço',
       };
     }
-  } catch (e) {
-    console.warn(`[CNPJ] Falha ao consultar BrasilAPI para ${limpo}:`, e);
+  } catch {
+    // Falha silenciosa para não travar a importação
   }
 
-  // Fallback para MinhaReceita
+  // Fallback rápido para MinhaReceita
   try {
     const res2 = await fetch(`https://minhareceita.org/${limpo}`, {
       headers: { 'User-Agent': 'CashflowFiscal/1.0' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (res2.ok) {
       const data = await res2.json();
@@ -56,8 +56,8 @@ async function buscarDadosCnpjReceita(cnpj: string) {
         atividade: data.cnae_fiscal_descricao || 'Serviço',
       };
     }
-  } catch (e) {
-    console.warn(`[CNPJ] Falha no fallback MinhaReceita para ${limpo}:`, e);
+  } catch {
+    // Falha silenciosa
   }
 
   return null;
@@ -73,51 +73,88 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
 
-    // Modo 1: Cadastro ou importação de múltiplos CNPJs em lote
+    // =========================================================================
+    // MODO 1: Importação ou cadastro em LOTE (Alta performance sem timeout 504)
+    // =========================================================================
     if (Array.isArray(body?.cnpjs) && body.cnpjs.length > 0) {
-      const listaCnpjs: string[] = body.cnpjs;
-      const criadas: any[] = [];
+      const rawCnpjs: string[] = body.cnpjs;
+      const cnpjsValidos = new Map<string, string>(); // limpo -> formatado
       const erros: any[] = [];
 
-      for (const raw of listaCnpjs) {
+      for (const raw of rawCnpjs) {
         const limpo = apenasDigitos(raw);
         if (!cnpjValido(limpo)) {
           erros.push({ cnpj: raw, erro: 'CNPJ com formato ou dígitos verificadores inválidos.' });
           continue;
         }
+        const formatado = limpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        cnpjsValidos.set(limpo, formatado);
+      }
 
-        const cnpjFormatado = limpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      if (cnpjsValidos.size === 0) {
+        return NextResponse.json({
+          sucesso: false,
+          totalProcessadas: 0,
+          totalErros: erros.length,
+          erros,
+          error: 'Nenhum CNPJ com dígitos válidos foi encontrado.',
+        }, { status: 400 });
+      }
 
-        // Checa se já existe
-        const existente = await db.empresa.findFirst({
-          where: { OR: [{ cnpj: cnpjFormatado }, { cnpj: limpo }] },
-          select: { id: true, razaoSocial: true, cnpj: true },
-        });
+      const chavesLimpos = Array.from(cnpjsValidos.keys());
+      const chavesFormatados = Array.from(cnpjsValidos.values());
 
-        if (existente) {
-          // Garante que o monitor e emissor estejam criados
-          await db.nfeDistribuicao.upsert({
-            where: { empresaId: existente.id },
-            create: { empresaId: existente.id, ativo: true, apenasNoturno: false },
+      // 1. Busca todas as empresas já existentes de uma só vez no banco
+      const existentes = await db.empresa.findMany({
+        where: {
+          OR: [
+            { cnpj: { in: chavesLimpos } },
+            { cnpj: { in: chavesFormatados } },
+          ],
+        },
+        select: { id: true, cnpj: true, razaoSocial: true },
+      });
+
+      const cnpjsJaCadastrados = new Set(existentes.map(e => apenasDigitos(e.cnpj)));
+
+      // 2. Garante que os registros existentes tenham monitor e emissor ativos
+      for (const ex of existentes) {
+        await Promise.all([
+          db.nfeDistribuicao.upsert({
+            where: { empresaId: ex.id },
+            create: { empresaId: ex.id, ativo: true, apenasNoturno: false },
             update: { ativo: true },
-          });
-          await db.nfseConfig.upsert({
-            where: { empresaId: existente.id },
-            create: { empresaId: existente.id, usarProcuracao: true },
+          }),
+          db.nfseConfig.upsert({
+            where: { empresaId: ex.id },
+            create: { empresaId: ex.id, usarProcuracao: true },
             update: {},
-          });
-          criadas.push({ ...existente, jaExistia: true });
-          continue;
+          }),
+        ]);
+      }
+
+      // 3. Identifica as que precisam ser criadas
+      const novosLimpos = chavesLimpos.filter(limpo => !cnpjsJaCadastrados.has(limpo));
+      const criadas: any[] = [...existentes.map(e => ({ ...e, jaExistia: true }))];
+
+      // Processa a inserção imediata no banco de dados para nunca dar timeout
+      for (const limpo of novosLimpos) {
+        const formatado = cnpjsValidos.get(limpo)!;
+
+        // Tenta busca rápida na Receita Federal (timeout curto de 1.5s para não travar o lote)
+        let dadosReceita = null;
+        try {
+          dadosReceita = await buscarDadosCnpjReceita(limpo, 1500);
+        } catch {
+          // Continua com nome padrão
         }
 
-        // Busca dados na Receita
-        const dadosReceita = await buscarDadosCnpjReceita(limpo);
-        const razaoSocial = dadosReceita?.razaoSocial || `EMPRESA CNPJ ${cnpjFormatado}`;
+        const razaoSocial = dadosReceita?.razaoSocial || `EMPRESA CNPJ ${formatado}`;
         const nomeFantasia = dadosReceita?.nomeFantasia || razaoSocial;
 
         const nova = await db.empresa.create({
           data: {
-            cnpj: cnpjFormatado,
+            cnpj: formatado,
             razaoSocial,
             nomeFantasia,
             email: dadosReceita?.email || 'contato@privilegecontabilidade.com.br',
@@ -125,20 +162,17 @@ export async function POST(request: Request) {
             responsavel: dadosReceita?.responsavel || 'Responsável',
             atividade: dadosReceita?.atividade || 'Serviço',
             tipo: 'empresa',
+            nfeDistribuicao: {
+              create: { ativo: true, apenasNoturno: false },
+            },
+            nfseConfig: {
+              create: {
+                usarProcuracao: true,
+                codigoMunicipio: dadosReceita?.codigoMunicipio || '',
+              },
+            },
           },
-        });
-
-        // Cria configuração do monitor SEFAZ e emissor NFS-e com Procuração
-        await db.nfeDistribuicao.create({
-          data: { empresaId: nova.id, ativo: true, apenasNoturno: false },
-        });
-
-        await db.nfseConfig.create({
-          data: {
-            empresaId: nova.id,
-            usarProcuracao: true,
-            codigoMunicipio: dadosReceita?.codigoMunicipio || '',
-          },
+          select: { id: true, cnpj: true, razaoSocial: true },
         });
 
         criadas.push(nova);
@@ -146,14 +180,18 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         sucesso: true,
-        mensagem: `${criadas.length} empresa(s) processada(s) com sucesso na base de dados!`,
+        mensagem: `${criadas.length} empresa(s) processada(s) e monitoradas com sucesso!`,
         totalProcessadas: criadas.length,
+        totalNovas: novosLimpos.length,
+        totalExistentes: existentes.length,
         totalErros: erros.length,
         erros,
       });
     }
 
-    // Modo 2: Cadastro individual de um único CNPJ
+    // =========================================================================
+    // MODO 2: Cadastro individual de um único CNPJ
+    // =========================================================================
     const rawCnpj = body?.cnpj ? String(body.cnpj) : '';
     const limpo = apenasDigitos(rawCnpj);
 
@@ -170,7 +208,6 @@ export async function POST(request: Request) {
     });
 
     if (existente) {
-      // Garante que o monitor e procuração estejam ativos
       await db.nfeDistribuicao.upsert({
         where: { empresaId: existente.id },
         create: { empresaId: existente.id, ativo: true, apenasNoturno: false },
@@ -192,7 +229,7 @@ export async function POST(request: Request) {
     // Busca dados cadastrais automáticos na Receita Federal
     let dadosReceita = null;
     if (!body?.razaoSocial || body.razaoSocial.trim() === '') {
-      dadosReceita = await buscarDadosCnpjReceita(limpo);
+      dadosReceita = await buscarDadosCnpjReceita(limpo, 4000);
     }
 
     const razaoSocial = (body?.razaoSocial || dadosReceita?.razaoSocial || `EMPRESA CNPJ ${cnpjFormatado}`).toUpperCase();
@@ -211,24 +248,18 @@ export async function POST(request: Request) {
         responsavel,
         atividade: body?.atividade || dadosReceita?.atividade || 'Serviço',
         tipo: 'empresa',
-      },
-    });
-
-    // Vincula o monitor SEFAZ
-    await db.nfeDistribuicao.create({
-      data: {
-        empresaId: novaEmpresa.id,
-        ativo: true,
-        apenasNoturno: Boolean(body?.apenasNoturno),
-      },
-    });
-
-    // Vincula configuração de NFS-e com procuração
-    await db.nfseConfig.create({
-      data: {
-        empresaId: novaEmpresa.id,
-        usarProcuracao: true,
-        codigoMunicipio: dadosReceita?.codigoMunicipio || '',
+        nfeDistribuicao: {
+          create: {
+            ativo: true,
+            apenasNoturno: Boolean(body?.apenasNoturno),
+          },
+        },
+        nfseConfig: {
+          create: {
+            usarProcuracao: true,
+            codigoMunicipio: dadosReceita?.codigoMunicipio || '',
+          },
+        },
       },
     });
 
@@ -275,4 +306,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Erro ao gerar backup da base de empresas.' }, { status: 500 });
   }
 }
-
