@@ -5,9 +5,10 @@ import { Instrument_Serif } from 'next/font/google';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
-  ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles
+  ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building
 } from 'lucide-react';
 import { toast } from 'sonner';
+import NfeCertificadoModal from './NfeCertificadoModal';
 
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
@@ -18,6 +19,10 @@ interface EmpresaMonitor {
   cnpj: string;
   certificado: 'escritorio' | 'propria' | 'ausente';
   procuracaoStatus: string | null;
+  certValidoAte?: string | null;
+  certTitular?: string | null;
+  temCertProprio?: boolean;
+  usarProcuracao?: boolean;
   monitor: {
     ativo: boolean;
     apenasNoturno?: boolean;
@@ -94,8 +99,16 @@ export default function NfeDestinadasPainel() {
   const [notaDetalhe, setNotaDetalhe] = useState<NfeDestinadaItem | null>(null);
   const [copiadoChave, setCopiadoChave] = useState(false);
 
+  // Modal de Gerenciamento do Certificado Digital A1
+  const [empresaCertificadoModal, setEmpresaCertificadoModal] = useState<EmpresaMonitor | null>(null);
+
   // Busca rápida de empresas no seletor
   const [filtroEmpresaTexto, setFiltroEmpresaTexto] = useState('');
+
+  // Exportação
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [formatoExportacao, setFormatoExportacao] = useState('ambos');
+  const [exportando, setExportando] = useState(false);
 
   // Carrega empresas aptas para monitoramento
   const carregarEmpresas = useCallback(async () => {
@@ -147,6 +160,7 @@ export default function NfeDestinadasPainel() {
         lista = lista.filter(n => n.possuiXml);
       }
       setNotas(lista);
+      setSelecionadas(new Set());
       setMonitorAtual(data.monitor || null);
     } catch (err: any) {
       console.error(err);
@@ -330,6 +344,71 @@ export default function NfeDestinadasPainel() {
     document.body.removeChild(link);
   };
 
+  // Abre o PDF (DANFE) numa nova aba
+  const handleAbrirPdf = (id: string) => {
+    window.open(`/api/nfe/destinadas/${id}/pdf`, '_blank', 'noopener');
+  };
+
+  // Exporta as selecionadas (ids) ou o filtro atual (mês, período, situação e busca)
+  const handleExportar = async (ids: string[] | null) => {
+    if (!empresaIdSelecionada) return;
+    try {
+      setExportando(true);
+      const res = await fetch('/api/nfe/destinadas/exportar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ids
+          ? { empresaId: empresaIdSelecionada, formato: formatoExportacao, ids }
+          : { empresaId: empresaIdSelecionada, formato: formatoExportacao, mes: mesFiltro, de: dataInicio, ate: dataFim, situacao: situacaoFiltro, busca }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Não foi possível exportar as notas.');
+      }
+      const nome = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || 'notas-fiscais';
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nome;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const exportadas = res.headers.get('X-Notas-Exportadas') || '0';
+      const semXml = Number(res.headers.get('X-Notas-Sem-Xml') || 0);
+      const comErro = Number(res.headers.get('X-Notas-Com-Erro') || 0);
+      toast.success(`${exportadas} nota(s) exportada(s).`);
+      if (semXml > 0) toast.warning(`${semXml} nota(s) ficaram de fora: a SEFAZ só entregou o resumo.`);
+      if (comErro > 0) toast.warning(`${comErro} PDF(s) não puderam ser gerados: o XML dessas notas não pôde ser lido.`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao exportar as notas.');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const alternarSelecao = (id: string) => {
+    setSelecionadas(prev => {
+      const proxima = new Set(prev);
+      if (proxima.has(id)) proxima.delete(id);
+      else proxima.add(id);
+      return proxima;
+    });
+  };
+
+  const notasComXml = useMemo(() => notas.filter(n => n.possuiXml), [notas]);
+  const todasSelecionadas = notasComXml.length > 0 && notasComXml.every(n => selecionadas.has(n.id));
+
+  const rotuloExportarFiltro = useMemo(() => {
+    if (mesFiltro) {
+      const [ano, mes] = mesFiltro.split('-');
+      return `Exportar notas de ${mes}/${ano}`;
+    }
+    return busca || dataInicio || dataFim || situacaoFiltro ? 'Exportar notas do filtro' : 'Exportar todas';
+  }, [mesFiltro, busca, dataInicio, dataFim, situacaoFiltro]);
+
   // Totais calculados
   const totais = useMemo(() => {
     const valorTotal = notas.reduce((acc, n) => acc + (n.valorNf || 0), 0);
@@ -468,19 +547,32 @@ export default function NfeDestinadasPainel() {
                     <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>
                       Certificado Digital
                     </div>
-                    {empresaAtual.certificado === 'escritorio' ? (
-                      <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <ShieldCheck size={12} /> Procuração Escritório
-                      </span>
-                    ) : empresaAtual.certificado === 'propria' ? (
-                      <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <ShieldCheck size={12} /> Certificado Próprio A1
-                      </span>
-                    ) : (
-                      <span className="badge badge-red" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <AlertCircle size={12} /> Sem Certificado
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {empresaAtual.certificado === 'escritorio' ? (
+                        <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <ShieldCheck size={12} /> Procuração Escritório
+                        </span>
+                      ) : empresaAtual.certificado === 'propria' ? (
+                        <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <ShieldCheck size={12} /> A1 Próprio {empresaAtual.certValidoAte ? `(${formatData(empresaAtual.certValidoAte)})` : ''}
+                        </span>
+                      ) : (
+                        <span className="badge badge-red" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <AlertCircle size={12} /> Sem Certificado
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setEmpresaCertificadoModal(empresaAtual)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '3px 8px', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        title="Upload de Certificado A1 da empresa ou alternar para Procuração"
+                      >
+                        <KeyRound size={12} />
+                        {empresaAtual.certificado === 'propria' ? 'Gerenciar A1' : 'Usar A1'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Auto-Monitoramento */}
@@ -732,6 +824,49 @@ export default function NfeDestinadasPainel() {
             )}
           </div>
 
+          {/* Exportação */}
+          <div style={{
+            background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb',
+            padding: '12px 16px', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center'
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Exportar como:</span>
+            <select
+              value={formatoExportacao}
+              onChange={(e) => setFormatoExportacao(e.target.value)}
+              aria-label="Formato da exportação"
+              style={{ padding: '7px 10px', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 6, outline: 'none', background: '#fff' }}
+            >
+              <option value="ambos">PDF e XML (ZIP)</option>
+              <option value="pdf">Só PDF (ZIP)</option>
+              <option value="xml">Só XML (ZIP)</option>
+              <option value="pdf_unico">Um único PDF com todas</option>
+            </select>
+            <button
+              onClick={() => handleExportar([...selecionadas])}
+              disabled={exportando || selecionadas.size === 0}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+            >
+              <Download size={13} />
+              Exportar selecionadas ({selecionadas.size})
+            </button>
+            <button
+              onClick={() => handleExportar(null)}
+              disabled={exportando || totais.comXmlCount === 0}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+            >
+              <Calendar size={13} />
+              {rotuloExportarFiltro}
+            </button>
+            {exportando && <span style={{ fontSize: 12.5, color: '#6b7280' }}>Gerando arquivo...</span>}
+            {totais.apenasResumo > 0 && (
+              <span style={{ fontSize: 12, color: '#a16207', flexBasis: '100%' }}>
+                {totais.apenasResumo} nota(s) só têm o resumo da SEFAZ. Elas não geram PDF nem entram na exportação até o XML completo ser liberado.
+              </span>
+            )}
+          </div>
+
           {/* Tabela de Notas Destinadas */}
           <div style={{
             background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7eb',
@@ -740,6 +875,17 @@ export default function NfeDestinadasPainel() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#4b5563', fontSize: 12 }}>
+                  <th style={{ padding: '12px 0 12px 16px', width: 28 }}>
+                    <input
+                      type="checkbox"
+                      checked={todasSelecionadas}
+                      disabled={notasComXml.length === 0}
+                      onChange={() => setSelecionadas(todasSelecionadas ? new Set() : new Set(notasComXml.map(n => n.id)))}
+                      aria-label="Selecionar todas as notas com XML completo"
+                      title="Selecionar todas as notas com XML completo"
+                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                    />
+                  </th>
                   <th style={{ padding: '12px 16px', fontWeight: 600 }}>Emissão</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600 }}>Número / Série</th>
                   <th style={{ padding: '12px 16px', fontWeight: 600 }}>Emitente (Fornecedor)</th>
@@ -752,14 +898,14 @@ export default function NfeDestinadasPainel() {
               <tbody>
                 {carregandoNotas ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
                       <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 8px', color: '#2563eb' }} />
                       Carregando NF-e destinadas...
                     </td>
                   </tr>
                 ) : notas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
                       <Inbox size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
                       <div style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Nenhuma nota destinada encontrada</div>
                       <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
@@ -775,6 +921,17 @@ export default function NfeDestinadasPainel() {
                       onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
+                      <td style={{ padding: '12px 0 12px 16px', width: 28 }}>
+                        <input
+                          type="checkbox"
+                          checked={selecionadas.has(n.id)}
+                          disabled={!n.possuiXml}
+                          onChange={() => alternarSelecao(n.id)}
+                          aria-label={`Selecionar nota ${n.numero || n.chaveAcesso}`}
+                          title={n.possuiXml ? 'Selecionar para exportar' : 'Só há o resumo da SEFAZ: não há o que exportar'}
+                          style={{ cursor: n.possuiXml ? 'pointer' : 'not-allowed', accentColor: '#2563eb' }}
+                        />
+                      </td>
                       <td style={{ padding: '12px 16px', color: '#111827', whiteSpace: 'nowrap' }}>
                         {formatData(n.dataEmissao)}
                       </td>
@@ -812,15 +969,26 @@ export default function NfeDestinadasPainel() {
                       <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {n.possuiXml && (
-                            <button
-                              onClick={() => handleBaixarXml(n.id, n.numero)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: '5px 8px', fontSize: 12 }}
-                              title="Baixar XML Completo (procNFe)"
-                            >
-                              <Download size={13} />
-                              XML
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleAbrirPdf(n.id)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '5px 8px', fontSize: 12 }}
+                                title="Abrir o PDF da nota (DANFE)"
+                              >
+                                <FileText size={13} />
+                                PDF
+                              </button>
+                              <button
+                                onClick={() => handleBaixarXml(n.id, n.numero)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '5px 8px', fontSize: 12 }}
+                                title="Baixar XML Completo (procNFe)"
+                              >
+                                <Download size={13} />
+                                XML
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => setNotaDetalhe(n)}
@@ -964,13 +1132,26 @@ export default function NfeDestinadasPainel() {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        {emp.certificado === 'escritorio' ? (
-                          <span className="badge badge-green" style={{ fontSize: 11 }}>Procuração</span>
-                        ) : emp.certificado === 'propria' ? (
-                          <span className="badge badge-green" style={{ fontSize: 11 }}>A1 Próprio</span>
-                        ) : (
-                          <span className="badge badge-red" style={{ fontSize: 11 }}>Ausente</span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEmpresaCertificadoModal(emp)}
+                          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                          title="Clique para configurar o Certificado A1 ou Procuração desta empresa"
+                        >
+                          {emp.certificado === 'propria' ? (
+                            <span className="badge badge-green" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <ShieldCheck size={11} /> A1 Próprio {emp.certValidoAte ? `(${formatData(emp.certValidoAte)})` : ''}
+                            </span>
+                          ) : emp.certificado === 'escritorio' ? (
+                            <span className="badge badge-blue" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Building size={11} /> Procuração
+                            </span>
+                          ) : (
+                            <span className="badge badge-yellow" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Upload size={11} /> + Adicionar A1
+                            </span>
+                          )}
+                        </button>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button
@@ -1156,13 +1337,22 @@ export default function NfeDestinadasPainel() {
                 </div>
 
                 {notaDetalhe.possuiXml && (
-                  <button
-                    onClick={() => handleBaixarXml(notaDetalhe.id, notaDetalhe.numero)}
-                    className="btn btn-primary btn-sm"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <Download size={13} /> Baixar XML
-                  </button>
+                  <div style={{ display: 'inline-flex', gap: 6, flexShrink: 0, marginLeft: 10 }}>
+                    <button
+                      onClick={() => handleAbrirPdf(notaDetalhe.id)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <FileText size={13} /> Abrir PDF
+                    </button>
+                    <button
+                      onClick={() => handleBaixarXml(notaDetalhe.id, notaDetalhe.numero)}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Download size={13} /> Baixar XML
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1178,6 +1368,20 @@ export default function NfeDestinadasPainel() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Gerenciamento do Certificado Digital A1 da Empresa */}
+      {empresaCertificadoModal && (
+        <NfeCertificadoModal
+          empresaId={empresaCertificadoModal.id}
+          empresaNome={empresaCertificadoModal.razaoSocial}
+          empresaCnpj={empresaCertificadoModal.cnpj}
+          onClose={() => setEmpresaCertificadoModal(null)}
+          onAtualizado={async () => {
+            await carregarEmpresas();
+            if (empresaIdSelecionada) await carregarNotas(empresaIdSelecionada);
+          }}
+        />
       )}
     </div>
   );

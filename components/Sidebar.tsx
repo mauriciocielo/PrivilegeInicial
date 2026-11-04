@@ -2,7 +2,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { store, User, Empresa } from '../lib/store';
 import { useAcessoNfse } from '../lib/nfse/use-acesso-nfse';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BrandLogo from './BrandLogo';
 import TwoFactorModal from './TwoFactorModal';
 import {
@@ -203,6 +203,43 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [searchEmpresa, setSearchEmpresa] = useState('');
   const [recentEmpresas, setRecentEmpresas] = useState<string[]>([]);
 
+  // Dropdown atualmente fixado aberto por clique no menu superior
+  const [openDropdownSection, setOpenDropdownSection] = useState<string | null>(null);
+
+  const sidebarNavRef = useRef<HTMLElement | null>(null);
+  const companyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const profilePopoverRef = useRef<HTMLDivElement | null>(null);
+
+  // Fecha menus ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (sidebarNavRef.current && !sidebarNavRef.current.contains(target)) {
+        setOpenDropdownSection(null);
+      }
+      if (companyDropdownRef.current && !companyDropdownRef.current.contains(target)) {
+        setShowCompanyDropdown(false);
+      }
+      if (profilePopoverRef.current && !profilePopoverRef.current.contains(target)) {
+        setShowProfilePopover(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  // Ao mudar de rota, fecha dropdowns abertos
+  useEffect(() => {
+    setOpenDropdownSection(null);
+    setShowCompanyDropdown(false);
+    setShowProfilePopover(false);
+  }, [pathname]);
+
   // Submenus recolhíveis — por padrão só o "Painel" começa aberto (menu
   // limpo). Lembra o que o usuário abriu/fechou, e sempre mantém visível a
   // seção da página atual (nunca esconde onde você está).
@@ -227,6 +264,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       try { localStorage.setItem('cf_sidebar_expanded_sections', JSON.stringify(next)); } catch {}
       return next;
     });
+  };
+
+  const handleSectionClick = (sectionName: string, isCurrentlyExpanded: boolean) => {
+    setOpenDropdownSection(prev => (prev === sectionName ? null : sectionName));
+    setShowCompanyDropdown(false);
+    setShowProfilePopover(false);
+    toggleSection(sectionName, isCurrentlyExpanded);
   };
 
   useEffect(() => {
@@ -445,6 +489,8 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard') return true;
       if (item.href === '/consultor/administrativo') return true;
+      // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
+      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas') return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -489,7 +535,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       </div>
 
       {isConsultorOrAdmin && selectableEmpresas.length > 0 && (
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div ref={companyDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => setShowCompanyDropdown(o => !o)}
             style={{
@@ -583,23 +629,37 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         </div>
       )}
 
-      <nav className="sidebar-nav">
+      <nav ref={sidebarNavRef} className="sidebar-nav">
         {nav.map(section => {
           const containsActive = section.items.some(item => item.href === pathname);
-          const isExpanded = expandedSections?.[section.section] ?? containsActive;
+          const isClickedOpen = openDropdownSection === section.section;
+          const isExpanded = isClickedOpen || (expandedSections?.[section.section] ?? containsActive);
           return (
-            <div key={section.section} className={isExpanded ? 'expanded' : ''}>
-              <div className="nav-section" onClick={() => toggleSection(section.section, isExpanded)}>
+            <div key={section.section} className={`${isExpanded ? 'expanded' : ''} ${isClickedOpen ? 'open' : ''}`}>
+              <div
+                className="nav-section"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSectionClick(section.section, isExpanded);
+                }}
+              >
                 <span
                   className="nav-section-label"
                   style={{
-                    color: containsActive ? '#000000' : undefined,
-                    fontWeight: containsActive ? 600 : undefined,
-                    background: containsActive ? '#f4f4f5' : undefined,
+                    color: (containsActive || isClickedOpen) ? '#000000' : undefined,
+                    fontWeight: (containsActive || isClickedOpen) ? 600 : undefined,
+                    background: (containsActive || isClickedOpen) ? '#f4f4f5' : undefined,
                   }}
                 >
                   {section.section}
-                  <ChevronDown size={13} style={{ opacity: 0.5, transition: 'transform .2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }} />
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      opacity: 0.5,
+                      transition: 'transform .2s',
+                      transform: isExpanded ? 'rotate(180deg)' : 'none',
+                    }}
+                  />
                 </span>
               </div>
 
@@ -611,7 +671,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                       key={item.href}
                       href={item.href}
                       className={`nav-item ${isActive ? 'active' : ''}`}
-                      onClick={e => { e.preventDefault(); router.push(item.href); }}
+                      onClick={e => {
+                        e.preventDefault();
+                        setOpenDropdownSection(null);
+                        router.push(item.href);
+                      }}
                     >
                       <span className="nav-icon">
                         <item.icon size={15} strokeWidth={1.9} />
@@ -681,7 +745,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         )}
 
         {/* Popover de Perfil Compacto */}
-        <div style={{ position: 'relative' }}>
+        <div ref={profilePopoverRef} style={{ position: 'relative' }}>
           <div 
             className="user-card" 
             onClick={() => setShowProfilePopover(!showProfilePopover)}

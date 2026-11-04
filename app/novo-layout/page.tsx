@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Inter, Instrument_Serif } from 'next/font/google';
 import { CheckCircle2, ChevronDown, ExternalLink, X } from 'lucide-react';
 import { consultoriaServices, contabilidadeServices, faqs, cnds } from '../pageData';
+import PopupInicial from '../../components/PopupInicial';
 
 const sans = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] });
@@ -536,6 +537,8 @@ export default function EnhancedLayoutPage() {
           </div>
         </div>
       </footer>
+
+      <PopupInicial />
 
       {/* Modal Termos de Uso & Política de Privacidade */}
       {legalModal && (

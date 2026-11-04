@@ -29,6 +29,7 @@ const AVAILABLE_SCREENS = [
   { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
   { label: '🔌 Contas via ERP', route: '/consultor/contas-erp' },
   { label: '🧾 NFS-e', route: '/consultor/nfse' },
+  { label: '📥 NF-e Destinadas', route: '/consultor/nfe-destinadas' },
   { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
   { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },

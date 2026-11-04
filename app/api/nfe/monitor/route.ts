@@ -16,10 +16,10 @@ export async function GET(request: Request) {
 
     const filtro = await filtroEmpresasNfse(auth.session);
     const empresas = await db.empresa.findMany({
-      where: { AND: [filtro, { nfseConfig: { isNot: null } }] },
+      where: filtro,
       select: {
         id: true, razaoSocial: true, nomeFantasia: true, cnpj: true,
-        nfseConfig: { select: { usarProcuracao: true, procuracaoStatus: true, certValidoAte: true } },
+        nfseConfig: { select: { usarProcuracao: true, procuracaoStatus: true, certValidoAte: true, certTitular: true } },
         nfeDistribuicao: true,
         _count: { select: { nfesDestinadas: true } },
       },
@@ -37,6 +37,10 @@ export async function GET(request: Request) {
           cnpj: e.cnpj,
           certificado: e.nfseConfig?.usarProcuracao ? 'escritorio' : (e.nfseConfig?.certValidoAte ? 'propria' : 'ausente'),
           procuracaoStatus: e.nfseConfig?.procuracaoStatus ?? null,
+          certValidoAte: e.nfseConfig?.certValidoAte ? e.nfseConfig.certValidoAte.toISOString() : null,
+          certTitular: e.nfseConfig?.certTitular ?? null,
+          temCertProprio: Boolean(e.nfseConfig?.certValidoAte),
+          usarProcuracao: e.nfseConfig?.usarProcuracao ?? true,
           monitor: e.nfeDistribuicao
             ? {
                 ativo: e.nfeDistribuicao.ativo,

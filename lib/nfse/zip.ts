@@ -1,8 +1,10 @@
 // ============================================================
 // NFS-e NACIONAL — gerador de arquivo ZIP em memória (puro Node.js)
 // ============================================================
-// Implementa o formato PKZIP padrão ( método STORE / sem dependência externa )
+// Implementa o formato PKZIP padrão ( sem dependência externa )
 // para exportar pacotes de XML e PDF das notas fiscais do mês.
+
+import { deflateRawSync } from 'zlib';
 
 const TABELA_CRC32 = (() => {
   const tabela = new Uint32Array(256);
@@ -36,20 +38,25 @@ export function criarZipBuffer(arquivos: ArquivoZip[]): Buffer {
 
   for (const arq of arquivos) {
     const nomeBytes = Buffer.from(arq.nome.replace(/\\/g, '/'), 'utf8');
-    const dados = arq.conteudo;
-    const crc = calcularCrc32(dados);
-    const tamanho = dados.length;
+    const original = arq.conteudo;
+    const crc = calcularCrc32(original);
+    const tamanho = original.length;
+    // XML encolhe muito; se comprimir não ajudar (PDF já comprimido), guarda como está.
+    const comprimido = deflateRawSync(original);
+    const usaDeflate = comprimido.length < tamanho;
+    const dados = usaDeflate ? comprimido : original;
+    const metodo = usaDeflate ? 8 : 0;
 
     // Local File Header (30 bytes + nome)
     const local = Buffer.alloc(30 + nomeBytes.length);
     local.writeUInt32LE(0x04034b50, 0); // signature
     local.writeUInt16LE(20, 4);         // version needed
     local.writeUInt16LE(0x0800, 6);     // flags: UTF-8 filename
-    local.writeUInt16LE(0, 8);          // method: 0 (STORE)
+    local.writeUInt16LE(metodo, 8);     // method: 0 (STORE) ou 8 (DEFLATE)
     local.writeUInt16LE(0, 10);         // mod time
     local.writeUInt16LE(0x21, 12);      // mod date
     local.writeUInt32LE(crc, 14);       // crc32
-    local.writeUInt32LE(tamanho, 18);   // compressed size
+    local.writeUInt32LE(dados.length, 18); // compressed size
     local.writeUInt32LE(tamanho, 22);   // uncompressed size
     local.writeUInt16LE(nomeBytes.length, 26); // filename length
     local.writeUInt16LE(0, 28);         // extra field length
@@ -63,11 +70,11 @@ export function criarZipBuffer(arquivos: ArquivoZip[]): Buffer {
     central.writeUInt16LE(20, 4);         // version made by
     central.writeUInt16LE(20, 6);         // version needed
     central.writeUInt16LE(0x0800, 8);     // flags: UTF-8
-    central.writeUInt16LE(0, 10);         // method: 0 (STORE)
+    central.writeUInt16LE(metodo, 10);    // method: 0 (STORE) ou 8 (DEFLATE)
     central.writeUInt16LE(0, 12);         // mod time
     central.writeUInt16LE(0x21, 14);      // mod date
     central.writeUInt32LE(crc, 16);       // crc32
-    central.writeUInt32LE(tamanho, 20);   // compressed size
+    central.writeUInt32LE(dados.length, 20); // compressed size
     central.writeUInt32LE(tamanho, 24);   // uncompressed size
     central.writeUInt16LE(nomeBytes.length, 28); // filename length
     central.writeUInt16LE(0, 30);         // extra length

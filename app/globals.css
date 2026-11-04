@@ -300,7 +300,9 @@ body {
   white-space: nowrap;
 }
 
-.sidebar-nav > div:hover .nav-section-label {
+.sidebar-nav > div:hover .nav-section-label,
+.sidebar-nav > div.open .nav-section-label,
+.sidebar-nav > div.expanded .nav-section-label {
   background: #f4f4f5;
   color: #000000;
 }
@@ -329,17 +331,19 @@ body {
   margin-top: 6px;
 }
 
-/* Criando uma "ponte invisível" para o mouse não perder o hover */
+/* Criando uma "ponte invisível" para o mouse não perder o hover nem fechar entre a label e o menu */
 .dropdown-menu-wrapper::before {
   content: '';
   position: absolute;
-  top: -10px;
+  top: -16px;
   left: 0;
   right: 0;
-  height: 10px;
+  height: 22px;
 }
 
-.sidebar-nav > div:hover .dropdown-menu-wrapper {
+.sidebar-nav > div:hover .dropdown-menu-wrapper,
+.sidebar-nav > div.open .dropdown-menu-wrapper,
+.sidebar-nav > div.expanded .dropdown-menu-wrapper {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
