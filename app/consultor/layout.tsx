@@ -24,8 +24,12 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
 
     const handleDataChange = () => {
       const current = sessionStorage.getItem('cf_empresa_sel') || '';
-      setSelectedEmpresaId(current);
-      window.dispatchEvent(new CustomEvent('empresaChange', { detail: current }));
+      setSelectedEmpresaId(prev => {
+        if (prev !== current) {
+          window.dispatchEvent(new CustomEvent('empresaChange', { detail: current }));
+        }
+        return current;
+      });
     };
 
     window.addEventListener('empresaChange', handleEmpresaChange);
@@ -49,12 +53,15 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     }
     setCurrentUser(user);
 
+    // A tela de NFS-e opera de forma independente da empresa selecionada no menu lateral.
+    const isRotaIndependente = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/nfse');
+
     // Permissão da rota com base na empresa ativa
     let companyOk = true;
-    if (selectedEmpresaId) {
+    if (selectedEmpresaId && !isRotaIndependente) {
       const activeEmpresa = store.getEmpresas().find(e => e.id === selectedEmpresaId);
       if (activeEmpresa && activeEmpresa.allowedRoutes && activeEmpresa.allowedRoutes.length > 0) {
-        companyOk = pathname === '/consultor/dashboard' || activeEmpresa.allowedRoutes.some(route => pathname.startsWith(route));
+        companyOk = activeEmpresa.allowedRoutes.some(route => pathname.startsWith(route));
       }
     }
 
@@ -67,7 +74,9 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
       
       const isGroup = selectedEmpresaId.startsWith('grupo:');
       let hasCompanyAccess = false;
-      if (isGroup) {
+      if (isRotaIndependente) {
+        hasCompanyAccess = true;
+      } else if (isGroup) {
         const groupName = selectedEmpresaId.split(':')[1];
         const companiesInGroup = store.getEmpresas().filter(e => e.grupoEconomico === groupName);
         hasCompanyAccess = companiesInGroup.some(e => user.empresaIds && user.empresaIds.includes(e.id));
