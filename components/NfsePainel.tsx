@@ -386,7 +386,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       const data = await res.json();
       if (data.sucesso && data.aliquota > 0) {
         setAliquotaSimplesDigitada(String(data.aliquota));
-        const det = `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (RBT12: R$ ${(data.rbt12 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
+        const det = data.rpa && data.valorDevido
+          ? `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (Imposto: R$ ${Number(data.valorDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${Number(data.rpa).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+          : `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (RBT12: R$ ${(data.rbt12 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
         setInfoAliquotaSerpro(det);
         toast.success(`Alíquota do Simples atualizada via Integra Contador: ${data.aliquota}%`);
       } else {
@@ -562,7 +564,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   };
 
   const abrirEdicao = (n: NfsE) => {
-    setForm({ ...n });
+    // Se cTribMun veio com 6 dígitos ou idêntico ao codigoServico, higieniza para não causar o erro E1235 no Sefin
+    const codServico = n.codigoServico || (n.cTribMun && n.cTribMun.length === 6 ? n.cTribMun : '');
+    const codMun = n.cTribMun && n.cTribMun.length <= 3 && n.cTribMun !== codServico ? n.cTribMun : '';
+    setForm({ ...n, codigoServico: codServico, cTribMun: codMun });
     setPercentuaisRetencao(percentuaisDosValores(n.valorServicos, { irrf: n.valorIr, pis: n.valorPis, cofins: n.valorCofins, csll: n.valorCsll, cp: n.valorInss }));
     setRetencaoManual(true);
     setRegraAplicada('');
@@ -2169,12 +2174,42 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                   <input type="month" className="form-control" max={hojeBrasilia().slice(0, 7)} value={form.dataCompetencia || ''} onChange={e => setForm(f => ({ ...f, dataCompetencia: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Cód. Tributação Nacional *</label>
-                  <input className="form-control" maxLength={6} placeholder="6 dígitos" value={form.codigoServico || ''} onChange={e => setForm(f => ({ ...f, codigoServico: e.target.value }))} />
+                  <label className="form-label">Cód. Tributação Nacional / Municipal *</label>
+                  <input
+                    className="form-control"
+                    maxLength={6}
+                    placeholder="6 dígitos (ex: 171901)"
+                    value={form.codigoServico || ''}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setForm(f => ({ ...f, codigoServico: v }));
+                    }}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Item da LC 116 (ex: 171901).
+                  </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Cód. Tributação Municipal</label>
-                  <input className="form-control" value={form.cTribMun || ''} onChange={e => setForm(f => ({ ...f, cTribMun: e.target.value }))} />
+                  <label className="form-label">
+                    Subcódigo Municipal <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional)</span>
+                  </label>
+                  <input
+                    className="form-control"
+                    maxLength={3}
+                    placeholder="Até 3 dígitos (ex: 001)"
+                    value={form.cTribMun || ''}
+                    onChange={e => {
+                      let v = e.target.value.trim();
+                      if (v.length === 6 && /^\d{6}$/.test(v)) {
+                        setForm(f => ({ ...f, codigoServico: v, cTribMun: '' }));
+                        return;
+                      }
+                      setForm(f => ({ ...f, cTribMun: v.slice(0, 3) }));
+                    }}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Se o município usa o mesmo código, <strong>deixe em branco</strong>.
+                  </div>
                 </div>
               </div>
               <div className="form-row">

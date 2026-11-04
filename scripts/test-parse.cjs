@@ -8,3 +8,4 @@ async function testParse() {
     console.log('Declaração:', JSON.stringify(dados.declaracao, null, 2));
   }
 }
+

@@ -304,7 +304,15 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
   const nt009 = leiaute === LEIAUTE_NT009;
   const id = idDps(cfg, d.serie, d.nDps);
   const doc = apenasDigitos(d.tomadorDocumento);
-  const cTribMun = (d.cTribMun || '').trim();
+  // cTribMun: Código de Tributação Municipal. No padrão NFS-e Nacional (TCCodTribMun),
+  // se informado, deve ser um subcódigo de até 3 dígitos (ex: "001"). Se o usuário ou emissor
+  // informar o mesmo código nacional (ex: 6 dígitos "171901"), NÃO deve ser enviado na tag <cTribMun>,
+  // pois causa o erro de esquema [E1235]: The value '171901' is invalid according to datatype 'TCCodTribMun'.
+  // Quando o município não adota subcódigo próprio (o código é o mesmo nacional), a tag <cTribMun> deve ser omitida.
+  const rawMun = (d.cTribMun || '').trim();
+  const cTribMun = rawMun && rawMun !== d.cTribNac && /^\d{1,3}$/.test(rawMun)
+    ? rawMun.padStart(3, '0')
+    : null;
   const cNbs = apenasDigitos(d.cNbs);
   const descricao = txt('xDescServ', limparTexto(d.descricao).slice(0, 2000));
   const im = apenasDigitos(cfg.inscricaoMunicipal);

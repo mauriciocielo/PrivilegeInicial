@@ -1,0 +1,33 @@
+name: Rotina Mensal de CNDs (Federal e Estadual)
+
+# Executa automaticamente no último dia de cada mês às 23:00 (horário de Brasília).
+# Consulta a CND Federal (Integra Contador / SERPRO) e a CND Estadual (SEFAZ)
+# de todas as empresas e envia relatório consolidado por e-mail para o escritório.
+
+on:
+  schedule:
+    # Executa diariamente às 02:00 UTC (23:00 BRT) entre os dias 28 e 31; o script verifica se é o último dia do mês.
+    - cron: '0 2 28-31 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rotina-cnd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Acionar Rotina de CNDs
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://privilege-inicial.vercel.app' }}
+        run: |
+          echo "Disparando rotina de regularidade fiscal e CNDs..."
+          status=$(curl -sS -o resposta.json -w '%{http_code}' --max-time 300 -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET:-privilege_cron_cnd_secret_2026}" "$APP_URL/api/cron/certidoes-mensal")
+          cat resposta.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::A rotina respondeu HTTP $status."
+            exit 1
+          fi
+

@@ -8,3 +8,4 @@ async function readDecNum() {
 }
 
 readDecNum().catch(console.error);
+

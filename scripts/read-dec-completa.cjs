@@ -5,3 +5,4 @@ async function readDeclaracaoCompleta() {
 }
 
 readDeclaracaoCompleta().catch(console.error);
+

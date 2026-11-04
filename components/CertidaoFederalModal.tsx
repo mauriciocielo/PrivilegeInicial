@@ -254,3 +254,4 @@ export default function CertidaoFederalModal({ empresaIdInicial, onFechar, empre
     </div>
   );
 }
+

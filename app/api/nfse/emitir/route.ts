@@ -62,6 +62,18 @@ export async function POST(request: Request) {
     const issRetido = n.issRetido === true;
     const retido = (v: unknown) => Math.max(0, Math.round((Number(v) || 0) * 100) / 100);
     const retencao = { irrf: retido(n.valorIr), pis: retido(n.valorPis), cofins: retido(n.valorCofins), csll: retido(n.valorCsll), cp: retido(n.valorInss) };
+    let cTribNac = apenasDigitos(texto(n.codigoServico));
+    let cTribMun = textoOuNull(n.cTribMun);
+    // Se o código nacional não foi preenchido mas o municipal veio com 6 dígitos, ele é o código nacional!
+    if (!cTribNac && cTribMun && apenasDigitos(cTribMun).length === 6) {
+      cTribNac = apenasDigitos(cTribMun);
+      cTribMun = null;
+    }
+    // Se cTribMun for idêntico ao nacional ou tiver 6 dígitos, omite para evitar erro E1235 (TCCodTribMun)
+    if (cTribMun && (cTribMun === cTribNac || apenasDigitos(cTribMun).length > 3)) {
+      cTribMun = null;
+    }
+
     const dados: DadosDps = {
       ambiente,
       serie,
@@ -69,8 +81,8 @@ export async function POST(request: Request) {
       dataCompetencia: texto(n.dataCompetencia),
       descricao: texto(n.discriminacao),
       valorServicos,
-      cTribNac: apenasDigitos(texto(n.codigoServico)),
-      cTribMun: textoOuNull(n.cTribMun),
+      cTribNac,
+      cTribMun,
       cNbs: textoOuNull(n.cNbs),
       municipioPrestacao: texto(n.municipioPrestacao) || config.codigoMunicipio || '',
       issRetido,

@@ -294,28 +294,44 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
         const linhas = extrairTextoPdf(pdfBuf);
         const textoUnido = linhas.join(' ');
 
-        // Busca RBT12: "RBT12" seguido de valor
-        let rbt12 = 0;
-        const rbt12Match = textoUnido.match(/RBT12\s*\\?\)?\s*([0-9\.\,]+)/i);
-        if (rbt12Match) {
-          rbt12 = parseFloat(rbt12Match[1].replace(/\./g, '').replace(',', '.'));
-        }
-
         // Busca RPA (Receita Bruta do PA):
         let rpa = 0;
-        const rpaMatch = textoUnido.match(/Receita Bruta do PA.*?([0-9\.\,]+)/i);
+        const rpaMatch = textoUnido.match(/Receita Bruta do PA\s*\\?\(RPA\\?\)[^\d]*([\d\.\,]+)/i)
+          || textoUnido.match(/Receita Bruta do PA.*?([0-9\.\,]+)/i);
         if (rpaMatch) {
           rpa = parseFloat(rpaMatch[1].replace(/\./g, '').replace(',', '.'));
         }
 
-        // Busca Total do Débito Exigível:
-        let valorDevido = 0;
-        const debitoMatch = textoUnido.match(/Total do Débito Exigível.*?([0-9\.\,]+)/i);
-        if (debitoMatch) {
-          valorDevido = parseFloat(debitoMatch[1].replace(/\./g, '').replace(',', '.'));
+        // Busca RBT12: "RBT12" seguido de valor
+        let rbt12 = 0;
+        const rbt12Match = textoUnido.match(/RBT12\s*\\?\)?\s*\|\s*([0-9\.\,]+)/i)
+          || textoUnido.match(/RBT12[^\d]*([0-9\.\,]+)/i);
+        if (rbt12Match) {
+          rbt12 = parseFloat(rbt12Match[1].replace(/\./g, '').replace(',', '.'));
         }
 
-        // Alíquota efetiva calculada diretamente: (Débito / RPA) * 100
+        // Busca Valor Total do Imposto (Débito do Simples Nacional)
+        // 1ª opção: Na seção do DAS Gerado (Principal / Total do DAS)
+        // 2ª opção: Na coluna Total do Débito Exigível
+        let valorDevido = 0;
+        const dasTotalMatch = textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Principal\s*\|\s*([0-9\.\,]+)/i)
+          || textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Total\s*\|\s*([0-9\.\,]+)/i);
+        if (dasTotalMatch) {
+          valorDevido = parseFloat(dasTotalMatch[1].replace(/\./g, '').replace(',', '.'));
+        } else {
+          const tabelaMatch = textoUnido.match(/Total do Débito Exigível[\s\S]*?Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){8}([0-9\.\,]+)/i);
+          if (tabelaMatch) {
+            valorDevido = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
+          } else {
+            // Fallback para último valor numérico após Total do Débito Exigível
+            const debitoMatch = textoUnido.match(/Total do Débito Exigível.*?Total\s*\|\s*([0-9\.\,]+)/i);
+            if (debitoMatch) {
+              valorDevido = parseFloat(debitoMatch[1].replace(/\./g, '').replace(',', '.'));
+            }
+          }
+        }
+
+        // Alíquota do Simples Nacional a informar na NFS-e: (Valor do Imposto / RPA) * 100
         let aliquotaEfetiva = 0;
         if (rpa > 0 && valorDevido > 0) {
           aliquotaEfetiva = Number(((valorDevido / rpa) * 100).toFixed(2));
@@ -335,7 +351,7 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
           numeroDas,
           numeroDeclaracao,
           pdfBase64: pdfB64,
-          detalhes: `Alíquota calculada sobre a apuração do Simples Nacional (${periodoApuracao}): ${aliquotaEfetiva}% (RBT12: R$ ${rbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`,
+          detalhes: `Alíquota calculada: ${aliquotaEfetiva}% (Imposto: R$ ${valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${rpa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) - PA: ${periodoApuracao}`,
         };
       }
     } catch (err) {

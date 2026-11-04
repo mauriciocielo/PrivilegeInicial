@@ -10,3 +10,4 @@ async function readRegimeApuracao() {
 }
 
 readRegimeApuracao().catch(console.error);
+

@@ -56,7 +56,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas via ERP', href: '/consultor/contas-erp', icon: Landmark },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
-      { label: 'Certidão Federal (CND)', href: '/consultor/cnd-federal', icon: ShieldCheck },
+      { label: 'Situação Fiscal & CNDs', href: '/consultor/cnd-federal', icon: ShieldCheck },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],

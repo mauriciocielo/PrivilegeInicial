@@ -6,3 +6,4 @@ async function checkAuthService() {
 }
 
 checkAuthService().catch(console.error);
+

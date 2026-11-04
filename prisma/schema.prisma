@@ -107,6 +107,8 @@ model Empresa {
   nfeDistribuicao            NfeDistribuicao?
   nfesDestinadas             NfeDestinada[]
   nfeManifestacoes           NfeManifestacaoEvento[]
+  certidoesFiscais           CertidaoFiscal[]
+  certidaoConfig             CertidaoConfig?
 }
 
 model Unidade {
@@ -1044,4 +1046,48 @@ model NfeManifestacaoEvento {
   empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([empresaId, chaveAcesso])
+}
+
+
+model CertidaoFiscal {
+  id                    String    @id @default(uuid())
+  empresaId             String
+  tipo                  String    // "FEDERAL", "ESTADUAL", "MUNICIPAL", "TRABALHISTA", "FGTS"
+  uf                    String?   // "PR", "SC", "SP", etc.
+  situacao              String    // "NEGATIVA", "POSITIVA_COM_EFEITO_NEGATIVA", "POSITIVA", "PROCESSANDO", "ERRO"
+  protocolo             String?
+  codigoAutenticidade   String?
+  numeroCertidao        String?
+  emitidoEm             DateTime?
+  validoAte             DateTime?
+  pdfBase64             String?   @db.Text
+  pendencias            Json?
+  observacoes           String?
+  criadoAutomaticamente Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  empresa               Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, tipo])
+  @@index([empresaId, createdAt])
+}
+
+model CertidaoConfig {
+  id                           String    @id @default(uuid())
+  empresaId                    String?   @unique
+  ativo                        Boolean   @default(true)
+  executarUltimoDia            Boolean   @default(true)
+  diaDoMes                     Int?      @default(0) // 0 = ultimo dia do mes
+  horario                      String    @default("23:00")
+  consultarFederal             Boolean   @default(true)
+  consultarEstadual            Boolean   @default(true)
+  notificarEmail               Boolean   @default(true)
+  emailsNotificacao            String?   // emails separados por virgula
+  notificarApenasComPendencias Boolean   @default(true)
+  ultimaExecucaoEm             DateTime?
+  statusUltimaExecucao         String?
+  detalhesUltimaExecucao       Json?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+  empresa                      Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }

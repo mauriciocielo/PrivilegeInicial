@@ -13,3 +13,4 @@ async function checkConsultasMcpDocs() {
 }
 
 checkConsultasMcpDocs().catch(console.error);
+
