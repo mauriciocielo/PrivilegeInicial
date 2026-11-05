@@ -33,7 +33,7 @@ describe('leitura do XML do CT-e', () => {
     expect(d.emitente.nome).toBe('Transportadora & Cia Ltda');
     expect(d.remetente.documento).toBe('11444777000161');
     expect(d.destinatario.documento).toBe('99888777000166');
-    expect(d.tomador).toBe('Destinatário');
+    expect(d.tomador).toMatchObject({ papel: 'Destinatário', nome: 'Destinatario Final SA', documento: '99888777000166' });
     expect(d.valores.total).toBe('1500.00');
     expect(d.valores.componentes).toHaveLength(2);
     expect(d.icms).toMatchObject({ cst: '00', aliquota: '12.00', valor: '180.00' });

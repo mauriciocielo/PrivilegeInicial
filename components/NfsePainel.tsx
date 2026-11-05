@@ -20,8 +20,13 @@ import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
+import NfseInsights from './NfseInsights';
 import { Instrument_Serif } from 'next/font/google';
-import { Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles,
+  ChevronDown, SlidersHorizontal, Settings, Plus, KeyRound, Users, Trash2,
+  CheckCircle2, AlertTriangle, ShieldCheck, Copy, UploadCloud
+} from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
@@ -36,6 +41,23 @@ type ResultadoEnvio =
   | { resultado: 'rejeitada' | 'incerta'; mensagem: string };
 
 const secaoStyle = { background: 'var(--bg-card2)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border-light)' };
+
+const itemMenuDropdownStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: '9px 14px',
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 500,
+  color: '#1f2937',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  width: '100%',
+  textAlign: 'left',
+  cursor: 'pointer',
+  transition: 'background 0.15s ease',
+};
 
 const AVISO_FALE_COM_ESCRITORIO = 'O escritório ainda precisa concluir a configuração desta empresa para emitir.';
 
@@ -143,6 +165,18 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const [config, setConfig] = useState<NfseConfigResposta | null>(null);
   const [erroConfig, setErroConfig] = useState('');
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showMenuFerramentas, setShowMenuFerramentas] = useState(false);
+  const menuFerramentasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fecharAoClicarFora = (e: MouseEvent) => {
+      if (menuFerramentasRef.current && !menuFerramentasRef.current.contains(e.target as Node)) {
+        setShowMenuFerramentas(false);
+      }
+    };
+    document.addEventListener('mousedown', fecharAoClicarFora);
+    return () => document.removeEventListener('mousedown', fecharAoClicarFora);
+  }, []);
   const [transmitindoId, setTransmitindoId] = useState<string | null>(null);
   const [showEmissoresModal, setShowEmissoresModal] = useState(false);
   const [showAcessoClienteModal, setShowAcessoClienteModal] = useState(false);
@@ -1237,13 +1271,38 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           padding: '24px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 18,
         }}
       >
         <div>
-          <div style={{ marginBottom: 6 }}>
-            <span style={{ background: '#600000', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99 }}>
-              Sefin Nacional • NFS-e (Tela Independente)
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span
+              style={{
+                background: '#600000',
+                color: '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '3px 10px',
+                borderRadius: 99,
+              }}
+            >
+              Sefin Nacional • NFS-e
             </span>
+            {emProducao ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#86efac', fontWeight: 600 }}>
+                <CheckCircle2 size={12} /> Produção Oficial
+              </span>
+            ) : (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#fde68a', fontWeight: 600 }}>
+                <AlertTriangle size={12} /> Ambiente de Testes
+              </span>
+            )}
           </div>
           <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#fff', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
             Notas Fiscais de Serviço
@@ -1296,111 +1355,219 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           )}
         </div>
 
-        <div className="header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-          {!modoCliente && (
-            <>
-              <button
-                className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-                onClick={() => setShowEmissoresModal(true)}
-              >
-                Emissores por Procuração
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-                onClick={() => setShowAcessoClienteModal(true)}
-                disabled={!empresa}
-              >
-                Login do Cliente
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-                onClick={() => setShowConfigModal(true)}
-                disabled={!config}
-              >
-                Configurar Emissor
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#7f1d1d', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-                onClick={handleLimparSemChave}
-              >
-                Limpar Rascunhos
-              </button>
-            </>
-          )}
-          {emProducao && (
-            <button
-              className="btn btn-secondary"
-              style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              onClick={handleSincronizarSequenciaOficial}
-              disabled={sincronizandoSequencia}
-              title="Busca o último número emitido no portal oficial e sincroniza a sequência da DPS"
-            >
-              <RefreshCw size={14} className={sincronizandoSequencia ? 'animate-spin' : ''} />
-              {sincronizandoSequencia ? 'Sincronizando...' : `Sincronizar Sequência Oficial (#${parametros?.proximoNDpsProducao || 1})`}
-            </button>
-          )}
+        <div className="header-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+          {/* Botão Principal em Destaque */}
           <button
+            type="button"
+            className="btn"
+            style={{
+              background: '#600000',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              padding: '10px 20px',
+              fontWeight: 600,
+              fontSize: 13.5,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(96,0,0,0.3)',
+              cursor: 'pointer',
+            }}
+            onClick={openNovo}
+          >
+            <Plus size={16} /> Nova Nota Manual
+          </button>
+
+          {/* Sincronização direta no ADN */}
+          <button
+            type="button"
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 13,
+              padding: '10px 16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
             onClick={() => setShowBuscarNotas(true)}
             disabled={!config}
+            title="Sincronizar notas emitidas e tomadas diretamente no ADN Nacional"
           >
-            Buscar Emitidas / Tomadas
+            <RefreshCw size={14} /> Buscar no ADN
           </button>
+
+          {/* Exportar Mês */}
           <button
+            type="button"
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 13,
+              padding: '10px 16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
             onClick={() => {
               setMesExportacao(mesFiltro || hojeBrasilia().slice(0, 7));
               setPapelExportacao(papelFiltro);
               setShowExportarModal(true);
             }}
           >
-            <Download size={14} /> Exportar Mês (XML/PDF)
+            <Download size={14} /> Exportar Mês
           </button>
-          <button
-            className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-            onClick={() => setShowCopiarModal(true)}
-          >
-            Copiar Notas
-          </button>
-          <button
-            className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
-            onClick={() => setShowImportarModal(true)}
-          >
-            Importar Lista
-          </button>
-          {!modoCliente && (
-            <button
-              className="btn btn-secondary"
-              style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              onClick={() => setShowCndModal(true)}
-              title="Gerar o Relatório de Situação Fiscal (SITFIS) na Receita Federal e na PGFN"
-            >
-              🏛️ Situação Federal
-            </button>
-          )}
+
+          {/* Analista IA */}
           <button
             type="button"
-            style={{ background: 'rgba(124,58,237,0.18)', color: '#e9d5ff', border: '1px solid rgba(167,139,250,0.4)', borderRadius: 8, padding: '10px 16px', fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{
+              background: 'rgba(124,58,237,0.22)',
+              color: '#e9d5ff',
+              border: '1px solid rgba(167,139,250,0.4)',
+              borderRadius: 10,
+              padding: '10px 16px',
+              fontWeight: 600,
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+            }}
             onClick={() => window.dispatchEvent(new CustomEvent('abrirCopilotoFiscal'))}
             title="Abrir o assistente de IA com o contexto fiscal"
           >
             <Sparkles size={14} /> Analista IA
           </button>
-          <button
-            className="btn"
-            style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 13.5 }}
-            onClick={openNovo}
-          >
-            Nova Nota Manual
-          </button>
+
+          {/* Menu Dropdown de Ferramentas e Gestão */}
+          <div style={{ position: 'relative' }} ref={menuFerramentasRef}>
+            <button
+              type="button"
+              onClick={() => setShowMenuFerramentas(!showMenuFerramentas)}
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: 10,
+                padding: '10px 14px',
+                fontWeight: 600,
+                fontSize: 13,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+              }}
+            >
+              <SlidersHorizontal size={14} /> Ferramentas <ChevronDown size={14} />
+            </button>
+
+            {showMenuFerramentas && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  zIndex: 100,
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 16,
+                  padding: '8px',
+                  minWidth: 260,
+                  boxShadow: '0 16px 32px -4px rgba(0,0,0,0.18)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
+              >
+                {!modoCliente && (
+                  <>
+                    <button
+                      type="button"
+                      style={itemMenuDropdownStyle}
+                      onClick={() => { setShowMenuFerramentas(false); setShowConfigModal(true); }}
+                      disabled={!config}
+                    >
+                      <Settings size={15} color="#374151" /> Configurar Emissor
+                    </button>
+
+                    <button
+                      type="button"
+                      style={itemMenuDropdownStyle}
+                      onClick={() => { setShowMenuFerramentas(false); setShowEmissoresModal(true); }}
+                    >
+                      <KeyRound size={15} color="#374151" /> Emissores por Procuração
+                    </button>
+
+                    <button
+                      type="button"
+                      style={itemMenuDropdownStyle}
+                      onClick={() => { setShowMenuFerramentas(false); setShowAcessoClienteModal(true); }}
+                      disabled={!empresa}
+                    >
+                      <Users size={15} color="#374151" /> Login do Cliente
+                    </button>
+
+                    <button
+                      type="button"
+                      style={itemMenuDropdownStyle}
+                      onClick={() => { setShowMenuFerramentas(false); setShowCndModal(true); }}
+                    >
+                      <ShieldCheck size={15} color="#0284c7" /> Situação Federal (SITFIS)
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  style={itemMenuDropdownStyle}
+                  onClick={() => { setShowMenuFerramentas(false); setShowCopiarModal(true); }}
+                >
+                  <Copy size={15} color="#374151" /> Copiar Notas em Lote
+                </button>
+
+                <button
+                  type="button"
+                  style={itemMenuDropdownStyle}
+                  onClick={() => { setShowMenuFerramentas(false); setShowImportarModal(true); }}
+                >
+                  <UploadCloud size={15} color="#374151" /> Importar Lista
+                </button>
+
+                {emProducao && (
+                  <button
+                    type="button"
+                    style={itemMenuDropdownStyle}
+                    onClick={() => { setShowMenuFerramentas(false); handleSincronizarSequenciaOficial(); }}
+                    disabled={sincronizandoSequencia}
+                  >
+                    <RefreshCw size={15} color="#16a34a" /> Sincronizar Sequência (#{parametros?.proximoNDpsProducao || 1})
+                  </button>
+                )}
+
+                {!modoCliente && (
+                  <button
+                    type="button"
+                    style={{ ...itemMenuDropdownStyle, color: '#b91c1c' }}
+                    onClick={() => { setShowMenuFerramentas(false); handleLimparSemChave(); }}
+                  >
+                    <Trash2 size={15} color="#b91c1c" /> Limpar Rascunhos
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1414,7 +1581,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               borderLeft: '3px solid #b91c1c',
               borderRadius: 12,
               padding: '12px 18px',
-              marginBottom: 24,
+              marginBottom: 20,
               fontSize: 13.5,
               color: '#7f1d1d',
             }}
@@ -1427,9 +1594,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               background: '#fff',
               border: '1px solid #e5e5e5',
               borderLeft: `3px solid ${emProducao ? '#15803d' : '#b45309'}`,
-              borderRadius: 12,
-              padding: '12px 18px',
-              marginBottom: 24,
+              borderRadius: 14,
+              padding: '14px 20px',
+              marginBottom: 20,
               fontSize: 13.5,
               color: '#525252',
               display: 'flex',
@@ -1437,6 +1604,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: 12,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.01)',
             }}
           >
             <div>
@@ -1470,6 +1638,32 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             </div>
           </div>
         )}
+
+        {/* Bloco de Inteligência Fiscal IA (Insights, Tendências & Parecer com Gemini) */}
+        <NfseInsights
+          notas={nfseList}
+          empresa={empresa}
+          config={config}
+          papelFiltro={papelFiltro}
+          mesFiltro={mesFiltro}
+          onFiltrarRascunhos={() => {
+            setPapelFiltro('prestadas');
+            setStatusFiltro('rascunho');
+          }}
+          onFiltrarTomadas={() => {
+            setPapelFiltro('tomadas');
+            setStatusFiltro('');
+          }}
+          onFiltrarPrestadas={() => {
+            setPapelFiltro('prestadas');
+            setStatusFiltro('');
+          }}
+          onBuscarTomador={(termo: string) => {
+            setSearch(termo);
+          }}
+          onAbrirConfig={() => setShowConfigModal(true)}
+          onAbrirCopilot={() => window.dispatchEvent(new CustomEvent('abrirCopilotoFiscal'))}
+        />
 
         {/* Resumo no padrão do Dashboard Fiscal / NF-e Destinadas: cartões clicáveis que filtram a lista. */}
         <div

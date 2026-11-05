@@ -45,7 +45,7 @@ export interface DadosDacte {
   emitente: ParteCte;
   remetente: ParteCte;
   destinatario: ParteCte;
-  tomador: string;
+  tomador: { papel: string; nome: string; documento: string };
   valores: { total: string; receber: string; componentes: Array<{ nome: string; valor: string }> };
   icms: { cst: string; baseCalculo: string; aliquota: string; valor: string };
   carga: { valor: string; produtoPredominante: string; quantidades: Array<{ unidade: string; tipo: string; quantidade: string }> };
@@ -90,13 +90,26 @@ function lerIcms(imp: string): DadosDacte['icms'] {
   };
 }
 
-function lerTomador(inf: string): string {
-  // toma3: 0=Remetente,1=Expedidor,2=Recebedor,3=Destinatário. toma4: dados próprios no XML.
-  const toma3 = tag(bloco(inf, 'toma3'), 'toma');
+/**
+ * Quem contratou o frete. No CT-e o tomador pode ser um dos participantes já
+ * declarados (toma3) ou ter dados próprios (toma4). Devolve o papel e, quando dá,
+ * o nome e o documento — para o DACTE mostrar explicitamente o tomador.
+ */
+function lerTomador(inf: string, rem: ParteCte, dest: ParteCte): { papel: string; nome: string; documento: string } {
+  // toma4: o tomador não é nenhum dos demais participantes; traz CNPJ/CPF e nome próprios.
   const toma4 = bloco(inf, 'toma4');
-  if (toma4) return tag(toma4, 'xNome') || 'Outro (toma4)';
-  const mapa: Record<string, string> = { '0': 'Remetente', '1': 'Expedidor', '2': 'Recebedor', '3': 'Destinatário' };
-  return mapa[toma3] || '—';
+  if (toma4) {
+    return { papel: 'Outro', nome: tag(toma4, 'xNome'), documento: tag(toma4, 'CNPJ') || tag(toma4, 'CPF') };
+  }
+  // toma3: 0=Remetente, 1=Expedidor, 2=Recebedor, 3=Destinatário.
+  const toma3 = tag(bloco(inf, 'toma3'), 'toma');
+  switch (toma3) {
+    case '0': return { papel: 'Remetente', nome: rem.nome, documento: rem.documento };
+    case '1': { const e = bloco(inf, 'exped'); return { papel: 'Expedidor', nome: tag(e, 'xNome'), documento: tag(e, 'CNPJ') || tag(e, 'CPF') }; }
+    case '2': { const r = bloco(inf, 'receb'); return { papel: 'Recebedor', nome: tag(r, 'xNome'), documento: tag(r, 'CNPJ') || tag(r, 'CPF') }; }
+    case '3': return { papel: 'Destinatário', nome: dest.nome, documento: dest.documento };
+    default: return { papel: '—', nome: '', documento: '' };
+  }
 }
 
 export function lerDadosDacte(xml: string): DadosDacte {
@@ -113,6 +126,8 @@ export function lerDadosDacte(xml: string): DadosDacte {
   const prot = bloco(xml, 'infProt');
   const chave = (inf.match(/Id="CTe(\d{44})"/)?.[1]) || tag(prot, 'chCTe') || '';
 
+  const remetente = lerParte(rem, 'enderReme');
+  const destinatario = lerParte(dest, 'enderDest');
   const componentes = blocos(vPrest, 'Comp').map(c => ({ nome: tag(c, 'xNome'), valor: tag(c, 'vComp') }));
   const quantidades = blocos(infCarga, 'infQ').map(q => ({
     unidade: tag(q, 'cUnid'),
@@ -132,9 +147,9 @@ export function lerDadosDacte(xml: string): DadosDacte {
     origem: [tag(ide, 'xMunIni'), tag(ide, 'UFIni')].filter(Boolean).join(' - '),
     destino: [tag(ide, 'xMunFim'), tag(ide, 'UFFim')].filter(Boolean).join(' - '),
     emitente: lerParte(emit, 'enderEmit'),
-    remetente: lerParte(rem, 'enderReme'),
-    destinatario: lerParte(dest, 'enderDest'),
-    tomador: lerTomador(inf),
+    remetente,
+    destinatario,
+    tomador: lerTomador(inf, remetente, destinatario),
     valores: {
       total: tag(vPrest, 'vTPrest'),
       receber: tag(vPrest, 'vRec'),
@@ -320,12 +335,21 @@ function blocoImposto(pdf: Pdf, d: DadosDacte, y: number): number {
   return y + 7;
 }
 
+function blocoTomador(pdf: Pdf, d: DadosDacte, y: number): number {
+  const t = d.tomador;
+  titulo(pdf, y, 'TOMADOR DO SERVIÇO (QUEM CONTRATA O FRETE)');
+  y += 3;
+  caixa(pdf, M, y, 44, 7, 'TOMADOR', t.papel, { negrito: true });
+  caixa(pdf, M + 44, y, CW - 44 - 52, 7, 'NOME / RAZÃO SOCIAL', t.nome || '—');
+  caixa(pdf, M + CW - 52, y, 52, 7, 'CNPJ / CPF', formatarDocumento(t.documento));
+  return y + 7;
+}
+
 function blocoCarga(pdf: Pdf, d: DadosDacte, y: number): number {
   titulo(pdf, y, 'INFORMAÇÕES DA CARGA');
   y += 3;
-  caixa(pdf, M, y, 50, 7, 'VALOR TOTAL DA CARGA', formatarNumero(d.carga.valor), { alinhar: 'right' });
-  caixa(pdf, M + 50, y, 40, 7, 'TOMADOR DO SERVIÇO', d.tomador);
-  caixa(pdf, M + 90, y, CW - 90, 7, 'PRODUTO PREDOMINANTE', d.carga.produtoPredominante);
+  caixa(pdf, M, y, 60, 7, 'VALOR TOTAL DA CARGA', formatarNumero(d.carga.valor), { alinhar: 'right' });
+  caixa(pdf, M + 60, y, CW - 60, 7, 'PRODUTO PREDOMINANTE', d.carga.produtoPredominante);
   y += 7;
   const qs = d.carga.quantidades.slice(0, 4);
   if (qs.length) {
@@ -367,6 +391,7 @@ function desenharDacte(pdf: Pdf, d: DadosDacte, situacao: string) {
   y = blocoPercurso(pdf, d, y + 1);
   y = blocoParte(pdf, 'REMETENTE', d.remetente, y + 1);
   y = blocoParte(pdf, 'DESTINATÁRIO', d.destinatario, y + 1);
+  y = blocoTomador(pdf, d, y + 1);
   y = blocoValores(pdf, d, y + 2);
   y = blocoImposto(pdf, d, y + 2);
   y = blocoCarga(pdf, d, y + 2);
