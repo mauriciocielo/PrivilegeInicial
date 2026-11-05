@@ -12,7 +12,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const filtro = await filtroEmpresasNfse(auth.session);
     const empresas = await db.empresa.findMany({
@@ -70,12 +69,14 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const body = await request.json().catch(() => ({}));
 
     // Atualização em lote de todas as empresas monitoradas (ex: ativar modo noturno em todas)
     if (body?.aplicarTodos === true && typeof body?.apenasNoturno === 'boolean') {
+      if (auth.session.role === 'cliente') {
+        return NextResponse.json({ error: 'Apenas consultores e administradores podem aplicar alterações globais.' }, { status: 403 });
+      }
       const filtro = await filtroEmpresasNfse(auth.session);
       const empresasPermitidas = await db.empresa.findMany({
         where: filtro,

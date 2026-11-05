@@ -14,7 +14,7 @@ async function autorizado(request: Request, token: string | null): Promise<boole
   if (token && token === segredo) return true;
   if (request.headers.get('x-vercel-cron') === '1') return true;
   const auth = await requireAuth(request);
-  return !auth.error && (auth.session.role === 'administrador' || auth.session.role === 'consultor');
+  return !auth.error && (auth.session.role === 'administrador' || auth.session.role === 'consultor' || auth.session.role === 'cliente');
 }
 
 async function executar() {

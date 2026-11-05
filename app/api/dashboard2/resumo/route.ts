@@ -9,9 +9,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') {
-      return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
-    }
 
     const filtroEmpresas = await filtroEmpresasNfse(auth.session);
     const empresasPermitidas = await db.empresa.findMany({

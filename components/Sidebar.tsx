@@ -39,8 +39,8 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Painel',
     items: [
-      { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
       { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/consultor/dashboard2', icon: ShieldCheck },
+      { label: 'Dashboard Financeiro', href: '/consultor/dashboard', icon: LayoutDashboard },
       { label: 'Ecossistema BPO', href: '/consultor/bpo', icon: Activity },
       { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
       { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
@@ -113,7 +113,8 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Visão Geral',
     items: [
-      { label: 'Dashboard', href: '/cliente/dashboard', icon: LayoutDashboard },
+      { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/cliente/dashboard2', icon: ShieldCheck },
+      { label: 'Dashboard Financeiro', href: '/cliente/dashboard', icon: LayoutDashboard },
       { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
@@ -470,16 +471,26 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const getFilteredNav = () => {
     if (role === 'cliente') {
-      // Cliente com procuração para o escritório usa só a emissão de notas.
-      if (acessoNfse.liberado) {
-        return [{ section: 'Notas Fiscais', items: [{ label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText }] }];
-      }
       if (acessoNfse.carregando) return [];
       const allowedClient = user?.allowedRoutes || [];
-      if (allowedClient.length === 0) return clienteNav; // backward compatibility for clients that have no allowedRoutes configured yet
-      return clienteNav.map(section => {
+      const itensVisaoGeral: NavItem[] = [
+        { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/cliente/dashboard2', icon: ShieldCheck },
+        { label: 'Dashboard Financeiro', href: '/cliente/dashboard', icon: LayoutDashboard },
+        ...(acessoNfse.liberado ? [{ label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText }] : []),
+        { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
+        { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
+        { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
+      ];
+
+      const navClienteBase = [
+        { section: 'Visão Geral', items: itensVisaoGeral },
+        ...clienteNav.filter(s => s.section !== 'Visão Geral'),
+      ];
+
+      if (allowedClient.length === 0) return navClienteBase;
+      return navClienteBase.map(section => {
         const items = section.items.filter(item => {
-          if (item.href === '/cliente/dashboard') return true;
+          if (item.href === '/cliente/dashboard' || item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
         return { ...section, items };

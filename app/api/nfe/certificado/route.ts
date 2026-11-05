@@ -14,7 +14,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const url = new URL(request.url);
     const empresaId = url.searchParams.get('empresaId') || '';
@@ -98,7 +97,6 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const body = await request.json().catch(() => ({}));
     const empresaId = typeof body?.empresaId === 'string' ? body.empresaId : '';
@@ -191,7 +189,6 @@ export async function PUT(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const body = await request.json().catch(() => ({}));
     const empresaId = typeof body?.empresaId === 'string' ? body.empresaId : '';
@@ -242,7 +239,6 @@ export async function DELETE(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const url = new URL(request.url);
     const empresaId = url.searchParams.get('empresaId') || '';

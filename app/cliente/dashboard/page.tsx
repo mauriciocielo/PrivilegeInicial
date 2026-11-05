@@ -7,7 +7,7 @@ import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
-import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays, ShieldCheck } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -247,7 +247,14 @@ export default function ClienteDashboard() {
             Evolução Mensal • {mesAtualLabel}
           </div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <a
+            href="/cliente/dashboard2"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#600000', borderColor: '#600000', fontWeight: 600 }}
+          >
+            <ShieldCheck size={14} /> Dashboard 2 (Fiscal & CNDs)
+          </a>
           <select 
             className="form-control" 
             value={mesSelecionado} 

@@ -8,6 +8,7 @@ import {
   Clock, Moon, Sun, ArrowUpRight, ArrowDownLeft, KeyRound, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { store } from '../lib/store';
 import NfeDestinadasPainel from './NfeDestinadasPainel';
 import PainelSituacaoFiscal from './PainelSituacaoFiscal';
 import NfeMonitorLogsPainel from './NfeMonitorLogsPainel';
@@ -58,6 +59,12 @@ export default function DashboardFiscalGeral() {
   const [carregandoResumo, setCarregandoResumo] = useState(true);
   const [executandoLote, setExecutandoLote] = useState(false);
   const [showCadastrarModal, setShowCadastrarModal] = useState(false);
+  const [isCliente, setIsCliente] = useState(false);
+
+  useEffect(() => {
+    const u = store.getCurrentUser();
+    if (u?.role === 'cliente') setIsCliente(true);
+  }, []);
 
   const carregarResumo = useCallback(async () => {
     try {
@@ -132,7 +139,7 @@ export default function DashboardFiscalGeral() {
                 borderRadius: 99,
               }}
             >
-              Dashboard 2 • Torre de Controle Fiscal
+              {isCliente ? 'Dashboard Fiscal • Documentos & CNDs' : 'Dashboard 2 • Torre de Controle Fiscal'}
             </span>
             {resumo?.ehHorarioNoturno ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#c4b5fd' }}>
@@ -154,10 +161,12 @@ export default function DashboardFiscalGeral() {
               lineHeight: 1.1,
             }}
           >
-            Monitoramento de Notas Fiscais & CNDs de Todos os Clientes
+            {isCliente ? 'Painel Fiscal: Notas Fiscais & CNDs' : 'Monitoramento de Notas Fiscais & CNDs de Todos os Clientes'}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>
-            Visão consolidada de NF-e, CT-e, NFS-e, certidões negativas e auditoria contínua da carteira.
+            {isCliente
+              ? 'Visão consolidada de NF-e (Mercadorias), CT-e (Fretes), NFS-e (Serviços) e certidões negativas da sua empresa.'
+              : 'Visão consolidada de NF-e, CT-e, NFS-e, certidões negativas e auditoria contínua da carteira.'}
           </p>
         </div>
 
@@ -183,29 +192,31 @@ export default function DashboardFiscalGeral() {
             }}
           >
             <Play size={14} fill="#ffffff" />
-            {executandoLote ? 'Executando Todos...' : 'Executar de Todos os Clientes'}
+            {executandoLote ? 'Sincronizando...' : (isCliente ? 'Sincronizar Documentos Agora' : 'Executar de Todos os Clientes')}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setShowCadastrarModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(255,255,255,0.1)',
-              color: '#ffffff',
-              border: '1px solid rgba(255,255,255,0.2)',
-              padding: '12px 18px',
-              borderRadius: 12,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={14} />
-            Cadastrar CNPJ / Importar
-          </button>
+          {!isCliente && (
+            <button
+              type="button"
+              onClick={() => setShowCadastrarModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(255,255,255,0.1)',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.2)',
+                padding: '12px 18px',
+                borderRadius: 12,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              <Plus size={14} />
+              Cadastrar CNPJ / Importar
+            </button>
+          )}
 
           <button
             type="button"
@@ -549,7 +560,7 @@ export default function DashboardFiscalGeral() {
             }}
           >
             <Activity size={14} />
-            Logs de Todos os Clientes
+            {isCliente ? 'Logs de Auditoria' : 'Logs de Todos os Clientes'}
             {(resumo?.monitor.erros24h || 0) > 0 && (
               <span
                 style={{
@@ -585,7 +596,7 @@ export default function DashboardFiscalGeral() {
             }}
           >
             <Play size={14} />
-            Central de Execução
+            {isCliente ? 'Central de Sincronização' : 'Central de Execução'}
           </button>
         </div>
       </div>
@@ -653,11 +664,13 @@ export default function DashboardFiscalGeral() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <Inbox size={20} color="#600000" />
                   <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-                    Sincronização Completa (Todas)
+                    {isCliente ? 'Sincronização de Documentos' : 'Sincronização Completa (Todas)'}
                   </span>
                 </div>
                 <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                  Consulta em paralelo a SEFAZ (NF-e Mercadorias e CT-e Fretes) e o ADN Nacional (NFS-e de Serviços emitidas e tomadas).
+                  {isCliente
+                    ? 'Consulta em tempo real a SEFAZ (NF-e Mercadorias e CT-e Fretes) e o ADN Nacional (NFS-e emitidas e tomadas).'
+                    : 'Consulta em paralelo a SEFAZ (NF-e Mercadorias e CT-e Fretes) e o ADN Nacional (NFS-e de Serviços emitidas e tomadas).'}
                 </p>
               </div>
               <button
@@ -680,7 +693,7 @@ export default function DashboardFiscalGeral() {
                 }}
               >
                 <Play size={14} fill="#ffffff" />
-                {executandoLote ? 'Executando...' : 'Executar de Todos os Clientes'}
+                {executandoLote ? 'Executando...' : (isCliente ? 'Sincronizar Documentos Agora' : 'Executar de Todos os Clientes')}
               </button>
             </div>
 
@@ -699,11 +712,13 @@ export default function DashboardFiscalGeral() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <ShieldCheck size={20} color="#0284c7" />
                   <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-                    Varredura de CNDs
+                    {isCliente ? 'Situação Fiscal & CNDs' : 'Varredura de CNDs'}
                   </span>
                 </div>
                 <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                  Atualiza certidões negativas de débitos e situação cadastral federal e estadual na Receita Federal.
+                  {isCliente
+                    ? 'Acompanhe e emita certidões negativas de débitos e situação cadastral federal e estadual na Receita Federal.'
+                    : 'Atualiza certidões negativas de débitos e situação cadastral federal e estadual na Receita Federal.'}
                 </p>
               </div>
               <button
@@ -732,50 +747,52 @@ export default function DashboardFiscalGeral() {
               </button>
             </div>
 
-            <div
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: 16,
-                padding: 24,
-                background: '#f9fafb',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <Building2 size={20} color="#16a34a" />
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-                    Cadastro de Todos os Clientes
-                  </span>
-                </div>
-                <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                  Cadastre novos CNPJs, importe planilhas de clientes ou gerencie certificados digitais A1 da carteira.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCadastrarModal(true)}
+            {!isCliente && (
+              <div
                 style={{
-                  background: '#16a34a',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '12px 18px',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 16,
+                  padding: 24,
+                  background: '#f9fafb',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
                 }}
               >
-                <Plus size={14} />
-                Cadastrar CNPJ / Importar
-              </button>
-            </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <Building2 size={20} color="#16a34a" />
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                      Cadastro de Todos os Clientes
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                    Cadastre novos CNPJs, importe planilhas de clientes ou gerencie certificados digitais A1 da carteira.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCadastrarModal(true)}
+                  style={{
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '12px 18px',
+                    borderRadius: 10,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Plus size={14} />
+                  Cadastrar CNPJ / Importar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

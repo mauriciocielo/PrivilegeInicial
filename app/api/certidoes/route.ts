@@ -10,7 +10,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const empresaIdParam = new URL(request.url).searchParams.get('empresaId');
     const empresasBrutas = await db.empresa.findMany({

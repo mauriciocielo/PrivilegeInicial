@@ -21,20 +21,28 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
     if (user.role !== 'cliente') { router.replace('/consultor/dashboard'); return; }
     if (acessoNfse.carregando) { setAuthorized(false); return; }
 
-    // Cliente com procuração para o escritório usa só a emissão de notas.
+    const isDashboard2 = pathname.startsWith('/cliente/dashboard2');
+    const isDashboard = pathname === '/cliente/dashboard';
+
+    // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto aos Dashboards
     if (acessoNfse.liberado) {
-      if (pathname === ROTA_NFSE) setAuthorized(true);
-      else { setAuthorized(false); router.replace(ROTA_NFSE); }
+      if (pathname === ROTA_NFSE || isDashboard2 || isDashboard) {
+        setAuthorized(true);
+        return;
+      }
+    }
+    if (pathname === ROTA_NFSE && !acessoNfse.liberado) {
+      setAuthorized(false);
+      router.replace(isDashboard2 ? '/cliente/dashboard2' : '/cliente/dashboard');
       return;
     }
-    if (pathname === ROTA_NFSE) { setAuthorized(false); router.replace('/cliente/dashboard'); return; }
 
     const allowed = user.allowedRoutes || [];
     if (allowed.length === 0) {
       // Compatibility
       setAuthorized(true);
     } else {
-      const isOk = pathname === '/cliente/dashboard' || allowed.some(route => pathname.startsWith(route));
+      const isOk = isDashboard || isDashboard2 || allowed.some(route => pathname.startsWith(route));
       setAuthorized(isOk);
     }
   }, [router, pathname, acessoNfse.carregando, acessoNfse.liberado]);

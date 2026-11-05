@@ -8,7 +8,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const empresaId = searchParams.get('empresaId');
@@ -24,12 +23,15 @@ export async function GET(request: Request) {
     });
     const idsPermitidos = empresasPermitidas.map(e => e.id);
 
-    const where: any = {
-      OR: [
-        { empresaId: { in: idsPermitidos } },
-        { empresaId: null }, // Logs gerais do lote/cron
-      ],
-    };
+    const isCliente = auth.session.role === 'cliente';
+    const where: any = isCliente
+      ? { empresaId: { in: idsPermitidos } }
+      : {
+          OR: [
+            { empresaId: { in: idsPermitidos } },
+            { empresaId: null }, // Logs gerais do lote/cron
+          ],
+        };
 
     if (empresaId && empresaId !== 'todas') {
       where.empresaId = empresaId;

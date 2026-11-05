@@ -6,7 +6,7 @@ import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
-import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus, LogOut } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus, LogOut, ShieldCheck } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -289,6 +289,13 @@ export default function ConsultorDashboard() {
               return <option key={m} value={m}>{d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
             })}
           </select>
+          <a 
+            href="/consultor/dashboard2" 
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderColor: '#600000', color: '#600000', fontWeight: 600 }}
+          >
+            <ShieldCheck size={14} /> Dashboard 2 (Fiscal & CNDs)
+          </a>
           <a href={`/consultor/report-board?empresaId=${empresaId}&mes=${mesSelecionado}`} className="btn btn-secondary">
              <Printer size={14} /> Emitir Report (PDF)
           </a>

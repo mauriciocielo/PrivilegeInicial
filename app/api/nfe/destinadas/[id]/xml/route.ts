@@ -9,7 +9,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
     const { id } = await params;
     const nota = await db.nfeDestinada.findUnique({

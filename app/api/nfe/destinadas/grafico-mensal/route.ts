@@ -37,9 +37,6 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role === 'cliente') {
-      return NextResponse.json({ error: 'Acesso restrito.' }, { status: 403 });
-    }
 
     const url = new URL(request.url);
     const empresaId = url.searchParams.get('empresaId') || '';
