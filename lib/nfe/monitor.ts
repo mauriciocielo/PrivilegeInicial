@@ -25,6 +25,9 @@ const ESPERA_APOS_656_MS = 65 * MINUTO;
 const ESPERA_APOS_REJEICAO_MS = 6 * 60 * MINUTO;
 const ESPERA_APOS_FALHA_MS = 30 * MINUTO;
 const MAX_PAGINAS_POR_CONSULTA = 12;
+// Na janela noturna a SEFAZ tolera lotes grandes: o teto sobe para buscar toda a carteira de notas
+// de uma vez. O tempo da rodada (limite) continua sendo o limitador real, então não há risco de 656.
+const MAX_PAGINAS_NOTURNO = 240;
 const RESERVA_CONSULTA_MS = 10 * MINUTO;
 const TIMEOUT_SEFAZ_MS = 40_000;
 // Quanto uma chamada já iniciada ainda pode durar depois do limite da rodada.
@@ -191,7 +194,10 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
   let adicionados = 0;
   const resultado: ResultadoConsultaNfe = { ...base, executada: true };
 
-  for (let pagina = 0; pagina < MAX_PAGINAS_POR_CONSULTA; pagina++) {
+  // No modo noturno busca TODAS as notas (sem o teto de 12 páginas do dia); o tempo da rodada ainda limita.
+  const maxPaginas = ehHorarioNoturnoBrasilia() ? MAX_PAGINAS_NOTURNO : MAX_PAGINAS_POR_CONSULTA;
+
+  for (let pagina = 0; pagina < maxPaginas; pagina++) {
     // Sem tempo para outra página: sai pelo caminho de leitura parcial, que retoma do NSU gravado.
     if (limite && pagina > 0 && Date.now() >= limite) break;
     let resposta;

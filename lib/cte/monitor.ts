@@ -10,8 +10,11 @@ import {
   montarEnvelopeDistribuicaoCte, SefazCteIndisponivelError, type AmbienteCte, type DadosCte
 } from './distribuicao';
 import { registrarLogFiscal } from '../nfe/logger';
+import { ehHorarioNoturnoBrasilia } from '../nfe/monitor';
 
 const MAX_PAGINAS_POR_CONSULTA = 8;
+// Janela noturna: busca todos os CT-e de uma vez (teto alto), igual ao monitor de NF-e.
+const MAX_PAGINAS_NOTURNO = 160;
 const AMBIENTE: AmbienteCte = 'producao';
 
 export interface ResultadoConsultaCte {
@@ -165,7 +168,14 @@ export async function consultarCteEmpresa(empresaId: string): Promise<ResultadoC
   let ultimoMotivo = '';
   let temMais = false;
 
-  for (let i = 0; i < MAX_PAGINAS_POR_CONSULTA; i++) {
+  // No modo noturno busca todos os CT-e de uma vez (teto alto), com orçamento de tempo
+  // próprio para não estourar o limite da função serverless (retoma do NSU gravado na próxima rodada).
+  const maxPaginas = ehHorarioNoturnoBrasilia() ? MAX_PAGINAS_NOTURNO : MAX_PAGINAS_POR_CONSULTA;
+  const inicioConsulta = Date.now();
+  const ORCAMENTO_MS = 45_000;
+
+  for (let i = 0; i < maxPaginas; i++) {
+    if (i > 0 && Date.now() - inicioConsulta > ORCAMENTO_MS) { temMais = BigInt(ultNsu || '0') < BigInt(maxNsu || '0'); break; }
     paginas++;
     const envelope = montarEnvelopeDistribuicaoCte({
       ambiente: AMBIENTE,
