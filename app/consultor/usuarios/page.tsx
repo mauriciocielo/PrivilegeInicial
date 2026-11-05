@@ -6,6 +6,7 @@ import { hashPassword } from '../../../lib/auth-hash';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { ROTA_SOMENTE_FISCAL } from '../../../components/Sidebar';
 
 const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 
@@ -824,6 +825,26 @@ export default function UsuariosPage() {
                 <label className="form-label" style={{ fontWeight: 600 }}>
                   Telas e Rotas Autorizadas (Selecione quais módulos o {form.role} poderá acessar)
                 </label>
+
+                {/* Escolha manual do painel inicial: por padrão o usuário vê os dois dashboards.
+                    Ativando aqui, ele fica só no painel fiscal (o Dashboard Financeiro some do menu). */}
+                <label
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 12px',
+                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                    border: `1px solid ${(form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent)' : 'var(--border-light)'}`,
+                    background: (form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent-glow)' : 'transparent',
+                    color: (form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent-light)' : 'var(--text-secondary)',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={(form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL)}
+                    onChange={() => toggleRoute(ROTA_SOMENTE_FISCAL)}
+                  />
+                  <span>🛡️ <strong>Somente Painel Fiscal</strong> — esconde o Dashboard Financeiro; o usuário abre direto no Dashboard 2 (Fiscal &amp; CNDs).</span>
+                </label>
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   {(form.role === 'consultor' ? AVAILABLE_SCREENS : AVAILABLE_CLIENT_SCREENS).map(screen => {
                     const checked = (form.allowedRoutes || []).includes(screen.route);

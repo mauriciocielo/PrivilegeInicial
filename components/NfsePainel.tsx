@@ -21,7 +21,7 @@ import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
 import { Instrument_Serif } from 'next/font/google';
-import { Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
@@ -54,6 +54,54 @@ function lerEmissorProprio(): EmpresaNfseSelecionada | null {
 
 // Notas anteriores à integração foram geradas pela simulação: nunca passaram pelo Sefin.
 const ehSimulada = (n: NfsE) => n.status !== 'rascunho' && !n.chaveAcesso;
+
+/**
+ * Cartão de resumo no mesmo padrão do Dashboard Fiscal / NF-e Destinadas:
+ * rótulo em caixa alta, número em sans-serif e, se clicável, filtra a lista ao ser pressionado.
+ */
+function CartaoResumoNfse({ rotulo, valor, sub, acento, badge, onClick }: {
+  rotulo: string;
+  valor: string | number;
+  sub: string;
+  acento?: string;
+  badge?: { texto: string; cor: string; fundo: string } | null;
+  onClick?: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  const interativo = !!onClick;
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      role={interativo ? 'button' : undefined}
+      tabIndex={interativo ? 0 : undefined}
+      onKeyDown={e => { if (interativo && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick!(); } }}
+      style={{
+        background: '#fff',
+        border: `1px solid ${hover && interativo ? '#d1d5db' : '#e5e7eb'}`,
+        borderRadius: 16,
+        padding: 20,
+        boxShadow: hover && interativo ? '0 12px 24px -8px rgba(0,0,0,0.12)' : '0 2px 4px rgba(0,0,0,0.02)',
+        transform: hover && interativo ? 'translateY(-3px)' : 'none',
+        transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+        cursor: interativo ? 'pointer' : 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{rotulo}</span>
+        {badge && (
+          <span style={{ background: badge.fundo, color: badge.cor, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge.texto}</span>
+        )}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: acento || '#111827', lineHeight: 1.1 }}>{valor}</div>
+      <div style={{ fontSize: 12, color: '#6b7280' }}>{sub}</div>
+    </div>
+  );
+}
 
 function ehNotaTomada(n: NfsE, cnpjEmpresa: string): boolean {
   if (n.status === 'rascunho') return false;
@@ -1186,16 +1234,18 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       <div
         className="page-header"
         style={{
-          background: '#fdfdfd',
-          borderBottom: '1px solid #e5e5e5',
+          background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
           padding: '24px 32px',
         }}
       >
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
-            Sefin Nacional • NFS-e (Tela Independente)
+          <div style={{ marginBottom: 6 }}>
+            <span style={{ background: '#600000', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99 }}>
+              Sefin Nacional • NFS-e (Tela Independente)
+            </span>
           </div>
-          <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
+          <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#fff', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
             Notas Fiscais de Serviço
           </h1>
           {modoCliente && acessoCliente.empresas.length > 1 ? (
@@ -1217,9 +1267,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             </select>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 14, color: '#171717', fontWeight: 600 }}>
+              <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 600 }}>
                 {empresa?.razaoSocial || empresa?.nomeFantasia}
-                {empresa?.cnpj ? <span style={{ fontWeight: 400, color: '#525252' }}>{` · CNPJ ${formatarCnpj(empresa.cnpj)}`}</span> : ''}
+                {empresa?.cnpj ? <span style={{ fontWeight: 400, color: '#9ca3af' }}>{` · CNPJ ${formatarCnpj(empresa.cnpj)}`}</span> : ''}
               </div>
               {!modoCliente && (
                 <button
@@ -1229,9 +1279,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 5,
-                    background: '#f3f4f6',
-                    border: '1px solid #d4d4d8',
-                    color: '#171717',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
                     borderRadius: 99,
                     padding: '3px 11px',
                     fontSize: 12,
@@ -1337,6 +1387,14 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             </button>
           )}
           <button
+            type="button"
+            style={{ background: 'rgba(124,58,237,0.18)', color: '#e9d5ff', border: '1px solid rgba(167,139,250,0.4)', borderRadius: 8, padding: '10px 16px', fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            onClick={() => window.dispatchEvent(new CustomEvent('abrirCopilotoFiscal'))}
+            title="Abrir o assistente de IA com o contexto fiscal"
+          >
+            <Sparkles size={14} /> Analista IA
+          </button>
+          <button
             className="btn"
             style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 500, fontSize: 13.5 }}
             onClick={openNovo}
@@ -1413,102 +1471,43 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           </div>
         )}
 
-        {/* Resumo no padrão editorial da Tela Inicial */}
+        {/* Resumo no padrão do Dashboard Fiscal / NF-e Destinadas: cartões clicáveis que filtram a lista. */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.35fr repeat(3, 1fr)',
-            gap: 20,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: 16,
             marginBottom: 24,
           }}
         >
-          <div
-            style={{
-              background: '#0a0a0a',
-              color: '#fff',
-              padding: '26px 30px',
-              borderRadius: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>
-              Notas Emitidas (Prestadas)
-            </span>
-            <div className={serif.className} style={{ fontSize: 38, fontWeight: 400, margin: '8px 0 4px', lineHeight: 1 }}>
-              {fmt.currency(totais.emitidas)}
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-              {totais.qtdEmitidasPrestadas} nota(s) autorizada(s) no período
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e5e5e5',
-              padding: '26px 26px',
-              borderRadius: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Serviços Tomados (Recebidas)
-            </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
-              {fmt.currency(totais.tomadasValor)}
-            </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
-              {totais.qtdTomadas} nota(s) tomada(s) de fornecedores
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e5e5e5',
-              padding: '26px 26px',
-              borderRadius: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Em Rascunho
-            </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
-              {fmt.currency(totais.pendentes)}
-            </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
-              {totais.qtdRascunhos} nota(s) pendente(s) de envio
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e5e5e5',
-              padding: '26px 26px',
-              borderRadius: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Canceladas
-            </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: totais.qtdCanceladasAba > 0 ? '#600000' : '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
-              {totais.qtdCanceladasAba}
-            </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
-              Notas canceladas na visão atual
-            </div>
-          </div>
+          <CartaoResumoNfse
+            rotulo="Notas Emitidas (Prestadas)"
+            valor={fmt.currency(totais.emitidas)}
+            sub={`${totais.qtdEmitidasPrestadas} nota(s) autorizada(s) no período`}
+            acento="#16a34a"
+            onClick={() => { setPapelFiltro('prestadas'); setStatusFiltro('emitida'); }}
+          />
+          <CartaoResumoNfse
+            rotulo="Serviços Tomados (Recebidas)"
+            valor={fmt.currency(totais.tomadasValor)}
+            sub={`${totais.qtdTomadas} nota(s) tomada(s) de fornecedores`}
+            onClick={() => { setPapelFiltro('tomadas'); setStatusFiltro(''); }}
+          />
+          <CartaoResumoNfse
+            rotulo="Em Rascunho"
+            valor={fmt.currency(totais.pendentes)}
+            sub={`${totais.qtdRascunhos} nota(s) pendente(s) de envio`}
+            acento={totais.qtdRascunhos > 0 ? '#b45309' : undefined}
+            badge={totais.qtdRascunhos > 0 ? { texto: `${totais.qtdRascunhos} a enviar`, cor: '#b45309', fundo: '#fef3c7' } : null}
+            onClick={() => { setPapelFiltro('prestadas'); setStatusFiltro('rascunho'); }}
+          />
+          <CartaoResumoNfse
+            rotulo="Canceladas"
+            valor={totais.qtdCanceladasAba}
+            sub="Notas canceladas na visão atual"
+            acento={totais.qtdCanceladasAba > 0 ? '#600000' : undefined}
+            onClick={() => setStatusFiltro('cancelada')}
+          />
         </div>
 
         {/* Seletor principal: Notas Emitidas (Prestador) vs Serviços Tomados (Tomador) + Filtro de Período em Tela */}

@@ -1,7 +1,11 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
+
+// Telas fiscais: aqui o copilot troca o contexto financeiro pelo fiscal (notas, CND, certificados).
+const EH_TELA_FISCAL = (p: string) => /\/dashboard2|\/nfe-destinadas|\/nfse|\/cnd-federal/.test(p);
 
 interface Message {
   sender: 'ai' | 'user';
@@ -10,6 +14,8 @@ interface Message {
 }
 
 export default function FloatingCopilot() {
+  const pathname = usePathname() || '';
+  const ehFiscal = EH_TELA_FISCAL(pathname);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -29,6 +35,13 @@ export default function FloatingCopilot() {
     }
   }, [messages, open]);
 
+  // Outras telas (ex.: o Dashboard Fiscal) podem abrir o copilot por um evento.
+  useEffect(() => {
+    const abrir = () => setOpen(true);
+    window.addEventListener('abrirCopilotoFiscal', abrir);
+    return () => window.removeEventListener('abrirCopilotoFiscal', abrir);
+  }, []);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
 
@@ -39,41 +52,78 @@ export default function FloatingCopilot() {
 
     const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
-    // Puxa Contexto dinâmico ativo
-    const empresaId = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id;
-    const empresa = store.getEmpresas().find(e => e.id === empresaId);
-    
-    let contextStr = 'Nenhuma empresa selecionada.';
-    if (empresaId && empresa) {
-      const lancs = store.getLancamentos(empresaId).filter(l => l.status === 'realizado');
-      const ports = store.getPortadores(empresaId);
-      const caixa = ports.reduce((acc, p) => acc + store.getSaldoPortador(p.id, p.empresaId), 0);
-      
-      const mesAtual = new Date().toISOString().slice(0, 7);
-      const lancsMes = lancs.filter(l => l.data.startsWith(mesAtual));
-      const rM = lancsMes.filter(l => l.tipo === 'receita').reduce((a,l) => a+l.valor, 0);
-      const dM = lancsMes.filter(l => l.tipo === 'despesa').reduce((a,l) => a+l.valor, 0);
+    let contextStr = '';
+    let systemInstruction = '';
 
-      // Inteligência Global Compartilhada
-      const docs = store.getInteligenciaDocs() || [];
-      const dContext = docs.filter(d => d.type.startsWith('text/') || d.name.endsWith('.txt')).map(d => `- ${d.name}: ${d.content.substring(0,250)}`).join('\n');
+    if (ehFiscal) {
+      // Painel fiscal: o mesmo copilot, agora com o contexto da carteira fiscal (notas, CND, certificados, monitor).
+      let resumo: any = null;
+      try {
+        const r = await fetch('/api/dashboard2/resumo');
+        if (r.ok) resumo = (await r.json())?.resumo;
+      } catch { /* segue sem o resumo; a IA avisa que não carregou */ }
 
-      contextStr = `
+      if (resumo) {
+        const n = resumo.notas || {};
+        const c = resumo.cnds || {};
+        const cert = resumo.certificados || {};
+        const mon = resumo.monitor || {};
+        contextStr = `
+CONTEXTO FISCAL DA CARTEIRA (consolidado de ${resumo.totalEmpresas ?? '?'} empresa(s)):
+Notas fiscais: ${n.totalGeral ?? 0} no total — ${n.totalNfe ?? 0} NF-e, ${n.totalCte ?? 0} CT-e, ${n.totalNfse ?? 0} NFS-e. Valor movimentado: ${fmt.currency(n.valorTotal || 0)}.
+NF-e: ${n.totalNfeEmitidas ?? 0} emitidas / ${n.totalNfeRecebidas ?? 0} recebidas. NFS-e: ${n.totalNfseEmitidas ?? 0} emitidas / ${n.totalNfseTomadas ?? 0} tomadas.
+Situação fiscal (CND/SITFIS): ${c.semPendencias ?? 0} sem pendências, ${c.comEfeito ?? 0} com débito suspenso (positiva c/ efeito de negativa), ${c.comPendencias ?? 0} com pendências, ${c.atencao ?? 0} a conferir, ${c.naoConsultadas ?? 0} não consultadas.
+Certificados A1: ${cert.comCertificado ?? 0} ativos, ${cert.comProcuracao ?? 0} por procuração, ${cert.vencendo30d ?? 0} vencendo em 30 dias, ${cert.vencidos ?? 0} vencidos, ${cert.semCertificado ?? 0} sem certificado.
+Monitor automático: ${mon.totalAtivos ?? 0} empresa(s) ativa(s), ${mon.erros24h ?? 0} erro(s) nas últimas 24h.`;
+      } else {
+        contextStr = 'Não foi possível carregar o resumo fiscal da carteira agora. Responda com base no que o analista descrever e sugira recarregar o painel.';
+      }
+
+      systemInstruction = `Você é o "Privilege Copilot Fiscal", assistente de IA acoplado ao painel fiscal do escritório contábil "Privilege" (NF-e, CT-e, NFS-e, certidões/CND e certificados digitais).
+Um analista fiscal está olhando o painel agora. Baseie-se no contexto consolidado da carteira:
+${contextStr}
+
+Regras:
+1. Responda sempre em Markdown conciso e profissional (tabelas ou bullet points), rápido e direto ao ponto.
+2. Ajude o analista a PRIORIZAR: certidões com pendência ou vencendo, certificados A1 a vencer, empresas sem consulta, erros do monitor. Sempre sugira a próxima ação concreta.
+3. Use só os números do contexto; pode fazer deduções simples, mas nunca invente valores, nomes de empresas ou situações que não estão no contexto.
+4. Quando pertinente, lembre que a CND só tem validade se emitida no portal oficial (Receita/SEFAZ) e que o relatório SITFIS não é certidão.`;
+    } else {
+      // Puxa Contexto dinâmico ativo (financeiro)
+      const empresaId = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id;
+      const empresa = store.getEmpresas().find(e => e.id === empresaId);
+
+      contextStr = 'Nenhuma empresa selecionada.';
+      if (empresaId && empresa) {
+        const lancs = store.getLancamentos(empresaId).filter(l => l.status === 'realizado');
+        const ports = store.getPortadores(empresaId);
+        const caixa = ports.reduce((acc, p) => acc + store.getSaldoPortador(p.id, p.empresaId), 0);
+
+        const mesAtual = new Date().toISOString().slice(0, 7);
+        const lancsMes = lancs.filter(l => l.data.startsWith(mesAtual));
+        const rM = lancsMes.filter(l => l.tipo === 'receita').reduce((a,l) => a+l.valor, 0);
+        const dM = lancsMes.filter(l => l.tipo === 'despesa').reduce((a,l) => a+l.valor, 0);
+
+        // Inteligência Global Compartilhada
+        const docs = store.getInteligenciaDocs() || [];
+        const dContext = docs.filter(d => d.type.startsWith('text/') || d.name.endsWith('.txt')).map(d => `- ${d.name}: ${d.content.substring(0,250)}`).join('\n');
+
+        contextStr = `
 CONTEXTO DA EMPRESA SESSÃO ATIVA:
 Empresa: ${empresa.razaoSocial}
 Saldo de Caixa Atual: ${fmt.currency(caixa)}
-Mês Corrente (${mesAtual}): Receitas: ${fmt.currency(rM)} / Despesas: ${fmt.currency(dM)} 
+Mês Corrente (${mesAtual}): Receitas: ${fmt.currency(rM)} / Despesas: ${fmt.currency(dM)}
 Total de registros processados: ${lancs.length}
-Políticas globais da empresa: 
+Políticas globais da empresa:
 - Cobrança: ${empresa.politicaCobrancaTexto || 'N/A'}
 - Pagamento: ${empresa.politicaPagamentosTexto || 'N/A'}
 
 Diretrizes Base de Conhecimento:
 ${dContext}
       `;
-    }
+      }
 
-    const systemInstruction = `Você é o "Privilege Copilot", inteligência financeira assistente acoplada globalmente no sistema ERP web do escritório contabil "Privilege". 
+      systemInstruction = `Você é o "Privilege Copilot", inteligência financeira assistente acoplada globalmente no sistema ERP web do escritório contabil "Privilege".
 Você age como um CFO e braço direito virtual hiper-responsivo.
 O usuário está visualizando e editando dados do sistema. Responda baseado no contexto injetado:
 ${contextStr}
@@ -82,6 +132,7 @@ Regras:
 1. Responda sempre em Markdown com formatação profissional, limpa e espaçada, mas seja muito conciso e rápido em suas observações. Use tabelas ou bullet points.
 2. Analise os fatos financeiros fornecidos da empresa selecionada e dê dicas precisas ou cruze informações. Não invente números fora do escopo, mas pode fazer deduções usando matemática comum de CF.
 3. Se perguntarem algo fora da contabilidade da empresa, você pode ajudar com excelência como um braço direito corporativo, utilizando todo seu raciocínio financeiro amplo do Gemini.`;
+    }
 
     const chatHist = [...messages, userMsg].slice(-8).map(m => ({
       role: m.sender === 'user' ? 'user' : 'model',
@@ -149,8 +200,8 @@ Regras:
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 22 }}>🧠</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Privilege Copilot</h3>
-                <span style={{ fontSize: 11, opacity: 0.8 }}>IA Assistente Global</span>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{ehFiscal ? 'Privilege Copilot Fiscal' : 'Privilege Copilot'}</h3>
+                <span style={{ fontSize: 11, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'IA Assistente Global'}</span>
               </div>
             </div>
             <button 
@@ -201,7 +252,7 @@ Regras:
           <div style={{ padding: 12, background: 'var(--bg-base)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 8 }}>
             <input 
               type="text"
-              placeholder="Pergunte sobre finanças..."
+              placeholder={ehFiscal ? 'Pergunte sobre notas, CND, certificados...' : 'Pergunte sobre finanças...'}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}

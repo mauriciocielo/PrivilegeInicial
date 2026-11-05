@@ -14,6 +14,10 @@ import {
   Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, type LucideIcon,
 } from 'lucide-react';
 
+// Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
+// (esconde o Dashboard Financeiro). Precisa ser idêntico ao usado na tela de Usuários.
+export const ROTA_SOMENTE_FISCAL = 'somente-painel-fiscal';
+
 const getAvatarGradient = (name: string) => {
   const colors = [
     ['#8c1a22', '#52080d'], // wine
@@ -469,6 +473,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     router.push('/');
   };
 
+  // Marcador manual (definido pelo admin na tela de Usuários) para esconder o Dashboard
+  // Financeiro e deixar o usuário apenas no painel fiscal. Ausente = mostra os dois (padrão).
+  const somenteFiscal = (user?.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL);
+
   const getFilteredNav = () => {
     if (role === 'cliente') {
       if (acessoNfse.carregando) return [];
@@ -490,7 +498,8 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (allowedClient.length === 0) return navClienteBase;
       return navClienteBase.map(section => {
         const items = section.items.filter(item => {
-          if (item.href === '/cliente/dashboard' || item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse') return true;
+          if (item.href === '/cliente/dashboard') return !somenteFiscal;
+          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
         return { ...section, items };
@@ -520,7 +529,8 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     
     return baseNav.map(section => {
       const items = section.items.filter(item => {
-        if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
+        if (item.href === '/consultor/dashboard') return !somenteFiscal;
+        if (item.href === '/consultor/dashboard2') return true;
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
         return userOk && companyOk;
@@ -562,7 +572,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           padding: '0 16px 0 0',
           flexShrink: 0,
         }}
-        onClick={() => router.push(role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')}
+        onClick={() => router.push(
+          somenteFiscal
+            ? (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard2')
+            : (role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')
+        )}
       >
         <BrandLogo size={42} />
       </div>

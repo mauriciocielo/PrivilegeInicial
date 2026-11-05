@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Instrument_Serif } from 'next/font/google';
 import {
   ShieldCheck, FileText, Activity, Building2, Play, RefreshCw,
@@ -53,6 +53,46 @@ interface ResumoFiscal {
   };
 }
 
+/** Cartão de indicador clicável: leva à aba correspondente e reage ao passar o mouse. */
+function CartaoKpi({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      style={{
+        background: '#ffffff',
+        border: `1px solid ${hover ? '#d1d5db' : '#e5e7eb'}`,
+        borderRadius: 16,
+        padding: 20,
+        boxShadow: hover ? '0 12px 24px -8px rgba(0,0,0,0.12)' : '0 2px 4px rgba(0,0,0,0.02)',
+        transform: hover ? 'translateY(-3px)' : 'none',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Esqueleto de carregamento para o número do KPI, no lugar do traço. */
+function Skeleton({ width = 56 }: { width?: number }) {
+  return (
+    <span
+      className="animate-pulse"
+      style={{ display: 'inline-block', width, height: 26, borderRadius: 6, background: '#e5e7eb', marginTop: 8 }}
+    />
+  );
+}
+
 export default function DashboardFiscalGeral() {
   const [abaAtiva, setAbaAtiva] = useState<'notas' | 'cnd' | 'logs' | 'execucao'>('notas');
   const [resumo, setResumo] = useState<ResumoFiscal | null>(null);
@@ -60,6 +100,7 @@ export default function DashboardFiscalGeral() {
   const [executandoLote, setExecutandoLote] = useState(false);
   const [showCadastrarModal, setShowCadastrarModal] = useState(false);
   const [isCliente, setIsCliente] = useState(false);
+  const [horaAtualizacao, setHoraAtualizacao] = useState<string | null>(null);
 
   useEffect(() => {
     const u = store.getCurrentUser();
@@ -73,6 +114,7 @@ export default function DashboardFiscalGeral() {
       if (!res.ok) throw new Error('Falha ao obter métricas');
       const data = await res.json();
       setResumo(data.resumo || null);
+      setHoraAtualizacao(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
       console.error('Erro ao carregar resumo do dashboard fiscal:', err);
     } finally {
@@ -220,23 +262,50 @@ export default function DashboardFiscalGeral() {
 
           <button
             type="button"
-            onClick={carregarResumo}
+            onClick={() => window.dispatchEvent(new CustomEvent('abrirCopilotoFiscal'))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 42,
-              height: 42,
+              gap: 7,
+              background: 'rgba(124,58,237,0.18)',
+              color: '#e9d5ff',
+              border: '1px solid rgba(167,139,250,0.4)',
+              padding: '12px 18px',
               borderRadius: 12,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: '#ffffff',
+              fontSize: 13,
+              fontWeight: 600,
               cursor: 'pointer',
             }}
-            title="Recarregar Indicadores"
+            title="Abrir o assistente de IA com o contexto fiscal da carteira"
           >
-            <RefreshCw size={15} className={carregandoResumo ? 'animate-spin' : ''} />
+            <Sparkles size={14} />
+            Analista IA
           </button>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <button
+              type="button"
+              onClick={carregarResumo}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#ffffff',
+                cursor: 'pointer',
+              }}
+              title="Recarregar Indicadores"
+            >
+              <RefreshCw size={15} className={carregandoResumo ? 'animate-spin' : ''} />
+            </button>
+            {horaAtualizacao && (
+              <span style={{ fontSize: 9.5, color: '#9ca3af' }}>{horaAtualizacao}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -249,18 +318,7 @@ export default function DashboardFiscalGeral() {
         }}
       >
         {/* Card 1: Notas Fiscais */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
+        <CartaoKpi onClick={() => setAbaAtiva('notas')}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
@@ -280,7 +338,7 @@ export default function DashboardFiscalGeral() {
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {resumo ? (resumo.notas.totalGeral).toLocaleString('pt-BR') : '—'}
+              {resumo ? (resumo.notas.totalGeral).toLocaleString('pt-BR') : <Skeleton />}
             </div>
             <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 2 }}>
               {valorFormatado(resumo?.notas.valorTotal)} movimentados
@@ -301,21 +359,10 @@ export default function DashboardFiscalGeral() {
             <span>🚚 {resumo?.notas.totalCte || 0} CT-e</span>
             <span>📑 {resumo?.notas.totalNfse || 0} NFS-e</span>
           </div>
-        </div>
+        </CartaoKpi>
 
         {/* Card 2: CNDs & Situação Fiscal */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
+        <CartaoKpi onClick={() => setAbaAtiva('cnd')}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
@@ -335,10 +382,10 @@ export default function DashboardFiscalGeral() {
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {resumo?.cnds.semPendencias || 0}{' '}
+              {!resumo ? <Skeleton /> : <>{resumo.cnds.semPendencias || 0}{' '}
               <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>
-                / {resumo?.totalEmpresas || 0} empresas
-              </span>
+                / {resumo.totalEmpresas || 0} empresas
+              </span></>}
             </div>
             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
               Certidões Negativas Federais / Estaduais
@@ -359,21 +406,10 @@ export default function DashboardFiscalGeral() {
             <span style={{ color: '#0284c7' }}>⚖ {resumo?.cnds.comEfeito || 0} Suspensos</span>
             <span style={{ color: '#dc2626' }}>✗ {resumo?.cnds.comPendencias || 0} Débitos</span>
           </div>
-        </div>
+        </CartaoKpi>
 
         {/* Card 3: Certificados Digitais A1 */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
+        <CartaoKpi onClick={() => setAbaAtiva('execucao')}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
@@ -395,10 +431,10 @@ export default function DashboardFiscalGeral() {
               )}
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {resumo?.certificados.comCertificado || 0}{' '}
+              {!resumo ? <Skeleton /> : <>{resumo.certificados.comCertificado || 0}{' '}
               <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>
                 com A1 ativo
-              </span>
+              </span></>}
             </div>
             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
               {resumo?.certificados.comProcuracao || 0} operam com procuração eletrônica
@@ -421,21 +457,10 @@ export default function DashboardFiscalGeral() {
             </span>
             <span>{resumo?.certificados.semCertificado || 0} sem A1</span>
           </div>
-        </div>
+        </CartaoKpi>
 
         {/* Card 4: Monitor & Auditoria */}
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
+        <CartaoKpi onClick={() => setAbaAtiva('logs')}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
@@ -455,8 +480,8 @@ export default function DashboardFiscalGeral() {
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {resumo?.monitor.totalAtivos || 0}{' '}
-              <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>empresas</span>
+              {!resumo ? <Skeleton /> : <>{resumo.monitor.totalAtivos || 0}{' '}
+              <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>empresas</span></>}
             </div>
             <div style={{ fontSize: 12, color: (resumo?.monitor.erros24h || 0) > 0 ? '#dc2626' : '#16a34a', marginTop: 2, fontWeight: 500 }}>
               {(resumo?.monitor.erros24h || 0) > 0
@@ -484,7 +509,7 @@ export default function DashboardFiscalGeral() {
               Ver Logs →
             </span>
           </div>
-        </div>
+        </CartaoKpi>
       </div>
 
       {/* Tabs Navigation */}

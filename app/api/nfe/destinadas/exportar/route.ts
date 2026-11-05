@@ -5,7 +5,13 @@ import { captureError } from '../../../../../lib/sentry-helper';
 import { acessoNegado } from '../../../../../lib/nfse/servidor';
 import { filtroNotasDestinadas } from '../../../../../lib/nfe/filtro';
 import { gerarDanfePdf, gerarDanfePdfUnico, lerDadosDanfe, type DadosDanfe } from '../../../../../lib/nfe/danfe';
+import { gerarDactePdf } from '../../../../../lib/cte/dacte';
 import { criarZipBuffer, type ArquivoZip } from '../../../../../lib/nfse/zip';
+
+/** CT-e (modelo 57) tem layout próprio (DACTE); os demais usam o DANFE. */
+const ehCteChave = (chave: string) => /^\d{44}$/.test(chave) && chave.slice(20, 22) === '57';
+const gerarPdfDoc = (chave: string, xml: string, situacao: string) =>
+  ehCteChave(chave) ? gerarDactePdf(xml, situacao) : gerarDanfePdf(xml, situacao);
 
 const FORMATOS = ['ambos', 'pdf', 'xml', 'pdf_unico'];
 const LIMITE_NOTAS = 1000;
@@ -97,14 +103,15 @@ export async function POST(request: Request) {
 
       for (const n of notas) {
         const prefixo = n.situacao === 'autorizada' ? '' : `${n.situacao.toUpperCase()}_`;
-        const base = `${prefixo}NFe_${n.numero || n.chaveAcesso}_${n.dataEmissao.slice(0, 10)}_${limparNome(n.emitenteNome)}`;
+        const sigla = ehCteChave(n.chaveAcesso) ? 'CTe' : 'NFe';
+        const base = `${prefixo}${sigla}_${n.numero || n.chaveAcesso}_${n.dataEmissao.slice(0, 10)}_${limparNome(n.emitenteNome)}`;
         const xml = n.xml as string;
         if (formato !== 'pdf') {
           arquivos.push({ nome: nomeUnico(formato === 'ambos' ? `xml/${base}` : base, 'xml'), conteudo: Buffer.from(xml, 'utf8') });
         }
         if (formato !== 'xml') {
           try {
-            arquivos.push({ nome: nomeUnico(formato === 'ambos' ? `pdf/${base}` : base, 'pdf'), conteudo: gerarDanfePdf(xml, n.situacao) });
+            arquivos.push({ nome: nomeUnico(formato === 'ambos' ? `pdf/${base}` : base, 'pdf'), conteudo: gerarPdfDoc(n.chaveAcesso, xml, n.situacao) });
           } catch {
             comErro++;
           }
