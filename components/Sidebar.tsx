@@ -40,6 +40,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     section: 'Painel',
     items: [
       { label: 'Dashboard', href: '/consultor/dashboard', icon: LayoutDashboard },
+      { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/consultor/dashboard2', icon: ShieldCheck },
       { label: 'Ecossistema BPO', href: '/consultor/bpo', icon: Activity },
       { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
       { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
@@ -489,10 +490,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     // Filtra rotas com base na configuração da empresa ativa
     const companyAllowed = (!selectedEmpresa.startsWith('grupo:') && activeEmpresa?.allowedRoutes) || [];
     const filterByCompany = (item: NavItem) => {
-      if (item.href === '/consultor/dashboard') return true;
+      if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
       if (item.href === '/consultor/administrativo') return true;
       // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
-      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal') return true;
+      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/dashboard2') return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -504,11 +505,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     }
 
     // Se consultor, filtra itens do consultor + empresa
-    const allowed = user?.allowedRoutes || ['/consultor/dashboard'];
+    const allowed = user?.allowedRoutes || ['/consultor/dashboard', '/consultor/dashboard2'];
     
     return baseNav.map(section => {
       const items = section.items.filter(item => {
-        if (item.href === '/consultor/dashboard') return true;
+        if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
         return userOk && companyOk;
