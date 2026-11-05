@@ -16,6 +16,8 @@ import {
   EVENTO_CANCELAMENTO, MANIFESTACAO_POR_EVENTO, SefazIndisponivelError, enviarDistribuicao, interpretarDocumento,
   lerRespostaDistribuicao, montarEnvelopeDistribuicao, type AmbienteNfe, type DadosNota,
 } from './distribuicao';
+import { consultarCteEmpresa } from '../cte/monitor';
+import { registrarLogFiscal } from './logger';
 
 const MINUTO = 60_000;
 const ESPERA_APOS_137_MS = 65 * MINUTO;
@@ -31,13 +33,13 @@ const FOLGA_APOS_LIMITE_MS = 12_000;
 const AMBIENTE: AmbienteNfe = 'producao';
 
 /**
- * Retorna se o momento atual está dentro da janela noturna (22h às 05h de Brasília / UTC-3).
+ * Retorna se o momento atual está dentro da janela noturna (21h às 07h de Brasília / UTC-3).
  * A SEFAZ possui tráfego consideravelmente menor nessa faixa, ideal para lotes volumosos.
  */
 export function ehHorarioNoturnoBrasilia(): boolean {
   const agoraBrasilia = new Date(Date.now() - 3 * 3600 * 1000);
   const hora = agoraBrasilia.getUTCHours();
-  return hora >= 22 || hora < 5;
+  return hora >= 21 || hora < 7;
 }
 
 export interface ResultadoConsultaNfe {
@@ -161,10 +163,11 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
   let aberta;
   try {
     aberta = await abrirCredencial(empresa.nfseConfig);
-  } catch (erro) {
+  } catch (erro: any) {
     if (erro instanceof CertificadoInvalidoError || erro instanceof CofreNaoConfiguradoError) {
       const proxima = depois(ESPERA_APOS_REJEICAO_MS);
       await registrar(empresaId, { mensagem: erro.message, proxima, certOrigem });
+      await registrarLogFiscal({ empresaId, tipo: 'nfe', status: 'erro', mensagem: erro.message });
       return { ...base, mensagem: erro.message, proximaConsultaEm: proxima };
     }
     throw erro;
@@ -172,12 +175,14 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
   if ('erro' in aberta) {
     const proxima = depois(ESPERA_APOS_REJEICAO_MS);
     await registrar(empresaId, { mensagem: aberta.erro, proxima, certOrigem });
+    await registrarLogFiscal({ empresaId, tipo: 'nfe', status: 'erro', mensagem: aberta.erro });
     return { ...base, mensagem: aberta.erro, proximaConsultaEm: proxima };
   }
   if (certOrigem === 'propria' && !certificadoPertenceAoCnpj(aberta.credencial, cnpj)) {
     const mensagem = 'O certificado A1 da empresa é de outro CNPJ: a SEFAZ só entrega as notas ao CNPJ do certificado.';
     const proxima = depois(ESPERA_APOS_REJEICAO_MS);
     await registrar(empresaId, { mensagem, proxima, certOrigem });
+    await registrarLogFiscal({ empresaId, tipo: 'nfe', status: 'erro', mensagem });
     return { ...base, mensagem, proximaConsultaEm: proxima };
   }
 
@@ -195,10 +200,11 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
       const timeout = limite ? Math.max(1000, Math.min(TIMEOUT_SEFAZ_MS, limite + FOLGA_APOS_LIMITE_MS - Date.now())) : TIMEOUT_SEFAZ_MS;
       const http = await enviarDistribuicao(aberta.credencial, AMBIENTE, envelope, timeout);
       resposta = lerRespostaDistribuicao(http.corpo);
-    } catch (erro) {
+    } catch (erro: any) {
       if (!(erro instanceof SefazIndisponivelError)) throw erro;
       const proxima = depois(ESPERA_APOS_FALHA_MS);
       await registrar(empresaId, { mensagem: erro.message, proxima, certOrigem, ultNsu, maxNsu, adicionados });
+      await registrarLogFiscal({ empresaId, tipo: 'nfe', status: 'erro', mensagem: erro.message });
       return { ...resultado, mensagem: erro.message, ultNsu, maxNsu, proximaConsultaEm: proxima };
     }
     resultado.paginas++;
@@ -225,6 +231,17 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
         const proxima = depois(ESPERA_APOS_137_MS);
         const mensagem = `Em dia: ${resultado.novas} nota(s) nova(s) nesta consulta.`;
         await registrar(empresaId, { cStat: '138', mensagem, proxima, certOrigem, ultNsu, maxNsu, adicionados });
+        if (resultado.novas > 0) {
+          await registrarLogFiscal({
+            empresaId,
+            tipo: 'nfe',
+            status: 'sucesso',
+            cStat: '138',
+            mensagem: `SEFAZ NF-e: ${resultado.novas} nova(s) mercadoria(s) sincronizada(s).`,
+            novas: resultado.novas,
+            atualizadas: resultado.atualizadas,
+          });
+        }
         return { ...resultado, mensagem, ultNsu, maxNsu, proximaConsultaEm: proxima };
       }
       continue;
@@ -234,6 +251,17 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
       const proxima = depois(ESPERA_APOS_137_MS);
       const mensagem = resultado.novas > 0 ? `Em dia: ${resultado.novas} nota(s) nova(s) nesta consulta.` : 'Nenhuma nota nova destinada a este CNPJ.';
       await registrar(empresaId, { cStat: '137', mensagem, proxima, certOrigem, ultNsu: resposta.ultNsu, maxNsu: resposta.maxNsu, adicionados });
+      if (resultado.novas > 0) {
+        await registrarLogFiscal({
+          empresaId,
+          tipo: 'nfe',
+          status: 'sucesso',
+          cStat: '137',
+          mensagem: `SEFAZ NF-e: ${resultado.novas} nova(s) mercadoria(s) sincronizada(s).`,
+          novas: resultado.novas,
+          atualizadas: resultado.atualizadas,
+        });
+      }
       return { ...resultado, mensagem, ultNsu: resposta.ultNsu, maxNsu: resposta.maxNsu, proximaConsultaEm: proxima };
     }
 
@@ -242,6 +270,13 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
     const proxima = depois(bloqueio ? ESPERA_APOS_656_MS : ESPERA_APOS_REJEICAO_MS);
     const mensagem = `SEFAZ [${resposta.cStat}] ${resposta.xMotivo}`.trim();
     await registrar(empresaId, { cStat: resposta.cStat, mensagem, proxima, certOrigem, ultNsu, maxNsu, adicionados });
+    await registrarLogFiscal({
+      empresaId,
+      tipo: 'nfe',
+      status: 'alerta',
+      cStat: resposta.cStat,
+      mensagem,
+    });
     return { ...resultado, mensagem, ultNsu, maxNsu, proximaConsultaEm: proxima };
   }
 
@@ -294,14 +329,37 @@ async function executarLote(maxEmpresas: number, tempoMs?: number): Promise<Resu
       break;
     }
     try {
-      const r = await consultarNfeDestinadas(fila[i], limite);
-      if (r.executada) { resumo.consultadas++; resumo.novas += r.novas; } else resumo.puladas++;
-      if (r.executada && r.cStat && !['137', '138'].includes(r.cStat)) resumo.falhas++;
+      const [rNfe, rCte] = await Promise.allSettled([
+        consultarNfeDestinadas(fila[i], limite),
+        consultarCteEmpresa(fila[i]),
+      ]);
+
+      if (rNfe.status === 'fulfilled') {
+        const r = rNfe.value;
+        if (r.executada) { resumo.consultadas++; resumo.novas += r.novas; } else resumo.puladas++;
+        if (r.executada && r.cStat && !['137', '138'].includes(r.cStat)) resumo.falhas++;
+      } else {
+        resumo.falhas++;
+      }
+
+      if (rCte.status === 'fulfilled' && rCte.value.executada) {
+        resumo.novas += rCte.value.novas;
+      }
     } catch {
       resumo.falhas++;
     }
     if (i < fila.length - 1) await new Promise(r => setTimeout(r, PAUSA_ENTRE_EMPRESAS_MS));
   }
+
+  if (resumo.consultadas > 0 || resumo.falhas > 0) {
+    await registrarLogFiscal({
+      tipo: 'lote',
+      status: resumo.falhas > 0 && resumo.consultadas === 0 ? 'erro' : (resumo.falhas > 0 ? 'alerta' : 'sucesso'),
+      mensagem: `Monitor DF-e: ${resumo.consultadas} empresa(s) consultadas (${resumo.novas} novos documentos localizados, ${resumo.falhas} falha(s)).`,
+      novas: resumo.novas,
+    });
+  }
+
   return resumo;
 }
 

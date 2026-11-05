@@ -23,6 +23,7 @@ export interface MesMetrica {
   comXml: number;
   semXml: number;
   nfse: number;
+  cte?: number;
   total: number;
   valorTotal: number;
 }
@@ -39,6 +40,7 @@ export interface GraficoMensalDados {
     totalRecebidas: number;
     totalEmitidas: number;
     totalNfse: number;
+    totalCte?: number;
     totalComXml: number;
     taxaXml: number;
     mediaMensal: number;
@@ -263,7 +265,7 @@ export default function NfeGraficoMensalArquivos({
             {resumo.totalGeral}
           </div>
           <span style={{ fontSize: 11, color: '#64748b' }}>
-            {resumo.totalRecebidas} compras • {resumo.totalEmitidas} vendas {resumo.totalNfse > 0 ? `• ${resumo.totalNfse} serviços` : ''}
+            {resumo.totalRecebidas} compras • {resumo.totalEmitidas} vendas {resumo.totalNfse > 0 ? `• ${resumo.totalNfse} serviços` : ''} {resumo.totalCte ? `• ${resumo.totalCte} fretes (CT-e)` : ''}
           </span>
         </div>
 

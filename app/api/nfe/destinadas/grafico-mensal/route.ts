@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 
     const cnpjLimpo = empresa.cnpj.replace(/\D/g, '');
 
-    // 1. Agrupamento mensal de NF-e (Mercadorias - Compras e Vendas)
+    // 1. Agrupamento mensal de NF-e (Mercadorias) e CT-e (Fretes)
     const nfeRows = await db.$queryRaw<Array<{
       mes: string;
       total: number;
@@ -69,6 +69,7 @@ export async function GET(request: Request) {
       qtd_recebidas: number;
       com_xml: number;
       sem_xml: number;
+      total_cte: number;
       valor_total: number;
     }>>`
       SELECT 
@@ -78,6 +79,7 @@ export async function GET(request: Request) {
         count(*) filter (where "emitenteCnpj" NOT LIKE ${'%' + cnpjLimpo + '%'})::int as qtd_recebidas,
         count(*) filter (where "possuiXml" = true)::int as com_xml,
         count(*) filter (where "possuiXml" = false or "possuiXml" is null)::int as sem_xml,
+        count(*) filter (where substring("chaveAcesso" from 21 for 2) = '57')::int as total_cte,
         coalesce(sum("valorNf"), 0)::float as valor_total
       FROM "NfeDestinada"
       WHERE "empresaId" = ${empresaId} 
@@ -115,6 +117,7 @@ export async function GET(request: Request) {
       comXml: number;
       semXml: number;
       nfse: number;
+      cte: number;
       total: number;
       valorTotal: number;
     }>();
@@ -131,6 +134,7 @@ export async function GET(request: Request) {
         comXml: r.com_xml || 0,
         semXml: r.sem_xml || 0,
         nfse: 0,
+        cte: r.total_cte || 0,
         total: r.total || 0,
         valorTotal: r.valor_total || 0,
       });
@@ -154,6 +158,7 @@ export async function GET(request: Request) {
           comXml: s.total_nfse || 0,
           semXml: 0,
           nfse: s.total_nfse || 0,
+          cte: 0,
           total: s.total_nfse || 0,
           valorTotal: s.valor_nfse || 0,
         });
@@ -167,6 +172,7 @@ export async function GET(request: Request) {
     let totalRecebidas = 0;
     let totalEmitidas = 0;
     let totalNfse = 0;
+    let totalCte = 0;
     let totalComXml = 0;
     let valorAcumulado = 0;
     let mesPico = { mes: '', label: 'Nenhum', total: 0 };
@@ -176,6 +182,7 @@ export async function GET(request: Request) {
       totalRecebidas += m.recebidas;
       totalEmitidas += m.emitidas;
       totalNfse += m.nfse;
+      totalCte += m.cte;
       totalComXml += m.comXml;
       valorAcumulado += m.valorTotal;
 
@@ -201,6 +208,7 @@ export async function GET(request: Request) {
         totalRecebidas,
         totalEmitidas,
         totalNfse,
+        totalCte,
         totalComXml,
         taxaXml,
         mediaMensal,

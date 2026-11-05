@@ -12,6 +12,7 @@ import { abrirCredencial } from './servidor';
 import { apenasDigitos, hojeBrasilia } from './dps';
 import { criarTransporteMtls, lerCaixaDfe } from './sefin';
 import { eventoCancelaNota, extrairDadosEmissor, lerNotaAdn, mesclarServicos, type ServicoConhecido } from './emissor';
+import { registrarLogFiscal } from '../nfe/logger';
 
 export const MESES_PERMITIDOS = [1, 3, 6, 12];
 
@@ -310,8 +311,9 @@ export async function sincronizarLoteNfseAdn(
   const configs = await db.nfseConfig.findMany({
     where: {
       OR: [
-        { usarProcuracao: true, procuracaoStatus: { not: 'sem_procuracao' } },
-        { usarProcuracao: false, certValidoAte: { gt: new Date() } },
+        { usarProcuracao: true, OR: [{ procuracaoStatus: null }, { procuracaoStatus: { not: 'sem_procuracao' } }] },
+        { certValidoAte: { gt: new Date() } },
+        { certPfxCifrado: { not: null } },
       ],
     },
     include: {
@@ -344,6 +346,15 @@ export async function sincronizarLoteNfseAdn(
           razaoSocial: cfg.empresa.razaoSocial,
           novas: sync.criadas,
         });
+        if (sync.criadas > 0) {
+          await registrarLogFiscal({
+            empresaId: cfg.empresaId,
+            tipo: 'nfse',
+            status: 'sucesso',
+            mensagem: `ADN Nacional: ${sync.criadas} nova(s) NFS-e (${sync.criadasEmitidas} emitidas, ${sync.criadasTomadas} tomadas).`,
+            novas: sync.criadas,
+          });
+        }
       } else {
         res.falhas++;
         res.detalhes.push({
@@ -352,14 +363,27 @@ export async function sincronizarLoteNfseAdn(
           novas: 0,
           erro: sync.error,
         });
+        await registrarLogFiscal({
+          empresaId: cfg.empresaId,
+          tipo: 'nfse',
+          status: 'erro',
+          mensagem: `ADN Nacional: ${sync.error}`,
+        });
       }
     } catch (e: any) {
       res.falhas++;
+      const erroMsg = e?.message || 'Erro inesperado na sincronização ADN';
       res.detalhes.push({
         empresaId: cfg.empresaId,
         razaoSocial: cfg.empresa.razaoSocial,
         novas: 0,
-        erro: e?.message || 'Erro inesperado',
+        erro: erroMsg,
+      });
+      await registrarLogFiscal({
+        empresaId: cfg.empresaId,
+        tipo: 'nfse',
+        status: 'erro',
+        mensagem: `ADN Nacional: ${erroMsg}`,
       });
     }
   }

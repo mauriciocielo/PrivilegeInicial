@@ -7,7 +7,8 @@ import {
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
   ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
   Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft,
-  Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight, BarChart3
+  Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight, BarChart3, Truck,
+  Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
@@ -18,6 +19,7 @@ import NfeIntegracaoModal from './NfeIntegracaoModal';
 import NfeImportarXmlModal from './NfeImportarXmlModal';
 import CadastrarCnpjModal from './CadastrarCnpjModal';
 import NfeGraficoMensalArquivos, { type GraficoMensalDados } from './NfeGraficoMensalArquivos';
+import NfeMonitorLogsPainel from './NfeMonitorLogsPainel';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
@@ -112,7 +114,7 @@ export default function NfeDestinadasPainel() {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
-  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'grafico' | 'certificados' | 'carteira'>('recebidas');
+  const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'grafico' | 'certificados' | 'carteira' | 'logs'>('recebidas');
   const [filtroStatusRapido, setFiltroStatusRapido] = useState<string>('todas');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
 
@@ -484,7 +486,9 @@ export default function NfeDestinadasPainel() {
       if (abaPrincipal === 'recebidas' && n.papel === 'emitida') return false;
       if (abaPrincipal === 'emitidas' && n.papel !== 'emitida') return false;
 
-      // 2. Filtro Rápido de Status
+      // 2. Filtro Rápido de Status e Modelo
+      if (filtroStatusRapido === 'cte' && n.chaveAcesso?.slice(20, 22) !== '57') return false;
+      if (filtroStatusRapido === 'nfe' && n.chaveAcesso?.slice(20, 22) !== '55') return false;
       if (filtroStatusRapido === 'xml' && !n.possuiXml) return false;
       if (filtroStatusRapido === 'resumo' && n.possuiXml) return false;
       if (filtroStatusRapido === 'cancelada' && n.situacao !== 'cancelada') return false;
@@ -503,6 +507,7 @@ export default function NfeDestinadasPainel() {
     const comXmlCount = notas.filter(n => n.possuiXml).length;
     const emitidas = notas.filter(n => n.papel === 'emitida');
     const recebidas = notas.filter(n => n.papel !== 'emitida');
+    const totalCte = notas.filter(n => n.chaveAcesso?.slice(20, 22) === '57').length;
     return {
       quantidade: notas.length,
       valorTotal,
@@ -512,6 +517,7 @@ export default function NfeDestinadasPainel() {
       valorEmitidas: emitidas.reduce((acc, n) => acc + (n.valorNf || 0), 0),
       qtdRecebidas: recebidas.length,
       valorRecebidas: recebidas.reduce((acc, n) => acc + (n.valorNf || 0), 0),
+      totalCte,
     };
   }, [notas]);
 
@@ -1258,10 +1264,30 @@ export default function NfeDestinadasPainel() {
             >
               Carteira de Empresas ({empresas.length})
             </button>
+            <button
+              type="button"
+              onClick={() => setAbaPrincipal('logs')}
+              style={{
+                background: abaPrincipal === 'logs' ? '#600000' : 'transparent',
+                color: abaPrincipal === 'logs' ? '#fff' : '#374151',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Activity size={14} />
+              Logs & Monitoramento
+            </button>
           </div>
 
           {/* Filtros de Data e Competência */}
-          {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' && (
+          {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' && abaPrincipal !== 'logs' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 12, color: '#525252', fontWeight: 600 }}>Mês:</span>
@@ -1303,7 +1329,7 @@ export default function NfeDestinadasPainel() {
         {/* =========================================================================
             VISÃO 1: NOTAS FISCAIS (RECEBIDAS, EMITIDAS OU TODAS)
             ========================================================================= */}
-        {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' ? (
+        {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' && abaPrincipal !== 'logs' ? (
           <>
             {/* Gráfico Mensal de Arquivos Inline (Opcional via Toggle) */}
             {mostrarGraficoInline && (
@@ -1370,6 +1396,7 @@ export default function NfeDestinadasPainel() {
               >
                 {[
                   { key: 'todas', label: `Todas (${notas.filter(n => abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida')).length})` },
+                  ...(totais.totalCte > 0 ? [{ key: 'cte', label: `🚚 CT-e Fretes (${totais.totalCte})` }] : []),
                   { key: 'xml', label: `Com XML (${notas.filter(n => n.possuiXml && (abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida'))).length})` },
                   { key: 'resumo', label: `Em Resumo (${notas.filter(n => !n.possuiXml && (abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida'))).length})` },
                   { key: 'cancelada', label: 'Canceladas' },
@@ -1541,6 +1568,11 @@ export default function NfeDestinadasPainel() {
                             </td>
                             <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
                               {n.numero || '—'} {n.serie ? `(Série ${n.serie})` : ''}
+                              {n.chaveAcesso?.slice(20, 22) === '57' && (
+                                <span style={{ marginLeft: 6, fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                  CT-e
+                                </span>
+                              )}
                             </td>
                             <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>
                               {formatData(n.dataEmissao)}
@@ -1554,7 +1586,11 @@ export default function NfeDestinadasPainel() {
                               )}
                             </td>
                             <td>
-                              {ehEmitida ? (
+                              {n.chaveAcesso?.slice(20, 22) === '57' ? (
+                                <span className="badge badge-amber" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <Truck size={11} /> Frete (CT-e)
+                                </span>
+                              ) : ehEmitida ? (
                                 <span className="badge badge-purple" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                   <ArrowUpRight size={11} /> Emitida (Venda)
                                 </span>
@@ -2079,6 +2115,14 @@ export default function NfeDestinadasPainel() {
               </table>
             </div>
           </div>
+        ) : abaPrincipal === 'logs' ? (
+          /* =========================================================================
+             VISÃO 4: HISTÓRICO E LOGS DE MONITORAMENTO FISCAL
+             ========================================================================= */
+          <NfeMonitorLogsPainel
+            empresaIdSelecionada={empresaIdSelecionada}
+            ehHorarioNoturno={ehHorarioNoturno}
+          />
         ) : (
           /* =========================================================================
              VISÃO 2: CARTEIRA DE EMPRESAS (MONITORADAS)

@@ -107,6 +107,7 @@ model Empresa {
   nfeDistribuicao            NfeDistribuicao?
   nfesDestinadas             NfeDestinada[]
   nfeManifestacoes           NfeManifestacaoEvento[]
+  fiscalMonitorLogs          FiscalMonitorLog[]
   certidoesFiscais           CertidaoFiscal[]
   certidaoConfig             CertidaoConfig?
 }
@@ -988,6 +989,8 @@ model NfeDistribuicao {
   empresaId         String    @id
   ultNsu            String    @default("0")
   maxNsu            String    @default("0")
+  ultNsuCte         String    @default("0")
+  maxNsuCte         String    @default("0")
   ativo             Boolean   @default(true)
   apenasNoturno     Boolean   @default(false)
   ultimaConsultaEm  DateTime?
@@ -1048,6 +1051,27 @@ model NfeManifestacaoEvento {
   @@index([empresaId, chaveAcesso])
 }
 
+
+// Histórico de execuções do monitor fiscal (NF-e, CT-e, NFS-e)
+model FiscalMonitorLog {
+  id          String   @id @default(uuid())
+  empresaId   String?
+  tipo        String   // 'nfe' | 'cte' | 'nfse' | 'lote'
+  origem      String   @default("cron") // 'cron' | 'manual'
+  status      String   @default("sucesso") // 'sucesso' | 'erro' | 'alerta'
+  cStat       String?
+  mensagem    String
+  novas       Int      @default(0)
+  atualizadas Int      @default(0)
+  detalhes    String?
+  createdAt   DateTime @default(now())
+  empresa     Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@index([createdAt])
+  @@index([tipo])
+  @@index([status])
+}
 
 model CertidaoFiscal {
   id                    String    @id @default(uuid())

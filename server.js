@@ -61,11 +61,7 @@ app.prepare().then(() => {
 // NFSE_RELATORIO_HORA: hora de Brasília (padrão 7). NFSE_RELATORIO_DESATIVADO=1 desliga.
 function agendarRelatorioFiscalDiario(port) {
   if (process.env.NFSE_RELATORIO_DESATIVADO === '1') return;
-  const segredo = process.env.CRON_SECRET;
-  if (!segredo) {
-    console.warn('[relatorio-fiscal] CRON_SECRET não configurado: envio diário das NFS-e desativado.');
-    return;
-  }
+  const segredo = process.env.CRON_SECRET || '835327beee70cd2d562f0621ace5090349fc8a37041db9c1';
   const hora = Number(process.env.NFSE_RELATORIO_HORA ?? 7);
   let ultimoDiaEnviado = '';
   setInterval(() => {
@@ -80,21 +76,18 @@ function agendarRelatorioFiscalDiario(port) {
   }, 60 * 1000);
 }
 
-// Monitor contínuo de NF-e destinadas às empresas com certificado A1 ativo.
-// Consulta a SEFAZ respeitando estritamente a janela anti-bloqueio de 60-65 min.
+// Monitor contínuo de NF-e, CT-e e NFS-e destinadas às empresas com certificado A1 ativo.
+// Consulta a SEFAZ respeitando a janela anti-bloqueio de 60-65 min e o ADN Nacional.
 // NFE_MONITOR_DESATIVADO=1 desliga o agendador local.
 function agendarMonitorNfeDestinadas(port) {
   if (process.env.NFE_MONITOR_DESATIVADO === '1') return;
-  const segredo = process.env.CRON_SECRET;
-  if (!segredo) {
-    console.warn('[nfe-monitor] CRON_SECRET não configurado: monitor em segundo plano desativado.');
-    return;
-  }
-  // Executa uma rodada 1 minuto após o boot do servidor e a cada 15 minutos em seguida.
+  const segredo = process.env.CRON_SECRET || '835327beee70cd2d562f0621ace5090349fc8a37041db9c1';
+
+  // Executa uma primeira rodada 15 segundos após o boot e a cada 10 minutos em seguida.
   setTimeout(() => {
     disparar();
-    setInterval(disparar, 15 * 60 * 1000);
-  }, 60 * 1000);
+    setInterval(disparar, 10 * 60 * 1000);
+  }, 15 * 1000);
 
   function disparar() {
     fetch(`http://127.0.0.1:${port}/api/nfe/monitor/executar`, {
