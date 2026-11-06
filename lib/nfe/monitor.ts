@@ -346,7 +346,7 @@ async function executarLote(maxEmpresas: number, tempoMs?: number): Promise<Resu
     try {
       const [rNfe, rCte] = await Promise.allSettled([
         consultarNfeDestinadas(fila[i], limite),
-        consultarCteEmpresa(fila[i]),
+        consultarCteEmpresa(fila[i], limite),
       ]);
 
       if (rNfe.status === 'fulfilled') {

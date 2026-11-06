@@ -77,8 +77,12 @@ async function gravarCte(empresaId: string, nsu: string, nota: DadosCte, xml: st
   return 'atualizada';
 }
 
-/** Executa uma rodada de consulta de CT-e na SEFAZ SVRS para a empresa informada */
-export async function consultarCteEmpresa(empresaId: string): Promise<ResultadoConsultaCte> {
+/**
+ * Executa uma rodada de consulta de CT-e na SEFAZ SVRS para a empresa informada.
+ * `limiteMs` (epoch) é o prazo da rodada em lote: a consulta para ao atingi-lo para
+ * não estourar o tempo da função serverless (retoma do NSU gravado na próxima rodada).
+ */
+export async function consultarCteEmpresa(empresaId: string, limiteMs?: number): Promise<ResultadoConsultaCte> {
   const empresa = await db.empresa.findUnique({
     where: { id: empresaId },
     select: {
@@ -168,14 +172,15 @@ export async function consultarCteEmpresa(empresaId: string): Promise<ResultadoC
   let ultimoMotivo = '';
   let temMais = false;
 
-  // No modo noturno busca todos os CT-e de uma vez (teto alto), com orçamento de tempo
-  // próprio para não estourar o limite da função serverless (retoma do NSU gravado na próxima rodada).
+  // No modo noturno busca todos os CT-e de uma vez (teto alto). O prazo é o MENOR entre
+  // o orçamento próprio e o limite da rodada em lote (`limiteMs`), para nunca estourar o
+  // tempo da função serverless. Ao atingi-lo, retoma do NSU gravado na próxima rodada.
   const maxPaginas = ehHorarioNoturnoBrasilia() ? MAX_PAGINAS_NOTURNO : MAX_PAGINAS_POR_CONSULTA;
-  const inicioConsulta = Date.now();
   const ORCAMENTO_MS = 45_000;
+  const prazo = Math.min(Date.now() + ORCAMENTO_MS, limiteMs ?? Number.MAX_SAFE_INTEGER);
 
   for (let i = 0; i < maxPaginas; i++) {
-    if (i > 0 && Date.now() - inicioConsulta > ORCAMENTO_MS) { temMais = BigInt(ultNsu || '0') < BigInt(maxNsu || '0'); break; }
+    if (i > 0 && Date.now() >= prazo) { temMais = BigInt(ultNsu || '0') < BigInt(maxNsu || '0'); break; }
     paginas++;
     const envelope = montarEnvelopeDistribuicaoCte({
       ambiente: AMBIENTE,

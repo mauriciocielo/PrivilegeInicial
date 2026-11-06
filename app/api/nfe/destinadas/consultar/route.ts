@@ -23,10 +23,11 @@ export async function POST(request: Request) {
     const negado = await acessoNegado(auth.session, empresaId);
     if (negado) return negado;
 
-    // Consulta paralela: NF-e (Ambiente Nacional) e CT-e (SVRS)
+    // Consulta paralela: NF-e (Ambiente Nacional) e CT-e (SVRS), ambas com o mesmo prazo.
+    const prazo = Date.now() + TEMPO_DA_CONSULTA_MS;
     const [resNfePromise, resCtePromise] = await Promise.allSettled([
-      consultarNfeDestinadas(empresaId, Date.now() + TEMPO_DA_CONSULTA_MS),
-      consultarCteEmpresa(empresaId),
+      consultarNfeDestinadas(empresaId, prazo),
+      consultarCteEmpresa(empresaId, prazo),
     ]);
 
     const resNfe = resNfePromise.status === 'fulfilled' ? resNfePromise.value : null;

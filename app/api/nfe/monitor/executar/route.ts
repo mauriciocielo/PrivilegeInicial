@@ -60,7 +60,7 @@ async function executar() {
       status: 'erro',
       mensagem: `Falha crítica na rodada do monitor fiscal: ${err?.message || 'Erro desconhecido'}`,
     });
-    return NextResponse.json({ iniciado: false, mensagem: 'Falha na rodada do monitor.' }, { status: 500 });
+    return NextResponse.json({ iniciado: false, mensagem: `Falha na rodada do monitor: ${err?.message || 'erro desconhecido'}` }, { status: 500 });
   }
 }
 

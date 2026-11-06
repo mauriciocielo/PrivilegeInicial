@@ -530,11 +530,15 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
     // Se consultor, filtra itens do consultor + empresa
     const allowed = user?.allowedRoutes || ['/consultor/dashboard', '/consultor/dashboard2'];
-    
+    // Quem opera o módulo fiscal (NFS-e / NF-e / CND) enxerga também o Comparador de SPED,
+    // mesmo sem a rota explícita no allowedRoutes — era por isso que não aparecia para o setor fiscal.
+    const operaFiscal = (user?.allowedRoutes || []).some(r => r.includes('nfse') || r.includes('nfe-destinadas') || r.includes('cnd'));
+
     return baseNav.map(section => {
       const items = section.items.filter(item => {
         if (item.href === '/consultor/dashboard') return !somenteFiscal;
         if (item.href === '/consultor/dashboard2') return true;
+        if (item.href === '/consultor/comparador-sped') return operaFiscal || allowed.some(route => item.href.startsWith(route));
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
         return userOk && companyOk;
