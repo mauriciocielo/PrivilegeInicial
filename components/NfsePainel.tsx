@@ -1265,8 +1265,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
 
   return (
     <>
+      {/* Cabeçalho fiscal escuro: NÃO usa a classe .page-header porque ela força
+          `background: var(--bg-base) !important` (fundo branco), o que deixaria o texto
+          claro invisível. Replicamos o layout (flex + sticky) inline. */}
       <div
-        className="page-header"
         style={{
           background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -1276,6 +1278,9 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 18,
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
         }}
       >
         <div>
