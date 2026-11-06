@@ -319,16 +319,18 @@ export const loteNfeEmAndamento = () => execucaoEmLote !== null;
 
 const PAUSA_ENTRE_EMPRESAS_MS = 500;
 
-async function executarLote(maxEmpresas: number, tempoMs?: number): Promise<ResumoLote> {
+async function executarLote(maxEmpresas: number, tempoMs?: number, forcar = false): Promise<ResumoLote> {
   const agora = new Date();
   const limite = tempoMs ? agora.getTime() + tempoMs : undefined;
   const noturno = ehHorarioNoturnoBrasilia();
-  // Só empresas com o monitoramento ligado (linha em NfeDistribuicao criada por quem ativou)
-  // e fora do período de espera da SEFAZ. Empresas marcadas como 'apenasNoturno' só rodam entre 22h e 05h.
+  // Só empresas com o monitoramento ligado e fora do período de espera da SEFAZ (a espera nunca é
+  // ignorada, nem no modo forçado — insistir antes da hora só rende 656). As 'apenasNoturno' rodam
+  // à noite; com `forcar` (disparo manual do admin) elas entram também fora do horário noturno.
+  const incluirNoturnas = noturno || forcar;
   const pendentes = await db.nfeDistribuicao.findMany({
     where: {
       ativo: true,
-      ...(noturno ? {} : { apenasNoturno: false }),
+      ...(incluirNoturnas ? {} : { apenasNoturno: false }),
       OR: [{ proximaConsultaEm: null }, { proximaConsultaEm: { lte: agora } }],
     },
     orderBy: { ultimaConsultaEm: { sort: 'asc', nulls: 'first' } },
@@ -382,8 +384,8 @@ async function executarLote(maxEmpresas: number, tempoMs?: number): Promise<Resu
  * Uma execução por instância; chamadas durante uma execução recebem a mesma.
  * Com `tempoMs`, para de começar novas empresas ao fim desse tempo e a fila continua na próxima rodada.
  */
-export function consultarLoteNfeDestinadas(maxEmpresas = 150, tempoMs?: number): Promise<ResumoLote> {
+export function consultarLoteNfeDestinadas(maxEmpresas = 150, tempoMs?: number, forcar = false): Promise<ResumoLote> {
   if (execucaoEmLote) return execucaoEmLote;
-  execucaoEmLote = executarLote(maxEmpresas, tempoMs).finally(() => { execucaoEmLote = null; });
+  execucaoEmLote = executarLote(maxEmpresas, tempoMs, forcar).finally(() => { execucaoEmLote = null; });
   return execucaoEmLote;
 }

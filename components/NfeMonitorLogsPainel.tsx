@@ -118,6 +118,40 @@ export default function NfeMonitorLogsPainel({
     }
   };
 
+  // Liga o monitoramento de TODAS as empresas com certificado (modo noturno) e já força a consulta.
+  const ativarEConsultarTodas = async () => {
+    if (!confirm('Ativar o monitoramento de TODAS as empresas com certificado em modo noturno e forçar uma consulta agora? Quem já roda não tem a espera da SEFAZ ignorada.')) return;
+    try {
+      setExecutandoRodada(true);
+      toast.info('Ativando todas as empresas com certificado (modo noturno)...');
+      const resAtivar = await fetch('/api/nfe/monitor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativarTodasComCertificado: true, apenasNoturno: true }),
+      });
+      const dataAtivar = await resAtivar.json();
+      if (!resAtivar.ok) { toast.error(dataAtivar.error || 'Falha ao ativar em lote.'); return; }
+      toast.success(`${dataAtivar.ativadas || 0} empresa(s) com certificado ativadas (${dataAtivar.criadas || 0} novas). Forçando a consulta...`);
+
+      const resRodada = await fetch('/api/nfe/monitor/executar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forcar: true }),
+      });
+      const dataRodada = await resRodada.json();
+      if (resRodada.ok && dataRodada.iniciado) {
+        toast.success(dataRodada.mensagem || 'Consulta forçada concluída!');
+        setTimeout(() => carregarLogs(), 1500);
+      } else {
+        toast.warning(dataRodada.mensagem || 'Empresas ativadas; a rodada não iniciou agora. Tente novamente em instantes.');
+      }
+    } catch {
+      toast.error('Erro ao ativar/consultar em lote.');
+    } finally {
+      setExecutandoRodada(false);
+    }
+  };
+
   const limparLogsAntigos = async () => {
     if (!confirm('Deseja limpar os logs anteriores a 3 dias?')) return;
     try {
@@ -392,6 +426,28 @@ export default function NfeMonitorLogsPainel({
           >
             <Play size={13} fill="#ffffff" />
             {executandoRodada ? 'Consultando...' : 'Executar Rodada Agora'}
+          </button>
+
+          <button
+            type="button"
+            onClick={ativarEConsultarTodas}
+            disabled={executandoRodada}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#111827',
+              background: '#fff',
+              border: '1px solid #111827',
+              borderRadius: 8,
+              padding: '7px 14px',
+              cursor: executandoRodada ? 'wait' : 'pointer',
+            }}
+            title="Liga o monitoramento de TODAS as empresas com certificado (modo noturno) e força uma consulta agora"
+          >
+            🌙 Ativar todas c/ certificado + consultar
           </button>
 
           <button

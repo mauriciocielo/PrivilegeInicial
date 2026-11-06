@@ -17,16 +17,17 @@ async function autorizado(request: Request, token: string | null): Promise<boole
   return !auth.error && (auth.session.role === 'administrador' || auth.session.role === 'consultor' || auth.session.role === 'cliente');
 }
 
-async function executar() {
+async function executar(forcar = false) {
   if (loteNfeEmAndamento()) {
     return NextResponse.json({ iniciado: false, mensagem: 'Já existe uma rodada do monitor em andamento.' }, { status: 409 });
   }
   // Na Vercel a função congela ao responder: a rodada precisa terminar antes da resposta.
   try {
     // 1. Executa busca automática de NF-e Mercadorias e CT-e Fretes na SEFAZ
+    //    (com `forcar`, inclui também as empresas marcadas como 'apenasNoturno' fora do horário noturno)
     // 2. Executa busca automática de NFS-e Serviços (Emitidas & Tomadas/Destinadas) no ADN SEFIN (a qualquer hora)
     const [resNfe, resNfse] = await Promise.allSettled([
-      consultarLoteNfeDestinadas(150, 24_000),
+      consultarLoteNfeDestinadas(150, 24_000, forcar),
       sincronizarLoteNfseAdn(40, 18_000),
     ]);
 
@@ -69,11 +70,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token') || request.headers.get('Authorization')?.replace('Bearer ', '') || null;
   if (!(await autorizado(request, token))) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-  return executar();
+  return executar(searchParams.get('forcar') === 'true');
 }
 
 export async function POST(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') || null;
   if (!(await autorizado(request, token))) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-  return executar();
+  const body = await request.json().catch(() => ({}));
+  return executar(body?.forcar === true);
 }

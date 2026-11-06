@@ -72,6 +72,36 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
 
+    // Ativa o monitoramento de TODAS as empresas com certificado (cria a linha de quem nunca
+    // foi ativado), opcionalmente já em modo noturno. Não toca na espera da SEFAZ de quem já roda.
+    if (body?.ativarTodasComCertificado === true) {
+      if (auth.session.role === 'cliente') {
+        return NextResponse.json({ error: 'Apenas consultores e administradores podem ativar em lote.' }, { status: 403 });
+      }
+      const apenasNoturno = typeof body?.apenasNoturno === 'boolean' ? body.apenasNoturno : true;
+      const filtro = await filtroEmpresasNfse(auth.session);
+      const empresas = await db.empresa.findMany({
+        where: {
+          AND: [
+            filtro,
+            // Tem certificado próprio (certValidoAte) ou opera pela procuração do escritório.
+            { nfseConfig: { is: { OR: [{ certValidoAte: { not: null } }, { usarProcuracao: true }] } } },
+          ],
+        },
+        // Seleciona só o necessário (evita desserializar colunas de CT-e que podem estar nulas).
+        select: { id: true, nfeDistribuicao: { select: { empresaId: true } } },
+      });
+      const comLinha = empresas.filter(e => e.nfeDistribuicao).map(e => e.id);
+      const semLinha = empresas.filter(e => !e.nfeDistribuicao).map(e => e.id);
+      if (comLinha.length) {
+        await db.nfeDistribuicao.updateMany({ where: { empresaId: { in: comLinha } }, data: { ativo: true, apenasNoturno } });
+      }
+      if (semLinha.length) {
+        await db.nfeDistribuicao.createMany({ data: semLinha.map(id => ({ empresaId: id, ativo: true, apenasNoturno })), skipDuplicates: true });
+      }
+      return NextResponse.json({ sucesso: true, ativadas: empresas.length, criadas: semLinha.length, apenasNoturno });
+    }
+
     // Atualização em lote de todas as empresas monitoradas (ex: ativar modo noturno em todas)
     if (body?.aplicarTodos === true && typeof body?.apenasNoturno === 'boolean') {
       if (auth.session.role === 'cliente') {
