@@ -53,8 +53,8 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     }
     setCurrentUser(user);
 
-    // As telas de NFS-e, NF-e Destinadas, CND Federal e Dashboard 2 operam de forma independente da empresa selecionada no menu lateral.
-    const isRotaIndependente = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/dashboard2') || pathname.startsWith('/consultor/nfse') || pathname.startsWith('/consultor/nfe-destinadas') || pathname.startsWith('/consultor/cnd-federal');
+    // As telas de NFS-e, NF-e Destinadas, CND Federal, Dashboard 2 e Comparador SPED operam de forma independente da empresa selecionada no menu lateral.
+    const isRotaIndependente = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/dashboard2') || pathname.startsWith('/consultor/nfse') || pathname.startsWith('/consultor/nfe-destinadas') || pathname.startsWith('/consultor/cnd-federal') || pathname.startsWith('/consultor/comparador-sped');
 
     // Permissão da rota com base na empresa ativa
     let companyOk = true;

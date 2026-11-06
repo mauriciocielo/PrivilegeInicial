@@ -11,7 +11,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -62,6 +62,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
       { label: 'Situação Fiscal & CNDs', href: '/consultor/cnd-federal', icon: ShieldCheck },
+      { label: 'Comparador de SPED', href: '/consultor/comparador-sped', icon: FileSearch },
       { label: 'APIs Open Finance', href: '/consultor/open-finance', icon: Landmark },
       { label: 'Políticas Financeiras', href: '/consultor/politicas', icon: ClipboardList },
     ],
@@ -484,7 +485,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       const itensVisaoGeral: NavItem[] = [
         { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/cliente/dashboard2', icon: ShieldCheck },
         { label: 'Dashboard Financeiro', href: '/cliente/dashboard', icon: LayoutDashboard },
-        ...(acessoNfse.liberado ? [{ label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText }] : []),
+        ...(acessoNfse.liberado ? [
+          { label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText },
+          { label: 'Comparador de SPED', href: '/cliente/comparador-sped', icon: FileSearch },
+        ] : []),
         { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
         { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
         { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
@@ -499,7 +503,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       return navClienteBase.map(section => {
         const items = section.items.filter(item => {
           if (item.href === '/cliente/dashboard') return !somenteFiscal;
-          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse') return true;
+          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
         return { ...section, items };
@@ -513,7 +517,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
       if (item.href === '/consultor/administrativo') return true;
       // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
-      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/dashboard2') return true;
+      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/comparador-sped' || item.href === '/consultor/dashboard2') return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -546,7 +550,8 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     pathname?.includes('/nfse') ||
     pathname?.includes('/nfe') ||
     pathname?.includes('/cnd') ||
-    pathname?.includes('/certid')
+    pathname?.includes('/certid') ||
+    pathname?.includes('/comparador-sped')
   );
 
   const isFiscalUser = Boolean(

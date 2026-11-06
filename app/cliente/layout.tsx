@@ -23,10 +23,11 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
     const isDashboard2 = pathname.startsWith('/cliente/dashboard2');
     const isDashboard = pathname === '/cliente/dashboard';
+    const isComparadorSped = pathname.startsWith('/cliente/comparador-sped');
 
-    // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto aos Dashboards
+    // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto aos Dashboards e Comparador SPED
     if (acessoNfse.liberado) {
-      if (pathname === ROTA_NFSE || isDashboard2 || isDashboard) {
+      if (pathname === ROTA_NFSE || isDashboard2 || isDashboard || isComparadorSped) {
         setAuthorized(true);
         return;
       }
@@ -42,7 +43,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       // Compatibility
       setAuthorized(true);
     } else {
-      const isOk = isDashboard || isDashboard2 || allowed.some(route => pathname.startsWith(route));
+      const isOk = isDashboard || isDashboard2 || isComparadorSped || allowed.some(route => pathname.startsWith(route));
       setAuthorized(isOk);
     }
   }, [router, pathname, acessoNfse.carregando, acessoNfse.liberado]);

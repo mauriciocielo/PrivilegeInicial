@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { Instrument_Serif } from 'next/font/google';
 import {
   ShieldCheck, FileText, Activity, Building2, Play, RefreshCw,
   Plus, CheckCircle2, AlertTriangle, XCircle, Truck, Inbox,
-  Clock, Moon, Sun, ArrowUpRight, ArrowDownLeft, KeyRound, Sparkles
+  Clock, Moon, Sun, ArrowUpRight, ArrowDownLeft, KeyRound, Sparkles, FileSearch
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { store } from '../lib/store';
@@ -94,6 +95,7 @@ function Skeleton({ width = 56 }: { width?: number }) {
 }
 
 export default function DashboardFiscalGeral() {
+  const router = useRouter();
   const [abaAtiva, setAbaAtiva] = useState<'notas' | 'cnd' | 'logs' | 'execucao'>('notas');
   const [resumo, setResumo] = useState<ResumoFiscal | null>(null);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
@@ -259,6 +261,28 @@ export default function DashboardFiscalGeral() {
               Cadastrar CNPJ / Importar
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => router.push(isCliente ? '/cliente/comparador-sped' : '/consultor/comparador-sped')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(255,255,255,0.1)',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '12px 18px',
+              borderRadius: 12,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+            title="Abrir ferramenta de auditoria e cruzamento de arquivo SPED com notas do sistema"
+          >
+            <FileSearch size={14} />
+            Comparar SPED
+          </button>
 
           <button
             type="button"
