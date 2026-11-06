@@ -32,19 +32,38 @@ export async function POST(request: Request) {
     const resNfe = resNfePromise.status === 'fulfilled' ? resNfePromise.value : null;
     const resCte = resCtePromise.status === 'fulfilled' ? resCtePromise.value : null;
 
+    // Antes o erro da NF-e era engolido: se ela falhasse, a tela mostrava só o CT-e, sem explicar
+    // (parecia que "só busca CT-e"). Agora o motivo aparece e vai para o log.
+    let erroNfe: string | null = null;
+    if (resNfePromise.status === 'rejected') {
+      erroNfe = (resNfePromise.reason as Error)?.message || 'Falha ao consultar a NF-e.';
+      console.error('Falha na consulta de NF-e:', resNfePromise.reason);
+      captureError(resNfePromise.reason);
+    }
+    let erroCte: string | null = null;
+    if (resCtePromise.status === 'rejected') {
+      erroCte = (resCtePromise.reason as Error)?.message || 'Falha ao consultar o CT-e.';
+      console.error('Falha na consulta de CT-e:', resCtePromise.reason);
+      captureError(resCtePromise.reason);
+    }
+
     const novasTotal = (resNfe?.novas || 0) + (resCte?.novas || 0);
     const atualizadasTotal = (resNfe?.atualizadas || 0) + (resCte?.atualizadas || 0);
 
-    let mensagemFinal = resNfe?.mensagem || '';
-    if (resCte && resCte.novas > 0) {
-      mensagemFinal += ` • +${resCte.novas} CT-e (fretes) importados!`;
-    }
+    const partes: string[] = [];
+    if (resNfe?.mensagem) partes.push(resNfe.mensagem);
+    if (resCte && resCte.novas > 0) partes.push(`+${resCte.novas} CT-e (fretes) importados!`);
+    if (erroNfe) partes.push(`NF-e não consultada: ${erroNfe}`);
+    if (erroCte) partes.push(`CT-e não consultado: ${erroCte}`);
+    const mensagemFinal = partes.join(' • ') || 'Consulta concluída.';
 
     return NextResponse.json({
       ...(resNfe || {}),
       novas: novasTotal,
       atualizadas: atualizadasTotal,
       cte: resCte,
+      erroNfe,
+      erroCte,
       mensagem: mensagemFinal,
     });
   } catch (error) {

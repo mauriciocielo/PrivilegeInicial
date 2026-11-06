@@ -114,7 +114,8 @@ async function gravarEvento(empresaId: string, chave: string, tpEvento: string) 
 }
 
 async function registrar(empresaId: string, dados: { cStat?: string | null; mensagem: string; proxima: Date | null; certOrigem?: string; ultNsu?: string; maxNsu?: string; adicionados?: number }) {
-  await db.nfeDistribuicao.update({
+  // updateMany (não update) para não desserializar a linha e não quebrar em colunas de CT-e nulas.
+  await db.nfeDistribuicao.updateMany({
     where: { empresaId },
     data: {
       ultimaConsultaEm: new Date(),
@@ -144,7 +145,14 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
   if (cnpj.length !== 14) return { ...base, mensagem: 'A empresa não tem CNPJ válido.' };
   if (!empresa.nfseConfig) return { ...base, mensagem: 'A empresa ainda não tem certificado configurado (abra a configuração do Emissor Nacional).' };
 
-  const estado = await db.nfeDistribuicao.upsert({ where: { empresaId }, update: {}, create: { empresaId } });
+  // Lê só os campos da NF-e: evita desserializar as colunas de CT-e (ultNsuCte/maxNsuCte),
+  // que em bancos ainda não sincronizados podem estar nulas e derrubariam toda a consulta de NF-e.
+  const estado = await db.nfeDistribuicao.upsert({
+    where: { empresaId },
+    update: {},
+    create: { empresaId },
+    select: { ultNsu: true, maxNsu: true, proximaConsultaEm: true, ativo: true },
+  });
   base.ultNsu = estado.ultNsu;
   base.maxNsu = estado.maxNsu;
   base.proximaConsultaEm = estado.proximaConsultaEm;
@@ -231,7 +239,8 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
       ultNsu = resposta.ultNsu;
       maxNsu = resposta.maxNsu;
       // Grava a cada página: se cair no meio, a próxima consulta continua daqui.
-      await db.nfeDistribuicao.update({ where: { empresaId }, data: { ultNsu, maxNsu } });
+      // updateMany (não update) para não desserializar a linha e evitar quebra em colunas de CT-e nulas.
+      await db.nfeDistribuicao.updateMany({ where: { empresaId }, data: { ultNsu, maxNsu } });
 
       if (!avancou || BigInt(ultNsu) >= BigInt(maxNsu)) {
         const proxima = depois(ESPERA_APOS_137_MS);
