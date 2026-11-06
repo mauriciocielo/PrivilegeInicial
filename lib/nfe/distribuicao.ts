@@ -42,6 +42,35 @@ export function montarEnvelopeDistribuicao(p: { ambiente: AmbienteNfe; cnpj: str
     + '</soap12:Body></soap12:Envelope>';
 }
 
+export function montarEnvelopeConsNsu(p: { ambiente: AmbienteNfe; cnpj: string; nsu: string; cUfAutor?: string }): string {
+  const cnpj = p.cnpj.replace(/\D/g, '');
+  const uf = p.cUfAutor && /^\d{2}$/.test(p.cUfAutor) ? `<cUFAutor>${p.cUfAutor}</cUFAutor>` : '';
+  return '<?xml version="1.0" encoding="utf-8"?>'
+    + '<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">'
+    + '<soap12:Body>'
+    + `<nfeDistDFeInteresse xmlns="${NS_WSDL}"><nfeDadosMsg>`
+    + '<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">'
+    + `<tpAmb>${p.ambiente === 'producao' ? 1 : 2}</tpAmb>${uf}<CNPJ>${cnpj}</CNPJ>`
+    + `<consNSU><NSU>${padNsu(p.nsu)}</NSU></consNSU>`
+    + '</distDFeInt></nfeDadosMsg></nfeDistDFeInteresse>'
+    + '</soap12:Body></soap12:Envelope>';
+}
+
+export function montarEnvelopeConsChave(p: { ambiente: AmbienteNfe; cnpj: string; chaveAcesso: string; cUfAutor?: string }): string {
+  const cnpj = p.cnpj.replace(/\D/g, '');
+  const chave = p.chaveAcesso.replace(/\D/g, '');
+  const uf = p.cUfAutor && /^\d{2}$/.test(p.cUfAutor) ? `<cUFAutor>${p.cUfAutor}</cUFAutor>` : '';
+  return '<?xml version="1.0" encoding="utf-8"?>'
+    + '<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">'
+    + '<soap12:Body>'
+    + `<nfeDistDFeInteresse xmlns="${NS_WSDL}"><nfeDadosMsg>`
+    + '<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">'
+    + `<tpAmb>${p.ambiente === 'producao' ? 1 : 2}</tpAmb>${uf}<CNPJ>${cnpj}</CNPJ>`
+    + `<consChNFe><chNFe>${chave}</chNFe></consChNFe>`
+    + '</distDFeInt></nfeDadosMsg></nfeDistDFeInteresse>'
+    + '</soap12:Body></soap12:Envelope>';
+}
+
 // ---------- Transporte (mTLS) ----------
 
 /**

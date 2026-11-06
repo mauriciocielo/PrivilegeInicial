@@ -284,7 +284,23 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
     const bloqueio = resposta.cStat === '656';
     const proxima = depois(bloqueio ? ESPERA_APOS_656_MS : ESPERA_APOS_REJEICAO_MS);
     const mensagem = `SEFAZ [${resposta.cStat}] ${resposta.xMotivo}`.trim();
-    await registrar(empresaId, { cStat: resposta.cStat, mensagem, proxima, certOrigem, ultNsu, maxNsu, adicionados });
+
+    // Se a SEFAZ devolveu um ultNSU ou maxNSU mais avançado na resposta (ou se exigiu usar o ultNSU nas
+    // solicitações subsequentes por já ter sido consumido por outro software externo), avançamos o ponteiro
+    // para evitar loop infinito de bloqueio 656 repetindo o NSU defasado.
+    let nsuParaSalvar = ultNsu;
+    let maxNsuParaSalvar = maxNsu;
+    if (resposta.ultNsu && resposta.ultNsu !== '0' && BigInt(resposta.ultNsu) > BigInt(nsuParaSalvar)) {
+      nsuParaSalvar = resposta.ultNsu;
+    }
+    if (resposta.maxNsu && resposta.maxNsu !== '0' && BigInt(resposta.maxNsu) > BigInt(maxNsuParaSalvar)) {
+      maxNsuParaSalvar = resposta.maxNsu;
+    }
+    if (bloqueio && resposta.xMotivo?.toLowerCase().includes('ultnsu') && BigInt(maxNsuParaSalvar) > BigInt(nsuParaSalvar)) {
+      nsuParaSalvar = maxNsuParaSalvar;
+    }
+
+    await registrar(empresaId, { cStat: resposta.cStat, mensagem, proxima, certOrigem, ultNsu: nsuParaSalvar, maxNsu: maxNsuParaSalvar, adicionados });
     await registrarLogFiscal({
       empresaId,
       tipo: 'nfe',
@@ -292,7 +308,7 @@ export async function consultarNfeDestinadas(empresaId: string, limite?: number)
       cStat: resposta.cStat,
       mensagem,
     });
-    return { ...resultado, mensagem, ultNsu, maxNsu, proximaConsultaEm: proxima };
+    return { ...resultado, mensagem, ultNsu: nsuParaSalvar, maxNsu: maxNsuParaSalvar, proximaConsultaEm: proxima };
   }
 
   // Limite de páginas desta chamada: sem espera, a próxima consulta continua do NSU gravado.

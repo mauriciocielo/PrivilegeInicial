@@ -8,7 +8,7 @@ import {
   ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
   Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft,
   Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight, BarChart3, Truck,
-  Activity
+  Activity, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
@@ -349,6 +349,26 @@ export default function NfeDestinadasPainel() {
       }
     } catch {
       toast.error('Erro ao conectar ao servidor.');
+    }
+  };
+
+  // Sincronizar Ponteiro de NSU com a SEFAZ
+  const handleSincronizarNsu = async (empId: string) => {
+    try {
+      const res = await fetch('/api/nfe/destinadas/sincronizar-nsu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: empId }),
+      });
+      const data = await lerJsonResposta(res);
+      if (res.ok) {
+        toast.success(data.mensagem || 'Ponteiro de NSU sincronizado com a SEFAZ!');
+        await carregarEmpresas();
+      } else {
+        toast.error(data.error || 'Erro ao sincronizar NSU.');
+      }
+    } catch {
+      toast.error('Erro de conexão ao sincronizar NSU.');
     }
   };
 
@@ -1022,6 +1042,64 @@ export default function NfeDestinadasPainel() {
                   <Moon size={11} color="#6366f1" /> Noturno
                 </span>
               </label>
+            </div>
+          </div>
+        )}
+
+        {/* Alerta de Consumo Indevido / Conflito de NSU com outro software */}
+        {empresaAtual && monitorAtual && (monitorAtual.ultimoStatus === '656' || monitorAtual.ultimaMensagem?.includes('656') || (monitorAtual.ultNsu && monitorAtual.maxNsu && BigInt(monitorAtual.maxNsu) > BigInt(monitorAtual.ultNsu))) && (
+          <div
+            style={{
+              background: '#fffbeb',
+              border: '1px solid #fcd34d',
+              borderRadius: 12,
+              padding: '16px 20px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 280 }}>
+              <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <strong style={{ fontSize: 14, color: '#92400e', display: 'block', marginBottom: 2 }}>
+                  Aviso da SEFAZ: Conflito de NSU / Consumo Indevido (Rejeição 656)
+                </strong>
+                <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                  {monitorAtual.ultimaMensagem || 'A SEFAZ exige que a consulta siga o último NSU distribuído.'}
+                  {monitorAtual.ultNsu && monitorAtual.maxNsu && (
+                    <span style={{ display: 'block', marginTop: 4, fontWeight: 500 }}>
+                      Ponteiro do sistema: <strong>{monitorAtual.ultNsu}</strong> · Maior NSU na SEFAZ: <strong>{monitorAtual.maxNsu}</strong>
+                    </span>
+                  )}
+                  <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#92400e' }}>
+                    💡 Dica: Outro software (como o ERP do posto ou sistema contábil) consultou com este certificado e avançou os NSUs. Aguarde o término do bloqueio de 1 hora da SEFAZ. Você também pode importar os XMLs pelo botão acima.
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleSincronizarNsu(empresaAtual.id)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #f59e0b',
+                  color: '#b45309',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                }}
+                title="Avança o ponteiro de busca para o maior NSU reportado pela SEFAZ"
+              >
+                Sincronizar NSU ({monitorAtual.maxNsu || 'SEFAZ'})
+              </button>
             </div>
           </div>
         )}
