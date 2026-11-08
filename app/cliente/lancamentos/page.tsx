@@ -15,6 +15,7 @@ type CardImportRow = {
   data: string;
   descricao: string;
   valor: number;
+  tipo: 'receita' | 'despesa';
   numeroDocumento?: string;
 };
 
@@ -30,6 +31,16 @@ const parseMoney = (value: unknown): number => {
     .replace(/\./g, '')
     .replace(',', '.');
   return Math.abs(Number(normalized)) || 0;
+};
+
+/** Diz se uma célula de dinheiro representa saída: sinal de menos ou parênteses contábeis. */
+const moneyNegativo = (value: unknown): boolean => {
+  if (typeof value === 'number') return value < 0;
+  const raw = String(value ?? '').trim();
+  if (!raw) return false;
+  if (/^\(.*\)$/.test(raw)) return true;
+  const normalized = raw.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+  return Number(normalized) < 0;
 };
 
 const parseCardDate = (value: unknown): string => {
@@ -63,6 +74,7 @@ const detectCardImportColumns = (headers: string[]) => {
     value: find(['valor', 'amount', 'total', 'debito', 'débito', 'saida', 'entrada', 'pago', 'recebido', 'dinheiro', 'pix', 'cartao']),
     valueEntrada: find(['entrada', 'credito', 'recebimento']),
     valueSaida: find(['saida', 'debito', 'pagamento']),
+    tipo: find(['tipo', 'natureza', 'd/c', 'c/d', 'operacao', 'operação', 'movimento']),
     document: find(['documento', 'doc', 'parcela', 'cartao', 'cartão', 'nf']),
   };
 };
@@ -566,7 +578,12 @@ export default function LancamentosPage() {
     }
 
     const columns = detectCardImportColumns(headers);
-    
+    const valueIndex = columns.value >= 0 ? columns.value : 2;
+    // A coluna única de valor usa sinais? Se há QUALQUER negativo, tratamos positivo = receita
+    // e negativo = despesa. Sem nenhum negativo (típico de fatura de cartão), mantém tudo como saída.
+    const usaSinalNoValor = columns.valueEntrada < 0 && columns.valueSaida < 0 &&
+      dataRows.some(r => moneyNegativo(r[valueIndex]));
+
     return dataRows
       .map((row, index) => {
         let data = '';
@@ -589,13 +606,22 @@ export default function LancamentosPage() {
         const descricao = String(row[descriptionIndex] || '').trim();
         
         let valor = 0;
+        let tipo: 'receita' | 'despesa' = 'despesa';
         if (columns.valueEntrada >= 0 || columns.valueSaida >= 0) {
-            const vEntrada = parseMoney(row[columns.valueEntrada]);
-            const vSaida = parseMoney(row[columns.valueSaida]);
-            valor = vEntrada > 0 ? vEntrada : vSaida; // Pega o que for maior que zero
+            const vEntrada = columns.valueEntrada >= 0 ? parseMoney(row[columns.valueEntrada]) : 0;
+            const vSaida = columns.valueSaida >= 0 ? parseMoney(row[columns.valueSaida]) : 0;
+            if (vEntrada > 0) { valor = vEntrada; tipo = 'receita'; }
+            else { valor = vSaida; tipo = 'despesa'; }
         } else {
-            const valueIndex = columns.value >= 0 ? columns.value : 2;
-            valor = parseMoney(row[valueIndex]);
+            const bruto = row[valueIndex];
+            valor = parseMoney(bruto);
+            tipo = usaSinalNoValor ? (moneyNegativo(bruto) ? 'despesa' : 'receita') : 'despesa';
+        }
+
+        if (columns.tipo >= 0) {
+            const t = normalizeText(String(row[columns.tipo] || ''));
+            if (/receita|entrada|credito|recebi|^c$/.test(t)) tipo = 'receita';
+            else if (/despesa|saida|debito|pagamento|^d$/.test(t)) tipo = 'despesa';
         }
 
         const numeroDocumento = columns.document >= 0 ? String(row[columns.document] || '').trim() : undefined;
@@ -605,6 +631,7 @@ export default function LancamentosPage() {
           data,
           descricao,
           valor,
+          tipo,
           numeroDocumento: numeroDocumento || undefined,
         };
       })
@@ -735,6 +762,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
     setCardSelectedIds(prev => prev.length === cardImportRows.length ? [] : cardImportRows.map(row => row.id));
   };
 
+  // Alterna manualmente receita/despesa de uma linha (corrige a detecção) e limpa a categoria vinculada.
+  const toggleCardRowTipo = (id: string) => {
+    setCardImportRows(prev => prev.map(r => r.id === id ? { ...r, tipo: r.tipo === 'receita' ? 'despesa' : 'receita' } : r));
+    setCardCatMap(prev => { const c = { ...prev }; delete c[id]; return c; });
+  };
+
   const handleCardImport = async () => {
     if (!cardPortadorId) { toast.error('Selecione o portador do cartão.'); return; }
     const rowsToImport = cardImportRows.filter(row => cardSelectedIds.includes(row.id));
@@ -751,7 +784,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
       data: row.data,
       descricao: row.descricao,
       valor: row.valor,
-      tipo: 'despesa',
+      tipo: row.tipo,
       planoContaId: cardCatMap[row.id] || '',
       portadorId: cardPortadorId,
       status: cardStatus,
@@ -1682,6 +1715,19 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               )}
             </div>
 
+            {cardImportRows.length > 0 && (() => {
+              const soma = (arr: CardImportRow[]) => arr.reduce((a, r) => a + r.valor, 0);
+              const rec = cardImportRows.filter(r => r.tipo === 'receita');
+              const desp = cardImportRows.filter(r => r.tipo === 'despesa');
+              return (
+                <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 12, fontSize: 12.5, fontWeight: 600 }}>
+                  <span style={{ color: 'var(--green, #16a34a)' }}>↑ {rec.length} receita(s): {fmt.currency(soma(rec))}</span>
+                  <span style={{ color: 'var(--red, #dc2626)' }}>↓ {desp.length} despesa(s): {fmt.currency(soma(desp))}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Clique no tipo de cada linha para corrigir, se preciso.</span>
+                </div>
+              );
+            })()}
+
             <div className="table-wrap" style={{ maxHeight: 400, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
               <table>
                 <thead>
@@ -1689,19 +1735,36 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                     <th style={{ width: 40 }}><input type="checkbox" checked={cardImportRows.length > 0 && cardSelectedIds.length === cardImportRows.length} onChange={toggleAllCardImportRows} /></th>
                     <th>Data</th>
                     <th>Descrição</th>
+                    <th style={{ width: 110 }}>Tipo</th>
                     <th style={{ textAlign: 'right' }}>Valor</th>
                     <th style={{ width: 250 }}>Plano de Contas</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cardImportRows.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Selecione um arquivo para visualizar os lançamentos.</td></tr>
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Selecione um arquivo para visualizar os lançamentos.</td></tr>
                   ) : cardImportRows.map(row => (
                     <tr key={row.id}>
                       <td><input type="checkbox" checked={cardSelectedIds.includes(row.id)} onChange={() => toggleCardImportRow(row.id)} /></td>
                       <td style={{ fontSize: 12 }}>{fmt.date(row.data)}</td>
                       <td style={{ fontSize: 12, fontWeight: 500 }}>{row.descricao}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(row.valor)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => toggleCardRowTipo(row.id)}
+                          title="Clique para alternar entre Receita e Despesa"
+                          style={{
+                            fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                            background: row.tipo === 'receita' ? 'var(--green-bg, #dcfce7)' : 'var(--red-bg, #fee2e2)',
+                            color: row.tipo === 'receita' ? 'var(--green, #16a34a)' : 'var(--red, #dc2626)',
+                          }}
+                        >
+                          {row.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
+                        </button>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: row.tipo === 'receita' ? 'var(--green, #16a34a)' : 'var(--red, #dc2626)' }}>
+                        {row.tipo === 'receita' ? '+' : '-'}{fmt.currency(row.valor)}
+                      </td>
                       <td>
                         <select
                           className="form-control form-control-sm"
@@ -1709,7 +1772,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                           onChange={e => setCardCatMap(prev => ({ ...prev, [row.id]: e.target.value }))}
                         >
                           <option value="">-- Vincular Categoria --</option>
-                          {planoContas.filter(p => p.tipo === 'despesa').map(pc => (
+                          {planoContas.filter(p => p.tipo === row.tipo).map(pc => (
                             <option key={pc.id} value={pc.id}>{pc.codigo} - {pc.descricao}</option>
                           ))}
                         </select>
