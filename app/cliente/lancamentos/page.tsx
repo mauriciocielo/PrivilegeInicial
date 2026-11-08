@@ -21,16 +21,31 @@ type CardImportRow = {
 
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+// Converte um valor monetário em número (magnitude; o sinal fica por conta de moneyNegativo).
+// Entende BRL (1.234,56 → ponto = milhar, vírgula = decimal), tolera US (1,234.56) e milhares
+// só com ponto (1.234 = mil duzentos e trinta e quatro).
 const parseMoney = (value: unknown): number => {
   if (typeof value === 'number') return Math.abs(value);
-  const raw = String(value || '').trim();
+  const raw = String(value ?? '').trim().replace(/[^\d.,]/g, '');
   if (!raw) return 0;
-  const normalized = raw
-    .replace(/[R$\s]/g, '')
-    .replace(/\((.*)\)/, '-$1')
-    .replace(/\./g, '')
-    .replace(',', '.');
-  return Math.abs(Number(normalized)) || 0;
+
+  const posVirgula = raw.lastIndexOf(',');
+  const posPonto = raw.lastIndexOf('.');
+  let decimal = -1; // posição do separador decimal, se houver
+  if (posVirgula >= 0 && posPonto >= 0) {
+    decimal = Math.max(posVirgula, posPonto); // o separador decimal é o que aparece por último
+  } else if (posVirgula >= 0) {
+    decimal = posVirgula; // só vírgula → decimal (BRL)
+  } else if (posPonto >= 0) {
+    // Só ponto: é milhar quando há mais de um ponto, ou um ponto seguido de exatamente 3 dígitos (viés BRL).
+    const digitosDepois = raw.length - posPonto - 1;
+    const qtdPontos = (raw.match(/\./g) || []).length;
+    decimal = (qtdPontos === 1 && digitosDepois !== 3) ? posPonto : -1;
+  }
+
+  const inteiro = (decimal >= 0 ? raw.slice(0, decimal) : raw).replace(/[.,]/g, '');
+  const frac = decimal >= 0 ? raw.slice(decimal + 1).replace(/[.,]/g, '') : '';
+  return Math.abs(Number(inteiro + (frac ? '.' + frac : ''))) || 0;
 };
 
 /** Diz se uma célula de dinheiro representa saída: sinal de menos ou parênteses contábeis. */
