@@ -8,23 +8,22 @@ import {
   CheckCircle2,
   ChevronDown,
   ExternalLink,
-  Star,
   MapPin,
   Phone,
   Mail,
   Clock,
   ArrowRight,
-  ShieldCheck,
-  Building2,
-  TrendingUp,
-  Award,
   MessageCircle,
 } from 'lucide-react';
 import { consultoriaServices, contabilidadeServices, faqs, cnds } from './pageData';
 import PopupInicial from '../components/PopupInicial';
+import StoreLocator from '../components/StoreLocator';
 
 const sans = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] });
+
+const GOOGLE_MAPS_URL =
+  'https://www.google.com/maps/search/?api=1&query=Privilege+Contabilidade+e+Consultoria+Rua+Par%C3%A1+127+Francisco+Beltr%C3%A3o+PR';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'contabilidade' | 'consultoria'>('contabilidade');
@@ -101,16 +100,15 @@ export default function HomePage() {
         .item-list { list-style: none; padding: 0; margin-top: 22px; }
         .item-list li { margin-bottom: 12px; font-size: 15px; color: var(--text-light); display: flex; align-items: center; gap: 10px; }
 
-        /* Testimonials / Social Proof */
-        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 36px; }
-        .testimonial-card { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-
         /* Partners Grid */
         .mvv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-        .mvv-card { background: #fff; padding: 32px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); }
-        .partners-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
-        .partner-card { background: #fff; border: 1px solid var(--border); padding: 36px; border-radius: 24px; display: flex; gap: 24px; align-items: flex-start; }
-        .partner-monogram { width: 130px; height: 130px; border-radius: 20px; background: linear-gradient(135deg, #600000, #2c0000); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+        .mvv-card { background: #fff; padding: 32px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: flex-start; }
+        .mvv-card-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; min-height: 52px; }
+        .mvv-card-head h4 { font-size: 22px; margin: 0; color: #000; line-height: 1.25; flex: 1; word-break: break-word; }
+        .mvv-card-head svg { flex-shrink: 0; margin-top: 4px; }
+        .partners-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .partner-card { background: #fff; border: 1px solid var(--border); padding: 40px; border-radius: 28px; display: flex; gap: 24px; align-items: flex-start; }
+        .partner-avatar { width: 150px; height: 150px; border-radius: 24px; overflow: hidden; flex-shrink: 0; position: relative; }
 
         /* FAQ & CNDs */
         .faq-grid { max-width: 860px; margin: 0 auto; display: grid; gap: 16px; }
@@ -153,7 +151,7 @@ export default function HomePage() {
           h2 { font-size: 34px; margin-bottom: 24px; }
           .hero { padding: 60px 0 40px; }
           .solutions-hub { grid-template-columns: 1fr 1fr; }
-          .impact-grid, .grid, .partners-grid, .footer-grid, .cnd-grid, .mvv-grid, .testimonials-grid { grid-template-columns: 1fr !important; }
+          .impact-grid, .grid, .partners-grid, .footer-grid, .cnd-grid, .mvv-grid { grid-template-columns: 1fr !important; }
           .partner-card { flex-direction: column; align-items: center; text-align: center; }
           .partner-card p { text-align: center !important; }
           .impact-card, .stat-card { padding: 36px 20px; }
@@ -181,10 +179,9 @@ export default function HomePage() {
           <div className="nav-links">
             <a href="#solucoes" className="nav-link">Serviços</a>
             <a href="#quem-somos" className="nav-link">Quem Somos</a>
-            <a href="#depoimentos" className="nav-link">Avaliações</a>
             <a href="#cnds" className="nav-link">Certidões</a>
             <a href="#faq" className="nav-link">Dúvidas</a>
-            <a href="#contato" className="nav-link">Contato</a>
+            <Link href="/contato" className="nav-link">Contato</Link>
             <Link href="/login" className="client-btn">Área do Cliente</Link>
           </div>
         </nav>
@@ -308,17 +305,17 @@ export default function HomePage() {
           />
           <div className="impact-card">
             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              Impacto nos Clientes
+              Resultados Alcançados
             </span>
             <div style={{ fontSize: '76px', fontWeight: '400', margin: '12px 0', fontFamily: serif.style.fontFamily }}>
               R$ 10 Mi+
             </div>
             <p style={{ fontSize: '18px', lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
-              Em captação de recursos estruturados, linhas de fomento e economia tributária auditada para nossos clientes.
+              Em crédito facilitado e novas linhas de fomento estruturadas para nossos clientes.
             </p>
           </div>
           <div className="stat-card">
-            <h3 style={{ fontSize: 26, marginBottom: 20 }}>Excelência e Rigor Técnico</h3>
+            <h3 style={{ fontSize: 26, marginBottom: 20 }}>Excelência Privilege</h3>
             <div style={{ display: 'grid', gap: 18 }}>
               {[
                 { title: 'Contabilidade & Fiscal Completa', desc: 'Escrituração, folha de pagamento, DCTFWeb, eSocial e apuração de tributos.' },
@@ -336,75 +333,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-        {/* Avaliações e Prova Social (Item 11) */}
-        <section id="depoimentos" style={{ padding: '60px 0', borderTop: '1px solid var(--border)' }}>
-          <div style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto 16px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fef3c7', padding: '6px 14px', borderRadius: '99px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', color: '#f59e0b' }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={15} fill="#f59e0b" />
-                ))}
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#92400e' }}>
-                5.0 no Google Meu Negócio
-              </span>
-            </div>
-            <h2 className="serif" style={{ fontSize: 40, margin: '8px 0 14px' }}>
-              A Confiança de Quem Cresce com a Privilege
-            </h2>
-            <p style={{ fontSize: 16, color: 'var(--text-light)' }}>
-              Empresas de comércio, agronegócio e serviços em Francisco Beltrão e região atestam nossa entrega.
-            </p>
-          </div>
-
-          <div className="testimonials-grid">
-            <div className="testimonial-card">
-              <div>
-                <div style={{ display: 'flex', color: '#f59e0b', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (<Star key={i} size={15} fill="#f59e0b" />))}
-                </div>
-                <p style={{ fontSize: '14.5px', lineHeight: 1.6, color: '#333', fontStyle: 'italic', margin: '0 0 18px 0' }}>
-                  "A migração do nosso financeiro para o BPO da Privilege organizou o fluxo de caixa da distribuidora. Hoje temos previsibilidade de 60 dias e economizamos o custo de contratar duas pessoas internas."
-                </p>
-              </div>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#111', display: 'block' }}>Roberto Almeida</strong>
-                <span style={{ fontSize: '13px', color: '#737373' }}>Diretor Comercial · Distribuidora de Alimentos</span>
-              </div>
-            </div>
-
-            <div className="testimonial-card">
-              <div>
-                <div style={{ display: 'flex', color: '#f59e0b', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (<Star key={i} size={15} fill="#f59e0b" />))}
-                </div>
-                <p style={{ fontSize: '14.5px', lineHeight: 1.6, color: '#333', fontStyle: 'italic', margin: '0 0 18px 0' }}>
-                  "O Marcos e o Mauricio fizeram uma revisão tributária completa no nosso negócio de varejo. Conseguimos recuperar valores de PIS/COFINS pagos a mais e reduzimos nossa alíquota mensal legalmente."
-                </p>
-              </div>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#111', display: 'block' }}>Juliana Zanella</strong>
-                <span style={{ fontSize: '13px', color: '#737373' }}>Sócia-Proprietária · Rede Varejista (Sudoeste/PR)</span>
-              </div>
-            </div>
-
-            <div className="testimonial-card">
-              <div>
-                <div style={{ display: 'flex', color: '#f59e0b', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (<Star key={i} size={15} fill="#f59e0b" />))}
-                </div>
-                <p style={{ fontSize: '14.5px', lineHeight: 1.6, color: '#333', fontStyle: 'italic', margin: '0 0 18px 0' }}>
-                  "Nossa família produtora precisava de segurança na entrega do LCDPR e na sucessão patrimonial das terras. A Privilege nos atendeu com rigor técnico impecável e total proximidade no campo."
-                </p>
-              </div>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#111', display: 'block' }}>Carlos Dalmolin</strong>
-                <span style={{ fontSize: '13px', color: '#737373' }}>Produtor Rural & Empresário do Agronegócio</span>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Services Switcher */}
         <section id="solucoes" style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
@@ -461,78 +389,187 @@ export default function HomePage() {
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }}
           />
           <div style={{ maxWidth: '920px', marginBottom: '48px' }}>
-            <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
+            <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
               Quem Somos
             </span>
             <h2 className="serif" style={{ fontSize: 44, marginBottom: 24, lineHeight: 1.15 }}>
-              Inteligência Contábil, Segurança Tributária e Parceria Estratégica.
+              Sua parceira estratégica em contabilidade e gestão.
             </h2>
-            <p style={{ fontSize: 17, color: 'var(--text-light)', lineHeight: 1.7 }}>
-              Com sede em Francisco Beltrão, a <strong>Privilege Contabilidade e Consultoria</strong> nasceu com o propósito de transformar a relação do empresário com seus números. Acreditamos que a contabilidade moderna não pode se limitar à entrega de guias de impostos: ela deve ser o motor gerador de caixa, segurança jurídica e direcionamento estratégico.
+            <p style={{ fontSize: 17, color: 'var(--text-light)', marginBottom: 18, textAlign: 'justify', lineHeight: 1.75 }}>
+              Fundada em 2018 na cidade de Francisco Beltrão (PR), a <strong style={{ color: 'var(--text)' }}>PRIVILEGE CONTABILIDADE E CONSULTORIA</strong> nasceu com o propósito de transformar a contabilidade tradicional em um verdadeiro motor de crescimento estratégico. Hoje, oferecemos soluções inteligentes, seguras e personalizadas em contabilidade, assessoria tributária e consultoria de negócios para empresas da região e de todo o país.
+            </p>
+            <p style={{ fontSize: 17, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.75 }}>
+              Acreditamos que a contabilidade vai muito além do cumprimento de obrigações: ela é uma ferramenta vital de gestão. Por isso, aliamos o profundo conhecimento técnico, a atualização constante e uma visão estratégica e consultiva para auxiliar nossos clientes no compliance legal, na otimização tributária inteligente e na tomada de decisões seguras — impulsionando o desenvolvimento sustentável.
             </p>
           </div>
 
-          <div className="partners-grid" style={{ marginBottom: '60px' }}>
-            <div className="partner-card">
-              <div className="partner-monogram">
-                <span style={{ fontSize: '32px' }}>MC</span>
-                <span style={{ fontSize: '12px', marginTop: '4px', letterSpacing: '0.1em' }}>SÓCIO</span>
-              </div>
-              <div>
-                <h3 className="serif" style={{ fontSize: 28, margin: '0 0 6px 0' }}>Marcos Cancelier</h3>
-                <div style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, marginBottom: 12 }}>
-                  Contador & Consultor Tributário · CRC-PR
+          {/* Nossos Pilares de Atuação */}
+          <div style={{ marginBottom: '56px' }}>
+            <h3 className="serif" style={{ fontSize: 32, marginBottom: 10 }}>Nossos Pilares de Atuação</h3>
+            <p style={{ fontSize: 16, color: 'var(--text-light)', marginBottom: 28 }}>
+              Nossa essência e o padrão de excelência que entregamos todos os dias aos nossos parceiros estão fundamentados em três valores centrais:
+            </p>
+            <div className="mvv-grid">
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Segurança e Confiança</h4>
                 </div>
-                <p style={{ fontSize: 14.5, color: 'var(--text-light)', lineHeight: 1.6, margin: 0 }}>
-                  Especialista em Gestão Empresarial e Planejamento Tributário. Atua na estruturação contábil, auditoria preventiva de SPED, enquadramentos fiscais estratégicos e conformidade tributária para PMEs e agronegócio.
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Atuação altamente responsável, rigor técnico e compromisso inegociável com a conformidade legal, societária e tributária para garantir a total tranquilidade da sua empresa.
+                </p>
+              </div>
+
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Inteligência Estratégica</h4>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Diagnósticos precisos, soluções contábeis e consultorias customizadas que apoiam decisões eficientes, evitam desperdícios e geram resultados financeiros reais.
+                </p>
+              </div>
+
+              <div className="mvv-card">
+                <div className="mvv-card-head">
+                  <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
+                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Pessoas e Excelência</h4>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Contamos com uma equipe de cerca de 30 profissionais altamente qualificados e em constante evolução, unidos por uma cultura de proximidade e dedicação total às necessidades de cada cliente.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Liderança com Visão de Futuro */}
+          <div style={{ maxWidth: '920px', marginBottom: '44px' }}>
+            <h3 className="serif" style={{ fontSize: 32, marginBottom: 14 }}>Liderança com Visão de Futuro</h3>
+            <p style={{ fontSize: 16.5, color: 'var(--text-light)', marginBottom: 14, textAlign: 'justify', lineHeight: 1.75 }}>
+              Sob a direção de <strong style={{ color: 'var(--text)' }}>Marcos Cancelier</strong> — contador, empresário, consultor, professor e palestrante, especialista em Gestão Empresarial e Direito Tributário — e <strong style={{ color: 'var(--text)' }}>Mauricio Cielo</strong> — contador e consultor especialista em inteligência financeira, auditoria e riscos —, a Privilege une a bagagem e a autoridade técnica de quem entende o mercado de ponta a ponta com o dinamismo de uma estrutura ágil e focada em resultados.
+            </p>
+            <p style={{ fontSize: 16.5, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.75 }}>
+              Mais do que prestadores de serviços, somos parceiros estratégicos de jornada. Oferecemos o conhecimento e a confiança que sua empresa precisa para ir mais longe.
+            </p>
+          </div>
+
+          {/* Cards dos Sócios com Fotos Reais e CRC-PR */}
+          <div className="partners-grid" style={{ marginBottom: '60px' }}>
+            {/* Marcos Cancelier */}
+            <div className="partner-card">
+              <div className="partner-avatar">
+                <Image
+                  src="/foto-marcos.jpg"
+                  alt="Marcos Cancelier — Sócio-Diretor e Contador (CRC-PR 062232/O-1)"
+                  fill
+                  sizes="(max-width: 900px) 140px, 150px"
+                  style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Marcos Cancelier</h3>
+                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 14, marginBottom: 4 }}>
+                  Sócio-Diretor · Contabilidade & Consultoria · CRC-PR 062232/O-1
+                </p>
+                <a
+                  href="https://instagram.com/marcos.cancelier"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '13px', marginBottom: '14px', textDecoration: 'none' }}
+                >
+                  @marcos.cancelier ↗
+                </a>
+                <p style={{ fontSize: 14, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
+                  Bacharel em Ciências Contábeis pela UTFPR (CRC-PR 062232/O-1) com pós-graduações em Direito Tributário e Gestão Empresarial. Palestrante do SESCAP-PR, atua na gestão executiva dos dois braços do grupo, conectando o rigor técnico contábil à estratégia empresarial e tomada de decisão.
                 </p>
               </div>
             </div>
 
+            {/* Mauricio Cielo */}
             <div className="partner-card">
-              <div className="partner-monogram">
-                <span style={{ fontSize: '32px' }}>MM</span>
-                <span style={{ fontSize: '12px', marginTop: '4px', letterSpacing: '0.1em' }}>SÓCIO</span>
+              <div className="partner-avatar">
+                <Image
+                  src="/foto-mauricio.jpg"
+                  alt="Mauricio Cielo — Sócio-Administrador e Contador (CRC-PR 082974/O-7)"
+                  fill
+                  sizes="(max-width: 900px) 140px, 150px"
+                  style={{ objectFit: 'cover', objectPosition: 'center center' }}
+                />
               </div>
-              <div>
-                <h3 className="serif" style={{ fontSize: 28, margin: '0 0 6px 0' }}>Mauricio Meurer</h3>
-                <div style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, marginBottom: 12 }}>
-                  Consultor Empresarial & Estratégico
-                </div>
-                <p style={{ fontSize: 14.5, color: 'var(--text-light)', lineHeight: 1.6, margin: 0 }}>
-                  Especialista em BPO financeiro, finanças corporativas, controladoria e inteligência de mercado. Lidera a implementação de processos operacionais e ferramentas de tomada de decisão para os clientes da Privilege.
+              <div style={{ flex: 1 }}>
+                <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Mauricio Cielo</h3>
+                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 14, marginBottom: 4 }}>
+                  Sócio-Administrador · Consultoria Estratégica · CRC-PR 082974/O-7
+                </p>
+                <a
+                  href="https://instagram.com/mauricio.cielo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '13px', marginBottom: '14px', textDecoration: 'none' }}
+                >
+                  @mauricio.cielo ↗
+                </a>
+                <p style={{ fontSize: 14, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
+                  Bacharel em Ciências Contábeis (CRC-PR 082974/O-7) com extensões em Auditoria e Riscos. Com mais de 200 empresas atendidas, lidera as divisões de inteligência financeira, reestruturação de fluxo de caixa e planejamento tributário estratégico na Privilege Consultoria.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Missão, Visão e Valores */}
-          <div className="mvv-grid">
-            <div className="mvv-card">
-              <h3 className="serif" style={{ fontSize: 22, margin: '0 0 10px 0' }}>Missão</h3>
-              <p style={{ fontSize: 14.5, color: 'var(--text-light)', lineHeight: 1.65, margin: 0 }}>
-                Impulsionar o crescimento sustentável de nossos clientes por meio de inteligência contábil, planejamento tributário ético e disciplina financeira.
-              </p>
-            </div>
-            <div className="mvv-card">
-              <h3 className="serif" style={{ fontSize: 22, margin: '0 0 10px 0' }}>Visão</h3>
-              <p style={{ fontSize: 14.5, color: 'var(--text-light)', lineHeight: 1.65, margin: 0 }}>
-                Ser reconhecido no Sudoeste do Paraná como o escritório de contabilidade consultiva de maior referência em inovação, confiança e resultados tangíveis.
-              </p>
-            </div>
-            <div className="mvv-card">
-              <h3 className="serif" style={{ fontSize: 22, margin: '0 0 10px 0' }}>Valores</h3>
-              <p style={{ fontSize: 14.5, color: 'var(--text-light)', lineHeight: 1.65, margin: 0 }}>
-                Ética intransigente, rigor técnico, transparência radical, inovação contínua e foco absoluto no sucesso do cliente.
-              </p>
+          <div style={{ marginTop: '60px' }}>
+            <h2 className="serif" style={{ fontSize: 36, marginBottom: '30px' }}>Missão, Visão e Valores</h2>
+            <div className="mvv-grid">
+              <div className="mvv-card">
+                <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Missão</h3>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Impulsionar o crescimento sustentável de nossos clientes por meio de inteligência contábil, planejamento tributário ético e disciplina financeira.
+                </p>
+              </div>
+              <div className="mvv-card">
+                <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Visão</h3>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Ser reconhecido, nos próximos 5 anos, em Francisco Beltrão, como o escritório de referência em contabilidade — um destino natural para quem busca excelência, confiança e resultados concretos.
+                </p>
+              </div>
+              <div className="mvv-card">
+                <div className="mvv-card-head" style={{ minHeight: '52px' }}>
+                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Valores</h3>
+                </div>
+                <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
+                  Ética & Comprometimento, Responsabilidade & Confiança, Excelência & Qualidade, Inovação & Evolução, Sustentabilidade & Organização.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Onde Estamos com NAP em Texto + Mapa Lazy Loaded */}
+          {/* Onde Estamos com NAP em Texto + Telefone Clicável + Mapa da Empresa */}
           <div style={{ marginTop: '70px' }}>
-            <h2 className="serif" style={{ fontSize: 36, marginBottom: '24px' }}>Onde Estamos em Francisco Beltrão</h2>
-            
-            {/* Bloco NAP Visível */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+              <h2 className="serif" style={{ fontSize: 36, margin: 0 }}>Onde Estamos em Francisco Beltrão</h2>
+              <a
+                href={GOOGLE_MAPS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                Abrir ficha no Google Maps e traçar rota <ExternalLink size={14} />
+              </a>
+            </div>
+
+            {/* Bloco NAP Visível com links tel: e mailto: */}
             <div style={{ background: '#f5f5f7', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', fontSize: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <MapPin size={22} color="var(--accent)" style={{ flexShrink: 0 }} />
@@ -547,7 +584,11 @@ export default function HomePage() {
                 <Phone size={22} color="var(--accent)" style={{ flexShrink: 0 }} />
                 <div>
                   <strong>Telefone & WhatsApp</strong>
-                  <div style={{ color: 'var(--text-light)' }}>(46) 3035-1018</div>
+                  <div>
+                    <a href="tel:+554630351018" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+                      (46) 3035-1018
+                    </a>
+                  </div>
                   <div style={{ color: 'var(--text-light)' }}>Atendimento presencial e online</div>
                 </div>
               </div>
@@ -556,7 +597,11 @@ export default function HomePage() {
                 <Mail size={22} color="var(--accent)" style={{ flexShrink: 0 }} />
                 <div>
                   <strong>E-mail Corporativo</strong>
-                  <div style={{ color: 'var(--text-light)' }}>contato@privilegecontabilidade.cnt.br</div>
+                  <div>
+                    <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: 'var(--text-light)', textDecoration: 'none' }}>
+                      contato@privilegecontabilidade.cnt.br
+                    </a>
+                  </div>
                   <div style={{ color: 'var(--text-light)' }}>Privilege Consultoria Ltda</div>
                 </div>
               </div>
@@ -566,22 +611,13 @@ export default function HomePage() {
                 <div>
                   <strong>Horário de Funcionamento</strong>
                   <div style={{ color: 'var(--text-light)' }}>Segunda a Sexta-feira</div>
-                  <div style={{ color: 'var(--text-light)' }}>08:00 às 18:00 (Sem fechar para almoço)</div>
+                  <div style={{ color: 'var(--text-light)' }}>08:00 às 18:00</div>
                 </div>
               </div>
             </div>
 
-            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', height: '380px' }}>
-              <iframe
-                title="Localização da Privilege Contabilidade em Francisco Beltrão"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3618.995964722513!2d-53.0560738!3d-25.9926417!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94f1c9c5f0f353a7%3A0x60b0985c5453675a!2sRua%20Par%C3%A1%2C%20127%20-%20Centro%2C%20Francisco%20Beltr%C3%A3o%20-%20PR!5e0!3m2!1spt-BR!2sbr!4v1729515000000!5m2!1spt-BR!2sbr"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', height: '460px' }}>
+              <StoreLocator />
             </div>
           </div>
 
@@ -722,22 +758,31 @@ export default function HomePage() {
             Pronto para estruturar o crescimento da sua empresa?
           </h2>
           <p style={{ fontSize: 18, color: '#d4d4d4', marginBottom: 36, maxWidth: '580px', margin: '0 auto 36px', lineHeight: 1.6 }}>
-            Agende um diagnóstico consultivo gratuito com Marcos Cancelier e Mauricio Meurer. Descubra oportunidades imediatas de economia fiscal e eficiência financeira.
+            Agende um diagnóstico consultivo gratuito com Marcos Cancelier e Mauricio Cielo. Descubra oportunidades imediatas de economia fiscal e eficiência financeira.
           </p>
-          <a
-            href={whatsAppMainUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hero-btn"
-            style={{ background: '#fff', color: '#600000' }}
-            onClick={() => trackWhatsAppClick('Footer CTA WhatsApp')}
-          >
-            <MessageCircle size={20} /> Falar com um Consultor no WhatsApp
-          </a>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a
+              href={whatsAppMainUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-btn"
+              style={{ background: '#fff', color: '#600000' }}
+              onClick={() => trackWhatsAppClick('Footer CTA WhatsApp')}
+            >
+              <MessageCircle size={20} /> Falar com um Consultor no WhatsApp
+            </a>
+            <a
+              href="tel:+554630351018"
+              className="hero-btn"
+              style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.4)' }}
+            >
+              <Phone size={18} /> Ligar: (46) 3035-1018
+            </a>
+          </div>
         </section>
       </div>
 
-      {/* Footer com NAP em Plain Text (Item 6) */}
+      {/* Footer com NAP em Plain Text e Links Clicáveis */}
       <footer style={{ padding: '70px 0 35px', background: '#111', color: '#fff' }}>
         <div className="container">
           <div className="footer-grid">
@@ -752,7 +797,7 @@ export default function HomePage() {
               <p style={{ fontSize: '13.5px', color: '#a3a3a3', maxWidth: '280px', marginBottom: 20, lineHeight: 1.6 }}>
                 Inteligência contábil, consultoria estratégica e BPO financeiro em Francisco Beltrão - PR.
               </p>
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <a
                   href="https://instagram.com/privilegefb"
                   target="_blank"
@@ -768,6 +813,14 @@ export default function HomePage() {
                   style={{ color: '#fff', fontSize: '13px', textDecoration: 'none' }}
                 >
                   LinkedIn
+                </a>
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#fff', fontSize: '13px', textDecoration: 'none' }}
+                >
+                  Google Maps
                 </a>
               </div>
             </div>
@@ -790,7 +843,7 @@ export default function HomePage() {
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '10px' }}>
                 <li><a href="#quem-somos" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Quem Somos</a></li>
-                <li><a href="#depoimentos" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Avaliações Google</a></li>
+                <li><Link href="/contato" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Contato e Localização</Link></li>
                 <li><Link href="/login" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Área do Cliente</Link></li>
                 <li><Link href="/privacidade" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Política de Privacidade</Link></li>
                 <li><Link href="/termos" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Termos de Uso</Link></li>
@@ -813,24 +866,54 @@ export default function HomePage() {
                 Fale Conosco
               </h4>
               <div style={{ fontSize: '13.5px', color: '#a3a3a3', lineHeight: 1.6, display: 'grid', gap: '8px' }}>
-                <div><strong>WhatsApp:</strong> (46) 3035-1018</div>
-                <div><strong>E-mail:</strong> contato@privilegecontabilidade.cnt.br</div>
+                <div>
+                  <strong>Telefone:</strong>{' '}
+                  <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>
+                    (46) 3035-1018
+                  </a>
+                </div>
+                <div>
+                  <strong>WhatsApp:</strong>{' '}
+                  <a
+                    href={whatsAppMainUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#fff', textDecoration: 'none' }}
+                    onClick={() => trackWhatsAppClick('Footer WhatsApp Link')}
+                  >
+                    (46) 3035-1018
+                  </a>
+                </div>
+                <div>
+                  <strong>E-mail:</strong>{' '}
+                  <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#a3a3a3', textDecoration: 'none' }}>
+                    contato@privilegecontabilidade.cnt.br
+                  </a>
+                </div>
                 <div><strong>Horário:</strong> Seg. a Sex. das 08h às 18h</div>
               </div>
             </div>
           </div>
 
-          {/* NAP (Name, Address, Phone) em Texto Puro Idêntico ao Google Meu Negócio */}
+          {/* NAP (Name, Address, Phone) em Texto Puro e Clicável */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '28px', marginBottom: '24px', fontSize: '13px', color: '#888', lineHeight: 1.7 }}>
             <p style={{ margin: 0 }}>
-              <strong style={{ color: '#d4d4d4' }}>Privilege Contabilidade e Consultoria</strong> · Razão Social: PRIVILEGE CONSULTORIA LTDA · CNPJ: 58.033.979/0001-84 · CRC-PR<br />
-              <span style={{ color: '#fff' }}>Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290</span> · Telefone: <span style={{ color: '#fff' }}>(46) 3035-1018</span> · E-mail: contato@privilegecontabilidade.cnt.br
+              <strong style={{ color: '#d4d4d4' }}>Privilege Contabilidade e Consultoria</strong> · Razão Social: PRIVILEGE CONSULTORIA LTDA · CNPJ: 58.033.979/0001-84 · Responsáveis Técnicos: Marcos Cancelier (CRC-PR 062232/O-1) e Mauricio Cielo (CRC-PR 082974/O-7)<br />
+              <span style={{ color: '#fff' }}>Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290</span> · Telefone:{' '}
+              <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>
+                (46) 3035-1018
+              </a>{' '}
+              · E-mail:{' '}
+              <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#a3a3a3', textDecoration: 'none' }}>
+                contato@privilegecontabilidade.cnt.br
+              </a>
             </p>
           </div>
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', color: '#737373', fontSize: '12.5px', flexWrap: 'wrap', gap: 14 }}>
             <div>© {new Date().getFullYear()} Privilege Contabilidade e Consultoria. Todos os direitos reservados.</div>
             <div style={{ display: 'flex', gap: '20px' }}>
+              <Link href="/contato" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Contato</Link>
               <Link href="/termos" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Termos de Uso</Link>
               <Link href="/privacidade" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Privacidade (LGPD)</Link>
               <a href="/sitemap.xml" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Mapa do Site</a>
