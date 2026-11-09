@@ -227,22 +227,32 @@ const jsonLdSchema = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'UNCONFIGURED_CLIENT_ID';
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || 'G-KXZ9EZV079';
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        {/* Google tag (gtag.js) */}
         <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
         />
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              window.gtag = gtag;
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '${gaId}');
+`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.gtag = window.gtag || function(){(window.dataLayer = window.dataLayer || []).push(arguments);};
               document.addEventListener('click', function(e) {
                 var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
                 if (!a) return;
@@ -253,7 +263,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     link_url: href,
                     page_path: window.location.pathname
                   });
-                  gtag('event', 'whatsapp_click', {
+                  window.gtag('event', 'whatsapp_click', {
                     event_category: 'engagement',
                     event_label: window.location.pathname,
                     link_url: href
@@ -264,7 +274,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     link_url: href,
                     page_path: window.location.pathname
                   });
-                  gtag('event', 'phone_click', {
+                  window.gtag('event', 'phone_click', {
                     event_category: 'engagement',
                     event_label: window.location.pathname,
                     link_url: href
@@ -273,6 +283,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }, true);
             `,
           }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
         {gtmId && (
           <Script
@@ -288,28 +302,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               `,
             }}
           />
-        )}
-        {gaId && (
-          <>
-            <Script
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-            />
-            <Script
-              id="google-analytics"
-              strategy="afterInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${gaId}', {
-                    page_path: window.location.pathname,
-                  });
-                `,
-              }}
-            />
-          </>
         )}
       </head>
       <body className={fontMain.className} suppressHydrationWarning>
