@@ -192,6 +192,7 @@ export default function HomePage() {
             src="/hero_office.png"
             alt="Ambiente profissional do escritório da Privilege Contabilidade em Francisco Beltrão"
             fill
+            sizes="100vw"
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.08 }}
             priority
           />
@@ -301,6 +302,7 @@ export default function HomePage() {
             src="/finance_abstract.png"
             alt="Análise de dados contábeis e demonstrativos financeiros"
             fill
+            sizes="100vw"
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }}
           />
           <div className="impact-card">
@@ -386,6 +388,7 @@ export default function HomePage() {
             src="/team_meeting.png"
             alt="Equipe de consultores e contadores da Privilege em reunião estratégica"
             fill
+            sizes="100vw"
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }}
           />
           <div style={{ maxWidth: '920px', marginBottom: '48px' }}>
@@ -461,9 +464,10 @@ export default function HomePage() {
                 <Image
                   src="/foto-marcos.jpg"
                   alt="Marcos Cancelier — Sócio-Diretor e Contador (CRC-PR 062232/O-1)"
-                  fill
-                  sizes="(max-width: 900px) 140px, 150px"
-                  style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+                  width={150}
+                  height={150}
+                  sizes="(max-width: 768px) 120px, 150px"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -491,9 +495,10 @@ export default function HomePage() {
                 <Image
                   src="/foto-mauricio.jpg"
                   alt="Mauricio Cielo — Sócio-Administrador e Contador (CRC-PR 082974/O-7)"
-                  fill
-                  sizes="(max-width: 900px) 140px, 150px"
-                  style={{ objectFit: 'cover', objectPosition: 'center center' }}
+                  width={150}
+                  height={150}
+                  sizes="(max-width: 768px) 120px, 150px"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
                 />
               </div>
               <div style={{ flex: 1 }}>

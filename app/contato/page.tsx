@@ -234,7 +234,7 @@ export default function ContatoPage() {
               <MapPin size={16} /> Abrir no Google Maps <ExternalLink size={14} />
             </a>
           </div>
-          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5', height: '450px' }}>
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5', height: '450px', marginBottom: '28px' }}>
             <iframe
               title="Localização da Privilege Contabilidade e Consultoria no Google Maps"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d680.6595585526918!2d-53.04807995568665!3d-26.080225948924042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94f07307c9e5b699%3A0xa090eae9c5f58c7a!2sPrivilege%20Contabilidade%20e%20Consultoria!5e1!3m2!1spt-BR!2sbr!4v1794247569116!5m2!1spt-BR!2sbr"
@@ -245,6 +245,35 @@ export default function ContatoPage() {
               loading="lazy"
               referrerPolicy="strict-origin-when-cross-origin"
             ></iframe>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', fontSize: '15px', lineHeight: 1.7, color: '#374151' }}>
+            <div style={{ background: '#fafafa', border: '1px solid #ececec', borderRadius: '18px', padding: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111', margin: '0 0 10px 0' }}>
+                Como chegar e onde estacionar
+              </h3>
+              <p style={{ margin: 0 }}>
+                Nosso escritório está situado na <strong>Rua Pará, nº 127, Sala 03, no Centro de Francisco Beltrão – PR</strong>, em localização privilegiada e de rápido acesso pelas principais avenidas centrais da cidade (próximo à Avenida Júlio Assis Cavalheiro e à Travessa Frei Deodato). Para maior comodidade em reuniões presenciais e entrega de documentos, há vagas de estacionamento rotativo (Faixa Azul) diretamente em frente ao edifício na Rua Pará, além de estacionamentos privados a poucos metros de distância.
+              </p>
+            </div>
+
+            <div style={{ background: '#fafafa', border: '1px solid #ececec', borderRadius: '18px', padding: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111', margin: '0 0 10px 0' }}>
+                Bairros atendidos em Francisco Beltrão
+              </h3>
+              <p style={{ margin: 0 }}>
+                Atendemos comércios, prestadores de serviços, clínicas médicas, indústrias e produtores rurais em todos os bairros de Francisco Beltrão, incluindo <strong>Centro, Cidade Norte (Pinheirinho), Vila Nova, Cango, Alvorada, Industrial, São Cristóvão, Cristo Rei, Luther King, Marrecas, Água Branca, Aeroporto, Jardim Floresta, Miniguaçu, Padre Ulrico e Sadia</strong>, além das comunidades do interior do município.
+              </p>
+            </div>
+
+            <div style={{ background: '#fafafa', border: '1px solid #ececec', borderRadius: '18px', padding: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111', margin: '0 0 10px 0' }}>
+                Cidades vizinhas e Sudoeste do Paraná
+              </h3>
+              <p style={{ margin: 0 }}>
+                Por meio da nossa plataforma contábil 100% digital e de visitas consultivas in loco, prestamos assessoria contábil, fiscal, BPO financeiro e LCDPR para empresas de toda a região Sudoeste do Paraná, abrangendo <strong>Marmeleiro, Renascença, Enéas Marques, Verê, Dois Vizinhos, Pato Branco, Ampére, Realeza, Capanema, Salto do Lontra, Santa Izabel do Oeste, Planalto, Pérola d&apos;Oeste, Pranchita, Santo Antônio do Sudoeste, Barracão, Flor da Serra do Sul, Salgado Filho e Itapejara d&apos;Oeste</strong>.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -259,9 +288,10 @@ export default function ContatoPage() {
                 <Image
                   src="/foto-marcos.jpg"
                   alt="Marcos Cancelier — Contador (CRC-PR 062232/O-1)"
-                  fill
+                  width={96}
+                  height={96}
                   sizes="96px"
-                  style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
                 />
               </div>
               <div>
@@ -285,9 +315,10 @@ export default function ContatoPage() {
                 <Image
                   src="/foto-mauricio.jpg"
                   alt="Mauricio Cielo — Contador (CRC-PR 082974/O-7)"
-                  fill
+                  width={96}
+                  height={96}
                   sizes="96px"
-                  style={{ objectFit: 'cover', objectPosition: 'center center' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
                 />
               </div>
               <div>

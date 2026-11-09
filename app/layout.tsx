@@ -130,7 +130,7 @@ const jsonLdSchema = {
   },
   geo: {
     '@type': 'GeoCoordinates',
-    latitude: -26.0802259,
+    latitude: -26.08023,
     longitude: -53.04808,
   },
   openingHoursSpecification: [
@@ -236,6 +236,43 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              window.gtag = gtag;
+              document.addEventListener('click', function(e) {
+                var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+                if (!a) return;
+                var href = a.getAttribute('href') || '';
+                if (href.indexOf('wa.me') !== -1 || href.indexOf('whatsapp.com') !== -1) {
+                  window.dataLayer.push({
+                    event: 'whatsapp_click',
+                    link_url: href,
+                    page_path: window.location.pathname
+                  });
+                  gtag('event', 'whatsapp_click', {
+                    event_category: 'engagement',
+                    event_label: window.location.pathname,
+                    link_url: href
+                  });
+                } else if (href.indexOf('tel:') === 0) {
+                  window.dataLayer.push({
+                    event: 'phone_click',
+                    link_url: href,
+                    page_path: window.location.pathname
+                  });
+                  gtag('event', 'phone_click', {
+                    event_category: 'engagement',
+                    event_label: window.location.pathname,
+                    link_url: href
+                  });
+                }
+              }, true);
+            `,
+          }}
         />
         {gtmId && (
           <Script

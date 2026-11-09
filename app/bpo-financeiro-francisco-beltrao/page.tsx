@@ -146,9 +146,12 @@ export default function BpoFinanceiroPage() {
           <span style={{ color: '#600000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
             Terceirização da Gestão Financeira (BPO)
           </span>
-          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 20px 0', color: '#111' }}>
-            BPO Financeiro em Francisco Beltrão: Controle Total do Seu Caixa sem Custos com Equipe Interna
+          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 12px 0', color: '#111' }}>
+            BPO Financeiro em Francisco Beltrão
           </h1>
+          <p style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.4, color: '#600000', margin: '0 0 18px 0' }}>
+            Controle total do seu caixa sem os custos de manter uma equipe interna.
+          </p>
           <p style={{ fontSize: '18px', lineHeight: 1.6, color: '#525252', margin: '0 0 32px 0' }}>
             Elimine planilhas confusas, pagamentos em atraso e a sobrecarga operacional. A Privilege cuida do contas a pagar, receber, conciliação bancária diária e fornece relatórios gerenciais claros para você focar nas vendas e no crescimento.
           </p>

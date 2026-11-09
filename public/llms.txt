@@ -11,7 +11,7 @@
 - E-mail: contato@privilegecontabilidade.cnt.br
 - Site Oficial: https://privilegecontabilidade.cnt.br
 - Página de Contato: https://privilegecontabilidade.cnt.br/contato
-- Coordenadas Geográficas: Latitude -25.9926, Longitude -53.0561
+- Coordenadas Geográficas: Latitude -26.08023, Longitude -53.04808
 - Horário de Atendimento: Segunda a Sexta-feira, das 08h às 18h
 
 ## Sócios e Responsáveis Técnicos

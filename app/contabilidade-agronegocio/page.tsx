@@ -146,9 +146,12 @@ export default function ContabilidadeAgronegocioPage() {
           <span style={{ color: '#600000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
             Agronegócio & Produtores Rurais
           </span>
-          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 20px 0', color: '#111' }}>
-            Contabilidade Especializada no Agronegócio: Segurança Fiscal para o Produtor Rural no Paraná
+          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 12px 0', color: '#111' }}>
+            Contabilidade para o Agronegócio e LCDPR
           </h1>
+          <p style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.4, color: '#600000', margin: '0 0 18px 0' }}>
+            Segurança fiscal e planejamento sucessório para o produtor rural no Paraná.
+          </p>
           <p style={{ fontSize: '18px', lineHeight: 1.6, color: '#525252', margin: '0 0 32px 0' }}>
             Do Livro Caixa Digital do Produtor Rural (LCDPR) ao planejamento tributário e sucessório da família do campo. A Privilege Contabilidade alia tecnologia e rigor contábil para proteger suas terras e otimizar seus resultados na safra e pecuária.
           </p>

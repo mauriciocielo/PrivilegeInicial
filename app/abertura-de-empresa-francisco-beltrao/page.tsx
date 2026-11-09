@@ -146,9 +146,12 @@ export default function AberturaEmpresaPage() {
           <span style={{ color: '#600000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
             Legalização Societária & Novos Negócios
           </span>
-          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 20px 0', color: '#111' }}>
-            Abertura de Empresa em Francisco Beltrão: Do Contrato ao CNPJ Ativo sem Complicações
+          <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 12px 0', color: '#111' }}>
+            Abertura de Empresa em Francisco Beltrão
           </h1>
+          <p style={{ fontSize: '22px', fontWeight: 600, lineHeight: 1.4, color: '#600000', margin: '0 0 18px 0' }}>
+            Do contrato social ao CNPJ ativo e alvarás liberados sem complicações.
+          </p>
           <p style={{ fontSize: '18px', lineHeight: 1.6, color: '#525252', margin: '0 0 32px 0' }}>
             Empreender exige foco e velocidade. A Privilege cuida de toda a burocracia na Junta Comercial (JUCEPAR), Receita Federal e Prefeitura de Francisco Beltrão. Mais do que emitir um CNPJ, planejamos a melhor estrutura tributária para o seu negócio pagar menos imposto desde o primeiro dia.
           </p>

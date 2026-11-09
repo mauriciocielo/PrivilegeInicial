@@ -148,7 +148,7 @@ export default function TransitionProvider({ children }: { children: React.React
     // loop infinito de recarregamento, visto pelo usuário como piscar. As
     // outras duas sincronizações deste arquivo (a de push debounced e o
     // polling) já tinham essa mesma exceção — só esta, a inicial, não tinha.
-    if (isPublicRoute) return;
+    if (isPublicRoute || isPublicRouteRef.current) return;
 
     const syncDb = async () => {
       // Confere/atualiza a sessão antes de tudo — se as empresas do usuário
@@ -222,7 +222,7 @@ export default function TransitionProvider({ children }: { children: React.React
           // Reforço: nunca navegar para /login estando já em /login — é
           // exatamente esse redirect-para-si-mesmo (reload -> remonta ->
           // 401 de novo -> redirect de novo) que causava a tela piscando.
-          if (!isPublicRoute) window.location.href = '/login';
+          if (!isPublicRoute && !isPublicRouteRef.current) window.location.href = '/login';
           else sessionStorage.setItem('cf_postgres_synced', 'true');
           return;
         }
@@ -381,7 +381,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Sincronização em tempo real via WebSockets (Socket.io)
   useEffect(() => {
-    if (isPublicRoute) return;
+    if (isPublicRoute || isPublicRouteRef.current) return;
 
     console.log('🔌 Inicializando conexão WebSocket global...');
     const socket = io();
@@ -537,7 +537,7 @@ export default function TransitionProvider({ children }: { children: React.React
 
   // Polling de fallback em tempo real (a cada 15 segundos) para a coleção ativa
   useEffect(() => {
-    if (isPublicRoute) return;
+    if (isPublicRoute || isPublicRouteRef.current) return;
 
     // Coleção principal ativada pela rota, se houver
     const pageCollection = getCollectionFromPath(pathname);
