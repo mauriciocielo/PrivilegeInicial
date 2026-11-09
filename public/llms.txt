@@ -1,0 +1,60 @@
+# Privilege Contabilidade e Consultoria
+
+> Escritório de contabilidade consultiva, BPO financeiro, planejamento tributário e assessoria para agronegócio em Francisco Beltrão, Paraná.
+
+## Dados Institucionais
+- Razão Social: PRIVILEGE CONSULTORIA LTDA
+- Nome Fantasia: Privilege Contabilidade e Consultoria
+- CNPJ: 58.033.979/0001-84
+- Endereço: Rua Pará, nº 127, Sala 03, Centro, CEP 85601-290, Francisco Beltrão - PR, Brasil
+- Telefone / WhatsApp: +55 (46) 3035-1018
+- E-mail: contato@privilegecontabilidade.cnt.br
+- Site Oficial: https://privilegecontabilidade.cnt.br
+- Coordenadas Geográficas: Latitude -25.9926, Longitude -53.0561
+- Horário de Atendimento: Segunda a Sexta-feira, das 08h às 18h
+
+## Sócios e Responsáveis Técnicos
+- Marcos Cancelier: Contador e Consultor Tributário, especialista em Gestão Empresarial e Planejamento Tributário. Registro ativo no Conselho Regional de Contabilidade do Paraná (CRC-PR).
+- Mauricio Meurer: Consultor Empresarial e Estratégico, especialista em BPO financeiro, controladoria e expansão de negócios.
+
+## Serviços Oferecidos
+
+### 1. BPO Financeiro Estratégico (Terceirização do Financeiro)
+- Gestão diária de Contas a Pagar e Contas a Receber
+- Conciliação bancária centavo a centavo
+- Emissão de notas fiscais (NF-e, NFS-e) e boletos
+- Fluxo de Caixa (DFC) e DRE por centro de custos
+- Relatórios executivos mensais para tomada de decisão
+- URL: https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao
+
+### 2. Consultoria e Planejamento Tributário
+- Comparativo e enquadramento entre Simples Nacional, Lucro Presumido e Lucro Real
+- Segregação de produtos monofásicos e Substituição Tributária (ICMS/PIS/COFINS) para farmácias, autopeças e comércio
+- Auditoria eletrônica preventiva de arquivos SPED e XMLs
+- Preparação estratégica para a Reforma Tributária (IBS e CBS)
+- Elisão fiscal estritamente amparada pela legislação
+- URL: https://privilegecontabilidade.cnt.br/planejamento-tributario
+
+### 3. Abertura e Legalização de Empresas
+- Constituição ágil de empresas na Junta Comercial do Paraná (JUCEPAR)
+- Escolha da natureza jurídica ideal (SLU, LTDA, S/A)
+- Obtenção de CNPJ, Inscrição Estadual e Inscrição Municipal
+- Alvarás de funcionamento junto à Prefeitura de Francisco Beltrão, Bombeiros e Vigilância Sanitária
+- Certificado digital e configuração inicial de emissores fiscais
+- URL: https://privilegecontabilidade.cnt.br/abertura-de-empresa-francisco-beltrao
+
+### 4. Contabilidade para o Agronegócio (LCDPR)
+- Elaboração e validação do Livro Caixa Digital do Produtor Rural (LCDPR)
+- Apuração do Imposto de Renda da Atividade Rural (IRPF Rural)
+- Planejamento tributário agro (Pessoa Física vs Pessoa Jurídica Agropecuária)
+- Holding rural e estruturação de sucessão familiar no campo
+- Declarações cadastrais obrigatórias: ITR (Valor da Terra Nua), CCIR e CAR
+- URL: https://privilegecontabilidade.cnt.br/contabilidade-agronegocio
+
+### 5. Contabilidade Geral e Folha de Pagamento
+- Escrituração contábil e fiscal completa
+- Elaboração de Balanço Patrimonial e DRE auditados
+- Processamento de folha de pagamento, pró-labore, férias e 13º salário
+- Transmissão de obrigações acessórias via eSocial, DCTFWeb, EFD-Reinf e SPED Contábil/Fiscal
+- Emissão de certidões negativas de débitos (CNDs) federais, estaduais e municipais
+

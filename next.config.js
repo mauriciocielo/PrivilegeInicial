@@ -9,6 +9,15 @@ const nextConfig = {
   // Necessário no Next.js 16: declara explicitamente o uso do Turbopack
   // para silenciar o erro quando plugins (ex: next-pwa) adicionam config webpack.
   turbopack: {},
+  async redirects() {
+    return [
+      {
+        source: '/novo-layout',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
