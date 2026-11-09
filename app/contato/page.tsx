@@ -7,7 +7,7 @@ const PAGE_TITLE = 'Contato e Localização em Francisco Beltrão';
 const PAGE_DESC =
   'Entre em contato com a Privilege Contabilidade em Francisco Beltrão, PR. Rua Pará, 127, Sala 03, Centro. Telefone e WhatsApp (46) 3035-1018.';
 const GOOGLE_MAPS_URL =
-  'https://www.google.com/maps/search/?api=1&query=Privilege+Contabilidade+e+Consultoria+Rua+Par%C3%A1+127+Francisco+Beltr%C3%A3o+PR';
+  'https://www.google.com/maps/place/?q=place_id:ChIJmbblyQdz8JQReoz1xenqkKA';
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -234,16 +234,16 @@ export default function ContatoPage() {
               <MapPin size={16} /> Abrir no Google Maps <ExternalLink size={14} />
             </a>
           </div>
-          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5', height: '400px' }}>
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e5e5', height: '450px' }}>
             <iframe
               title="Localização da Privilege Contabilidade e Consultoria no Google Maps"
-              src="https://www.google.com/maps?q=Privilege+Contabilidade+e+Consultoria,+Rua+Par%C3%A1,+127,+Centro,+Francisco+Beltr%C3%A3o+-+PR,+85601-290&hl=pt-BR&z=17&output=embed"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d680.6595585526918!2d-53.04807995568665!3d-26.080225948924042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94f07307c9e5b699%3A0xa090eae9c5f58c7a!2sPrivilege%20Contabilidade%20e%20Consultoria!5e1!3m2!1spt-BR!2sbr!4v1794247569116!5m2!1spt-BR!2sbr"
               width="100%"
               height="100%"
               style={{ border: 0 }}
               allowFullScreen
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              referrerPolicy="strict-origin-when-cross-origin"
             ></iframe>
           </div>
         </section>

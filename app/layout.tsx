@@ -19,7 +19,7 @@ const SITE_DESC =
   'Contabilidade consultiva e BPO financeiro em Francisco Beltrão, PR. Abertura de empresas, fiscal, folha, planejamento tributário e agronegócio (LCDPR).';
 
 const GOOGLE_MAPS_URL =
-  'https://www.google.com/maps/search/?api=1&query=Privilege+Contabilidade+e+Consultoria+Rua+Par%C3%A1+127+Francisco+Beltr%C3%A3o+PR';
+  'https://www.google.com/maps/place/?q=place_id:ChIJmbblyQdz8JQReoz1xenqkKA';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -130,8 +130,8 @@ const jsonLdSchema = {
   },
   geo: {
     '@type': 'GeoCoordinates',
-    latitude: -25.9926,
-    longitude: -53.0561,
+    latitude: -26.0802259,
+    longitude: -53.04808,
   },
   openingHoursSpecification: [
     {

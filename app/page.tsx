@@ -23,7 +23,7 @@ const sans = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600', '7
 const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] });
 
 const GOOGLE_MAPS_URL =
-  'https://www.google.com/maps/search/?api=1&query=Privilege+Contabilidade+e+Consultoria+Rua+Par%C3%A1+127+Francisco+Beltr%C3%A3o+PR';
+  'https://www.google.com/maps/place/?q=place_id:ChIJmbblyQdz8JQReoz1xenqkKA';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'contabilidade' | 'consultoria'>('contabilidade');
