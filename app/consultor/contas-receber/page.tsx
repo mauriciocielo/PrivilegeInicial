@@ -6,15 +6,37 @@ import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
 import { gerarRemessaSicoob240, nomeArquivoRemessa, RemessaSicoobInvalidaError, type BeneficiarioSicoob, type PagamentoCnab } from '../../../lib/cnab/sicoob240';
+import { gerarBoletoSicoob, barrasITF } from '../../../lib/cnab/boleto-sicoob';
+
+/** Código de barras Interleaved 2 of 5 como SVG (padrão do boleto). */
+function CodigoBarrasBoleto({ codigo, altura = 50 }: { codigo: string; altura?: number }) {
+  let larguras: number[];
+  try { larguras = barrasITF(codigo); } catch { return null; }
+  const unidade = 1.1; // largura do módulo estreito em px
+  const total = larguras.reduce((a, b) => a + b, 0) * unidade;
+  let x = 0;
+  const barras: { x: number; w: number }[] = [];
+  larguras.forEach((l, i) => {
+    const w = l * unidade;
+    if (i % 2 === 0) barras.push({ x, w }); // índices pares = barra preta
+    x += w;
+  });
+  return (
+    <svg width={total} height={altura} viewBox={`0 0 ${total} ${altura}`} style={{ display: 'block' }} aria-label="Código de barras do boleto">
+      {barras.map((b, i) => <rect key={i} x={b.x} y={0} width={b.w} height={altura} fill="#000" />)}
+    </svg>
+  );
+}
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
 
 type ConfigSicoob = {
   agencia: string; digitoAgencia: string; conta: string; digitoConta: string;
+  convenio: string; carteira: string;
   modalidadeCarteira: string; sequencialRemessa: number; proximoNossoNumero: number;
 };
 const CONFIG_SICOOB_KEY = (eid: string) => `cf_cnab_sicoob_${eid}`;
-const CONFIG_SICOOB_PADRAO: ConfigSicoob = { agencia: '', digitoAgencia: '', conta: '', digitoConta: '', modalidadeCarteira: '01', sequencialRemessa: 1, proximoNossoNumero: 1 };
+const CONFIG_SICOOB_PADRAO: ConfigSicoob = { agencia: '', digitoAgencia: '', conta: '', digitoConta: '', convenio: '', carteira: '1', modalidadeCarteira: '01', sequencialRemessa: 1, proximoNossoNumero: 1 };
 
 function baixarTexto(conteudo: string, nome: string) {
   const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
@@ -337,6 +359,19 @@ export default function ContasReceberPage() {
 
   const hasC6 = empresa?.bancoBoleto === 'c6';
 
+  // Boleto Sicoob calculado (código de barras + linha digitável) a partir da config e do lançamento.
+  const boletoCalc = useMemo(() => {
+    if (!c6BoletoLanc) return null;
+    const cfg = configSicoob;
+    if (!cfg.agencia.trim() || !cfg.convenio.trim()) return null;
+    try {
+      return gerarBoletoSicoob(
+        { agencia: cfg.agencia, convenio: cfg.convenio, carteira: cfg.carteira || '1', variacao: cfg.modalidadeCarteira || '01' },
+        { nossoNumero: cfg.proximoNossoNumero || 1, valor: c6BoletoLanc.valor, dataVencimento: c6BoletoLanc.data },
+      );
+    } catch { return null; }
+  }, [c6BoletoLanc, configSicoob]);
+
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
@@ -534,15 +569,15 @@ export default function ContasReceberPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {/* C6 Boleto button — only for pending receivables on C6-enabled companies */}
-                          {l.status === 'previsto' && hasC6 && (
+                          {/* Boleto (Sicoob quando houver config de cobrança; C6 quando habilitado) */}
+                          {l.status === 'previsto' && (hasC6 || (!!configSicoob.agencia && !!configSicoob.convenio)) && (
                             <button
                               className="btn btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 11, background: '#000', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              style={{ padding: '4px 8px', fontSize: 11, background: '#003641', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                               onClick={() => openC6Boleto(l)}
-                              title="Emitir boleto via C6 Bank"
+                              title="Gerar/visualizar o boleto deste título"
                             >
-                              🖤 Boleto C6
+                              🏦 Boleto
                             </button>
                           )}
                           {l.status === 'previsto' && (() => {
@@ -721,6 +756,14 @@ export default function ContasReceberPage() {
                 <label className="form-label">Díg. agência</label>
                 <input className="form-control" maxLength={1} value={rascunhoCfg.digitoAgencia} onChange={e => setRascunhoCfg(c => ({ ...c, digitoAgencia: e.target.value.replace(/\D/g, '') }))} placeholder="(se houver)" />
               </div>
+              <div className="form-group">
+                <label className="form-label">Convênio / cód. beneficiário</label>
+                <input className="form-control" maxLength={7} value={rascunhoCfg.convenio} onChange={e => setRascunhoCfg(c => ({ ...c, convenio: e.target.value.replace(/\D/g, '') }))} placeholder="(do Sicoob)" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Carteira</label>
+                <input className="form-control" maxLength={1} value={rascunhoCfg.carteira} onChange={e => setRascunhoCfg(c => ({ ...c, carteira: e.target.value.replace(/\D/g, '') || '1' }))} placeholder="1" />
+              </div>
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -776,7 +819,7 @@ export default function ContasReceberPage() {
             {/* Header — no-print */}
             <div className="no-print" style={{ fontFamily: 'var(--font-sans)', borderBottom: '1px solid #e5e7eb', paddingBottom: 16, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🖤 Emissão de Boleto — C6 Bank</h2>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🏦 Boleto Sicoob</h2>
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>Preencha os dados do sacado antes de imprimir</p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -808,13 +851,12 @@ export default function ContasReceberPage() {
             <div className="boleto-sheet" style={{ border: '2px solid #000', padding: 14, background: '#fff' }}>
               {/* Bank header */}
               <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 8, alignItems: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 900, marginRight: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 22, background: '#000', color: '#fff', padding: '2px 10px', borderRadius: 4, fontFamily: 'sans-serif', fontWeight: 800, letterSpacing: -0.5 }}>C6</span>
-                  <strong style={{ fontFamily: 'sans-serif', letterSpacing: -0.5 }}>C6 BANK</strong>
+                <div style={{ fontSize: 20, fontWeight: 900, marginRight: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 16, background: '#003641', color: '#fff', padding: '3px 10px', borderRadius: 4, fontFamily: 'sans-serif', fontWeight: 800, letterSpacing: -0.5 }}>SICOOB</span>
                 </div>
-                <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 15px', fontSize: 18, fontWeight: 900 }}>336-7</div>
-                <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 900, fontFamily: 'monospace' }}>
-                  33690.{String(Math.floor(c6BoletoLanc.valor)).padStart(5,'0')} {c6BoletoLanc.id.slice(0,10).replace(/[^0-9]/g,'0')} 98765.432105 1 9801{String(Math.floor(c6BoletoLanc.valor*100)).padStart(12,'0')}
+                <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 15px', fontSize: 18, fontWeight: 900 }}>756-0</div>
+                <div style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>
+                  {boletoCalc ? boletoCalc.linhaDigitavel : 'Preencha os dados de Cobrança Sicoob'}
                 </div>
               </div>
 
@@ -822,7 +864,7 @@ export default function ContasReceberPage() {
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Local de Pagamento</div>
-                  <div style={{ fontSize: 10 }}>PAGÁVEL EM QUALQUER AGÊNCIA BANCÁRIA, INTERNET BANKING OU VIA PIX C6 BANK</div>
+                  <div style={{ fontSize: 10 }}>PAGÁVEL EM QUALQUER BANCO OU CANAL ELETRÔNICO ATÉ O VENCIMENTO</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
@@ -838,7 +880,7 @@ export default function ContasReceberPage() {
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Cód. Beneficiário</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>0001 / 951357-8</div>
+                  <div style={{ fontSize: 10, textAlign: 'right' }}>{configSicoob.agencia || '—'} / {configSicoob.convenio || '—'}</div>
                 </div>
               </div>
 
@@ -866,7 +908,7 @@ export default function ContasReceberPage() {
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>01/{c6BoletoLanc.id.slice(-8).toUpperCase()}-P</div>
+                  <div style={{ fontSize: 10, textAlign: 'right' }}>{boletoCalc ? boletoCalc.nossoNumero : '—'}</div>
                 </div>
               </div>
 
@@ -874,7 +916,7 @@ export default function ContasReceberPage() {
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Carteira</div>
-                  <div style={{ fontSize: 10 }}>01 (C6 COB)</div>
+                  <div style={{ fontSize: 10 }}>{configSicoob.carteira || '1'} / {configSicoob.modalidadeCarteira || '01'}</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie</div>
@@ -898,9 +940,7 @@ export default function ContasReceberPage() {
                     • COBRANÇA REFERENTE A {c6BoletoLanc.descricao.toUpperCase()}.<br />
                     • APÓS O VENCIMENTO COBRAR MORA DE R$ 1,50 AO DIA E MULTA DE 2,0%.<br />
                     • NÃO RECEBER APÓS 30 DIAS DO VENCIMENTO.<br />
-                    • SAC C6 BANK: 0800 666 2000.<br />
-                    <br />
-                    <strong>PAGUE UTILIZANDO O QR CODE PIX DO C6 BANK AO LADO.</strong>
+                    • SICOOB — CENTRAL DE RELACIONAMENTO: 0800 642 0000.
                   </div>
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -933,32 +973,22 @@ export default function ContasReceberPage() {
                 </div>
               </div>
 
-              {/* Barcode + QR Code */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, padding: '0 8px' }}>
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 4 }}>Ficha de Compensação — C6 Bank (336)</div>
-                  <div style={{ display: 'flex', height: 46, width: 400, alignItems: 'stretch' }}>
-                    {Array.from({ length: 58 }).map((_, idx) => {
-                      const isWide = (idx * 5) % 3 === 0;
-                      const isGap = (idx * 7) % 4 === 0;
-                      return <div key={idx} style={{ width: isWide ? 4 : 1.5, background: isGap ? 'transparent' : '#000', marginRight: 0.8 }} />;
-                    })}
-                  </div>
-                  <div style={{ fontSize: 9, marginTop: 4, fontFamily: 'monospace' }}>
-                    33690.{String(Math.floor(c6BoletoLanc.valor)).padStart(5,'0')} {c6BoletoLanc.id.slice(0,10).replace(/[^0-9]/g,'0')} 98765.432105 1 9801{String(Math.floor(c6BoletoLanc.valor*100)).padStart(12,'0')}
-                  </div>
+              {/* Ficha de Compensação — código de barras e linha digitável reais */}
+              <div style={{ marginTop: 14, padding: '0 8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #000', paddingBottom: 2 }}>
+                  <div style={{ fontSize: 9, fontWeight: 'bold' }}>Ficha de Compensação — Sicoob (756)</div>
+                  <div style={{ fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>{boletoCalc ? boletoCalc.linhaDigitavel : '—'}</div>
                 </div>
-
-                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>PIX C6 BANK</div>
-                  <div style={{ width: 80, height: 80, border: '2px solid #000', padding: 3, display: 'flex', flexWrap: 'wrap', background: '#fff' }}>
-                    {Array.from({ length: 64 }).map((_, idx) => {
-                      const fill = (idx * 5) % 3 === 0 || idx < 8 || idx % 8 === 0 || (idx > 50 && idx % 2 === 0);
-                      return <div key={idx} style={{ width: '12.5%', height: '12.5%', background: fill ? '#000' : 'transparent' }} />;
-                    })}
-                  </div>
-                  <div style={{ fontSize: 7, fontWeight: 'bold' }}>PIX COBRANÇA</div>
+                <div style={{ marginTop: 10 }}>
+                  {boletoCalc
+                    ? <CodigoBarrasBoleto codigo={boletoCalc.codigoBarras} altura={50} />
+                    : <div style={{ fontSize: 10, color: '#b91c1c' }}>Preencha os dados em “⚙️ Cobrança Sicoob” (agência, conta e convênio) para gerar o código de barras.</div>}
                 </div>
+                {boletoCalc && (
+                  <div className="no-print" style={{ fontSize: 10, color: '#6b7280', marginTop: 8, fontFamily: 'var(--font-sans)' }}>
+                    ⚠️ Rascunho: confirme os códigos (convênio, carteira, nosso número) e <strong>homologue no Sicoob</strong> antes de cobrar. O nosso número usado é o “próximo” da configuração.
+                  </div>
+                )}
               </div>
             </div>
           </div>
