@@ -5,8 +5,24 @@ import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
+import { gerarRemessaSicoob240, nomeArquivoRemessa, RemessaSicoobInvalidaError, type BeneficiarioSicoob, type PagamentoCnab } from '../../../lib/cnab/sicoob240';
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
+
+type ConfigSicoob = {
+  agencia: string; digitoAgencia: string; conta: string; digitoConta: string;
+  modalidadeCarteira: string; sequencialRemessa: number; proximoNossoNumero: number;
+};
+const CONFIG_SICOOB_KEY = (eid: string) => `cf_cnab_sicoob_${eid}`;
+const CONFIG_SICOOB_PADRAO: ConfigSicoob = { agencia: '', digitoAgencia: '', conta: '', digitoConta: '', modalidadeCarteira: '01', sequencialRemessa: 1, proximoNossoNumero: 1 };
+
+function baixarTexto(conteudo: string, nome: string) {
+  const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome; a.click();
+  URL.revokeObjectURL(url);
+}
 
 const parseMoney = (value: unknown): number => {
   if (typeof value === 'number') return Math.abs(value);
@@ -44,6 +60,11 @@ export default function ContasReceberPage() {
   const [c6BoletoLanc, setC6BoletoLanc] = useState<Lancamento | null>(null);
   const [c6Sacado, setC6Sacado] = useState({ nome: '', cpfCnpj: '', endereco: '' });
 
+  // Remessa CNAB 240 Sicoob
+  const [showRemessaConfig, setShowRemessaConfig] = useState(false);
+  const [configSicoob, setConfigSicoob] = useState<ConfigSicoob>(CONFIG_SICOOB_PADRAO);
+  const [rascunhoCfg, setRascunhoCfg] = useState<ConfigSicoob>(CONFIG_SICOOB_PADRAO);
+
   const load = useCallback((eId: string) => {
     if (!eId) return;
     setEmpresaId(eId);
@@ -53,7 +74,69 @@ export default function ContasReceberPage() {
     setPortadores(store.getPortadores(eId).filter(p => p.ativo));
     setClientes(store.getClientes(eId).filter(c => c.ativo && (c.tipo === 'cliente' || c.tipo === 'ambos')));
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
+    try {
+      const salvo = JSON.parse(localStorage.getItem(CONFIG_SICOOB_KEY(eId)) || 'null');
+      setConfigSicoob(salvo ? { ...CONFIG_SICOOB_PADRAO, ...salvo } : CONFIG_SICOOB_PADRAO);
+    } catch { setConfigSicoob(CONFIG_SICOOB_PADRAO); }
   }, []);
+
+  const salvarConfigSicoob = (cfg: ConfigSicoob) => {
+    setConfigSicoob(cfg);
+    try { localStorage.setItem(CONFIG_SICOOB_KEY(empresaId), JSON.stringify(cfg)); } catch {}
+  };
+
+  const gerarRemessaSicoob = () => {
+    const cfg = configSicoob;
+    if (!cfg.agencia.trim() || !cfg.conta.trim() || !cfg.digitoConta.trim()) {
+      toast.info('Primeiro preencha os dados de cobrança do Sicoob (agência, conta e dígito).');
+      setShowRemessaConfig(true);
+      return;
+    }
+    if (!empresa?.cnpj || !empresa?.razaoSocial) { toast.error('A empresa precisa de razão social e CNPJ cadastrados.'); return; }
+    const selecionados = filtered.filter(l => selectedIds.includes(l.id));
+    if (selecionados.length === 0) { toast.error('Selecione os boletos para a remessa.'); return; }
+
+    let nn = cfg.proximoNossoNumero || 1;
+    const pagamentos: PagamentoCnab[] = [];
+    const semCliente: string[] = [];
+    for (const l of selecionados) {
+      const cli = store.getClientes(empresaId).find(c => c.id === l.clienteId);
+      if (!cli || !cli.cpfCnpj || !cli.nome) { semCliente.push(l.descricao); continue; }
+      pagamentos.push({
+        nossoNumero: nn++,
+        numeroDocumento: l.numeroDocumento || l.id.replace(/\D/g, '').slice(0, 10) || String(nn),
+        valor: l.valor,
+        dataVencimento: l.data,
+        sacado: {
+          documento: cli.cpfCnpj, nome: cli.nome, endereco: cli.endereco || '',
+          cep: cli.cep || '', cidade: cli.cidade || '', uf: cli.estado || '',
+        },
+      });
+    }
+    if (pagamentos.length === 0) {
+      toast.error('Nenhum boleto tem cliente vinculado com nome e CPF/CNPJ. Vincule o cliente nos lançamentos.');
+      return;
+    }
+
+    const benef: BeneficiarioSicoob = {
+      empresaMae: empresa.razaoSocial,
+      documentoCedente: empresa.cnpj,
+      agencia: cfg.agencia, digitoAgencia: cfg.digitoAgencia, conta: cfg.conta, digitoConta: cfg.digitoConta,
+      modalidadeCarteira: cfg.modalidadeCarteira || '01',
+      sequencialRemessa: cfg.sequencialRemessa || 1,
+    };
+
+    try {
+      const conteudo = gerarRemessaSicoob240(benef, pagamentos);
+      baixarTexto(conteudo, nomeArquivoRemessa(benef.sequencialRemessa));
+      // Avança os contadores para a próxima remessa
+      salvarConfigSicoob({ ...cfg, sequencialRemessa: (cfg.sequencialRemessa || 1) + 1, proximoNossoNumero: nn });
+      toast.success(`Remessa Sicoob gerada com ${pagamentos.length} boleto(s).${semCliente.length ? ` ${semCliente.length} sem cliente ficaram de fora.` : ''}`);
+    } catch (e) {
+      const msg = e instanceof RemessaSicoobInvalidaError ? e.message : 'Erro ao gerar a remessa.';
+      toast.error(msg);
+    }
+  };
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cf_empresa_sel') || '';
@@ -288,8 +371,12 @@ export default function ContasReceberPage() {
               }}>
                 🗑️ Excluir ({selectedIds.length})
               </button>
+              <button className="btn btn-secondary" onClick={gerarRemessaSicoob} title="Gerar o arquivo de remessa CNAB 240 do Sicoob com os boletos selecionados">
+                🏦 Gerar Remessa Sicoob ({selectedIds.length})
+              </button>
             </>
           )}
+          <button className="btn btn-secondary btn-sm" onClick={() => { setRascunhoCfg(configSicoob); setShowRemessaConfig(true); }} title="Dados de cobrança do Sicoob (agência, conta, carteira) para a remessa CNAB">⚙️ Cobrança Sicoob</button>
           <button className="btn btn-secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Exportar a lista filtrada para CSV">⬇️ Exportar CSV</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Conta a Receber</button>
         </div>
@@ -618,6 +705,58 @@ export default function ContasReceberPage() {
       )}
 
       {/* C6 Bank Boleto Modal */}
+      {showRemessaConfig && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowRemessaConfig(false)}>
+          <div className="modal" style={{ maxWidth: 560 }}>
+            <h2 className="modal-title">🏦 Dados de Cobrança — Sicoob (CNAB 240)</h2>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+              Informe exatamente os dados que o Sicoob forneceu ao beneficiário. A remessa usa a razão social e o CNPJ da empresa.
+            </p>
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Agência (4 díg.)</label>
+                <input className="form-control" maxLength={4} value={rascunhoCfg.agencia} onChange={e => setRascunhoCfg(c => ({ ...c, agencia: e.target.value.replace(/\D/g, '') }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Díg. agência</label>
+                <input className="form-control" maxLength={1} value={rascunhoCfg.digitoAgencia} onChange={e => setRascunhoCfg(c => ({ ...c, digitoAgencia: e.target.value.replace(/\D/g, '') }))} placeholder="(se houver)" />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Conta corrente</label>
+                <input className="form-control" value={rascunhoCfg.conta} onChange={e => setRascunhoCfg(c => ({ ...c, conta: e.target.value.replace(/\D/g, '') }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Díg. conta</label>
+                <input className="form-control" maxLength={1} value={rascunhoCfg.digitoConta} onChange={e => setRascunhoCfg(c => ({ ...c, digitoConta: e.target.value.replace(/\D/g, '') }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Modalidade/carteira</label>
+                <input className="form-control" maxLength={2} value={rascunhoCfg.modalidadeCarteira} onChange={e => setRascunhoCfg(c => ({ ...c, modalidadeCarteira: e.target.value.replace(/\D/g, '') }))} placeholder="01" />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Nº da próxima remessa</label>
+                <input className="form-control" type="number" min={1} value={rascunhoCfg.sequencialRemessa} onChange={e => setRascunhoCfg(c => ({ ...c, sequencialRemessa: Math.max(1, Number(e.target.value) || 1) }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Próximo nosso número</label>
+                <input className="form-control" type="number" min={1} value={rascunhoCfg.proximoNossoNumero} onChange={e => setRascunhoCfg(c => ({ ...c, proximoNossoNumero: Math.max(1, Number(e.target.value) || 1) }))} />
+              </div>
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'var(--bg-base)', padding: 10, borderRadius: 8, marginTop: 4 }}>
+              ⚠️ A remessa precisa passar pela <strong>homologação do Sicoob</strong> antes do uso em produção. O nosso número é atribuído em sequência a partir do valor acima; confirme que está dentro da faixa liberada pelo banco.
+            </div>
+            <div className="form-actions" style={{ marginTop: 16 }}>
+              <button className="btn btn-secondary" onClick={() => setShowRemessaConfig(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={() => { salvarConfigSicoob(rascunhoCfg); setShowRemessaConfig(false); toast.success('Dados de cobrança salvos.'); }}>✓ Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showC6BoletoModal && c6BoletoLanc && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowC6BoletoModal(false)}>
           <div className="modal c6-boleto-modal-container" style={{ maxWidth: 820, padding: 24, background: '#fff', color: '#000', fontFamily: 'Courier New, monospace', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
