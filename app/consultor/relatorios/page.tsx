@@ -47,6 +47,7 @@ export default function RelatoriosPage() {
   const defaultFluxoOrder = [
     'receitas',
     'custos',
+    'header_margem_bruta',
     'header_despesas',
     'despesas_fixas',
     'despesas_variaveis',
@@ -251,13 +252,14 @@ export default function RelatoriosPage() {
       const emprestimos = catGroups.emprestimos.monthlyTotals[k];
       const investimentos = catGroups.investimentos.monthlyTotals[k];
 
+      const margemBruta = receitas - custos; // Resultado Bruto: antes das despesas
       const recOp = receitas - custos - despesas;
       const resBruto = recOp + liberacoes - emprestimos - investimentos;
       const transferencias = catGroups.transferencias.monthlyTotals[k];
       const naoCat = catGroups.nao_categorizados.monthlyTotals[k];
       const resLiq = resBruto + transferencias + naoCat;
 
-      return { key: k, recOp, resBruto, resLiq };
+      return { key: k, margemBruta, recOp, resBruto, resLiq };
     });
 
     return {
@@ -436,6 +438,7 @@ export default function RelatoriosPage() {
       const rows: (string | number)[][] = [
         ['Receitas', fmt.currency(receitas)],
         [drilldownData.groups.custos.label, fmt.currency(custos)],
+        ['(=) Resultado Bruto (Receita - Custos)', fmt.currency(receitas - custos)],
         ['Despesas Totais', fmt.currency(despesas)],
         ['  - Despesas com Impostos', fmt.currency(desp.impostos)],
         ['  - Despesas Fixas', fmt.currency(desp.fixas)],
@@ -881,6 +884,32 @@ export default function RelatoriosPage() {
               {/* Fluxo de Caixa Dinâmico (Kanban Vertical) */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {fluxoOrder.map(cat => {
+                  if (cat === 'header_margem_bruta') {
+                    const totalMargem = drilldownData.monthlySummary.reduce((a, b) => a + b.margemBruta, 0);
+                    const recTotal = drilldownData.groups.receitas.total;
+                    return (
+                      <div draggable onDragStart={(e) => handleDragStart(e, cat)} onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, cat); }} key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(96,0,0,0.05)', fontWeight: 700, fontSize: 13, borderTop: '2px solid rgba(96,0,0,0.12)', borderBottom: '1px solid rgba(96,0,0,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ cursor: 'grab', marginRight: 4, color: 'var(--border)', fontSize: '16px' }} title="Arraste para reordenar">⣿</span><span>(=) Resultado Bruto (Receita − Custos)</span></div>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          {drilldownData.monthlySummary.map(s => {
+                            const recVal = drilldownData.groups.receitas.monthlyTotals[s.key];
+                            const pct = recVal ? (s.margemBruta / recVal) * 100 : 0;
+                            return (
+                              <span key={s.key} style={{ minWidth: 100, textAlign: 'right', color: s.margemBruta >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                <span>{fmt.currency(s.margemBruta)}</span>
+                                {s.margemBruta !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{pct.toFixed(1)}%</span>}
+                              </span>
+                            );
+                          })}
+                          <span style={{ minWidth: 100, textAlign: 'right', fontWeight: 800, borderLeft: '1px solid var(--border)', paddingLeft: 8, color: totalMargem >= 0 ? 'var(--green)' : 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                            <span>{fmt.currency(totalMargem)}</span>
+                            {totalMargem !== 0 && <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>{(recTotal ? (totalMargem / recTotal) * 100 : 0).toFixed(1)}%</span>}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   if (cat === 'header_despesas') {
                     return (
                       <div draggable onDragStart={(e) => handleDragStart(e, cat)} onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, cat); }} key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(0,0,0,0.02)', fontWeight: 700, fontSize: 13, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
