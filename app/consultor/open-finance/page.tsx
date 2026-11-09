@@ -1,34 +1,251 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador } from '../../../lib/store';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+interface BankDefinition {
+  id: string;
+  code: string;
+  name: string;
+  color: string;
+  portalUrl: string;
+  portalLabel: string;
+  authType: string;
+  freeSteps: string[];
+  needsSecret?: boolean;
+  needsAppKey?: boolean;
+  needsAgenciaConta?: boolean;
+  supportsCustomEndpoint?: boolean;
+}
+
+interface BankSavedConfig {
+  bankId: string;
+  enabled: boolean;
+  ambiente: 'producao' | 'sandbox';
+  clientId: string;
+  clientSecret: string;
+  appKey: string;
+  agencia: string;
+  conta: string;
+  customEndpoint: string;
+  usarCertificadoEmpresa: boolean;
+  certPemUpload?: string;
+  keyPemUpload?: string;
+  lastSyncAt?: string;
+  lastSyncCount?: number;
+}
+
+interface NormalizedTx {
+  fitId: string;
+  date: string;
+  type: 'CREDIT' | 'DEBIT';
+  amount: number;
+  paymentType: 'PIX' | 'TED' | 'BOLETO' | 'TARIFA' | 'DEBITO_AUTOMATICO' | 'OUTROS';
+  description: string;
+  counterpartyName?: string;
+  counterpartyDoc?: string;
+}
+
+const BANCOS_DIRETOS_GRATUITOS: BankDefinition[] = [
+  {
+    id: 'sicoob',
+    code: '756',
+    name: 'Sicoob (API Direta)',
+    color: '#00a859',
+    portalUrl: 'https://developers.sicoob.com.br',
+    portalLabel: 'developers.sicoob.com.br',
+    authType: 'OAuth2 + Certificado Digital A1 (mTLS) — 100% Gratuito',
+    needsAgenciaConta: true,
+    freeSteps: [
+      'Acesse developers.sicoob.com.br e clique em "Acessar Portal" com a conta do cooperado PJ.',
+      'Crie um aplicativo gratuito selecionando a API "Conta Corrente v4" (escopos cco_extrato e cco_consulta) e vincule o Certificado A1 da empresa.',
+      'Copie o Client ID gerado gratuitamente e cole abaixo. O sistema usará automaticamente o Certificado A1 da empresa!',
+    ],
+  },
+  {
+    id: 'inter',
+    code: '077',
+    name: 'Banco Inter PJ',
+    color: '#ff7a00',
+    portalUrl: 'https://developers.inter.co',
+    portalLabel: 'Internet Banking Inter PJ > Soluções para sua empresa > Nova Integração',
+    authType: 'OAuth2 + Certificado .crt/.key gratuito do painel Inter PJ',
+    needsSecret: true,
+    needsAgenciaConta: true,
+    freeSteps: [
+      'Entre no Internet Banking do Banco Inter PJ pelo computador > menu "Soluções para sua empresa" > "Nova Integração".',
+      'Marque a permissão "Consultar extrato e saldo" (extrato.read) de forma 100% gratuita.',
+      'Baixe o pacote com Client ID, Client Secret, Certificado (.crt) e Chave Privada (.key) e preencha abaixo.',
+    ],
+  },
+  {
+    id: 'sicredi',
+    code: '748',
+    name: 'Sicredi Cooperativa',
+    color: '#3fa110',
+    portalUrl: 'https://developers.sicredi.com.br',
+    portalLabel: 'developers.sicredi.com.br',
+    authType: 'OAuth2 + API Extrato/Cobrança Sicredi Developers (Gratuito)',
+    needsSecret: true,
+    needsAgenciaConta: true,
+    supportsCustomEndpoint: true,
+    freeSteps: [
+      'Acesse developers.sicredi.com.br ou solicite ao gerente da conta PJ a liberação gratuita da chave de API no Internet Banking.',
+      'Ative o produto de Consulta de Extrato / Open Finance PJ e copie o Client ID e Client Secret.',
+      'Informe cooperativa/posto e conta corrente abaixo para sincronizar os lançamentos D-1.',
+    ],
+  },
+  {
+    id: 'bb',
+    code: '001',
+    name: 'Banco do Brasil PJ',
+    color: '#eab308',
+    portalUrl: 'https://developers.bb.com.br',
+    portalLabel: 'developers.bb.com.br',
+    authType: 'OAuth2 + gw-dev-app-key + Certificado A1 (API Extratos v1)',
+    needsSecret: true,
+    needsAppKey: true,
+    needsAgenciaConta: true,
+    freeSteps: [
+      'Acesse developers.bb.com.br, crie seu projeto gratuito e assine a API "Extratos Conta Corrente v1".',
+      'Credencie o Certificado Digital e-CNPJ A1 da empresa no Gerenciador Financeiro BB.',
+      'Copie o Client ID, Client Secret e a Developer Application Key (gw-dev-app-key) e cole abaixo.',
+    ],
+  },
+  {
+    id: 'cora',
+    code: '403',
+    name: 'Cora PJ (API Direta)',
+    color: '#fe3e6d',
+    portalUrl: 'https://developers.cora.com.br',
+    portalLabel: 'App/Web Cora PJ > Conta > Integrações > APIs Diretas',
+    authType: 'mTLS Direto Gratuito (Client ID + Certificado PEM)',
+    freeSteps: [
+      'No painel web da Cora PJ, acesse "Conta" > "Integrações" > "APIs Diretas" (100% gratuito no plano padrão).',
+      'Gere uma nova credencial de integração direta e baixe o Client ID, certificado (.pem/.crt) e private-key (.key).',
+      'Cole o Client ID e envie os arquivos de certificado abaixo para puxar o extrato em tempo real.',
+    ],
+  },
+  {
+    id: 'c6',
+    code: '336',
+    name: 'C6 Bank PJ',
+    color: '#18181b',
+    portalUrl: 'https://developers.c6bank.com.br',
+    portalLabel: 'developers.c6bank.com.br',
+    authType: 'OAuth2 + mTLS Certificado A1 (API Statement C6)',
+    needsSecret: true,
+    needsAgenciaConta: true,
+    supportsCustomEndpoint: true,
+    freeSteps: [
+      'Acesse o portal developers.c6bank.com.br e habilite a API de Extrato (Statement) na conta C6 Empresas.',
+      'Vincule o Certificado Digital A1 (e-CNPJ) da empresa e copie o Client ID e Client Secret.',
+      'Salve abaixo para sincronizar Pix, TEDs, boletos liquidados e tarifas diretamente.',
+    ],
+  },
+  {
+    id: 'itau',
+    code: '341',
+    name: 'Itaú Empresas',
+    color: '#ea580c',
+    portalUrl: 'https://devportal.itau.com.br',
+    portalLabel: 'devportal.itau.com.br',
+    authType: 'Itaú DevPortal — Account Statement API + mTLS A1',
+    needsSecret: true,
+    needsAgenciaConta: true,
+    supportsCustomEndpoint: true,
+    freeSteps: [
+      'Acesse devportal.itau.com.br com os dados da empresa correntista Itaú Empresas.',
+      'Crie uma credencial para a API "Consulta de Extrato (Account Statement)" usando o Certificado A1.',
+      'Preencha Client ID, Client Secret, Agência e Conta abaixo.',
+    ],
+  },
+  {
+    id: 'openbanking-brasil',
+    code: '000',
+    name: 'Padrão OpenBanking-Brasil (openapi v2)',
+    color: '#2563eb',
+    portalUrl: 'https://github.com/orgs/OpenBanking-Brasil/repositories',
+    portalLabel: 'github.com/OpenBanking-Brasil/openapi',
+    authType: 'Contrato Oficial BACEN (/open-banking/accounts/v2/accounts/{id}/transactions)',
+    needsSecret: true,
+    supportsCustomEndpoint: true,
+    freeSteps: [
+      'Compatível com qualquer endpoint que siga o repositório oficial OpenBanking-Brasil/openapi (Fase 2 - Dados Transacionais de Contas).',
+      'Pode apontar para um container local do OpenBanking-Brasil/mock-api (Docker) ou para o endpoint FAPI-BR do banco.',
+      'No modo "Homologação / Simulador OpenBanking-Brasil", você pode testar e importar transações imediatamente sem precisar de credenciais externas.',
+    ],
+  },
+];
+
 export default function OpenFinancePage() {
-  const router = useRouter();
   const [empresaId, setEmpresaId] = useState('');
   const [activeCompany, setActiveCompany] = useState<Empresa | null>(null);
   const [portadores, setPortadores] = useState<Portador[]>([]);
-  
-  // UI states
-  const [syncingBank, setSyncingBank] = useState<string | null>(null);
-  const [showConnectModal, setShowConnectModal] = useState(false);
-  const [selectedBank, setSelectedBank] = useState<{ id: string, name: string, color: string } | null>(null);
-  const [step, setStep] = useState(1);
+  const [configs, setConfigs] = useState<Record<string, BankSavedConfig>>({});
+  const [certStatus, setCertStatus] = useState<{
+    possuiCertificadoA1: boolean;
+    titular: string | null;
+    cnpj: string | null;
+    validoAte: string | null;
+  }>({ possuiCertificadoA1: false, titular: null, cnpj: null, validoAte: null });
 
-  const BANCOS_INTEGRACAO = [
-    { id: 'bb', name: 'Banco do Brasil', color: '#facc15' },
-    { id: 'itau', name: 'Itaú Unibanco', color: '#f97316' },
-    { id: 'sicoob', name: 'Sicoob', color: '#10b981' },
-    { id: 'sicredi', name: 'Sicredi', color: '#22c55e' },
-    { id: 'nubank', name: 'Nubank (PJ)', color: '#a855f7' },
-    { id: 'c6', name: 'C6 Bank', color: '#000000' }
-  ];
+  // Modal & Form state
+  const [selectedBank, setSelectedBank] = useState<BankDefinition | null>(null);
+  const [form, setForm] = useState<BankSavedConfig>({
+    bankId: '',
+    enabled: true,
+    ambiente: 'sandbox',
+    clientId: '',
+    clientSecret: '',
+    appKey: '',
+    agencia: '',
+    conta: '',
+    customEndpoint: '',
+    usarCertificadoEmpresa: true,
+    certPemUpload: '',
+    keyPemUpload: '',
+  });
+  const [pfxBase64, setPfxBase64] = useState('');
+  const [pfxPassword, setPfxPassword] = useState('');
+  const [pfxFileName, setPfxFileName] = useState('');
 
-  const load = (eId: string) => {
+  // Sync & Preview state
+  const [syncingBankId, setSyncingBankId] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [previewTxs, setPreviewTxs] = useState<NormalizedTx[]>([]);
+  const [previewBank, setPreviewBank] = useState<BankDefinition | null>(null);
+  const [previewProtocol, setPreviewProtocol] = useState('');
+
+  const storageKey = (eId: string) => `cf_openfinance_free_configs_${eId}`;
+
+  const load = async (eId: string) => {
+    if (!eId) return;
     setEmpresaId(eId);
     setPortadores(store.getPortadores(eId));
     setActiveCompany(store.getEmpresas().find(e => e.id === eId) || null);
+
+    try {
+      const raw = localStorage.getItem(storageKey(eId));
+      setConfigs(raw ? JSON.parse(raw) : {});
+    } catch {
+      setConfigs({});
+    }
+
+    try {
+      const res = await fetch(`/api/banco-extrato?acao=status-certificado&empresaId=${encodeURIComponent(eId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCertStatus(data);
+      }
+    } catch {
+      // ignora falha silenciosamente
+    }
   };
 
   useEffect(() => {
@@ -40,21 +257,237 @@ export default function OpenFinancePage() {
     return () => window.removeEventListener('empresaChange', handler);
   }, []);
 
-  const handleConnectClick = (bank: any) => {
+  const openBankConfig = (bank: BankDefinition) => {
+    const existing = configs[bank.id];
     setSelectedBank(bank);
-    setStep(1);
-    setShowConnectModal(true);
+    setPfxBase64('');
+    setPfxPassword('');
+    setPfxFileName('');
+    setForm(
+      existing || {
+        bankId: bank.id,
+        enabled: true,
+        ambiente: 'sandbox',
+        clientId: '',
+        clientSecret: '',
+        appKey: '',
+        agencia: '',
+        conta: '',
+        customEndpoint: '',
+        usarCertificadoEmpresa: true,
+        certPemUpload: '',
+        keyPemUpload: '',
+      }
+    );
   };
 
-  const simulateIntegration = () => {
-    setStep(2); // Connecting...
-    setTimeout(() => {
-      setStep(3); // Success
-      setTimeout(() => {
-        setShowConnectModal(false);
-        toast.success(`O Banco ${selectedBank?.name} foi sincronizado com sucesso! A partir de hoje, 100% dos lançamentos serão importados no painel de OFX automaticamente de madrugada.`);
-      }, 3000);
-    }, 4000);
+  const saveBankConfig = () => {
+    if (!selectedBank || !empresaId) return;
+    if (form.ambiente === 'producao' && !form.clientId.trim() && !form.customEndpoint.trim()) {
+      toast.error('Em modo Produção, informe o Client ID gratuito gerado no portal do banco (ou mude para Simulador OpenBanking-Brasil para testar).');
+      return;
+    }
+
+    const updated: Record<string, BankSavedConfig> = {
+      ...configs,
+      [selectedBank.id]: {
+        ...form,
+        bankId: selectedBank.id,
+        enabled: true,
+      },
+    };
+    setConfigs(updated);
+    localStorage.setItem(storageKey(empresaId), JSON.stringify(updated));
+
+    // Garante que existe um Portador (conta bancária) vinculado a esse banco
+    const existingPortador = portadores.find(p =>
+      p.nome.toLowerCase().includes(selectedBank.name.split(' ')[0].toLowerCase())
+    );
+    if (!existingPortador) {
+      store.savePortador({
+        id: `port_${selectedBank.id}_${Date.now()}`,
+        empresaId,
+        nome: `${selectedBank.name}${form.conta ? ` (${form.conta})` : ''}`,
+        tipo: 'conta_corrente',
+        banco: `${selectedBank.code} - ${selectedBank.name}`,
+        agencia: form.agencia || '0001',
+        conta: form.conta || 'Conta PJ',
+        saldoInicial: 0,
+        ativo: true,
+      });
+      setPortadores(store.getPortadores(empresaId));
+    }
+
+    toast.success(`Configuração gratuita de ${selectedBank.name} salva com sucesso!`);
+    setSelectedBank(null);
+  };
+
+  const handlePfxUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPfxFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      setPfxBase64(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleTextFileUpload = (field: 'certPemUpload' | 'keyPemUpload', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm(prev => ({ ...prev, [field]: String(reader.result || '') }));
+      toast.success(`Arquivo ${file.name} carregado.`);
+    };
+    reader.readAsText(file);
+  };
+
+  const syncBankStatement = async (bank: BankDefinition, cfgOverride?: BankSavedConfig) => {
+    const cfg = cfgOverride ||
+      configs[bank.id] || {
+        bankId: bank.id,
+        enabled: true,
+        ambiente: 'sandbox',
+        clientId: '',
+        clientSecret: '',
+        appKey: '',
+        agencia: '',
+        conta: '',
+        customEndpoint: '',
+        usarCertificadoEmpresa: true,
+      };
+
+    setSyncingBankId(bank.id);
+    try {
+      const res = await fetch('/api/banco-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...cfg,
+          empresaId,
+          bankId: bank.id,
+          pfxBase64,
+          pfxPassword,
+          startDate,
+          endDate,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Falha ao consultar extrato na API do banco.');
+        return;
+      }
+
+      const txs: NormalizedTx[] = data.transactions || [];
+      setPreviewBank(bank);
+      setPreviewTxs(txs);
+      setPreviewProtocol(data.protocolo || 'OpenBanking-Brasil/openapi v2');
+
+      // Atualiza data do último sync
+      const updated: Record<string, BankSavedConfig> = {
+        ...configs,
+        [bank.id]: {
+          ...cfg,
+          enabled: true,
+          lastSyncAt: new Date().toLocaleString('pt-BR'),
+          lastSyncCount: txs.length,
+        },
+      };
+      setConfigs(updated);
+      localStorage.setItem(storageKey(empresaId), JSON.stringify(updated));
+
+      toast.success(`${txs.length} transações recebidas de ${bank.name}! Confira abaixo para importar no Fluxo de Caixa.`);
+    } catch (err) {
+      toast.error(`Erro de conexão: ${(err as Error).message}`);
+    } finally {
+      setSyncingBankId(null);
+    }
+  };
+
+  const importTransactionsToCashflow = () => {
+    if (!previewBank || previewTxs.length === 0 || !empresaId) return;
+
+    // Localiza ou cria o Portador correspondente
+    let portador = store
+      .getPortadores(empresaId)
+      .find(p => p.nome.toLowerCase().includes(previewBank.name.split(' ')[0].toLowerCase()));
+
+    if (!portador) {
+      const novoPortador: Portador = {
+        id: `port_${previewBank.id}_${Date.now()}`,
+        empresaId,
+        nome: previewBank.name,
+        tipo: 'conta_corrente',
+        banco: `${previewBank.code} - ${previewBank.name}`,
+        agencia: '0001',
+        conta: 'Conta PJ',
+        saldoInicial: 0,
+        ativo: true,
+      };
+      store.savePortador(novoPortador);
+      portador = novoPortador;
+      setPortadores(store.getPortadores(empresaId));
+    }
+
+    // Localiza plano de contas padrão para receitas e despesas
+    const planos = store.getPlanoContas(empresaId);
+    const planoEntrada =
+      planos.find(p => p.tipo === 'receita' && p.nivel === 3 && p.ativo) || planos.find(p => p.tipo === 'receita');
+    const planoSaida =
+      planos.find(p => p.tipo === 'despesa' && p.nivel === 3 && p.ativo) || planos.find(p => p.tipo === 'despesa');
+
+    const existentes = store.getLancamentos(empresaId);
+    const novosLancamentos = [];
+    let ignoradosDuplicados = 0;
+
+    for (const tx of previewTxs) {
+      const jaExiste = existentes.some(
+        l =>
+          l.ofxId === tx.fitId ||
+          l.observacao?.includes(tx.fitId) ||
+          (l.data === tx.date && Math.abs(l.valor - tx.amount) < 0.01 && l.descricao === tx.description)
+      );
+
+      if (jaExiste) {
+        ignoradosDuplicados++;
+        continue;
+      }
+
+      novosLancamentos.push({
+        id: `of_${tx.fitId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        empresaId,
+        tipo: (tx.type === 'CREDIT' ? 'receita' : 'despesa') as 'receita' | 'despesa',
+        descricao: tx.description,
+        valor: tx.amount,
+        data: tx.date,
+        planoContaId: (tx.type === 'CREDIT' ? planoEntrada?.id : planoSaida?.id) || (tx.type === 'CREDIT' ? 'pc4' : 'pc30'),
+        portadorId: portador.id,
+        status: 'realizado' as const,
+        numeroDocumento: tx.fitId,
+        observacao: `Importado via Open Finance Gratuito (${previewProtocol})${
+          tx.counterpartyName ? ` · ${tx.counterpartyName}` : ''
+        }${tx.counterpartyDoc ? ` (${tx.counterpartyDoc})` : ''}`,
+        origem: 'ofx' as const,
+        ofxId: tx.fitId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    if (novosLancamentos.length > 0) {
+      store.saveLancamentos(novosLancamentos);
+    }
+
+    toast.success(
+      `${novosLancamentos.length} lançamento(s) importado(s) e conciliado(s) no Fluxo de Caixa${
+        ignoradosDuplicados > 0 ? ` (${ignoradosDuplicados} já existente(s) ignorado(s))` : ''
+      }!`
+    );
+    setPreviewTxs([]);
   };
 
   return (
@@ -62,103 +495,576 @@ export default function OpenFinancePage() {
       <div className="page-header">
         <div>
           <div className="page-title">
-            Central Open Finance
-            <span className="badge badge-purple" style={{ marginLeft: 12 }}>BETA</span>
+            Central Open Finance & APIs Bancárias Diretas
+            <span className="badge badge-green" style={{ marginLeft: 12 }}>
+              100% GRATUITO (SEM INTERMEDIÁRIOS)
+            </span>
           </div>
-          <div className="page-subtitle">{activeCompany?.nomeFantasia} — Sincronização Bancária Direta</div>
+          <div className="page-subtitle">
+            {activeCompany?.nomeFantasia || 'Selecione uma empresa'} — Conexão direta via mTLS / Certificado Digital A1 e padrão OpenBanking-Brasil
+          </div>
         </div>
       </div>
 
       <div className="page-body">
-         <div className="card" style={{ padding: 24, marginBottom: 24, background: 'linear-gradient(135deg, #1f253d 0%, #171c2f 100%)', color: '#fff', border: 'none' }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: '#fff' }}>Diga Adeus Aos Arquivos OFX</h2>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, maxWidth: 600, lineHeight: 1.6 }}>
-               Através do protocolo oficial do Banco Central (Open Finance Brasil), o Privilege OS se conecta diretamente nas contas do seu cliente. Puxamos o extrato D-1 de forma nativa e <strong>totalmente automatizada</strong> todas as madrugadas, sem qualquer intervenção humana. Apenas modo-leitura comercial, segurança criptográfica 256-bits.
+        {/* Banner explicativo da arquitetura gratuita */}
+        <div
+          className="card"
+          style={{
+            padding: 24,
+            marginBottom: 24,
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20 }}>
+            <div style={{ maxWidth: 680 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.18)', color: '#4ade80', padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+                ✓ Zero Mensalidade de Agregadores · Conexão Direta mTLS + OpenBanking-Brasil/openapi
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: '#fff' }}>
+                Extrato Automático Direto nos Portais Gratuitos dos Bancos
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+                Em vez de pagar hubs intermediários por conta conectada, o sistema utiliza diretamente o{' '}
+                <strong>Certificado Digital ICP-Brasil A1 (e-CNPJ)</strong> que a empresa já possui cadastrado no cofre e as credenciais gratuitas do{' '}
+                <strong>Portal Developers de cada banco (Sicoob, Inter, Sicredi, BB, Cora, C6, Itaú)</strong>, além de suportar o contrato oficial{' '}
+                <code>OpenBanking-Brasil/openapi</code>.
+              </p>
             </div>
-         </div>
 
-         <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16 }}>Integrações Disponíveis Instantaneamente (D-1)</h3>
-         <div className="grid-3" style={{ marginBottom: 40 }}>
-            {BANCOS_INTEGRACAO.map(b => {
-               // Verifica se o cliente tem esse banco ativado na string de nome (simulação)
-               const isConnected = portadores.some(p => p.nome.toLowerCase().includes(b.name.toLowerCase().split(' ')[0]));
-               
-               return (
-                 <div className="glass-card" key={b.id} style={{ padding: 24, position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                       <div style={{ width: 40, height: 40, borderRadius: 8, background: b.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#fff', fontWeight: 900 }}>
-                          {b.name.charAt(0)}
-                       </div>
-                       {isConnected && (
-                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--green)', fontWeight: 700, background: 'var(--green-bg)', padding: '4px 10px', borderRadius: 20 }}>
-                           <span className="pulse-glow" style={{ background: 'var(--green)', width: 6, height: 6, borderRadius: '50%' }}></span> ATIVO
-                         </div>
-                       )}
+            {/* Status do Certificado A1 da Empresa */}
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                borderRadius: 14,
+                padding: '16px 20px',
+                minWidth: 280,
+              }}
+            >
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>
+                Cofre mTLS da Empresa Ativa
+              </div>
+              {certStatus.possuiCertificadoA1 ? (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#4ade80', marginBottom: 4 }}>
+                    ● Certificado A1 Pronto para Uso
+                  </div>
+                  <div style={{ fontSize: 12, color: '#cbd5e1' }}>
+                    {certStatus.titular || activeCompany?.razaoSocial}
+                  </div>
+                  {certStatus.validoAte && (
+                    <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>
+                      Válido até: {new Date(certStatus.validoAte).toLocaleDateString('pt-BR')}
                     </div>
-                    
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{b.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, marginBottom: 20, minHeight: 34 }}>
-                       Sincronização Pix, Transferências, Tarifas Bancárias e Pagamentos com código de barras.
-                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>
+                    ● Certificado A1 não detectado no cofre
+                  </div>
+                  <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                    Você pode usar o <strong>Simulador OpenBanking-Brasil</strong> imediatamente ou enviar o arquivo <code>.pfx</code> / <code>.crt</code> na configuração do banco.
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
-                    {isConnected ? (
-                       <button className="btn btn-secondary" style={{ width: '100%', border: '1px solid var(--border)' }} onClick={() => toast.success('Sincronização já está ativa para esta instituição e os logs estão normais.')}>
-                          Gerenciar Credenciais
-                       </button>
-                    ) : (
-                       <button className="btn btn-primary" style={{ width: '100%', background: 'var(--text-primary)', color: 'var(--bg-base)', border: 'none' }} onClick={() => handleConnectClick(b)}>
-                          + Conectar Banco
-                       </button>
+          {/* Filtro de Período para Sincronização */}
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 16,
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: '#cbd5e1', fontWeight: 600 }}>Período de Busca do Extrato:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ color: '#94a3b8' }}>De:</label>
+              <input
+                type="date"
+                className="form-input"
+                style={{ width: 155, height: 34, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)' }}
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ color: '#94a3b8' }}>Até:</label>
+              <input
+                type="date"
+                className="form-input"
+                style={{ width: 155, height: 34, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)' }}
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Painel de Pré-visualização de Lançamentos Sincronizados */}
+        {previewTxs.length > 0 && previewBank && (
+          <div className="card" style={{ padding: 24, marginBottom: 28, border: '2px solid var(--green)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Extrato Recebido — {previewBank.name} ({previewTxs.length} transações)
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  Protocolo: <strong>{previewProtocol}</strong> · Sem duplicidade por FITID
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-secondary" onClick={() => setPreviewTxs([])}>
+                  Fechar Prévia
+                </button>
+                <button className="btn btn-primary" style={{ background: 'var(--green)', border: 'none' }} onClick={importTransactionsToCashflow}>
+                  ✓ Importar e Conciliar {previewTxs.length} Lançamentos no Caixa
+                </button>
+              </div>
+            </div>
+
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>ID Transação (FITID)</th>
+                    <th>Modalidade</th>
+                    <th>Histórico / Descrição</th>
+                    <th>Contraparte (CPF/CNPJ)</th>
+                    <th style={{ textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewTxs.map(tx => (
+                    <tr key={tx.fitId}>
+                      <td>{tx.date.split('-').reverse().join('/')}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{tx.fitId}</td>
+                      <td>
+                        <span className={`badge ${tx.type === 'CREDIT' ? 'badge-green' : 'badge-red'}`}>
+                          {tx.paymentType}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{tx.description}</td>
+                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {tx.counterpartyName || '-'}
+                        {tx.counterpartyDoc ? ` (${tx.counterpartyDoc})` : ''}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: 'right',
+                          fontWeight: 700,
+                          color: tx.type === 'CREDIT' ? 'var(--green)' : 'var(--red)',
+                        }}
+                      >
+                        {tx.type === 'CREDIT' ? '+' : '-'} R${' '}
+                        {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Grade de Bancos e Conectores Gratuitos */}
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16 }}>
+          Conectores Bancários Gratuitos (APIs Diretas PJ & Padrão OpenBanking-Brasil)
+        </h3>
+
+        <div className="grid-3" style={{ marginBottom: 40 }}>
+          {BANCOS_DIRETOS_GRATUITOS.map(b => {
+            const cfg = configs[b.id];
+            const isConfigured = Boolean(cfg?.enabled);
+            const isSyncing = syncingBankId === b.id;
+
+            return (
+              <div className="glass-card" key={b.id} style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        background: b.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 15,
+                        color: b.color === '#eab308' ? '#111' : '#fff',
+                        fontWeight: 900,
+                      }}
+                    >
+                      {b.code}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: 20,
+                          background: 'rgba(16,185,129,0.12)',
+                          color: 'var(--green)',
+                        }}
+                      >
+                        GRÁTIS
+                      </span>
+                      {isConfigured && (
+                        <span
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: 20,
+                            background: cfg.ambiente === 'producao' ? 'var(--green-bg)' : 'rgba(59,130,246,0.15)',
+                            color: cfg.ambiente === 'producao' ? 'var(--green)' : '#3b82f6',
+                          }}
+                        >
+                          {cfg.ambiente === 'producao' ? 'PRODUÇÃO mTLS' : 'SIMULADOR ATIVO'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text-primary)' }}>{b.name}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}>{b.authType}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, marginBottom: 16, lineHeight: 1.5 }}>
+                    Portal oficial: <strong>{b.portalLabel}</strong>
+                    {cfg?.lastSyncAt && (
+                      <div style={{ marginTop: 6, color: 'var(--green)', fontWeight: 600 }}>
+                        ✓ Última sincronização: {cfg.lastSyncAt} ({cfg.lastSyncCount || 0} lançamentos)
+                      </div>
                     )}
-                 </div>
-               );
-            })}
-         </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1, border: '1px solid var(--border)', fontSize: 12.5 }}
+                    onClick={() => openBankConfig(b)}
+                  >
+                    ⚙️ Configurar Grátis
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      flex: 1,
+                      background: b.color,
+                      color: b.color === '#eab308' ? '#111' : '#fff',
+                      border: 'none',
+                      fontSize: 12.5,
+                    }}
+                    disabled={isSyncing}
+                    onClick={() => syncBankStatement(b)}
+                  >
+                    {isSyncing ? '⏳ Buscando...' : '↻ Puxar Extrato'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {showConnectModal && selectedBank && (
-         <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-            <div className="modal" style={{ maxWidth: 440, background: '#030712', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
-               {step === 1 && (
-                  <div style={{ padding: 32, textAlign: 'center' }}>
-                     <div style={{ width: 64, height: 64, borderRadius: 16, background: selectedBank.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#fff', fontWeight: 900, margin: '0 auto 24px' }}>
-                         {selectedBank.name.charAt(0)}
-                     </div>
-                     <h2 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 12px 0' }}>Autenticação {selectedBank.name}</h2>
-                     <p style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.5, marginBottom: 32 }}>
-                        Para conectar esta instituição via Banco Central, você será redirecionado para o ambiente seguro do banco. Autentique usando token PJ ou assinatura Gov.br.
-                     </p>
-                     
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <button className="btn btn-primary" style={{ background: selectedBank.color, color: selectedBank.color === '#facc15' ? '#000' : '#fff', border: 'none', height: 48, fontSize: 14 }} onClick={simulateIntegration}>
-                           Prosseguir para o Banco →
-                        </button>
-                        <button className="btn btn-ghost" style={{ color: '#6b7280' }} onClick={() => setShowConnectModal(false)}>
-                           Cancelar Operação
-                        </button>
-                     </div>
-                  </div>
-               )}
-
-               {step === 2 && (
-                  <div style={{ padding: '60px 32px', textAlign: 'center' }}>
-                     <div className="spinner" style={{ width: 48, height: 48, border: `4px solid rgba(255,255,255,0.1)`, borderTopColor: selectedBank.color, margin: '0 auto 24px' }}></div>
-                     <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px 0' }}>Estabelecendo Túnel Seguro...</h3>
-                     <div style={{ fontSize: 13, color: '#6b7280' }}>Trocando chaves criptográficas com a API do {selectedBank.name} (OAuth 2.0).</div>
-                  </div>
-               )}
-
-               {step === 3 && (
-                  <div style={{ padding: '60px 32px', textAlign: 'center' }}>
-                     <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#22c55e', margin: '0 auto 24px' }}>
-                        ✓
-                     </div>
-                     <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px 0', color: '#22c55e' }}>Integração Estabelecida!</h3>
-                     <div style={{ fontSize: 13, color: '#9ca3af' }}>As contas correntes ativas já estão mapeadas no sistema. Sincronização agendada para 02:00 AM diárias.</div>
-                  </div>
-               )}
+      {/* Modal de Configuração Gratuita Passo a Passo */}
+      {selectedBank && (
+        <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="modal" style={{ maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 10,
+                    background: selectedBank.color,
+                    color: selectedBank.color === '#eab308' ? '#111' : '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: 14,
+                  }}
+                >
+                  {selectedBank.code}
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{selectedBank.name}</h2>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedBank.authType}</div>
+                </div>
+              </div>
+              <button className="btn btn-ghost" onClick={() => setSelectedBank(null)}>
+                ✕
+              </button>
             </div>
-         </div>
+
+            {/* Passo a Passo para Gerar a Credencial Gratuita no Banco */}
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong style={{ fontSize: 13 }}>Como obter a credencial gratuita neste banco:</strong>
+                <a
+                  href={selectedBank.portalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textDecoration: 'none' }}
+                >
+                  Abrir {selectedBank.portalLabel} ↗
+                </a>
+              </div>
+              <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {selectedBank.freeSteps.map((stepText, i) => (
+                  <li key={i} style={{ marginBottom: 4 }}>
+                    {stepText}
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Seleção de Modo: Simulador Gratuito Imediato vs. Produção mTLS */}
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label">Modo de Operação</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    border: form.ambiente === 'sandbox' ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    background: form.ambiente === 'sandbox' ? 'rgba(96,0,0,0.08)' : 'transparent',
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                  }}
+                  onClick={() => setForm(prev => ({ ...prev, ambiente: 'sandbox' }))}
+                >
+                  🧪 Simulador OpenBanking-Brasil (Teste Imediato)
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    border: form.ambiente === 'producao' ? '2px solid var(--green)' : '1px solid var(--border)',
+                    background: form.ambiente === 'producao' ? 'var(--green-bg)' : 'transparent',
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                  }}
+                  onClick={() => setForm(prev => ({ ...prev, ambiente: 'producao' }))}
+                >
+                  🔒 Produção Direta (API Oficial mTLS)
+                </button>
+              </div>
+            </div>
+
+            {form.ambiente === 'sandbox' ? (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 10,
+                  background: 'rgba(59,130,246,0.08)',
+                  border: '1px solid rgba(59,130,246,0.25)',
+                  fontSize: 12.5,
+                  color: 'var(--text-secondary)',
+                  marginBottom: 18,
+                  lineHeight: 1.55,
+                }}
+              >
+                No modo <strong>Simulador OpenBanking-Brasil</strong>, o sistema gera e consome o payload padronizado{' '}
+                <code>GET /open-banking/accounts/v2/accounts/&#123;accountId&#125;/transactions</code> sem exigir chaves de produção, permitindo testar todo o fluxo de conciliação automática no Fluxo de Caixa agora mesmo.
+              </div>
+            ) : (
+              <>
+                <div className="grid-2" style={{ gap: 12, marginBottom: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Client ID (Portal Developers do Banco)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Ex: 9b1deb4d-3b7d-4bad-9bdd..."
+                      value={form.clientId}
+                      onChange={e => setForm(prev => ({ ...prev, clientId: e.target.value }))}
+                    />
+                  </div>
+
+                  {selectedBank.needsSecret && (
+                    <div className="form-group">
+                      <label className="form-label">Client Secret / Token Bearer</label>
+                      <input
+                        type="password"
+                        className="form-input"
+                        placeholder="Informe o Client Secret..."
+                        value={form.clientSecret}
+                        onChange={e => setForm(prev => ({ ...prev, clientSecret: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {selectedBank.needsAppKey && (
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label className="form-label">Developer Application Key (gw-dev-app-key)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Chave da aplicação no developers.bb.com.br"
+                      value={form.appKey}
+                      onChange={e => setForm(prev => ({ ...prev, appKey: e.target.value }))}
+                    />
+                  </div>
+                )}
+
+                {selectedBank.needsAgenciaConta && (
+                  <div className="grid-2" style={{ gap: 12, marginBottom: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">Agência / Cooperativa</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: 3025"
+                        value={form.agencia}
+                        onChange={e => setForm(prev => ({ ...prev, agencia: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Conta Corrente PJ (com dígito)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Ex: 12345-6"
+                        value={form.conta}
+                        onChange={e => setForm(prev => ({ ...prev, conta: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedBank.supportsCustomEndpoint && (
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label className="form-label">
+                      Endpoint OpenBanking-Brasil / API de Extrato (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="https://api.banco.com.br/open-banking/accounts/v2/accounts/{id}/transactions"
+                      value={form.customEndpoint}
+                      onChange={e => setForm(prev => ({ ...prev, customEndpoint: e.target.value }))}
+                    />
+                  </div>
+                )}
+
+                {/* Certificado Digital mTLS */}
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: 14,
+                    marginBottom: 18,
+                  }}
+                >
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.usarCertificadoEmpresa}
+                      onChange={e => setForm(prev => ({ ...prev, usarCertificadoEmpresa: e.target.checked }))}
+                    />
+                    Reaproveitar automaticamente o Certificado Digital A1 (.pfx) salvo na empresa
+                  </label>
+
+                  {!form.usarCertificadoEmpresa && (
+                    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                      <div className="grid-2" style={{ gap: 10 }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                            Opção A: Arquivo .PFX / .P12
+                          </label>
+                          <input type="file" accept=".pfx,.p12" className="form-input" onChange={handlePfxUpload} />
+                          {pfxFileName && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>{pfxFileName}</div>}
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                            Senha do .PFX
+                          </label>
+                          <input
+                            type="password"
+                            className="form-input"
+                            placeholder="Senha do certificado"
+                            value={pfxPassword}
+                            onChange={e => setPfxPassword(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid-2" style={{ gap: 10 }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                            Opção B: Certificado .CRT / .PEM (Inter/Cora)
+                          </label>
+                          <input
+                            type="file"
+                            accept=".crt,.pem"
+                            className="form-input"
+                            onChange={e => handleTextFileUpload('certPemUpload', e)}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                            Chave Privada .KEY (Inter/Cora)
+                          </label>
+                          <input
+                            type="file"
+                            accept=".key,.pem"
+                            className="form-input"
+                            onChange={e => handleTextFileUpload('keyPemUpload', e)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="btn btn-secondary" onClick={() => setSelectedBank(null)}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  const cfgToTest: BankSavedConfig = { ...form, bankId: selectedBank.id, enabled: true };
+                  saveBankConfig();
+                  syncBankStatement(selectedBank, cfgToTest);
+                }}
+              >
+                ↻ Salvar e Puxar Extrato Agora
+              </button>
+              <button className="btn btn-primary" onClick={saveBankConfig}>
+                Salvar Configuração
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
