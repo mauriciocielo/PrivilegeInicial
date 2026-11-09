@@ -433,7 +433,17 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
             <div className="form-group">
               <label className="form-label">CST PIS/COFINS</label>
               <select className="form-control" value={p.piscofinsCst} onChange={e => set('piscofinsCst', e.target.value)} disabled={p.opSimpNac === 2}>
-                <option value="08">08 — Operação sem incidência</option>
+                <option value="01">01 — Tributável, alíquota básica</option>
+                <option value="02">02 — Tributável, alíquota diferenciada</option>
+                <option value="03">03 — Tributável, alíquota por unidade de medida</option>
+                <option value="04">04 — Monofásica, revenda a alíquota zero</option>
+                <option value="05">05 — Tributável por substituição tributária</option>
+                <option value="06">06 — Alíquota zero</option>
+                <option value="07">07 — Isenta da contribuição</option>
+                <option value="08">08 — Sem incidência da contribuição</option>
+                <option value="09">09 — Com suspensão da contribuição</option>
+                <option value="49">49 — Outras operações de saída</option>
+                <option value="99">99 — Outras operações</option>
                 <option value="00">00 — Nenhum</option>
               </select>
             </div>
@@ -453,7 +463,16 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
             </div>
             <div className="form-group">
               <label className="form-label">CST IBS/CBS</label>
-              <input className="form-control" maxLength={3} value={p.ibsCbsCst || ''} onChange={e => set('ibsCbsCst', e.target.value)} />
+              <input className="form-control" list="cst-ibscbs-sugestoes" maxLength={3} value={p.ibsCbsCst || ''} onChange={e => set('ibsCbsCst', e.target.value)} placeholder="ex.: 000" />
+              <datalist id="cst-ibscbs-sugestoes">
+                <option value="000">000 — Tributação integral</option>
+                <option value="200">200 — Alíquota reduzida</option>
+                <option value="400">400 — Isenção</option>
+                <option value="410">410 — Imunidade</option>
+                <option value="510">510 — Diferimento</option>
+                <option value="550">550 — Suspensão</option>
+                <option value="620">620 — Tributação monofásica</option>
+              </datalist>
             </div>
             <div className="form-group">
               <label className="form-label">cClassTrib</label>
@@ -468,7 +487,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               </select>
             </div>
           </div>
-          <div style={ajudaStyle}>Grupo IBS/CBS: já exigido no Regime Regular e obrigatório no Simples a partir da competência 01/2027. Confirme os códigos com a contabilidade.</div>
+          <div style={ajudaStyle}>Grupo IBS/CBS: já exigido no Regime Regular e obrigatório no Simples a partir da competência 01/2027. O CST PIS/COFINS traz a tabela completa; o CST IBS/CBS aceita digitação com sugestões — como o leiaute nacional ainda está em produção restrita (NT 009), <strong>confirme o CST e o cClassTrib com a contabilidade / a Nota Técnica oficial</strong> antes de emitir.</div>
           <div className="form-group" style={{ marginTop: 12 }}>
             <label className="form-label">Leiaute da DPS</label>
             <select className="form-control" value={p.leiaute || ''} onChange={e => set('leiaute', e.target.value)}>
