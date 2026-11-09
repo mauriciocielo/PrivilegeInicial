@@ -32,8 +32,15 @@ module.exports = (phase) => {
   const withPWA = require('@ducanh2912/next-pwa').default({
     dest: 'public',
     register: true,
-    skipWaiting: true,
     disable: false,
+    // Nova versão assume sozinha: ativa na hora, controla as abas abertas e limpa caches antigos.
+    // O componente PwaAutoUpdate recarrega a página quando o novo service worker assume.
+    reloadOnOnline: true,
+    workboxOptions: {
+      skipWaiting: true,
+      clientsClaim: true,
+      cleanupOutdatedCaches: true,
+    },
   });
 
   return withPWA(nextConfig);

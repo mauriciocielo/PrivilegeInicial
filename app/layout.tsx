@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import TransitionProvider from '../components/TransitionProvider';
 import ConfirmProvider from '../components/ConfirmProvider';
+import PwaAutoUpdate from '../components/PwaAutoUpdate';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const fontMain = Plus_Jakarta_Sans({
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={fontMain.className} suppressHydrationWarning>
         <GoogleOAuthProvider clientId={googleClientId}>
+          <PwaAutoUpdate />
           <Toaster position="top-right" richColors />
           <ConfirmProvider />
           <TransitionProvider>{children}</TransitionProvider>
