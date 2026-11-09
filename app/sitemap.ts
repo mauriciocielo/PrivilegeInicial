@@ -36,6 +36,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/contato`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/privacidade`,
       lastModified,
       changeFrequency: 'yearly',
@@ -49,4 +55,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 }
-

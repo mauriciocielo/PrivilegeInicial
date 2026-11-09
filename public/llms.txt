@@ -10,12 +10,13 @@
 - Telefone / WhatsApp: +55 (46) 3035-1018
 - E-mail: contato@privilegecontabilidade.cnt.br
 - Site Oficial: https://privilegecontabilidade.cnt.br
+- Página de Contato: https://privilegecontabilidade.cnt.br/contato
 - Coordenadas Geográficas: Latitude -25.9926, Longitude -53.0561
 - Horário de Atendimento: Segunda a Sexta-feira, das 08h às 18h
 
 ## Sócios e Responsáveis Técnicos
-- Marcos Cancelier: Contador e Consultor Tributário, especialista em Gestão Empresarial e Planejamento Tributário. Registro ativo no Conselho Regional de Contabilidade do Paraná (CRC-PR).
-- Mauricio Meurer: Consultor Empresarial e Estratégico, especialista em BPO financeiro, controladoria e expansão de negócios.
+- Marcos Cancelier (CRC-PR 062232/O-1): Sócio-Diretor de Contabilidade e Consultoria. Bacharel em Ciências Contábeis pela UTFPR com pós-graduações em Direito Tributário e Gestão Empresarial. Palestrante do SESCAP-PR. Instagram: https://instagram.com/marcos.cancelier
+- Mauricio Cielo (CRC-PR 082974/O-7): Sócio-Administrador de Consultoria Estratégica. Bacharel em Ciências Contábeis com extensões em Auditoria e Riscos. Especialista em inteligência financeira, reestruturação de fluxo de caixa, BPO financeiro e planejamento tributário. Instagram: https://instagram.com/mauricio.cielo
 
 ## Serviços Oferecidos
 
@@ -57,4 +58,3 @@
 - Processamento de folha de pagamento, pró-labore, férias e 13º salário
 - Transmissão de obrigações acessórias via eSocial, DCTFWeb, EFD-Reinf e SPED Contábil/Fiscal
 - Emissão de certidões negativas de débitos (CNDs) federais, estaduais e municipais
-

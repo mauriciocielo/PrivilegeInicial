@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, CheckCircle2, ChevronRight, TrendingDown, Scale, ShieldAlert, Sparkles, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, TrendingDown, Scale, ShieldAlert, Sparkles, MessageCircle, Phone } from 'lucide-react';
+
+const PAGE_TITLE = 'Planejamento Tributário e Gestão Fiscal';
+const PAGE_DESC =
+  'Reduza legalmente seus impostos e prepare sua empresa para a Reforma Tributária. Estudo entre Simples, Presumido e Lucro Real em Francisco Beltrão, PR.';
 
 export const metadata: Metadata = {
-  title: 'Planejamento Tributário e Gestão Fiscal · Francisco Beltrão e Paraná',
-  description:
-    'Reduza legalmente seus impostos e prepare sua empresa para a Reforma Tributária. Auditoria fiscal, enquadramento entre Simples, Lucro Presumido e Lucro Real em Francisco Beltrão pela Privilege Contabilidade.',
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
   keywords: [
     'planejamento tributário Francisco Beltrão',
     'redução de impostos Paraná',
@@ -20,10 +23,56 @@ export const metadata: Metadata = {
     canonical: 'https://privilegecontabilidade.cnt.br/planejamento-tributario',
   },
   openGraph: {
-    title: 'Planejamento Tributário · Privilege Contabilidade',
-    description: 'Diagnóstico preventivo e estruturação fiscal ética para pagar apenas o justo por lei.',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
     url: 'https://privilegecontabilidade.cnt.br/planejamento-tributario',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Privilege Contabilidade e Consultoria' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
+    images: ['/og-image.png'],
+  },
+};
+
+const serviceJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service',
+      '@id': 'https://privilegecontabilidade.cnt.br/planejamento-tributario#service',
+      name: 'Planejamento Tributário e Gestão Fiscal',
+      serviceType: 'Consultoria Tributária e Elisão Fiscal',
+      description: PAGE_DESC,
+      url: 'https://privilegecontabilidade.cnt.br/planejamento-tributario',
+      provider: {
+        '@id': 'https://privilegecontabilidade.cnt.br/#organization',
+      },
+      areaServed: [
+        { '@type': 'City', name: 'Francisco Beltrão' },
+        { '@type': 'AdministrativeArea', name: 'Sudoeste do Paraná' },
+        { '@type': 'AdministrativeArea', name: 'Paraná' },
+      ],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Início',
+          item: 'https://privilegecontabilidade.cnt.br/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Planejamento Tributário',
+          item: 'https://privilegecontabilidade.cnt.br/planejamento-tributario',
+        },
+      ],
+    },
+  ],
 };
 
 export default function PlanejamentoTributarioPage() {
@@ -31,13 +80,18 @@ export default function PlanejamentoTributarioPage() {
 
   return (
     <div style={{ background: '#fdfdfd', color: '#171717', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+
       {/* Header Institucional */}
       <header style={{ borderBottom: '1px solid #e5e5e5', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center' }}>
             <Image src="/privilege-logo-colorida.svg" alt="Privilege Contabilidade e Consultoria" width={170} height={42} priority />
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <Link
               href="/"
               style={{
@@ -83,8 +137,6 @@ export default function PlanejamentoTributarioPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none' }}>Início</Link>
           <ChevronRight size={14} />
-          <span style={{ color: '#525252' }}>Soluções Fiscais</span>
-          <ChevronRight size={14} />
           <span style={{ color: '#600000', fontWeight: 600 }}>Planejamento Tributário</span>
         </div>
       </nav>
@@ -99,7 +151,7 @@ export default function PlanejamentoTributarioPage() {
             Planejamento Tributário: Pague Apenas o Justo e Blinde Seu Negócio com Segurança Jurídica
           </h1>
           <p style={{ fontSize: '18px', lineHeight: 1.6, color: '#525252', margin: '0 0 32px 0' }}>
-            No Brasil, até 70% das empresas pagam impostos a mais por estarem enquadradas no regime errado ou por não aproveitarem os benefícios fiscais legais. A Privilege Contabilidade realiza diagnóstico tributário aprofundado para gerar economia real e preparar sua empresa para a Reforma Tributária.
+            No Brasil, grande parte das empresas paga impostos a mais por enquadramento inadequado ou por não aproveitar benefícios fiscais legais. A Privilege Contabilidade realiza diagnóstico tributário aprofundado para gerar economia real e preparar sua empresa para a Reforma Tributária.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
@@ -122,6 +174,24 @@ export default function PlanejamentoTributarioPage() {
             >
               <MessageCircle size={20} /> Solicitar Diagnóstico Tributário
             </a>
+            <a
+              href="tel:+554630351018"
+              style={{
+                background: '#fff',
+                color: '#600000',
+                border: '1px solid #600000',
+                padding: '16px 28px',
+                borderRadius: '12px',
+                fontWeight: 600,
+                fontSize: '16px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Phone size={18} /> (46) 3035-1018
+            </a>
           </div>
         </div>
 
@@ -134,7 +204,7 @@ export default function PlanejamentoTributarioPage() {
             A carga tributária brasileira é uma das mais complexas do planeta. Manter sua empresa no "piloto automático" pagando guias sem auditoria sistemática de alíquotas, créditos de PIS/COFINS, substituição tributária de ICMS e fator R é o caminho mais rápido para drenar a rentabilidade.
           </p>
           <p style={{ fontSize: '16px', lineHeight: 1.7, color: '#404040', margin: 0 }}>
-            Liderado por <strong>Marcos Cancelier</strong>, contador especialista em Direito Tributário e Gestão Empresarial (CRC-PR), nosso time não atua com aventuras jurídicas: aplicamos <strong>elisão fiscal 100% legal e respaldada na legislação</strong>, permitindo que os recursos economizados fiquem no seu caixa para reinvestimento.
+            Liderado por <strong>Marcos Cancelier (CRC-PR 062232/O-1)</strong> e <strong>Mauricio Cielo (CRC-PR 082974/O-7)</strong>, nosso time não atua com aventuras jurídicas: aplicamos <strong>elisão fiscal 100% legal e respaldada na legislação</strong>, permitindo que os recursos economizados fiquem no seu caixa para reinvestimento.
           </p>
         </section>
 
@@ -234,7 +304,7 @@ export default function PlanejamentoTributarioPage() {
             Descubra quanto sua empresa pode economizar em tributos
           </h2>
           <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.85)', maxWidth: '640px', margin: '0 auto 32px' }}>
-            Agende um diagnóstico preliminar com o especialista Marcos Cancelier. Avaliaremos o cenário tributário da sua empresa sem custo inicial.
+            Agende um diagnóstico preliminar com os especialistas Marcos Cancelier (CRC-PR 062232/O-1) e Mauricio Cielo (CRC-PR 082974/O-7). Avaliaremos o cenário tributário da sua empresa sem custo inicial.
           </p>
           <a
             href={whatsAppUrl}
@@ -258,18 +328,21 @@ export default function PlanejamentoTributarioPage() {
         </section>
       </main>
 
-      {/* Footer com NAP Text */}
+      {/* Footer com NAP Text e Telefone Clicável */}
       <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />
-            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: (46) 3035-1018 · E-mail: contato@privilegecontabilidade.cnt.br
+            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone:{' '}
+            <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>(46) 3035-1018</a> · E-mail:{' '}
+            <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#a3a3a3', textDecoration: 'none' }}>contato@privilegecontabilidade.cnt.br</a>
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>Início</Link>
             <Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#fff', textDecoration: 'none' }}>BPO Financeiro</Link>
             <Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#fff', textDecoration: 'none' }}>Abertura de Empresa</Link>
             <Link href="/contabilidade-agronegocio" style={{ color: '#fff', textDecoration: 'none' }}>Agronegócio</Link>
+            <Link href="/contato" style={{ color: '#fff', textDecoration: 'none' }}>Contato</Link>
             <Link href="/privacidade" style={{ color: '#fff', textDecoration: 'none' }}>Privacidade</Link>
           </div>
         </div>
@@ -277,4 +350,3 @@ export default function PlanejamentoTributarioPage() {
     </div>
   );
 }
-

@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, CheckCircle2, ChevronRight, DollarSign, Clock, BarChart3, ShieldCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, DollarSign, Clock, BarChart3, ShieldCheck, MessageCircle, Phone } from 'lucide-react';
+
+const PAGE_TITLE = 'BPO Financeiro em Francisco Beltrão';
+const PAGE_DESC =
+  'Terceirize o financeiro da sua empresa em Francisco Beltrão com a Privilege Contabilidade. Contas a pagar, receber, conciliação diária e fluxo de caixa.';
 
 export const metadata: Metadata = {
-  title: 'BPO Financeiro em Francisco Beltrão · Terceirização Financeira Inteligente',
-  description:
-    'Terceirize o financeiro da sua empresa em Francisco Beltrão com a Privilege Contabilidade. Gestão profissional de contas a pagar, receber, conciliação diária, DFC e relatórios estratégicos.',
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
   keywords: [
     'BPO financeiro Francisco Beltrão',
     'terceirização do financeiro Francisco Beltrão PR',
@@ -19,10 +22,56 @@ export const metadata: Metadata = {
     canonical: 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao',
   },
   openGraph: {
-    title: 'BPO Financeiro em Francisco Beltrão · Privilege Contabilidade',
-    description: 'Transforme seu financeiro em um motor de tomada de decisões com BPO integrado.',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
     url: 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Privilege Contabilidade e Consultoria' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
+    images: ['/og-image.png'],
+  },
+};
+
+const serviceJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service',
+      '@id': 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao#service',
+      name: 'BPO Financeiro em Francisco Beltrão',
+      serviceType: 'BPO Financeiro e Terceirização da Gestão Financeira',
+      description: PAGE_DESC,
+      url: 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao',
+      provider: {
+        '@id': 'https://privilegecontabilidade.cnt.br/#organization',
+      },
+      areaServed: [
+        { '@type': 'City', name: 'Francisco Beltrão' },
+        { '@type': 'AdministrativeArea', name: 'Sudoeste do Paraná' },
+        { '@type': 'AdministrativeArea', name: 'Paraná' },
+      ],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Início',
+          item: 'https://privilegecontabilidade.cnt.br/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'BPO Financeiro em Francisco Beltrão',
+          item: 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao',
+        },
+      ],
+    },
+  ],
 };
 
 export default function BpoFinanceiroPage() {
@@ -30,13 +79,18 @@ export default function BpoFinanceiroPage() {
 
   return (
     <div style={{ background: '#fdfdfd', color: '#171717', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+
       {/* Header Institucional */}
       <header style={{ borderBottom: '1px solid #e5e5e5', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center' }}>
             <Image src="/privilege-logo-colorida.svg" alt="Privilege Contabilidade e Consultoria" width={170} height={42} priority />
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <Link
               href="/"
               style={{
@@ -82,8 +136,6 @@ export default function BpoFinanceiroPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none' }}>Início</Link>
           <ChevronRight size={14} />
-          <span style={{ color: '#525252' }}>Soluções Estratégicas</span>
-          <ChevronRight size={14} />
           <span style={{ color: '#600000', fontWeight: 600 }}>BPO Financeiro em Francisco Beltrão</span>
         </div>
       </nav>
@@ -120,6 +172,24 @@ export default function BpoFinanceiroPage() {
               }}
             >
               <MessageCircle size={20} /> Solicitar Diagnóstico de BPO Gratuito
+            </a>
+            <a
+              href="tel:+554630351018"
+              style={{
+                background: '#fff',
+                color: '#600000',
+                border: '1px solid #600000',
+                padding: '16px 28px',
+                borderRadius: '12px',
+                fontWeight: 600,
+                fontSize: '16px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Phone size={18} /> (46) 3035-1018
             </a>
           </div>
         </div>
@@ -233,7 +303,7 @@ export default function BpoFinanceiroPage() {
             Quer ter clareza total do seu caixa a partir deste mês?
           </h2>
           <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.85)', maxWidth: '640px', margin: '0 auto 32px' }}>
-            Agende uma conversa rápida com Marcos Cancelier e Mauricio Meurer. Vamos analisar seus processos atuais e mostrar o modelo ideal de BPO para sua empresa em Francisco Beltrão.
+            Agende uma conversa rápida com Marcos Cancelier (CRC-PR 062232/O-1) e Mauricio Cielo (CRC-PR 082974/O-7). Vamos analisar seus processos atuais e mostrar o modelo ideal de BPO para sua empresa em Francisco Beltrão.
           </p>
           <a
             href={whatsAppUrl}
@@ -257,18 +327,21 @@ export default function BpoFinanceiroPage() {
         </section>
       </main>
 
-      {/* Footer com NAP Text */}
+      {/* Footer com NAP Text e Telefone Clicável */}
       <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />
-            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: (46) 3035-1018 · E-mail: contato@privilegecontabilidade.cnt.br
+            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone:{' '}
+            <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>(46) 3035-1018</a> · E-mail:{' '}
+            <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#a3a3a3', textDecoration: 'none' }}>contato@privilegecontabilidade.cnt.br</a>
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>Início</Link>
             <Link href="/planejamento-tributario" style={{ color: '#fff', textDecoration: 'none' }}>Planejamento Tributário</Link>
             <Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#fff', textDecoration: 'none' }}>Abertura de Empresa</Link>
             <Link href="/contabilidade-agronegocio" style={{ color: '#fff', textDecoration: 'none' }}>Agronegócio</Link>
+            <Link href="/contato" style={{ color: '#fff', textDecoration: 'none' }}>Contato</Link>
             <Link href="/privacidade" style={{ color: '#fff', textDecoration: 'none' }}>Privacidade</Link>
           </div>
         </div>
@@ -276,4 +349,3 @@ export default function BpoFinanceiroPage() {
     </div>
   );
 }
-

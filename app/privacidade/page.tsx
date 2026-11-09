@@ -3,26 +3,60 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, ShieldCheck, Mail, MapPin, Phone } from 'lucide-react';
 
+const PAGE_TITLE = 'Política de Privacidade (LGPD)';
+const PAGE_DESC =
+  'Política de Privacidade e Proteção de Dados da Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84) em Francisco Beltrão/PR, conforme a LGPD.';
+
 export const metadata: Metadata = {
-  title: 'Política de Privacidade e Proteção de Dados (LGPD)',
-  description:
-    'Política de Privacidade e Proteção de Dados da Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84), em Francisco Beltrão/PR, em estrita conformidade com a Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).',
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
   alternates: {
     canonical: 'https://privilegecontabilidade.cnt.br/privacidade',
   },
   openGraph: {
-    title: 'Política de Privacidade · Privilege Contabilidade',
-    description: 'Conformidade LGPD, segurança da informação e tratamento ético de dados na Privilege Contabilidade.',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
     url: 'https://privilegecontabilidade.cnt.br/privacidade',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Privilege Contabilidade e Consultoria' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
+    images: ['/og-image.png'],
+  },
+};
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Início',
+      item: 'https://privilegecontabilidade.cnt.br/',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Política de Privacidade (LGPD)',
+      item: 'https://privilegecontabilidade.cnt.br/privacidade',
+    },
+  ],
 };
 
 export default function PrivacidadePage() {
   return (
     <div style={{ background: '#fdfdfd', color: '#171717', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
       {/* Header Institucional */}
       <header style={{ borderBottom: '1px solid #e5e5e5', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center' }}>
             <Image src="/privilege-logo-colorida.svg" alt="Privilege Contabilidade e Consultoria" width={170} height={42} priority />
           </Link>
@@ -40,7 +74,6 @@ export default function PrivacidadePage() {
                 padding: '8px 14px',
                 borderRadius: '8px',
                 border: '1px solid #e5e5e5',
-                transition: 'all 0.2s',
               }}
             >
               <ArrowLeft size={16} /> Voltar ao Início
@@ -126,7 +159,7 @@ export default function PrivacidadePage() {
             </p>
             <ul style={{ paddingLeft: '22px', display: 'grid', gap: '8px', marginTop: '10px' }}>
               <li>Nenhum dado financeiro ou fiscal é comercializado ou compartilhado para fins de publicidade comportamental;</li>
-              <li>Toda e qualquer apuração tributária sensível ou decisão contábil estratégica permanece sob a <strong>supervisão direta e validação de contadores legalmente habilitados com registro ativo no Conselho Regional de Contabilidade do Paraná (CRC-PR)</strong>.</li>
+              <li>Toda e qualquer apuração tributária sensível ou decisão contábil estratégica permanece sob a <strong>supervisão direta e validação de contadores legalmente habilitados com registro ativo no Conselho Regional de Contabilidade do Paraná (CRC-PR 062232/O-1 e CRC-PR 082974/O-7)</strong>.</li>
             </ul>
           </section>
 
@@ -178,11 +211,21 @@ export default function PrivacidadePage() {
             <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={16} color="#600000" />
-                <span><strong>E-mail do DPO:</strong> contato@privilegecontabilidade.cnt.br</span>
+                <span>
+                  <strong>E-mail do DPO:</strong>{' '}
+                  <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#600000', textDecoration: 'none' }}>
+                    contato@privilegecontabilidade.cnt.br
+                  </a>
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Phone size={16} color="#600000" />
-                <span><strong>Telefone / WhatsApp:</strong> (46) 3035-1018</span>
+                <span>
+                  <strong>Telefone / WhatsApp:</strong>{' '}
+                  <a href="tel:+554630351018" style={{ color: '#600000', textDecoration: 'none' }}>
+                    (46) 3035-1018
+                  </a>
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MapPin size={16} color="#600000" />
@@ -193,15 +236,17 @@ export default function PrivacidadePage() {
         </article>
       </main>
 
-      {/* Footer com NAP Text */}
+      {/* Footer com NAP Text e Telefone Clicável */}
       <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />
-            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: (46) 3035-1018
+            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone:{' '}
+            <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>(46) 3035-1018</a>
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>Início</Link>
+            <Link href="/contato" style={{ color: '#fff', textDecoration: 'none' }}>Contato</Link>
             <Link href="/termos" style={{ color: '#fff', textDecoration: 'none' }}>Termos de Uso</Link>
             <Link href="/login" style={{ color: '#fff', textDecoration: 'none' }}>Área do Cliente</Link>
           </div>
@@ -210,4 +255,3 @@ export default function PrivacidadePage() {
     </div>
   );
 }
-

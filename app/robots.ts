@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/cliente/',
           '/consultor/',
-          '/login',
           '/api/',
           '/perfil',
           '/reset-dados',
@@ -18,7 +17,5 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: 'https://privilegecontabilidade.cnt.br/sitemap.xml',
-    host: 'https://privilegecontabilidade.cnt.br',
   };
 }
-

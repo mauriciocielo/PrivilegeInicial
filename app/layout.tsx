@@ -14,10 +14,12 @@ const fontMain = Plus_Jakarta_Sans({
 });
 
 const SITE_TITLE = 'Privilege Contabilidade e Consultoria — Francisco Beltrão, PR';
+// Meta description enxuta (~151 caracteres) alinhada aos serviços buscados localmente
 const SITE_DESC =
-  'Escritório de contabilidade consultiva, BPO financeiro e planejamento tributário em Francisco Beltrão, PR. '
-  + 'Abertura de empresas, escrituração fiscal, folha de pagamento, controladoria e contabilidade para agronegócio (LCDPR). '
-  + 'Simples Nacional, Lucro Presumido e Lucro Real.';
+  'Contabilidade consultiva e BPO financeiro em Francisco Beltrão, PR. Abertura de empresas, fiscal, folha, planejamento tributário e agronegócio (LCDPR).';
+
+const GOOGLE_MAPS_URL =
+  'https://www.google.com/maps/search/?api=1&query=Privilege+Contabilidade+e+Consultoria+Rua+Par%C3%A1+127+Francisco+Beltr%C3%A3o+PR';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://privilegecontabilidade.cnt.br'),
   title: {
     default: SITE_TITLE,
-    template: '%s · Privilege Contabilidade',
+    template: '%s | Privilege',
   },
   description: SITE_DESC,
   manifest: '/manifest.json',
@@ -42,8 +44,6 @@ export const metadata: Metadata = {
     'abertura de empresa Francisco Beltrão',
     'contabilidade agronegócio LCDPR',
     'contabilidade consultiva',
-    'recuperação tributária',
-    'gestão financeira BPO',
   ],
   authors: [{ name: 'Privilege Contabilidade e Consultoria' }],
   creator: 'Privilege Contabilidade',
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Privilege Contabilidade e Consultoria — Francisco Beltrão, PR',
+        alt: SITE_TITLE,
       },
     ],
   },
@@ -76,8 +76,22 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESC,
-    images: ['/og-image.png'],
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: SITE_TITLE,
+      },
+    ],
   },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
   robots: {
     index: true,
     follow: true,
@@ -105,6 +119,7 @@ const jsonLdSchema = {
   telephone: '+55-46-3035-1018',
   email: 'contato@privilegecontabilidade.cnt.br',
   taxID: '58.033.979/0001-84',
+  hasMap: GOOGLE_MAPS_URL,
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Rua Pará, 127, Sala 03, Centro',
@@ -135,20 +150,31 @@ const jsonLdSchema = {
   ],
   sameAs: [
     'https://www.instagram.com/privilegefb',
+    'https://www.instagram.com/marcos.cancelier',
+    'https://www.instagram.com/mauricio.cielo',
     'https://www.linkedin.com/company/privilege-assessoria-cont%C3%A1bil/',
+    GOOGLE_MAPS_URL,
   ],
   founder: [
     {
       '@type': 'Person',
       name: 'Marcos Cancelier',
-      jobTitle: 'Contador e Consultor Tributário',
-      description: 'Especialista em Gestão Empresarial e Planejamento Tributário. Contador registrado no CRC-PR.',
+      jobTitle: 'Sócio-Diretor · Contabilidade & Consultoria',
+      identifier: 'CRC-PR 062232/O-1',
+      image: 'https://privilegecontabilidade.cnt.br/foto-marcos.jpg',
+      sameAs: ['https://www.instagram.com/marcos.cancelier'],
+      description:
+        'Contador registrado no CRC-PR 062232/O-1, Bacharel em Ciências Contábeis pela UTFPR com pós-graduações em Direito Tributário e Gestão Empresarial. Palestrante do SESCAP-PR.',
     },
     {
       '@type': 'Person',
-      name: 'Mauricio Meurer',
-      jobTitle: 'Consultor Empresarial e Estratégico',
-      description: 'Especialista em BPO financeiro, controladoria e expansão de negócios.',
+      name: 'Mauricio Cielo',
+      jobTitle: 'Sócio-Administrador · Consultoria Estratégica',
+      identifier: 'CRC-PR 082974/O-7',
+      image: 'https://privilegecontabilidade.cnt.br/foto-mauricio.jpg',
+      sameAs: ['https://www.instagram.com/mauricio.cielo'],
+      description:
+        'Contador registrado no CRC-PR 082974/O-7, Bacharel em Ciências Contábeis com extensões em Auditoria e Riscos. Especialista em inteligência financeira, BPO e planejamento tributário.',
     },
   ],
   hasOfferCatalog: {
@@ -161,7 +187,8 @@ const jsonLdSchema = {
           '@type': 'Service',
           name: 'BPO Financeiro em Francisco Beltrão',
           url: 'https://privilegecontabilidade.cnt.br/bpo-financeiro-francisco-beltrao',
-          description: 'Terceirização da gestão financeira para PMEs: contas a pagar, contas a receber, conciliação diária e fluxo de caixa.',
+          description:
+            'Terceirização da gestão financeira para PMEs: contas a pagar, contas a receber, conciliação diária e fluxo de caixa.',
         },
       },
       {
@@ -170,7 +197,8 @@ const jsonLdSchema = {
           '@type': 'Service',
           name: 'Planejamento Tributário e Gestão Fiscal',
           url: 'https://privilegecontabilidade.cnt.br/planejamento-tributario',
-          description: 'Auditoria tributária, enquadramento Simples Nacional, Lucro Presumido e Lucro Real, preparação para Reforma Tributária.',
+          description:
+            'Auditoria tributária, enquadramento Simples Nacional, Lucro Presumido e Lucro Real, preparação para Reforma Tributária.',
         },
       },
       {
@@ -179,7 +207,8 @@ const jsonLdSchema = {
           '@type': 'Service',
           name: 'Abertura de Empresas em Francisco Beltrão',
           url: 'https://privilegecontabilidade.cnt.br/abertura-de-empresa-francisco-beltrao',
-          description: 'Abertura rápida e legalização completa de empresas, emissão de CNPJ, alvarás e certidões negativas.',
+          description:
+            'Abertura rápida e legalização completa de empresas, emissão de CNPJ, alvarás e certidões negativas.',
         },
       },
       {
@@ -188,7 +217,8 @@ const jsonLdSchema = {
           '@type': 'Service',
           name: 'Contabilidade para Agronegócio e LCDPR',
           url: 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio',
-          description: 'Livro Caixa Digital do Produtor Rural, planejamento tributário agropecuário e gestão patrimonial para famílias produtoras.',
+          description:
+            'Livro Caixa Digital do Produtor Rural, planejamento tributário agropecuário e gestão patrimonial para famílias produtoras.',
         },
       },
     ],
@@ -198,6 +228,7 @@ const jsonLdSchema = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'UNCONFIGURED_CLIENT_ID';
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
@@ -206,6 +237,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
+        {gtmId && (
+          <Script
+            id="gtm-script"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${gtmId}');
+              `,
+            }}
+          />
+        )}
         {gaId && (
           <>
             <Script
@@ -230,6 +276,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className={fontMain.className} suppressHydrationWarning>
+        {gtmId && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
+              height="0"
+              width="0"
+              style={{ display: 'none', visibility: 'hidden' }}
+            />
+          </noscript>
+        )}
         <GoogleOAuthProvider clientId={googleClientId}>
           <PwaAutoUpdate />
           <Toaster position="top-right" richColors />

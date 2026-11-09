@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, CheckCircle2, ChevronRight, Sprout, Tractor, Landmark, ShieldCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronRight, Sprout, Tractor, Landmark, ShieldCheck, MessageCircle, Phone } from 'lucide-react';
+
+const PAGE_TITLE = 'Contabilidade para Agronegócio e LCDPR';
+const PAGE_DESC =
+  'Contabilidade para o agronegócio e produtores rurais em Francisco Beltrão e Sudoeste do PR. Livro Caixa Digital (LCDPR), ITR, holding e sucessão rural.';
 
 export const metadata: Metadata = {
-  title: 'Contabilidade para o Agronegócio em Francisco Beltrão · LCDPR e Gestão Rural',
-  description:
-    'Especialistas em contabilidade para o agronegócio e produtores rurais em Francisco Beltrão e Sudoeste do Paraná. Livro Caixa Digital do Produtor Rural (LCDPR), ITR, holding rural e planejamento tributário agro.',
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
   keywords: [
     'contabilidade agronegócio Francisco Beltrão',
     'LCDPR Paraná contador',
@@ -19,10 +22,56 @@ export const metadata: Metadata = {
     canonical: 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio',
   },
   openGraph: {
-    title: 'Contabilidade para o Agronegócio · Privilege Contabilidade',
-    description: 'Gestão contábil e fiscal de alta precisão para produtores rurais e empresas agro do Sudoeste do Paraná.',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
     url: 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Privilege Contabilidade e Consultoria' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${PAGE_TITLE} | Privilege`,
+    description: PAGE_DESC,
+    images: ['/og-image.png'],
+  },
+};
+
+const serviceJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service',
+      '@id': 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio#service',
+      name: 'Contabilidade para o Agronegócio e LCDPR',
+      serviceType: 'Contabilidade Rural, LCDPR e Planejamento Sucessório no Campo',
+      description: PAGE_DESC,
+      url: 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio',
+      provider: {
+        '@id': 'https://privilegecontabilidade.cnt.br/#organization',
+      },
+      areaServed: [
+        { '@type': 'City', name: 'Francisco Beltrão' },
+        { '@type': 'AdministrativeArea', name: 'Sudoeste do Paraná' },
+        { '@type': 'AdministrativeArea', name: 'Paraná' },
+      ],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Início',
+          item: 'https://privilegecontabilidade.cnt.br/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Contabilidade para o Agronegócio (LCDPR)',
+          item: 'https://privilegecontabilidade.cnt.br/contabilidade-agronegocio',
+        },
+      ],
+    },
+  ],
 };
 
 export default function ContabilidadeAgronegocioPage() {
@@ -30,13 +79,18 @@ export default function ContabilidadeAgronegocioPage() {
 
   return (
     <div style={{ background: '#fdfdfd', color: '#171717', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+
       {/* Header Institucional */}
       <header style={{ borderBottom: '1px solid #e5e5e5', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center' }}>
             <Image src="/privilege-logo-colorida.svg" alt="Privilege Contabilidade e Consultoria" width={170} height={42} priority />
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <Link
               href="/"
               style={{
@@ -82,8 +136,6 @@ export default function ContabilidadeAgronegocioPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none' }}>Início</Link>
           <ChevronRight size={14} />
-          <span style={{ color: '#525252' }}>Soluções Setoriais</span>
-          <ChevronRight size={14} />
           <span style={{ color: '#600000', fontWeight: 600 }}>Contabilidade para o Agronegócio (LCDPR)</span>
         </div>
       </nav>
@@ -120,6 +172,24 @@ export default function ContabilidadeAgronegocioPage() {
               }}
             >
               <MessageCircle size={20} /> Falar com Especialista Agro
+            </a>
+            <a
+              href="tel:+554630351018"
+              style={{
+                background: '#fff',
+                color: '#600000',
+                border: '1px solid #600000',
+                padding: '16px 28px',
+                borderRadius: '12px',
+                fontWeight: 600,
+                fontSize: '16px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Phone size={18} /> (46) 3035-1018
             </a>
           </div>
         </div>
@@ -255,18 +325,21 @@ export default function ContabilidadeAgronegocioPage() {
         </section>
       </main>
 
-      {/* Footer com NAP Text */}
+      {/* Footer com NAP Text e Telefone Clicável */}
       <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />
-            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: (46) 3035-1018 · E-mail: contato@privilegecontabilidade.cnt.br
+            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone:{' '}
+            <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>(46) 3035-1018</a> · E-mail:{' '}
+            <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#a3a3a3', textDecoration: 'none' }}>contato@privilegecontabilidade.cnt.br</a>
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>Início</Link>
             <Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#fff', textDecoration: 'none' }}>BPO Financeiro</Link>
             <Link href="/planejamento-tributario" style={{ color: '#fff', textDecoration: 'none' }}>Planejamento Tributário</Link>
             <Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#fff', textDecoration: 'none' }}>Abertura de Empresa</Link>
+            <Link href="/contato" style={{ color: '#fff', textDecoration: 'none' }}>Contato</Link>
             <Link href="/privacidade" style={{ color: '#fff', textDecoration: 'none' }}>Privacidade</Link>
           </div>
         </div>
@@ -274,4 +347,3 @@ export default function ContabilidadeAgronegocioPage() {
     </div>
   );
 }
-

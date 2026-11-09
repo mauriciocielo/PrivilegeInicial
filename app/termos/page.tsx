@@ -6,20 +6,50 @@ import { ArrowLeft, FileText, Mail, MapPin, Phone } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'Termos e Condições de Uso',
   description:
-    'Termos e Condições Gerais de Uso da plataforma e dos serviços prestados pela Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84) em Francisco Beltrão/PR.',
+    'Termos e Condições de Uso da plataforma e serviços da Privilege Contabilidade (CNPJ 58.033.979/0001-84) em Francisco Beltrão/PR.',
   alternates: {
     canonical: 'https://privilegecontabilidade.cnt.br/termos',
   },
   openGraph: {
-    title: 'Termos de Uso · Privilege Contabilidade',
+    title: 'Termos e Condições de Uso | Privilege',
     description: 'Condições gerais, responsabilidades e parâmetros operacionais dos serviços da Privilege Contabilidade.',
     url: 'https://privilegecontabilidade.cnt.br/termos',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Termos de Uso — Privilege Contabilidade' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Termos e Condições de Uso | Privilege',
+    description: 'Condições gerais, responsabilidades e parâmetros operacionais dos serviços da Privilege Contabilidade.',
+    images: ['/og-image.png'],
+  },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Início',
+      item: 'https://privilegecontabilidade.cnt.br',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Termos de Uso',
+      item: 'https://privilegecontabilidade.cnt.br/termos',
+    },
+  ],
 };
 
 export default function TermosPage() {
   return (
     <div style={{ background: '#fdfdfd', color: '#171717', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header Institucional */}
       <header style={{ borderBottom: '1px solid #e5e5e5', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -153,11 +183,11 @@ export default function TermosPage() {
             <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={16} color="#600000" />
-                <span><strong>E-mail:</strong> contato@privilegecontabilidade.cnt.br</span>
+                <span><strong>E-mail:</strong> <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#600000', textDecoration: 'none', fontWeight: 600 }}>contato@privilegecontabilidade.cnt.br</a></span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Phone size={16} color="#600000" />
-                <span><strong>Telefone:</strong> (46) 3035-1018</span>
+                <span><strong>Telefone:</strong> <a href="tel:+554630351018" style={{ color: '#600000', textDecoration: 'none', fontWeight: 600 }}>(46) 3035-1018</a></span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MapPin size={16} color="#600000" />
@@ -173,10 +203,11 @@ export default function TermosPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />
-            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: (46) 3035-1018
+            Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290 · Telefone: <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'underline' }}>(46) 3035-1018</a> · E-mail: <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#fff', textDecoration: 'underline' }}>contato@privilegecontabilidade.cnt.br</a>
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <Link href="/" style={{ color: '#fff', textDecoration: 'none' }}>Início</Link>
+            <Link href="/contato" style={{ color: '#fff', textDecoration: 'none' }}>Contato</Link>
             <Link href="/privacidade" style={{ color: '#fff', textDecoration: 'none' }}>Privacidade</Link>
             <Link href="/login" style={{ color: '#fff', textDecoration: 'none' }}>Área do Cliente</Link>
           </div>
