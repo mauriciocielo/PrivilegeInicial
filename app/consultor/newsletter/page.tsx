@@ -19,6 +19,7 @@ export default function NewsletterPage() {
   const [modoDestinatarios, setModoDestinatarios] = useState<'clientes' | 'manual'>('clientes');
   const [listaManual, setListaManual] = useState('');
   const [imagens, setImagens] = useState<{ filename: string; base64: string }[]>([]);
+  const [linkDestinoImagem, setLinkDestinoImagem] = useState('https://wa.me/5546999048990');
   const [enviando, setEnviando] = useState(false);
   
   // Customização / Ajuste de Senha SMTP em tela
@@ -220,6 +221,7 @@ export default function NewsletterPage() {
           destinatariosLista: modoDestinatarios === 'manual' ? listaManual : undefined,
           smtpUserCustom: smtpUser.trim(),
           smtpPassCustom: smtpPass.trim(),
+          linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
           imagens: imagens.map((img, idx) => ({
             filename: img.filename,
             base64: img.base64,
@@ -651,6 +653,37 @@ export default function NewsletterPage() {
                       ))}
                     </div>
                   )}
+
+                  {imagens.length > 0 && (
+                    <div style={{ marginTop: 20, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '14px 16px', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16 }}>💬</span> Link de Destino ao Clicar na Imagem (WhatsApp)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setLinkDestinoImagem('https://wa.me/5546999048990?text=' + encodeURIComponent('Olá! Vi o comunicado da Privilege e gostaria de mais informações.'))}
+                          style={{ fontSize: 11.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Usar WhatsApp Oficial (46) 99904-8990
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        className="input input-bordered w-full"
+                        value={linkDestinoImagem}
+                        onChange={e => setLinkDestinoImagem(e.target.value)}
+                        placeholder="https://wa.me/5546999048990?text=Olá"
+                        style={{ fontSize: 13, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
+                        <span>✅ Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
+                        <a href={linkDestinoImagem} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', fontWeight: 700, color: '#166534' }}>
+                          Testar Link ↗
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -892,6 +925,37 @@ export default function NewsletterPage() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {imagens.length > 0 && (
+                    <div style={{ marginTop: 20, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '14px 16px', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16 }}>💬</span> Link de Destino ao Clicar na Imagem (WhatsApp)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setLinkDestinoImagem('https://wa.me/5546999048990?text=' + encodeURIComponent('Olá! Vi o comunicado da Privilege e gostaria de mais informações.'))}
+                          style={{ fontSize: 11.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Usar WhatsApp Oficial (46) 99904-8990
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        className="input input-bordered w-full"
+                        value={linkDestinoImagem}
+                        onChange={e => setLinkDestinoImagem(e.target.value)}
+                        placeholder="https://wa.me/5546999048990?text=Olá"
+                        style={{ fontSize: 13, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
+                        <span>✅ Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
+                        <a href={linkDestinoImagem} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', fontWeight: 700, color: '#166534' }}>
+                          Testar Link ↗
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

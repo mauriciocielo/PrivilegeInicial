@@ -451,12 +451,29 @@ export async function POST(req: Request) {
 
           let htmlImagens = '';
           if (temImagensAnexadas) {
+            const linkWhatsDestino = (body.linkImagem || '').trim() || `https://wa.me/5546999048990?text=${encodeURIComponent('Olá! Vi o comunicado da Privilege e gostaria de mais informações.')}`;
+
             htmlImagens = `
-              <div style="margin: 20px 0; text-align: center;">
+              <div style="margin: 22px 0; text-align: center;">
                 ${attachmentsNewsletter
                   .filter(att => att.cid.startsWith('img_anexo_'))
-                  .map(att => `<img src="cid:${att.cid}" alt="${tituloAssunto}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 14px rgba(0,0,0,0.07);" />`)
+                  .map(att => `
+                    <div style="margin-bottom: 16px;">
+                      <a href="${linkWhatsDestino}" target="_blank" style="display: inline-block; text-decoration: none; cursor: pointer;">
+                        <img src="cid:${att.cid}" alt="${tituloAssunto}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 6px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 14px rgba(0,0,0,0.08);" />
+                      </a>
+                    </div>
+                  `)
                   .join('')}
+
+                <div style="margin-top: 14px; text-align: center;">
+                  <a href="${linkWhatsDestino}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 15px; padding: 13px 26px; border-radius: 30px; box-shadow: 0 4px 12px rgba(37,211,102,0.35); letter-spacing: 0.3px; font-family: Arial, sans-serif;">
+                    💬 Falar com a Consultoria no WhatsApp &rarr;
+                  </a>
+                  <p style="margin: 8px 0 0; font-size: 11.5px; color: #64748b;">
+                    (Toque na imagem acima ou no botão verde para abrir a conversa)
+                  </p>
+                </div>
               </div>
             `;
           }
