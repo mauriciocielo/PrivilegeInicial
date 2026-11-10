@@ -14,32 +14,8 @@ import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse
 import NfseCopiarModal from './NfseCopiarModal';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
-import { gerarBoletoSicoob, barrasITF } from '../lib/cnab/boleto-sicoob';
-
-function CodigoBarrasBoletoNfse({ codigo, altura = 46 }: { codigo: string; altura?: number }) {
-  let larguras: number[];
-  try {
-    larguras = barrasITF(codigo);
-  } catch {
-    return null;
-  }
-  const unidade = 1.1;
-  const total = larguras.reduce((a, b) => a + b, 0) * unidade;
-  let x = 0;
-  const barras: { x: number; w: number }[] = [];
-  larguras.forEach((l, i) => {
-    const w = l * unidade;
-    if (i % 2 === 0) barras.push({ x, w });
-    x += w;
-  });
-  return (
-    <svg width={total} height={altura} viewBox={`0 0 ${total} ${altura}`} style={{ display: 'block', maxWidth: '100%' }}>
-      {barras.map((b, i) => (
-        <rect key={i} x={b.x} y={0} width={b.w} height={altura} fill="#000" />
-      ))}
-    </svg>
-  );
-}
+import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
+import BoletoSicoobOficial from './BoletoSicoobOficial';
 import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
@@ -3166,10 +3142,11 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                 <style dangerouslySetInnerHTML={{ __html: `
                   @media print {
                     body * { visibility: hidden !important; }
-                    .nfse-boleto-printable, .nfse-boleto-printable * { visibility: visible !important; }
-                    .nfse-boleto-printable {
+                    .boleto-sicoob-oficial-printable, .boleto-sicoob-oficial-printable * { visibility: visible !important; }
+                    .boleto-sicoob-oficial-printable {
                       position: absolute !important; left: 0 !important; top: 0 !important;
-                      width: 100% !important; margin: 0 !important; padding: 14px !important;
+                      width: 100% !important; margin: 0 !important; padding: 12px !important;
+                      border: none !important;
                     }
                     .no-print { display: none !important; }
                   }
@@ -3248,100 +3225,39 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                       </div>
 
                       {boletoLocal && (
-                        <div
-                          className="nfse-boleto-printable"
-                          style={{
-                            border: '2px solid #000',
-                            padding: 12,
-                            background: '#fff',
-                            color: '#000',
-                            fontFamily: 'Courier New, monospace',
-                            marginBottom: 16,
-                            borderRadius: 4,
-                          }}
-                        >
-                          <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 6, alignItems: 'center' }}>
-                            <span
-                              style={{
-                                fontSize: 14,
-                                background: '#003641',
-                                color: '#fff',
-                                padding: '2px 8px',
-                                borderRadius: 3,
-                                fontFamily: 'sans-serif',
-                                fontWeight: 800,
-                                marginRight: 10,
-                              }}
-                            >
-                              SICOOB
-                            </span>
-                            <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 10px', fontSize: 16, fontWeight: 900 }}>
-                              756-0
-                            </div>
-                            <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 900 }}>
-                              {boletoLocal.linhaDigitavel}
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                            <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
-                              <div style={{ fontSize: 10, fontWeight: 'bold' }}>
-                                {empresa?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'} — CNPJ: {empresa?.cnpj || '58.033.979/0001-84'}
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, padding: 4 }}>
-                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
-                              <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
-                                {fmt.date(vencimentoCobrancaNota)}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                            <div style={{ flex: 2, borderRight: '1px solid #000', padding: 4 }}>
-                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Beneficiário</div>
-                              <div style={{ fontSize: 10 }}>4342 / 4276485</div>
-                            </div>
-                            <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Documento / Nosso Número</div>
-                              <div style={{ fontSize: 10 }}>
-                                NFS-e {notaCobrancaModal.numero} / {boletoLocal.nossoNumero}
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, padding: 4 }}>
-                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
-                              <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
-                                {fmt.currency(Number(resultadoCobrancaNota.valor))}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: 6, gap: 10, alignItems: 'center' }}>
-                            <div style={{ flex: 1, fontSize: 9.5, lineHeight: '14px' }}>
-                              <strong>Referência:</strong> NFS-e Nº {notaCobrancaModal.numero} — {(notaCobrancaModal.discriminacao || '').slice(0, 90)}<br />
-                              • Pagador: <strong>{notaCobrancaModal.tomadorRazaoSocial}</strong> ({notaCobrancaModal.tomadorCnpjCpf})<br />
-                              • Pague pelo Código de Barras abaixo ou pelo QR Code Pix Oficial ao lado.<br />
-                              • TXID BACEN: {resultadoCobrancaNota.txid}
-                            </div>
-                            {resultadoCobrancaNota.brcode && (
-                              <div style={{ border: '1px solid #000', padding: 4, textAlign: 'center' }}>
-                                <div style={{ fontSize: 7, fontWeight: 800 }}>QR CODE PIX</div>
-                                <img
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=88x88&data=${encodeURIComponent(
-                                    resultadoCobrancaNota.brcode
-                                  )}`}
-                                  alt="QR Code Pix Sicoob"
-                                  width={84}
-                                  height={84}
-                                />
-                              </div>
-                            )}
-                          </div>
-
-                          <div style={{ paddingTop: 8 }}>
-                            <CodigoBarrasBoletoNfse codigo={boletoLocal.codigoBarras} altura={46} />
-                          </div>
+                        <div style={{ marginBottom: 16 }}>
+                          <BoletoSicoobOficial
+                            beneficiarioNome={empresa?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'}
+                            beneficiarioCnpj={empresa?.cnpj || '58.033.979/0001-84'}
+                            agencia="4342"
+                            convenio="4276485"
+                            conta="175.204-9"
+                            nossoNumero={boletoLocal.nossoNumero}
+                            numeroDocumento={`NFS-E ${notaCobrancaModal.numero}`}
+                            dataDocumento={fmt.date(notaCobrancaModal.dataEmissao)}
+                            dataProcessamento={new Date().toLocaleDateString('pt-BR')}
+                            dataVencimento={fmt.date(vencimentoCobrancaNota)}
+                            valorDocumento={fmt.currency(Number(resultadoCobrancaNota.valor))}
+                            linhaDigitavel={boletoLocal.linhaDigitavel}
+                            codigoBarras={boletoLocal.codigoBarras}
+                            pagadorNome={notaCobrancaModal.tomadorRazaoSocial}
+                            pagadorCpfCnpj={notaCobrancaModal.tomadorCnpjCpf}
+                            pagadorEndereco={
+                              [
+                                notaCobrancaModal.tomadorEndereco,
+                                notaCobrancaModal.tomadorBairro,
+                                notaCobrancaModal.tomadorCidade,
+                                notaCobrancaModal.tomadorUf,
+                                notaCobrancaModal.tomadorCep,
+                              ]
+                                .filter(Boolean)
+                                .join(' — ') || undefined
+                            }
+                            descricaoReferencia={`NFS-e Nº ${notaCobrancaModal.numero} — ${(notaCobrancaModal.discriminacao || '').slice(0, 100)}`}
+                            brcodePix={resultadoCobrancaNota.brcode}
+                            txidPix={resultadoCobrancaNota.txid}
+                            especieDoc="DS"
+                          />
                         </div>
                       )}
 

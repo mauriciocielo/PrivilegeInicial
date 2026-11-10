@@ -3,32 +3,7 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador } from '../../../lib/store';
 import { toast } from 'sonner';
-import { barrasITF } from '../../../lib/cnab/boleto-sicoob';
-
-function CodigoBarrasBoleto({ codigo, altura = 48 }: { codigo: string; altura?: number }) {
-  let larguras: number[];
-  try {
-    larguras = barrasITF(codigo);
-  } catch {
-    return null;
-  }
-  const unidade = 1.1;
-  const total = larguras.reduce((a, b) => a + b, 0) * unidade;
-  let x = 0;
-  const barras: { x: number; w: number }[] = [];
-  larguras.forEach((l, i) => {
-    const w = l * unidade;
-    if (i % 2 === 0) barras.push({ x, w });
-    x += w;
-  });
-  return (
-    <svg width={total} height={altura} viewBox={`0 0 ${total} ${altura}`} style={{ display: 'block', maxWidth: '100%' }}>
-      {barras.map((b, i) => (
-        <rect key={i} x={b.x} y={0} width={b.w} height={altura} fill="#000" />
-      ))}
-    </svg>
-  );
-}
+import BoletoSicoobOficial from '../../../components/BoletoSicoobOficial';
 
 interface BankDefinition {
   id: string;
@@ -274,6 +249,9 @@ export default function OpenFinancePage() {
     valor: string;
     status: string;
     chave: string;
+    boletoRegistradoOnline?: boolean;
+    pdfBoletoOficialBase64?: string | null;
+    motivoCodigoBarrasNaoRegistrado?: string | null;
     boleto?: {
       linhaDigitavel: string;
       codigoBarras: string;
@@ -534,6 +512,9 @@ export default function OpenFinancePage() {
         valor: data.valor,
         status: data.status,
         chave: data.chave,
+        boletoRegistradoOnline: Boolean(data.boletoRegistradoOnline),
+        pdfBoletoOficialBase64: data.pdfBoletoOficialBase64 || null,
+        motivoCodigoBarrasNaoRegistrado: data.motivoCodigoBarrasNaoRegistrado || null,
         boleto: data.boleto || null,
       });
 
@@ -1451,10 +1432,11 @@ export default function OpenFinancePage() {
                 <style dangerouslySetInnerHTML={{ __html: `
                   @media print {
                     body * { visibility: hidden !important; }
-                    .boleto-sicoob-printable, .boleto-sicoob-printable * { visibility: visible !important; }
-                    .boleto-sicoob-printable {
+                    .boleto-sicoob-oficial-printable, .boleto-sicoob-oficial-printable * { visibility: visible !important; }
+                    .boleto-sicoob-oficial-printable {
                       position: absolute !important; left: 0 !important; top: 0 !important;
-                      width: 100% !important; margin: 0 !important; padding: 14px !important;
+                      width: 100% !important; margin: 0 !important; padding: 12px !important;
+                      border: none !important;
                     }
                     .no-print { display: none !important; }
                   }
@@ -1466,7 +1448,7 @@ export default function OpenFinancePage() {
                     border: '1px solid rgba(16, 185, 129, 0.35)',
                     borderRadius: 12,
                     padding: 14,
-                    marginBottom: 14,
+                    marginBottom: 12,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1516,101 +1498,49 @@ export default function OpenFinancePage() {
                   </div>
                 </div>
 
-                {/* Ficha de Compensação Boleto Híbrido Sicoob (756-0) */}
+                {/* Aviso / Status do Registro do Código de Barras na CIP */}
+                <div className="no-print" style={{ marginBottom: 14 }}>
+                  {cobResult.boletoRegistradoOnline ? (
+                    <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#065f46' }}>
+                      <strong>✅ Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong>
+                    </div>
+                  ) : (
+                    <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#92400e', lineHeight: 1.45 }}>
+                      <div>
+                        <strong>✅ QR Code Pix Oficial: REGISTRADO E ATIVO IMEDIATAMENTE</strong> (TXID: {cobResult.txid}).
+                      </div>
+                      <div style={{ marginTop: 4 }}>
+                        <strong>⚠️ Código de Barras (CIP):</strong>{' '}
+                        {cobResult.motivoCodigoBarrasNaoRegistrado ||
+                          "Para que o código de barras também seja registrado online na CIP sem precisar enviar CNAB 240, acesse developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs e marque também a API 'Cobrança Bancária'."}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Boleto Oficial Sicoob (Recibo do Pagador + Ficha de Compensação 756-0 FEBRABAN) */}
                 {cobResult.boleto && (
-                  <div
-                    className="boleto-sicoob-printable"
-                    style={{
-                      border: '2px solid #000',
-                      padding: 12,
-                      background: '#fff',
-                      color: '#000',
-                      fontFamily: 'Courier New, monospace',
-                      marginBottom: 16,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 6, alignItems: 'center' }}>
-                      <span
-                        style={{
-                          fontSize: 14,
-                          background: '#003641',
-                          color: '#fff',
-                          padding: '2px 8px',
-                          borderRadius: 3,
-                          fontFamily: 'sans-serif',
-                          fontWeight: 800,
-                          marginRight: 10,
-                        }}
-                      >
-                        SICOOB
-                      </span>
-                      <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 10px', fontSize: 16, fontWeight: 900 }}>
-                        756-0
-                      </div>
-                      <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 900 }}>
-                        {cobResult.boleto.linhaDigitavel}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                      <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
-                        <div style={{ fontSize: 10, fontWeight: 'bold' }}>
-                          {activeCompany?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'} — CNPJ: {activeCompany?.cnpj || '58.033.979/0001-84'}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1, padding: 4 }}>
-                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
-                        <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
-                          {cobForm.dataVencimento.split('-').reverse().join('/')}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                      <div style={{ flex: 2, borderRight: '1px solid #000', padding: 4 }}>
-                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Beneficiário</div>
-                        <div style={{ fontSize: 10 }}>
-                          {cobResult.boleto.agencia} / {cobResult.boleto.convenio}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
-                        <div style={{ fontSize: 10 }}>{cobResult.boleto.nossoNumero}</div>
-                      </div>
-                      <div style={{ flex: 1, padding: 4 }}>
-                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
-                        <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
-                          R$ {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: 6, gap: 10, alignItems: 'center' }}>
-                      <div style={{ flex: 1, fontSize: 9.5, lineHeight: '14px' }}>
-                        <strong>Instruções:</strong> {cobForm.descricao}<br />
-                        • Pague pelo Código de Barras abaixo ou aponte a câmera para o QR Code Pix Oficial.<br />
-                        • Pagador: <strong>{cobForm.pagadorNome || 'Consumidor / Cliente'}</strong>{' '}
-                        {cobForm.pagadorDocumento ? `(${cobForm.pagadorDocumento})` : ''}<br />
-                        • TXID BACEN: {cobResult.txid}
-                      </div>
-                      {cobResult.brcode && (
-                        <div style={{ border: '1px solid #000', padding: 4, textAlign: 'center' }}>
-                          <div style={{ fontSize: 7, fontWeight: 800 }}>QR CODE PIX</div>
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=88x88&data=${encodeURIComponent(cobResult.brcode)}`}
-                            alt="QR Code Pix"
-                            width={84}
-                            height={84}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ paddingTop: 8 }}>
-                      <CodigoBarrasBoleto codigo={cobResult.boleto.codigoBarras} altura={46} />
-                    </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <BoletoSicoobOficial
+                      beneficiarioNome={activeCompany?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'}
+                      beneficiarioCnpj={activeCompany?.cnpj || '58.033.979/0001-84'}
+                      agencia={cobResult.boleto.agencia || '4342'}
+                      convenio={cobResult.boleto.convenio || '4276485'}
+                      conta={cobResult.boleto.conta || '175.204-9'}
+                      nossoNumero={cobResult.boleto.nossoNumero}
+                      numeroDocumento={cobResult.txid.slice(0, 10).toUpperCase()}
+                      dataDocumento={new Date().toLocaleDateString('pt-BR')}
+                      dataProcessamento={new Date().toLocaleDateString('pt-BR')}
+                      dataVencimento={cobForm.dataVencimento.split('-').reverse().join('/')}
+                      valorDocumento={`R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                      linhaDigitavel={cobResult.boleto.linhaDigitavel}
+                      codigoBarras={cobResult.boleto.codigoBarras}
+                      pagadorNome={cobForm.pagadorNome || 'CONSUMIDOR / CLIENTE'}
+                      pagadorCpfCnpj={cobForm.pagadorDocumento}
+                      descricaoReferencia={cobForm.descricao}
+                      brcodePix={cobResult.brcode}
+                      txidPix={cobResult.txid}
+                    />
                   </div>
                 )}
 

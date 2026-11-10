@@ -546,23 +546,107 @@ export async function POST(request: Request) {
 
       const cobJson = JSON.parse(cobRes.body || '{}');
       const dtVenc = dataVencimento || new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
-      let boletoSicoob = null;
+      const hojeIso = new Date().toISOString().slice(0, 10);
+
+      // 2.6 Tenta registrar também o BOLETO BANCÁRIO OFICIAL (Código de Barras 44 dígitos na CIP/FEBRABAN + PDF Oficial Sicoob)
+      // Endpoint oficial Sicoob: POST https://api.sicoob.com.br/cobranca-bancaria/v3/boletos
+      let boletoRegistradoOnline = false;
+      let pdfBoletoOficialBase64 = '';
+      let motivoCodigoBarrasNaoRegistrado = '';
+      let boletoSicoob: {
+        codigoBarras: string;
+        linhaDigitavel: string;
+        nossoNumero: string;
+        campoLivre?: string;
+        fatorVencimento?: string;
+      } | null = null;
+
       try {
-        boletoSicoob = gerarBoletoSicoob(
-          {
-            agencia: agencia || '4342',
-            convenio: '4276485',
-            carteira: '1',
-            variacao: '01',
+        const payloadBoletoV3 = {
+          numeroCliente: 4276485,
+          codigoModalidade: 1,
+          numeroContaCorrente: 1752049,
+          codigoEspecieDocumento: 'DM',
+          dataEmissao: hojeIso,
+          seuNumero: String(nossoNumero || Math.floor((Date.now() / 1000) % 900000)).slice(0, 15),
+          identificacaoEmissaoBoleto: 2, // 2 = Beneficiário emite
+          identificacaoDistribuicaoBoleto: 2, // 2 = Beneficiário distribui
+          valor: Number(valorNum.toFixed(2)),
+          dataVencimento: dtVenc,
+          tipoDesconto: 0,
+          tipoMulta: Number(multaPercentual) > 0 ? 2 : 0,
+          dataMulta: Number(multaPercentual) > 0 ? dtVenc : undefined,
+          valorMulta: Number(multaPercentual) > 0 ? Number(multaPercentual) : undefined,
+          tipoJurosMora: Number(jurosMensalPercentual) > 0 ? 2 : 0,
+          dataJurosMora: Number(jurosMensalPercentual) > 0 ? dtVenc : undefined,
+          valorJurosMora: Number(jurosMensalPercentual) > 0 ? Number(jurosMensalPercentual) : undefined,
+          numeroParcela: 1,
+          aceite: false,
+          codigoCadastrarPIX: 1, // 1 = Com Pix Híbrido Sicoob
+          gerarPdf: true, // Solicita o PDF Oficial do Sicoob
+          pagador: {
+            numeroCpfCnpj: docValido ? docLimpo : '58033979000184',
+            nome: (pagadorNome || 'CLIENTE CONSUMIDOR').trim().slice(0, 50),
+            endereco: (body.pagadorEndereco || 'RUA DO COMERCIO, CENTRO').slice(0, 40),
+            bairro: (body.pagadorBairro || 'CENTRO').slice(0, 30),
+            cidade: (body.pagadorCidade || 'FRANCISCO BELTRAO').slice(0, 40),
+            cep: String(body.pagadorCep || '85601000').replace(/\D/g, '').padEnd(8, '0').slice(0, 8),
+            uf: (body.pagadorUf || 'PR').slice(0, 2).toUpperCase(),
           },
-          {
-            nossoNumero: Number(nossoNumero) || Math.floor((Date.now() / 1000) % 9000000) + 1,
-            valor: valorNum,
-            dataVencimento: dtVenc,
+          mensagensInstrucao: [
+            (descricao || 'Cobrança Privilege Consultoria').slice(0, 40),
+            'Pague pelo QR Code Pix ou Código de Barras até o vencimento.',
+          ],
+        };
+
+        const bolRes = await httpsRequestMtls('https://api.sicoob.com.br/cobranca-bancaria/v3/boletos', {
+          method: 'POST',
+          headers: headersCob,
+          body: JSON.stringify(payloadBoletoV3),
+          certPem,
+          keyPem,
+        });
+
+        if (bolRes.status >= 200 && bolRes.status < 300) {
+          const bolJson = JSON.parse(bolRes.body || '{}');
+          const resBol = bolJson.resultado || bolJson;
+          if (resBol?.codigoBarras && resBol?.linhaDigitavel) {
+            boletoRegistradoOnline = true;
+            pdfBoletoOficialBase64 = resBol.pdfBoleto || '';
+            boletoSicoob = {
+              codigoBarras: String(resBol.codigoBarras),
+              linhaDigitavel: String(resBol.linhaDigitavel),
+              nossoNumero: String(resBol.nossoNumero || nossoNumero || '1'),
+            };
           }
-        );
-      } catch {
-        boletoSicoob = null;
+        } else if (bolRes.status === 403 && bolRes.body.includes('Not registered to plan')) {
+          motivoCodigoBarrasNaoRegistrado =
+            "A API 'Cobrança Bancária' ainda não está marcada no seu aplicativo do Portal Sicoob Developers (HTTP 403 Not registered to plan). Por isso, o QR Code Pix foi registrado online e já pode ser pago imediatamente, mas para que o Código de Barras de 44 dígitos também seja registrado online na CIP/FEBRABAN (sem precisar enviar arquivo CNAB 240), acesse developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs e marque também 'Cobrança Bancária'.";
+        } else {
+          motivoCodigoBarrasNaoRegistrado = `Retorno Sicoob Cobrança Bancária (HTTP ${bolRes.status}): ${bolRes.body.slice(0, 220)}`;
+        }
+      } catch (errBol) {
+        motivoCodigoBarrasNaoRegistrado = (errBol as Error).message;
+      }
+
+      if (!boletoSicoob) {
+        try {
+          boletoSicoob = gerarBoletoSicoob(
+            {
+              agencia: agencia || '4342',
+              convenio: '4276485',
+              carteira: '1',
+              variacao: '01',
+            },
+            {
+              nossoNumero: Number(nossoNumero) || Math.floor((Date.now() / 1000) % 9000000) + 1,
+              valor: valorNum,
+              dataVencimento: dtVenc,
+            }
+          );
+        } catch {
+          boletoSicoob = null;
+        }
       }
 
       return NextResponse.json({
@@ -575,6 +659,9 @@ export async function POST(request: Request) {
         chave: cobJson.chave || chavePix,
         calendario: cobJson.calendario || {},
         devedor: cobJson.devedor || devedorObj || null,
+        boletoRegistradoOnline,
+        pdfBoletoOficialBase64: pdfBoletoOficialBase64 || null,
+        motivoCodigoBarrasNaoRegistrado: motivoCodigoBarrasNaoRegistrado || null,
         boleto: boletoSicoob
           ? {
               ...boletoSicoob,
@@ -582,6 +669,8 @@ export async function POST(request: Request) {
               convenio: '4276485',
               conta: conta || '175.204-9',
               dataVencimento: dtVenc,
+              registradoOnline: boletoRegistradoOnline,
+              pdfBoleto: pdfBoletoOficialBase64 || null,
             }
           : null,
       });

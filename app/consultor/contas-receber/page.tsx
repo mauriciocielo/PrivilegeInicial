@@ -7,6 +7,7 @@ import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
 import { gerarRemessaSicoob240, nomeArquivoRemessa, RemessaSicoobInvalidaError, type BeneficiarioSicoob, type PagamentoCnab } from '../../../lib/cnab/sicoob240';
 import { gerarBoletoSicoob, barrasITF } from '../../../lib/cnab/boleto-sicoob';
+import BoletoSicoobOficial from '../../../components/BoletoSicoobOficial';
 
 /** Código de barras Interleaved 2 of 5 como SVG (padrão do boleto). */
 function CodigoBarrasBoleto({ codigo, altura = 50 }: { codigo: string; altura?: number }) {
@@ -93,7 +94,17 @@ export default function ContasReceberPage() {
   const [c6Sacado, setC6Sacado] = useState({ nome: '', cpfCnpj: '', endereco: '' });
   const [emitirBoletoAoSalvar, setEmitirBoletoAoSalvar] = useState(true);
   const [gerandoPixSicoob, setGerandoPixSicoob] = useState(false);
-  const [pixSicoobDados, setPixSicoobDados] = useState<{ brcode: string; txid: string; chave: string } | null>(null);
+  const [pixSicoobDados, setPixSicoobDados] = useState<{
+    brcode: string;
+    txid: string;
+    chave: string;
+    boletoRegistradoOnline?: boolean;
+    pdfBoletoOficialBase64?: string | null;
+    motivoCodigoBarrasNaoRegistrado?: string | null;
+    codigoBarrasOficial?: string;
+    linhaDigitavelOficial?: string;
+    nossoNumeroOficial?: string;
+  } | null>(null);
 
   // Remessa CNAB 240 Sicoob
   const [showRemessaConfig, setShowRemessaConfig] = useState(false);
@@ -364,6 +375,12 @@ export default function ContasReceberPage() {
           brcode: data.brcode,
           txid: data.txid,
           chave: data.chave || '58033979000184',
+          boletoRegistradoOnline: Boolean(data.boletoRegistradoOnline),
+          pdfBoletoOficialBase64: data.pdfBoletoOficialBase64 || null,
+          motivoCodigoBarrasNaoRegistrado: data.motivoCodigoBarrasNaoRegistrado || null,
+          codigoBarrasOficial: data.boleto?.codigoBarras,
+          linhaDigitavelOficial: data.boleto?.linhaDigitavel,
+          nossoNumeroOficial: data.boleto?.nossoNumero,
         });
         // Salva no observacao o txid se ainda não tiver
         if (!lanc.observacao?.includes(data.txid)) {
@@ -991,169 +1008,73 @@ export default function ContasReceberPage() {
               </div>
             </div>
 
-            {/* Boleto Document */}
-            <div className="boleto-sheet" style={{ border: '2px solid #000', padding: 14, background: '#fff' }}>
-              {/* Bank header */}
-              <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 8, alignItems: 'center' }}>
-                <div style={{ fontSize: 20, fontWeight: 900, marginRight: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 16, background: '#003641', color: '#fff', padding: '3px 10px', borderRadius: 4, fontFamily: 'sans-serif', fontWeight: 800, letterSpacing: -0.5 }}>SICOOB</span>
-                </div>
-                <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 15px', fontSize: 18, fontWeight: 900 }}>756-0</div>
-                <div style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>
-                  {boletoCalc ? boletoCalc.linhaDigitavel : 'Preencha os dados de Cobrança Sicoob'}
-                </div>
-              </div>
-
-              {/* Row 1 */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Local de Pagamento</div>
-                  <div style={{ fontSize: 10 }}>PAGÁVEL EM QUALQUER BANCO OU CANAL ELETRÔNICO ATÉ O VENCIMENTO</div>
-                </div>
-                <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
-                  <div style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'right' }}>{fmt.date(c6BoletoLanc.data)}</div>
-                </div>
-              </div>
-
-              {/* Row 2 */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
-                  <div style={{ fontSize: 10, fontWeight: 'bold' }}>{empresa?.razaoSocial} — CNPJ: {empresa?.cnpj}</div>
-                </div>
-                <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Cód. Beneficiário</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>{configSicoob.agencia || '—'} / {configSicoob.convenio || '—'}</div>
-                </div>
-              </div>
-
-              {/* Row 3 */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data do Documento</div>
-                  <div style={{ fontSize: 10 }}>{fmt.date(c6BoletoLanc.createdAt?.split('T')[0] || todayStr)}</div>
-                </div>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Número do Documento</div>
-                  <div style={{ fontSize: 10 }}>{c6BoletoLanc.numeroDocumento || c6BoletoLanc.id.slice(0, 8).toUpperCase()}</div>
-                </div>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie Doc.</div>
-                  <div style={{ fontSize: 10 }}>DM</div>
-                </div>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Aceite</div>
-                  <div style={{ fontSize: 10 }}>N</div>
-                </div>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data Processamento</div>
-                  <div style={{ fontSize: 10 }}>{fmt.date(todayStr)}</div>
-                </div>
-                <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>{boletoCalc ? boletoCalc.nossoNumero : '—'}</div>
-                </div>
-              </div>
-
-              {/* Row 4 */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Carteira</div>
-                  <div style={{ fontSize: 10 }}>{configSicoob.carteira || '1'} / {configSicoob.modalidadeCarteira || '01'}</div>
-                </div>
-                <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie</div>
-                  <div style={{ fontSize: 10 }}>R$</div>
-                </div>
-                <div style={{ flex: 2, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Referência</div>
-                  <div style={{ fontSize: 10, fontWeight: 600 }}>{c6BoletoLanc.descricao}</div>
-                </div>
-                <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
-                  <div style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(c6BoletoLanc.valor)}</div>
-                </div>
-              </div>
-
-              {/* Row 5 — Instructions, QR Code Pix Híbrido & deductions */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 3, borderRight: '1px solid #000', padding: 6, minHeight: 115, display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>Instruções (Responsabilidade do Beneficiário)</div>
-                    <div style={{ fontSize: 10, marginTop: 5, lineHeight: '15px' }}>
-                      • COBRANÇA REFERENTE A {c6BoletoLanc.descricao.toUpperCase()}.<br />
-                      • PAGUE PELO CÓDIGO DE BARRAS OU APONTE A CÂMERA PARA O QR CODE PIX AO LADO.<br />
-                      • APÓS O VENCIMENTO COBRAR MORA DE 1,0% AO MÊS E MULTA DE 2,0%.<br />
-                      • SICOOB — COOPERATIVA 4342 / CONTA 175.204-9 / BENEF. 4276485.
-                      {pixSicoobDados?.txid && (
-                        <>
-                          <br />• TXID PIX OFICIAL SICOOB: <strong>{pixSicoobDados.txid}</strong>
-                        </>
-                      )}
-                    </div>
+            {/* Status do Registro Online Sicoob (Pix + Código de Barras CIP) — no-print */}
+            <div className="no-print" style={{ marginBottom: 14, fontFamily: 'var(--font-sans)' }}>
+              {pixSicoobDados?.boletoRegistradoOnline ? (
+                <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', fontSize: 12.5, color: '#065f46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <strong>✅ Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong> Tanto o código de barras quanto o Pix já podem ser pagos imediatamente em qualquer banco.
                   </div>
-                  {pixSicoobDados?.brcode && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid #000', padding: 4, borderRadius: 4, minWidth: 108 }}>
-                      <div style={{ fontSize: 7.5, fontWeight: 800, marginBottom: 2 }}>PAGUE COM PIX</div>
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=92x92&data=${encodeURIComponent(pixSicoobDados.brcode)}`}
-                        alt="QR Code Pix Sicoob"
-                        width={92}
-                        height={92}
-                        style={{ display: 'block' }}
-                      />
-                    </div>
+                  {pixSicoobDados.pdfBoletoOficialBase64 && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ background: '#065f46', border: 'none' }}
+                      onClick={() => {
+                        const bytes = Uint8Array.from(atob(pixSicoobDados.pdfBoletoOficialBase64!), c => c.charCodeAt(0));
+                        const blob = new Blob([bytes], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                      }}
+                    >
+                      📄 Abrir PDF Oficial do Servidor Sicoob
+                    </button>
                   )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Desconto</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+              ) : (
+                <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', lineHeight: 1.45 }}>
+                  <div>
+                    <strong>✅ QR Code Pix Oficial Sicoob: REGISTRADO E ATIVO IMEDIATAMENTE</strong>{' '}
+                    {pixSicoobDados?.txid ? `(TXID: ${pixSicoobDados.txid})` : ''}. O cliente já pode pagar pelo QR Code Pix ou Pix Copia e Cola deste boleto agora mesmo!
                   </div>
-                  <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Outras Deduções</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
-                  </div>
-                  <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(+) Mora / Multa</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
-                  </div>
-                  <div style={{ padding: 4 }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor Cobrado</div>
-                    <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(c6BoletoLanc.valor)}</div>
+                  <div style={{ marginTop: 4 }}>
+                    <strong>⚠️ Por que o Código de Barras ainda não consta registrado na CIP?</strong>{' '}
+                    {pixSicoobDados?.motivoCodigoBarrasNaoRegistrado ||
+                      "No portal developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs, você marcou 'Conta Corrente' e 'Pix', mas falta marcar a opção 'Cobrança Bancária'. Assim que marcar 'Cobrança Bancária' no portal do Sicoob (ou enviar o arquivo em '🏦 Gerar Remessa Sicoob'), o código de barras também será registrado automaticamente na CIP!"}
                   </div>
                 </div>
-              </div>
-
-              {/* Payer info */}
-              <div style={{ padding: 6, borderBottom: '1px solid #000' }}>
-                <div style={{ fontSize: 8, fontWeight: 'bold' }}>Pagador (Sacado)</div>
-                <div style={{ fontSize: 10, lineHeight: '15px' }}>
-                  <strong>{c6Sacado.nome || 'SACADO NÃO INFORMADO'}</strong>
-                  {c6Sacado.cpfCnpj && <> — CPF/CNPJ: {c6Sacado.cpfCnpj}</>}
-                  {c6Sacado.endereco && <><br />{c6Sacado.endereco}</>}
-                </div>
-              </div>
-
-              {/* Ficha de Compensação — código de barras e linha digitável reais */}
-              <div style={{ marginTop: 14, padding: '0 8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #000', paddingBottom: 2 }}>
-                  <div style={{ fontSize: 9, fontWeight: 'bold' }}>Ficha de Compensação — Sicoob (756)</div>
-                  <div style={{ fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>{boletoCalc ? boletoCalc.linhaDigitavel : '—'}</div>
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  {boletoCalc
-                    ? <CodigoBarrasBoleto codigo={boletoCalc.codigoBarras} altura={50} />
-                    : <div style={{ fontSize: 10, color: '#b91c1c' }}>Preencha os dados em “⚙️ Cobrança Sicoob” (agência, conta e convênio) para gerar o código de barras.</div>}
-                </div>
-                {boletoCalc && (
-                  <div className="no-print" style={{ fontSize: 10, color: '#6b7280', marginTop: 8, fontFamily: 'var(--font-sans)' }}>
-                    ⚠️ Rascunho: confirme os códigos (convênio, carteira, nosso número) e <strong>homologue no Sicoob</strong> antes de cobrar. O nosso número usado é o “próximo” da configuração.
-                  </div>
-                )}
-              </div>
+              )}
             </div>
+
+            {/* Boleto Oficial Sicoob (Recibo do Pagador + Ficha de Compensação 756-0 FEBRABAN) */}
+            {boletoCalc ? (
+              <BoletoSicoobOficial
+                beneficiarioNome={empresa?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'}
+                beneficiarioCnpj={empresa?.cnpj || '58.033.979/0001-84'}
+                agencia={configSicoob.agencia || '4342'}
+                convenio={configSicoob.convenio || '4276485'}
+                conta={`${configSicoob.conta || '175204'}-${configSicoob.digitoConta || '9'}`}
+                carteira={configSicoob.carteira || '1'}
+                modalidade={configSicoob.modalidadeCarteira || '01'}
+                nossoNumero={pixSicoobDados?.nossoNumeroOficial || boletoCalc.nossoNumero}
+                numeroDocumento={c6BoletoLanc.numeroDocumento || c6BoletoLanc.id.slice(0, 8).toUpperCase()}
+                dataDocumento={fmt.date(c6BoletoLanc.createdAt?.split('T')[0] || todayStr)}
+                dataProcessamento={fmt.date(todayStr)}
+                dataVencimento={fmt.date(c6BoletoLanc.data)}
+                valorDocumento={fmt.currency(c6BoletoLanc.valor)}
+                linhaDigitavel={pixSicoobDados?.linhaDigitavelOficial || boletoCalc.linhaDigitavel}
+                codigoBarras={pixSicoobDados?.codigoBarrasOficial || boletoCalc.codigoBarras}
+                pagadorNome={c6Sacado.nome || 'SACADO NÃO INFORMADO'}
+                pagadorCpfCnpj={c6Sacado.cpfCnpj}
+                pagadorEndereco={c6Sacado.endereco}
+                descricaoReferencia={c6BoletoLanc.descricao}
+                brcodePix={pixSicoobDados?.brcode}
+                txidPix={pixSicoobDados?.txid}
+              />
+            ) : (
+              <div style={{ fontSize: 12, color: '#b91c1c', padding: 16 }}>
+                Preencha os dados em “⚙️ Cobrança Sicoob” (agência, conta e convênio) para gerar o boleto.
+              </div>
+            )}
           </div>
         </div>
       )}
