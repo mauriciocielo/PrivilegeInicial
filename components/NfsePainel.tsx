@@ -922,6 +922,47 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     status: string;
     chave: string;
   } | null>(null);
+  const [enviandoEmailNfse, setEnviandoEmailNfse] = useState(false);
+
+  const enviarBoletoNfsePorEmail = async (notaAlvo: NfsE, dadosCob: any, boletoLinha?: string) => {
+    const emailDest = notaAlvo.tomadorEmail || '';
+    const emailInformado = window.prompt(`Enviar NFS-e Nº ${notaAlvo.numero} e Boleto Sicoob para qual e-mail?`, emailDest);
+    if (!emailInformado || !emailInformado.includes('@')) {
+      if (emailInformado) toast.error('E-mail informado é inválido.');
+      return;
+    }
+
+    setEnviandoEmailNfse(true);
+    try {
+      const res = await fetch('/api/email-servicos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'cobranca_boleto',
+          empresaId,
+          destinatarioEmail: emailInformado,
+          destinatarioNome: notaAlvo.tomadorRazaoSocial,
+          assunto: `NFS-e Nº ${notaAlvo.numero} e Boleto Sicoob — Privilege Consultoria`,
+          nfseNumero: notaAlvo.numero,
+          valor: Number(dadosCob.valor),
+          vencimento: fmt.date(notaAlvo.vencimento || vencimentoCobrancaNota),
+          linhaDigitavel: boletoLinha,
+          brcodePix: dadosCob.brcode,
+          txidPix: dadosCob.txid,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Erro ao enviar e-mail.');
+        return;
+      }
+      toast.success(`E-mail com NFS-e e Boleto enviado com sucesso para ${emailInformado}!`);
+    } catch (e: any) {
+      toast.error(`Falha no envio de e-mail: ${e.message}`);
+    } finally {
+      setEnviandoEmailNfse(false);
+    }
+  };
 
   const emitirCobrancaDaNota = async (notaAlvo: NfsE, tipoOverride?: 'pix_imediato' | 'pix_vencimento', vencOverride?: string) => {
     setEmitindoCobrancaNota(true);
@@ -3261,20 +3302,31 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                         </div>
                       )}
 
-                      <div className="no-print form-actions" style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between' }}>
-                        <a
-                          href={`https://wa.me/?text=${encodeURIComponent(
-                            `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue o boleto/cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
-                              Number(resultadoCobrancaNota.valor)
-                            )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nLinha Digitável do Boleto:\n${boletoLocal?.linhaDigitavel || ''}\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-secondary btn-sm"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          📲 Enviar Boleto + Pix no WhatsApp
-                        </a>
+                      <div className="no-print form-actions" style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#047857', borderColor: '#047857', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            disabled={enviandoEmailNfse}
+                            onClick={() => enviarBoletoNfsePorEmail(notaCobrancaModal, resultadoCobrancaNota, boletoLocal?.linhaDigitavel)}
+                          >
+                            ✉️ {enviandoEmailNfse ? 'Enviando E-mail...' : 'Enviar por E-mail ao Cliente'}
+                          </button>
+                          <a
+                            href={`https://wa.me/?text=${encodeURIComponent(
+                              `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue o boleto/cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
+                                Number(resultadoCobrancaNota.valor)
+                              )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nLinha Digitável do Boleto:\n${boletoLocal?.linhaDigitavel || ''}\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-secondary btn-sm"
+                            style={{ textDecoration: 'none' }}
+                          >
+                            📲 Enviar no WhatsApp
+                          </a>
+                        </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button className="btn btn-secondary" onClick={() => setResultadoCobrancaNota(null)}>
                             Reemitir / Alterar Modalidade

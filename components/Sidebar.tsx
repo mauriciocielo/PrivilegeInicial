@@ -8,7 +8,7 @@ import TwoFactorModal from './TwoFactorModal';
 import {
   Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
-  ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText,
+  ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
   Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, type LucideIcon,
@@ -98,6 +98,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
     items: [
       { label: 'Empresas', href: '/consultor/empresas', icon: Building2 },
       { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
+      { label: 'Disparador de Newsletter', href: '/consultor/newsletter', icon: Mail },
       { label: 'Usuários', href: '/consultor/usuarios', icon: UserCog },
       { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: ListTree },
       { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: Tag },

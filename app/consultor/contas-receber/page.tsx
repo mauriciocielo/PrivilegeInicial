@@ -94,6 +94,7 @@ export default function ContasReceberPage() {
   const [c6Sacado, setC6Sacado] = useState({ nome: '', cpfCnpj: '', endereco: '' });
   const [emitirBoletoAoSalvar, setEmitirBoletoAoSalvar] = useState(true);
   const [gerandoPixSicoob, setGerandoPixSicoob] = useState(false);
+  const [enviandoEmailBoleto, setEnviandoEmailBoleto] = useState(false);
   const [pixSicoobDados, setPixSicoobDados] = useState<{
     brcode: string;
     txid: string;
@@ -976,6 +977,51 @@ export default function ContasReceberPage() {
                     ⚡ Copiar Pix Copia e Cola
                   </button>
                 )}
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ fontFamily: 'var(--font-sans)', background: '#047857', borderColor: '#047857' }}
+                  disabled={enviandoEmailBoleto}
+                  onClick={async () => {
+                    const cli = c6BoletoLanc?.clienteId ? clientes.find(c => c.id === c6BoletoLanc.clienteId) : null;
+                    const emailDest = window.prompt('Enviar Boleto e Pix para qual e-mail?', cli?.email || '');
+                    if (!emailDest || !emailDest.includes('@')) {
+                      if (emailDest) toast.error('E-mail informado é inválido.');
+                      return;
+                    }
+                    setEnviandoEmailBoleto(true);
+                    try {
+                      const res = await fetch('/api/email-servicos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          tipo: 'cobranca_boleto',
+                          empresaId,
+                          destinatarioEmail: emailDest,
+                          destinatarioNome: c6Sacado.nome,
+                          assunto: `Boleto e Cobrança Sicoob — ${c6BoletoLanc?.descricao || 'Privilege Consultoria'}`,
+                          valor: c6BoletoLanc?.valor,
+                          vencimento: fmt.date(c6BoletoLanc?.data || todayStr),
+                          linhaDigitavel: pixSicoobDados?.linhaDigitavelOficial || boletoCalc?.linhaDigitavel,
+                          brcodePix: pixSicoobDados?.brcode,
+                          txidPix: pixSicoobDados?.txid,
+                          mensagem: `Referente ao lançamento: ${c6BoletoLanc?.descricao}`,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || data.error) {
+                        toast.error(data.error || 'Erro ao enviar e-mail.');
+                        return;
+                      }
+                      toast.success(`E-mail com Boleto e Pix enviado com sucesso para ${emailDest}!`);
+                    } catch (e: any) {
+                      toast.error(`Falha no envio: ${e.message}`);
+                    } finally {
+                      setEnviandoEmailBoleto(false);
+                    }
+                  }}
+                >
+                  ✉️ {enviandoEmailBoleto ? 'Enviando...' : 'Enviar por E-mail'}
+                </button>
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ fontFamily: 'var(--font-sans)' }}
