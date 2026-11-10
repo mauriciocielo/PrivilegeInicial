@@ -209,8 +209,9 @@ export async function POST(req: Request) {
       if (hasLogoOficial) {
         attachments.push({
           filename: 'privilege-logo.png',
-          path: logoOficialPath,
+          content: fs.readFileSync(logoOficialPath),
           cid: 'privilege-logo',
+          contentType: 'image/png',
         });
       }
       if (pdfBoletoBase64) {
@@ -345,8 +346,9 @@ export async function POST(req: Request) {
       if (hasLogoOficial) {
         attachmentsNewsletter.push({
           filename: 'privilege-logo.png',
-          path: logoOficialPath,
+          content: fs.readFileSync(logoOficialPath),
           cid: 'privilege-logo',
+          contentType: 'image/png',
         });
       }
 
