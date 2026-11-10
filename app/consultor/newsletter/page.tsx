@@ -21,8 +21,8 @@ export default function NewsletterPage() {
   
   // Customização / Ajuste de Senha SMTP em tela
   const [showSmtpConfig, setShowSmtpConfig] = useState(false);
-  const [smtpUser, setSmtpUser] = useState('contato@privilegecontabilidade.com.br');
-  const [smtpPass, setSmtpPass] = useState('Con@*010203');
+  const [smtpUser, setSmtpUser] = useState('consultoria@privilegecontabilidade.com.br');
+  const [smtpPass, setSmtpPass] = useState('@Privilege1452');
 
   // Logs e Auditoria de E-mails
   const [logs, setLogs] = useState<any[]>([]);

@@ -38,9 +38,9 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: strin
 
   const smtpHost = envHost || 'mail.privilegecontabilidade.com.br';
   const smtpPort = Number(envPort) || 465;
-  const smtpUser = envUser || 'contato@privilegecontabilidade.com.br';
-  const smtpPass = envPass || 'Con@*010203';
-  const smtpFrom = envFrom || 'contato@privilegecontabilidade.com.br';
+  const smtpUser = envUser || 'consultoria@privilegecontabilidade.com.br';
+  const smtpPass = envPass || '@Privilege1452';
+  const smtpFrom = envFrom || 'consultoria@privilegecontabilidade.com.br';
 
   const transporter = nodemailer.createTransport({
     host: smtpHost,
