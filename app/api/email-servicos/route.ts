@@ -7,6 +7,67 @@ import { db } from '../../../lib/prisma';
 import { captureError } from '../../../lib/sentry-helper';
 import { salvarLog } from './log/route';
 
+/**
+ * Converte marcações de texto e markdown em HTML seguro e estilizado para e-mails
+ */
+export function formatarMensagemParaEmail(texto: string): string {
+  if (!texto) return '';
+
+  let html = texto;
+
+  // 1. Cabeçalhos Markdown: ###, ##, #
+  html = html.replace(/^### (.*$)/gim, '<h3 style="color: #600000; font-size: 16px; font-weight: bold; margin: 18px 0 6px;">$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2 style="color: #600000; font-size: 18px; font-weight: bold; margin: 22px 0 8px;">$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1 style="color: #600000; font-size: 20px; font-weight: 800; margin: 24px 0 10px;">$1</h1>');
+
+  // 2. Caixa de Destaque / Citação: > Alerta ou frase
+  html = html.replace(/^\> (.*$)/gim, '<div style="background: #fdf2f2; border-left: 4px solid #600000; padding: 12px 16px; margin: 14px 0; border-radius: 4px; color: #475569; font-style: italic; line-height: 1.5;">$1</div>');
+
+  // 3. Negrito: **texto** ou __texto__
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a; font-weight: 700;">$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong style="color: #0f172a; font-weight: 700;">$1</strong>');
+
+  // 4. Itálico: *texto*
+  html = html.replace(/(^|[^\w])\*(.*?)\*([^\w]|$)/g, '$1<em style="color: #334155;">$2</em>$3');
+
+  // 5. Links Markdown: [texto](url)
+  html = html.replace(/\[(.*?)\]\((https?:\/\/.*?)\)/gi, '<a href="$2" target="_blank" style="color: #600000; font-weight: bold; text-decoration: underline;">$1</a>');
+
+  // 6. Listas com marcadores (linhas começando com •, -, ou *)
+  const lines = html.split('\n');
+  const processedLines: string[] = [];
+  let inList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      if (!inList) {
+        processedLines.push('<ul style="margin: 12px 0; padding-left: 22px; color: #334155; line-height: 1.6;">');
+        inList = true;
+      }
+      const itemContent = trimmed.replace(/^[•\-\*]\s+/, '');
+      processedLines.push(`<li style="margin-bottom: 6px;">${itemContent}</li>`);
+    } else {
+      if (inList) {
+        processedLines.push('</ul>');
+        inList = false;
+      }
+      processedLines.push(lines[i]);
+    }
+  }
+  if (inList) {
+    processedLines.push('</ul>');
+  }
+
+  html = processedLines.join('\n');
+
+  // 7. Quebras de parágrafo e linhas
+  html = html.replace(/\n\n/g, '<p style="margin: 14px 0;"></p>');
+  html = html.replace(/\n/g, '<br />');
+
+  return html;
+}
+
 function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: string; port?: number }) {
   let envPass = customAuth?.pass || process.env.SMTP_PASS;
   let envUser = customAuth?.user || process.env.SMTP_USER;
@@ -376,11 +437,14 @@ export async function POST(req: Request) {
 
       for (const dest of emailsDestino) {
         const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const randomRef = Math.random().toString(36).slice(2, 10);
+        const baseUrl = origin || 'https://privilegecontabilidade.com.br';
+        const webViewUrl = `${baseUrl}/api/email-servicos/view?id=${logId}&ref=${randomRef}`;
         const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
 
         try {
           const nomeDest = dest.nome || 'Cliente';
-          let bodyHtml = (conteudoHtml || '').replace(/\n/g, '<br />');
+          let bodyHtml = formatarMensagemParaEmail(conteudoHtml || '');
 
           let htmlImagens = '';
           if (temImagensAnexadas) {
@@ -404,23 +468,28 @@ export async function POST(req: Request) {
               <style>
                 body { font-family: Arial, Helvetica, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; -webkit-font-smoothing: antialiased; }
                 .email-wrapper { max-width: 640px; background: #ffffff; border-radius: 8px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-                .top-link { font-size: 11px; color: #64748b; text-align: center; padding: 12px 18px 0; }
-                .header-logo { padding: 18px 24px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+                .top-link { font-size: 11px; color: #64748b; text-align: center; padding: 12px 18px 8px; line-height: 1.5; background: #fafafa; border-bottom: 1px solid #f1f5f9; }
+                .header-logo { padding: 20px 24px 22px; text-align: center; border-bottom: 1px solid #f1f5f9; background: #ffffff; }
                 .content-box { padding: 26px 32px; font-size: 14.5px; line-height: 1.6; color: #334155; }
-                .footer-box { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 24px; text-align: center; font-size: 11.5px; color: #94a3b8; line-height: 1.5; }
+                .footer-box { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 24px; text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.5; }
               </style>
             </head>
             <body>
               <div class="email-wrapper">
                 <div class="top-link">
-                  Se houver problemas com o modo de exibição desta mensagem, <a href="#" style="color: #64748b; text-decoration: underline;">clique aqui para exibi-la em um navegador da Web</a>.
+                  Se houver problemas com o modo de exibição desta mensagem, 
+                  <a href="${webViewUrl}" target="_blank" style="color: #600000; font-weight: 600; text-decoration: underline;">clique aqui para exibi-la em um navegador da Web</a>
+                  ou acesse nosso site: 
+                  <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #600000; font-weight: 600; text-decoration: underline;">privilegecontabilidade.com.br</a>.
                 </div>
                 
                 <div class="header-logo">
-                  ${hasLogoOficial
-                    ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade e Consultoria" width="180" style="display: block; margin: 0 auto; max-width: 180px; height: auto;" />`
-                    : `<h2 style="color: #600000; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">PRIVILEGE CONTABILIDADE E CONSULTORIA</h2>`
-                  }
+                  <a href="https://privilegecontabilidade.com.br" target="_blank" style="display: inline-block; text-decoration: none;">
+                    ${hasLogoOficial
+                      ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade e Consultoria" width="260" style="display: block; margin: 0 auto; max-width: 260px; height: auto;" />`
+                      : `<h2 style="color: #600000; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">PRIVILEGE CONTABILIDADE E CONSULTORIA</h2>`
+                    }
+                  </a>
                 </div>
 
                 <div class="content-box">
@@ -430,7 +499,7 @@ export async function POST(req: Request) {
                       ${htmlImagens}
                     </div>
                   ` : `
-                    <!-- MODO TEXTO & COMUNICADO COMPLETO -->
+                    <!-- MODO TEXTO & COMUNICADO COMPLETO FORMATADO -->
                     <p style="margin: 0 0 16px; font-size: 15px; color: #0f172a;">
                       Prezado(a) <strong>${nomeDest}</strong>,
                     </p>
@@ -439,21 +508,46 @@ export async function POST(req: Request) {
                     </div>
                     ${htmlImagens}
 
-                    <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13.5px; color: #334155; line-height: 1.5;">
-                      <p style="margin: 0; font-weight: bold; color: #0f172a;">Privilege Assessoria Contábil</p>
-                      <p style="margin: 2px 0 12px; font-size: 12.5px; color: #64748b;">Contabilidade, orientação tributária e apoio à gestão empresarial.</p>
-                      <p style="margin: 0; font-size: 12.5px; color: #475569;">
-                        Obrigado,<br />
-                        <strong style="color: #0f172a;">MARCOS CANCELIER ASSESSORIA CONTABIL ME</strong><br />
-                        (46) 3035-1061 / (46) 3035-1018
+                    <div style="margin-top: 30px; padding-top: 18px; border-top: 2px solid #600000; font-size: 13px; color: #334155; line-height: 1.6;">
+                      <p style="margin: 0; font-weight: 800; font-size: 14.5px; color: #600000; letter-spacing: 0.3px;">
+                        PRIVILEGE CONTABILIDADE E CONSULTORIA
                       </p>
+                      <p style="margin: 2px 0 12px; font-size: 12.5px; color: #64748b;">
+                        Contabilidade Estratégica, BPO Financeiro e Apoio à Gestão Empresarial
+                      </p>
+
+                      <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; color: #475569; margin-top: 8px;">
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top; width: 22px;">🏢</td>
+                          <td style="padding: 2px 0;"><strong>PRIVILEGE CONSULTORIA LTDA</strong> · CNPJ: <strong>58.033.979/0001-84</strong></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top;">📍</td>
+                          <td style="padding: 2px 0;">Rua Pará, 127, Sala 103, Centro – Francisco Beltrão / PR · CEP 85.601-290</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top;">📞</td>
+                          <td style="padding: 2px 0;">(46) 3035-1061 / (46) 3035-1018 · 📱 WhatsApp: <strong>(46) 99904-8990</strong></td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top;">🌐</td>
+                          <td style="padding: 2px 0;">
+                            <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #600000; font-weight: bold; text-decoration: none;">privilegecontabilidade.com.br</a>
+                            · Instagram: <a href="https://instagram.com/privilegefb" target="_blank" style="color: #600000; text-decoration: none;">@privilegefb</a>
+                          </td>
+                        </tr>
+                      </table>
                     </div>
                   `}
                 </div>
 
                 <div class="footer-box">
-                  <strong>Precisa de ajuda?</strong> Entre em contato conosco pelo telefone (46) 3035-1061 ou responda a este e-mail.<br />
-                  Privilege Contabilidade e Consultoria · Francisco Beltrão/PR
+                  <strong>Precisa de ajuda ou orientação contábil?</strong><br />
+                  Entre em contato com nossa equipe pelo telefone <strong>(46) 3035-1061</strong>, WhatsApp <strong>(46) 99904-8990</strong> ou responda a este e-mail.<br />
+                  <span style="display: inline-block; margin-top: 6px; color: #94a3b8;">
+                    Privilege Consultoria Ltda · Francisco Beltrão/PR · 
+                    <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #64748b; text-decoration: underline;">Visitar Nosso Site Oficial</a>
+                  </span>
                 </div>
                 ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
               </div>
@@ -481,6 +575,7 @@ export async function POST(req: Request) {
             destinatarioNome: nomeDest,
             status: 'entregue',
             enviadoEm: new Date().toISOString(),
+            html: templatePersonalizado,
           });
 
           await new Promise(r => setTimeout(r, 150));

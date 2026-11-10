@@ -18,6 +18,7 @@ export interface EmailLogEntry {
   baixadoEm?: string;
   ipAcesso?: string;
   userAgent?: string;
+  html?: string; // HTML completo para exibição na web
 }
 
 export function lerLogs(): EmailLogEntry[] {
@@ -67,14 +68,12 @@ export function atualizarStatusLog(
   }
 }
 
-// GET: Retorna os logs para a interface da Newsletter
+// GET: Retorna todos os logs de envio para a interface da Newsletter
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const empresaId = url.searchParams.get('empresaId');
   const tipo = url.searchParams.get('tipo');
 
   let logs = lerLogs();
-  if (empresaId) logs = logs.filter(l => !l.empresaId || l.empresaId === empresaId);
   if (tipo) logs = logs.filter(l => l.tipo === tipo);
 
   return NextResponse.json({ ok: true, logs });

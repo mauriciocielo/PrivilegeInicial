@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { store, Empresa, Cliente } from '../../../lib/store';
 import { toast } from 'sonner';
 import {
   Mail, Send, Users, CheckCircle2, Image as ImageIcon, X, ListPlus, Sparkles,
-  Eye, Download, RefreshCw, Key, ShieldCheck, AlertCircle
+  Eye, Download, RefreshCw, Key, ShieldCheck, AlertCircle, Bold, Italic, Underline,
+  Heading2, List, Quote, Link as LinkIcon, Palette
 } from 'lucide-react';
 
 export default function NewsletterPage() {
@@ -29,6 +30,54 @@ export default function NewsletterPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [carregandoLogs, setCarregandoLogs] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<'novo' | 'historico'>('novo');
+  const [abaMensagem, setAbaMensagem] = useState<'editor' | 'previa'>('editor');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const aplicarFormatacao = (prefixo: string, sufixo: string = '', textoPadrao: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selecionado = mensagem.substring(start, end) || textoPadrao;
+    const novoTexto = mensagem.substring(0, start) + prefixo + selecionado + sufixo + mensagem.substring(end);
+
+    setMensagem(novoTexto);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefixo.length, start + prefixo.length + selecionado.length);
+    }, 50);
+  };
+
+  const renderPreviewHtml = (txt: string) => {
+    if (!txt) return '<span style="color: #94a3b8; font-style: italic;">Nenhum texto digitado ainda...</span>';
+    let h = txt;
+    h = h.replace(/^### (.*$)/gim, '<h3 style="color: #600000; font-size: 16px; font-weight: bold; margin: 14px 0 4px;">$1</h3>');
+    h = h.replace(/^## (.*$)/gim, '<h2 style="color: #600000; font-size: 18px; font-weight: bold; margin: 18px 0 6px;">$1</h2>');
+    h = h.replace(/^# (.*$)/gim, '<h1 style="color: #600000; font-size: 20px; font-weight: 800; margin: 20px 0 8px;">$1</h1>');
+    h = h.replace(/^\> (.*$)/gim, '<div style="background: #fdf2f2; border-left: 4px solid #600000; padding: 10px 14px; margin: 12px 0; border-radius: 4px; color: #475569; font-style: italic;">$1</div>');
+    h = h.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a; font-weight: bold;">$1</strong>');
+    h = h.replace(/(^|[^\w])\*(.*?)\*([^\w]|$)/g, '$1<em>$2</em>$3');
+    h = h.replace(/\[(.*?)\]\((https?:\/\/.*?)\)/gi, '<a href="$2" target="_blank" style="color: #600000; font-weight: bold; text-decoration: underline;">$1</a>');
+    
+    const lines = h.split('\n');
+    const processed: string[] = [];
+    let inList = false;
+    for (const l of lines) {
+      const t = l.trim();
+      if (t.startsWith('• ') || t.startsWith('- ') || t.startsWith('* ')) {
+        if (!inList) { processed.push('<ul style="margin: 8px 0; padding-left: 20px; color: #334155;">'); inList = true; }
+        processed.push(`<li>${t.replace(/^[•\-\*]\s+/, '')}</li>`);
+      } else {
+        if (inList) { processed.push('</ul>'); inList = false; }
+        processed.push(l);
+      }
+    }
+    if (inList) processed.push('</ul>');
+    h = processed.join('\n').replace(/\n\n/g, '<p style="margin: 10px 0;"></p>').replace(/\n/g, '<br />');
+    return h;
+  };
 
   const [resultadoEnvio, setResultadoEnvio] = useState<{
     ok: boolean;
@@ -44,13 +93,13 @@ export default function NewsletterPage() {
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
     const clis = store.getClientes(eId).filter(c => c.ativo);
     setClientes(clis);
-    carregarLogsServidor(eId);
+    carregarLogsServidor();
   };
 
-  const carregarLogsServidor = async (eId?: string) => {
+  const carregarLogsServidor = async (_eId?: string) => {
     setCarregandoLogs(true);
     try {
-      const res = await fetch(`/api/email-servicos/log?empresaId=${encodeURIComponent(eId || empresaId)}`);
+      const res = await fetch('/api/email-servicos/log');
       if (res.ok) {
         const data = await res.json();
         setLogs(data.logs || []);
@@ -606,18 +655,182 @@ export default function NewsletterPage() {
             ) : (
               /* SE MODO TEXTO: Exibe a Mensagem e as Imagens Opcionais */
               <>
+                {/* MODO TEXTO: Editor Formatado com Toolbar e Prévia em Tempo Real */}
                 <div className="form-group" style={{ marginBottom: 18 }}>
-                  <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
-                    Texto da Mensagem
-                  </label>
-                  <textarea
-                    className="form-input"
-                    rows={8}
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 13.5, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'Arial, sans-serif' }}
-                    placeholder="Digite aqui o texto do informativo..."
-                    value={mensagem}
-                    onChange={e => setMensagem(e.target.value)}
-                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', margin: 0 }}>
+                      ✍️ Conteúdo da Mensagem (com Formatação)
+                    </label>
+                    <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setAbaMensagem('editor')}
+                        style={{
+                          border: 'none',
+                          padding: '4px 10px',
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          background: abaMensagem === 'editor' ? '#fff' : 'transparent',
+                          color: abaMensagem === 'editor' ? '#8c1a22' : '#64748b',
+                          boxShadow: abaMensagem === 'editor' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        }}
+                      >
+                        ✏️ Editor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaMensagem('previa')}
+                        style={{
+                          border: 'none',
+                          padding: '4px 10px',
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          background: abaMensagem === 'previa' ? '#fff' : 'transparent',
+                          color: abaMensagem === 'previa' ? '#8c1a22' : '#64748b',
+                          boxShadow: abaMensagem === 'previa' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        }}
+                      >
+                        👁️ Prévia Formatada
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Barra de Ferramentas de Formatação */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 4,
+                      background: '#f8fafc',
+                      border: '1px solid #d1d5db',
+                      borderBottom: 'none',
+                      borderRadius: '6px 6px 0 0',
+                      padding: '6px 8px',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      title="Negrito (**texto**)"
+                      onClick={() => aplicarFormatacao('**', '**', 'texto em negrito')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      title="Itálico (*texto*)"
+                      onClick={() => aplicarFormatacao('*', '*', 'texto em itálico')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontStyle: 'italic', fontSize: 13 }}
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      title="Sublinhado (<u>texto</u>)"
+                      onClick={() => aplicarFormatacao('<u>', '</u>', 'texto sublinhado')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', textDecoration: 'underline', fontSize: 13 }}
+                    >
+                      U
+                    </button>
+                    <span style={{ width: 1, height: 18, background: '#cbd5e1', margin: '0 4px' }} />
+                    <button
+                      type="button"
+                      title="Título Grande (# Título)"
+                      onClick={() => aplicarFormatacao('### ', '\n', 'Título da Seção')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                    >
+                      H3 Título
+                    </button>
+                    <button
+                      type="button"
+                      title="Lista com Marcadores (• Item)"
+                      onClick={() => aplicarFormatacao('• ', '\n', 'Item da lista')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                    >
+                      • Lista
+                    </button>
+                    <button
+                      type="button"
+                      title="Caixa de Aviso / Destaque (> Aviso)"
+                      onClick={() => aplicarFormatacao('> ', '\n', 'Importante: insira aqui o comunicado de destaque.')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                    >
+                      💬 Destaque
+                    </button>
+                    <span style={{ width: 1, height: 18, background: '#cbd5e1', margin: '0 4px' }} />
+                    <button
+                      type="button"
+                      title="Inserir Link"
+                      onClick={() => {
+                        const url = prompt('Digite a URL do link (ex: https://privilegecontabilidade.com.br):', 'https://');
+                        if (url) aplicarFormatacao('[', `](${url})`, 'Clique aqui');
+                      }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                    >
+                      🔗 Link
+                    </button>
+                    <button
+                      type="button"
+                      title="Texto em Cor Vinho Privilege"
+                      onClick={() => aplicarFormatacao('<span style="color: #600000; font-weight: bold;">', '</span>', 'Texto Vinho')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#600000', fontWeight: 700, fontSize: 12 }}
+                    >
+                      🍷 Vinho Privilege
+                    </button>
+                    <button
+                      type="button"
+                      title="Texto em Cor Verde Sucesso"
+                      onClick={() => aplicarFormatacao('<span style="color: #16a34a; font-weight: bold;">', '</span>', 'Texto Verde')}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#16a34a', fontWeight: 700, fontSize: 12 }}
+                    >
+                      🟢 Verde
+                    </button>
+                  </div>
+
+                  {/* Conteúdo: Editor ou Prévia */}
+                  {abaMensagem === 'editor' ? (
+                    <textarea
+                      ref={textareaRef}
+                      className="form-input"
+                      rows={9}
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        fontSize: 14,
+                        borderRadius: '0 0 6px 6px',
+                        border: '1px solid #d1d5db',
+                        fontFamily: 'Arial, Helvetica, sans-serif',
+                        lineHeight: 1.6,
+                      }}
+                      placeholder="Escreva sua mensagem aqui... Use os botões acima para aplicar Negrito (**texto**), Itálico (*texto*), Título (###), Listas (•) e Cores!"
+                      value={mensagem}
+                      onChange={e => setMensagem(e.target.value)}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        minHeight: 200,
+                        maxHeight: 360,
+                        overflowY: 'auto',
+                        padding: '16px 20px',
+                        background: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0 0 6px 6px',
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                        color: '#1e293b',
+                      }}
+                      dangerouslySetInnerHTML={{ __html: renderPreviewHtml(mensagem) }}
+                    />
+                  )}
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+                    💡 Dica: Você pode usar formatação rápida com botões acima ou digitar diretamente em <strong>HTML</strong> e <strong>Markdown</strong>.
+                  </div>
                 </div>
 
                 {/* Imagens Anexadas Opcionais */}
