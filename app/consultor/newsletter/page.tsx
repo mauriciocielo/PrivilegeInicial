@@ -14,6 +14,7 @@ export default function NewsletterPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [assunto, setAssunto] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [tipoFormato, setTipoFormato] = useState<'imagem' | 'texto'>('imagem');
   const [modoDestinatarios, setModoDestinatarios] = useState<'clientes' | 'manual'>('clientes');
   const [listaManual, setListaManual] = useState('');
   const [imagens, setImagens] = useState<{ filename: string; base64: string }[]>([]);
@@ -110,7 +111,8 @@ export default function NewsletterPage() {
       reader.onload = () => {
         const base64 = reader.result as string;
         setImagens(prev => [...prev, { filename: file.name, base64 }]);
-        toast.success(`Imagem ${file.name} anexada com sucesso!`);
+        setTipoFormato('imagem');
+        toast.success(`Imagem ${file.name} anexada! Modo "Somente Imagem" ativado.`);
       };
       reader.readAsDataURL(file);
     }
@@ -123,13 +125,22 @@ export default function NewsletterPage() {
 
   const handleDisparar = async () => {
     if (!assunto.trim()) {
-      toast.error('Informe o assunto da newsletter.');
+      toast.error('Informe o assunto do e-mail.');
       return;
     }
-    if (!mensagem.trim() && imagens.length === 0) {
-      toast.error('Escreva o conteúdo da mensagem ou anexe uma imagem.');
-      return;
+
+    if (tipoFormato === 'imagem') {
+      if (imagens.length === 0) {
+        toast.error('Selecione ou anexe a imagem do panfleto/flyer para disparo.');
+        return;
+      }
+    } else {
+      if (!mensagem.trim() && imagens.length === 0) {
+        toast.error('Escreva o conteúdo da mensagem ou anexe uma imagem.');
+        return;
+      }
     }
+
     if (totalDestinatariosEstimados === 0) {
       toast.error(
         modoDestinatarios === 'clientes'
@@ -152,9 +163,10 @@ export default function NewsletterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: 'newsletter',
+          somenteImagem: tipoFormato === 'imagem',
           empresaId,
           assunto,
-          mensagem,
+          mensagem: tipoFormato === 'imagem' ? '' : mensagem,
           destinatariosLista: modoDestinatarios === 'manual' ? listaManual : undefined,
           smtpUserCustom: smtpUser.trim(),
           smtpPassCustom: smtpPass.trim(),
@@ -327,42 +339,91 @@ export default function NewsletterPage() {
             </div>
           </div>
 
-          {/* Modelos Prontos */}
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 12 }}>
-              <Sparkles size={16} color="#8c1a22" /> Modelos Prontos de Comunicados (Clique para carregar)
+          {/* Modelos Prontos (Visíveis apenas no modo Texto) */}
+          {tipoFormato === 'texto' && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 12 }}>
+                <Sparkles size={16} color="#8c1a22" /> Modelos Prontos de Comunicados (Clique para carregar)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
+                {modelosProntos.map((mod, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setAssunto(mod.assunto);
+                      setMensagem(mod.texto);
+                      toast.info('Modelo carregado no formulário!');
+                    }}
+                    style={{
+                      textAlign: 'left',
+                      background: '#fff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 8,
+                      padding: '10px 14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#8c1a22')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#cbd5e1')}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>{mod.titulo}</div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3 }}>{mod.assunto}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
-              {modelosProntos.map((mod, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setAssunto(mod.assunto);
-                    setMensagem(mod.texto);
-                    toast.info('Modelo carregado no formulário!');
-                  }}
-                  style={{
-                    textAlign: 'left',
-                    background: '#fff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: 8,
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#8c1a22')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#cbd5e1')}
-                >
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>{mod.titulo}</div>
-                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3 }}>{mod.assunto}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Formulário Principal */}
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            
+            {/* Escolha do Formato do Comunicado */}
+            <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 10, display: 'block', color: '#1e293b' }}>
+                🎨 Formato do E-mail
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div
+                  onClick={() => setTipoFormato('imagem')}
+                  style={{
+                    border: `2px solid ${tipoFormato === 'imagem' ? '#8c1a22' : '#cbd5e1'}`,
+                    background: tipoFormato === 'imagem' ? '#fdf2f2' : '#fff',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: tipoFormato === 'imagem' ? '#8c1a22' : '#1e293b' }}>
+                    <ImageIcon size={18} /> 🖼️ Somente Imagem (Flyer / Arte / Panfleto)
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    Habilita <strong>apenas o Assunto e a Imagem</strong>. O e-mail exibe a logo oficial do escritório e o flyer em destaque.
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setTipoFormato('texto')}
+                  style={{
+                    border: `2px solid ${tipoFormato === 'texto' ? '#8c1a22' : '#cbd5e1'}`,
+                    background: tipoFormato === 'texto' ? '#fdf2f2' : '#fff',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: tipoFormato === 'texto' ? '#8c1a22' : '#1e293b' }}>
+                    <Sparkles size={18} /> 📝 Texto & Comunicado Completo
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    Permite redigir texto com parágrafos, modelos prontos e assinatura formal do escritório.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Seletor de Destinatários */}
             <div style={{ marginBottom: 18 }}>
               <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 8, display: 'block' }}>
@@ -440,96 +501,188 @@ export default function NewsletterPage() {
             )}
 
             {/* Assunto */}
-            <div className="form-group" style={{ marginBottom: 16 }}>
-              <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
-                Assunto do E-mail *
+            <div className="form-group" style={{ marginBottom: 18 }}>
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, color: '#111827' }}>
+                🏷️ Assunto do E-mail *
               </label>
               <input
                 type="text"
                 className="form-input"
-                style={{ width: '100%', padding: '9px 12px', fontSize: 14, borderRadius: 6, border: '1px solid #d1d5db' }}
-                placeholder="Ex: Privilege Consultoria — Lembrete de Fechamento Fiscal"
+                style={{ width: '100%', padding: '10px 14px', fontSize: 14, borderRadius: 6, border: '1px solid #cbd5e1', fontWeight: 500 }}
+                placeholder={tipoFormato === 'imagem' ? 'Ex: Comunicado Importante — Privilege Contabilidade' : 'Ex: Privilege Consultoria — Lembrete de Fechamento Fiscal'}
                 value={assunto}
                 onChange={e => setAssunto(e.target.value)}
               />
             </div>
 
-            {/* Mensagem */}
-            <div className="form-group" style={{ marginBottom: 18 }}>
-              <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
-                Texto da Mensagem
-              </label>
-              <textarea
-                className="form-input"
-                rows={8}
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13.5, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'Arial, sans-serif' }}
-                placeholder="Digite aqui o texto do informativo..."
-                value={mensagem}
-                onChange={e => setMensagem(e.target.value)}
-              />
-            </div>
+            {/* SE MODO SOMENTE IMAGEM: Exibe apenas o Box de Imagem em Destaque */}
+            {tipoFormato === 'imagem' ? (
+              <div style={{ marginBottom: 22, background: '#fff', border: '2px dashed #8c1a22', borderRadius: 10, padding: 20, textAlign: 'center' }}>
+                <div style={{ maxWidth: 500, margin: '0 auto' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#8c1a22', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <ImageIcon size={20} /> Imagem / Flyer do Comunicado *
+                  </div>
+                  <p style={{ fontSize: 12.5, color: '#64748b', margin: '0 0 16px' }}>
+                    O e-mail será enviado com a logo oficial da Privilege no topo e esta arte em largura total.
+                  </p>
 
-            {/* Imagens Anexadas */}
-            <div style={{ marginBottom: 22, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <label style={{ fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <ImageIcon size={16} color="#8c1a22" /> Panfletos & Imagens (Incorporadas no corpo do e-mail)
-                </label>
-                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
-                  <span>+ Adicionar Imagem</span>
-                  <input type="file" accept="image/*" multiple onChange={handleUploadImagem} style={{ display: 'none' }} />
-                </label>
-              </div>
-
-              {imagens.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
-                  Nenhuma imagem anexada. Você pode adicionar panfletos, banners ou comunicados visuais em PNG/JPG.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  {imagens.map((img, idx) => (
-                    <div
-                      key={idx}
+                  {imagens.length === 0 ? (
+                    <label
                       style={{
-                        position: 'relative',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 6,
-                        padding: 4,
-                        background: '#fff',
-                        textAlign: 'center',
-                        maxWidth: 160,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: '#8c1a22',
+                        color: '#fff',
+                        padding: '12px 24px',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        boxShadow: '0 2px 6px rgba(140,26,34,0.25)',
                       }}
                     >
-                      <img src={img.base64} alt={img.filename} style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 4, display: 'block' }} />
-                      <div style={{ fontSize: 11, color: '#374151', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {img.filename}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoverImagem(idx)}
-                        style={{
-                          position: 'absolute',
-                          top: -6,
-                          right: -6,
-                          background: '#ef4444',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: 20,
-                          height: 20,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <X size={12} />
-                      </button>
+                      <ImageIcon size={18} />
+                      <span>Selecionar Imagem (PNG ou JPG)</span>
+                      <input type="file" accept="image/*" onChange={handleUploadImagem} style={{ display: 'none' }} />
+                    </label>
+                  ) : (
+                    <div>
+                      {imagens.map((img, idx) => (
+                        <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                          <img
+                            src={img.base64}
+                            alt={img.filename}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: 380,
+                              borderRadius: 8,
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                              border: '1px solid #e2e8f0',
+                            }}
+                          />
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginTop: 8 }}>
+                            Arquivo: {img.filename}
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
+                            <label
+                              style={{
+                                cursor: 'pointer',
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                color: '#8c1a22',
+                                background: '#fdf2f2',
+                                padding: '6px 14px',
+                                borderRadius: 6,
+                                border: '1px solid #fecaca',
+                              }}
+                            >
+                              Trocar Imagem
+                              <input type="file" accept="image/*" onChange={handleUploadImagem} style={{ display: 'none' }} />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverImagem(idx)}
+                              style={{
+                                cursor: 'pointer',
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                color: '#dc2626',
+                                background: '#fef2f2',
+                                padding: '6px 14px',
+                                borderRadius: 6,
+                                border: '1px solid #fee2e2',
+                              }}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* SE MODO TEXTO: Exibe a Mensagem e as Imagens Opcionais */
+              <>
+                <div className="form-group" style={{ marginBottom: 18 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                    Texto da Mensagem
+                  </label>
+                  <textarea
+                    className="form-input"
+                    rows={8}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13.5, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'Arial, sans-serif' }}
+                    placeholder="Digite aqui o texto do informativo..."
+                    value={mensagem}
+                    onChange={e => setMensagem(e.target.value)}
+                  />
+                </div>
+
+                {/* Imagens Anexadas Opcionais */}
+                <div style={{ marginBottom: 22, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <label style={{ fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <ImageIcon size={16} color="#8c1a22" /> Panfletos & Imagens (Opcional)
+                    </label>
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                      <span>+ Adicionar Imagem</span>
+                      <input type="file" accept="image/*" multiple onChange={handleUploadImagem} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+
+                  {imagens.length === 0 ? (
+                    <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+                      Nenhuma imagem anexada. Você pode adicionar panfletos, banners ou comunicados visuais em PNG/JPG.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {imagens.map((img, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            position: 'relative',
+                            border: '1px solid #d1d5db',
+                            borderRadius: 6,
+                            padding: 4,
+                            background: '#fff',
+                            textAlign: 'center',
+                            maxWidth: 160,
+                          }}
+                        >
+                          <img src={img.base64} alt={img.filename} style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 4, display: 'block' }} />
+                          <div style={{ fontSize: 11, color: '#374151', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {img.filename}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoverImagem(idx)}
+                            style={{
+                              position: 'absolute',
+                              top: -6,
+                              right: -6,
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: 20,
+                              height: 20,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Feedback Detalhado de Envio */}
             {resultadoEnvio && (

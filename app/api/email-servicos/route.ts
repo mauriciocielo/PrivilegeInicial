@@ -92,6 +92,9 @@ export async function POST(req: Request) {
 
     const origin = req.headers.get('origin') || req.headers.get('host') ? `http://${req.headers.get('host')}` : '';
 
+    const logoOficialPath = path.join(process.cwd(), 'public', 'privilege-logo-email.png');
+    const hasLogoOficial = fs.existsSync(logoOficialPath);
+
     // -------------------------------------------------------------
     // CASO 1: ENVIO DE BOLETO / COBRANÇA / NFS-E
     // -------------------------------------------------------------
@@ -118,23 +121,30 @@ export async function POST(req: Request) {
         <head>
           <meta charset="utf-8" />
           <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 20px; color: #1f2937; }
-            .container { max-width: 620px; background: #ffffff; border-radius: 8px; margin: 0 auto; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-            .header { background: #003641; color: #ffffff; padding: 24px 28px; text-align: center; }
-            .header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
-            .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+            body { font-family: Arial, Helvetica, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1f2937; }
+            .container { max-width: 620px; background: #ffffff; border-radius: 8px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+            .top-notice { font-size: 11px; color: #64748b; text-align: center; padding: 12px 16px 0; }
+            .header { background: #ffffff; padding: 16px 28px 18px; text-align: center; border-bottom: 2px solid #600000; }
+            .header h1 { margin: 10px 0 0; font-size: 16px; font-weight: 800; color: #111827; letter-spacing: 0.5px; }
+            .header p { margin: 4px 0 0; font-size: 12.5px; color: #64748b; }
             .body { padding: 26px 28px; }
             .highlight-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 16px; margin: 20px 0; }
             .pix-box { text-align: center; background: #ffffff; border: 1.5px solid #003641; border-radius: 8px; padding: 18px; margin: 24px 0; }
             .pix-title { font-weight: 800; color: #003641; font-size: 15px; margin-bottom: 12px; }
             .code-box { background: #f3f4f6; border: 1px dashed #9ca3af; padding: 10px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 12px 0; border-radius: 4px; text-align: center; font-weight: bold; }
-            .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 18px 28px; text-align: center; font-size: 12px; color: #6b7280; line-height: 1.5; }
+            .footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 28px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.5; }
           </style>
         </head>
         <body>
           <div class="container">
+            <div class="top-notice">
+              Se houver problemas com o modo de exibição desta mensagem, <a href="#" style="color: #64748b; text-decoration: underline;">clique aqui para exibi-la em um navegador da Web</a>.
+            </div>
             <div class="header">
-              <h1>PRIVILEGE CONSULTORIA & ASSESSORIA CONTÁBIL</h1>
+              ${hasLogoOficial
+                ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade e Consultoria" width="180" style="display:block; margin: 0 auto; max-width: 180px; height: auto;" />`
+                : `<h1 style="color: #600000; margin: 0;">PRIVILEGE CONTABILIDADE & CONSULTORIA</h1>`
+              }
               <p>Cooperativa Sicoob 4342 · Cobrança Bancária Oficial</p>
             </div>
             <div class="body">
@@ -169,15 +179,25 @@ export async function POST(req: Request) {
               ` : ''}
 
               ${mensagem ? `
-                <div style="background: #f8fafc; border-left: 3px solid #003641; padding: 12px 14px; margin-top: 18px; font-size: 13.5px; color: #334155;">
+                <div style="background: #f8fafc; border-left: 3px solid #600000; padding: 12px 14px; margin-top: 18px; font-size: 13.5px; color: #334155;">
                   ${mensagem.replace(/\n/g, '<br />')}
                 </div>
               ` : ''}
+
+              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13.5px; color: #374151; line-height: 1.5;">
+                <p style="margin: 0; font-weight: bold; color: #111827;">Privilege Assessoria Contábil</p>
+                <p style="margin: 2px 0 10px; font-size: 12.5px; color: #6b7280;">Contabilidade, orientação tributária e apoio à gestão empresarial.</p>
+                <p style="margin: 0; font-size: 12.5px; color: #4b5563;">
+                  Obrigado,<br />
+                  <strong style="color: #111827;">MARCOS CANCELIER ASSESSORIA CONTABIL ME</strong><br />
+                  (46) 3035-1061 / (46) 3035-1018
+                </p>
+              </div>
             </div>
 
             <div class="footer">
-              <strong>PRIVILEGE CONSULTORIA LTDA</strong><br />
-              CNPJ: 58.033.979/0001-84 · Central: contato@privilegecontabilidade.com.br
+              <strong>Precisa de ajuda?</strong> Entre em contato conosco pelo telefone (46) 3035-1061 ou responda a este e-mail.<br />
+              Privilege Contabilidade e Consultoria · Francisco Beltrão/PR
             </div>
             ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
           </div>
@@ -186,6 +206,13 @@ export async function POST(req: Request) {
       `;
 
       const attachments: any[] = [];
+      if (hasLogoOficial) {
+        attachments.push({
+          filename: 'privilege-logo.png',
+          path: logoOficialPath,
+          cid: 'privilege-logo',
+        });
+      }
       if (pdfBoletoBase64) {
         attachments.push({
           filename: `Boleto-Sicoob-${nfseNumero || 'Cobranca'}.pdf`,
@@ -313,6 +340,16 @@ export async function POST(req: Request) {
 
       // Prepara anexos/imagens se existirem
       const attachmentsNewsletter: any[] = [];
+
+      // Inclui a logo oficial do escritório como anexo inline embutido (CID)
+      if (hasLogoOficial) {
+        attachmentsNewsletter.push({
+          filename: 'privilege-logo.png',
+          path: logoOficialPath,
+          cid: 'privilege-logo',
+        });
+      }
+
       if (Array.isArray(imagens)) {
         for (let i = 0; i < imagens.length; i++) {
           const img = imagens[i];
@@ -332,6 +369,9 @@ export async function POST(req: Request) {
       let falhas = 0;
       const logsEnvio: { email: string; status: 'ok' | 'erro'; erro?: string }[] = [];
 
+      const temImagensAnexadas = attachmentsNewsletter.some(a => a.cid.startsWith('img_anexo_'));
+      const isModoSomenteImagem = body.somenteImagem || (!conteudoHtml && temImagensAnexadas);
+
       for (const dest of emailsDestino) {
         const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
@@ -341,10 +381,13 @@ export async function POST(req: Request) {
           let bodyHtml = (conteudoHtml || '').replace(/\n/g, '<br />');
 
           let htmlImagens = '';
-          if (attachmentsNewsletter.length > 0) {
+          if (temImagensAnexadas) {
             htmlImagens = `
-              <div style="margin-top: 20px; text-align: center;">
-                ${attachmentsNewsletter.map(att => `<img src="cid:${att.cid}" alt="Imagem em anexo" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`).join('')}
+              <div style="margin: 20px 0; text-align: center;">
+                ${attachmentsNewsletter
+                  .filter(att => att.cid.startsWith('img_anexo_'))
+                  .map(att => `<img src="cid:${att.cid}" alt="${tituloAssunto}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 14px rgba(0,0,0,0.07);" />`)
+                  .join('')}
               </div>
             `;
           }
@@ -354,31 +397,61 @@ export async function POST(req: Request) {
             <html>
             <head>
               <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>${tituloAssunto}</title>
               <style>
-                body { font-family: Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
-                .card { max-width: 640px; background: #ffffff; border-radius: 10px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-                .topbar { background: #8c1a22; color: #ffffff; padding: 24px 28px; text-align: center; }
-                .topbar h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
-                .topbar p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
-                .content { padding: 28px; font-size: 15px; line-height: 1.6; color: #334155; }
-                .footer { background: #f1f5f9; padding: 18px 28px; text-align: center; font-size: 12px; color: #64748b; }
+                body { font-family: Arial, Helvetica, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; -webkit-font-smoothing: antialiased; }
+                .email-wrapper { max-width: 640px; background: #ffffff; border-radius: 8px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+                .top-link { font-size: 11px; color: #64748b; text-align: center; padding: 12px 18px 0; }
+                .header-logo { padding: 18px 24px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+                .content-box { padding: 26px 32px; font-size: 14.5px; line-height: 1.6; color: #334155; }
+                .footer-box { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 24px; text-align: center; font-size: 11.5px; color: #94a3b8; line-height: 1.5; }
               </style>
             </head>
             <body>
-              <div class="card">
-                <div class="topbar">
-                  <h2>PRIVILEGE CONSULTORIA CONTÁBIL</h2>
-                  <p>Informativo e Comunicado Oficial</p>
+              <div class="email-wrapper">
+                <div class="top-link">
+                  Se houver problemas com o modo de exibição desta mensagem, <a href="#" style="color: #64748b; text-decoration: underline;">clique aqui para exibi-la em um navegador da Web</a>.
                 </div>
-                <div class="content">
-                  <p>Prezado(a) <strong>${nomeDest}</strong>,</p>
-                  <div>${bodyHtml}</div>
-                  ${htmlImagens}
+                
+                <div class="header-logo">
+                  ${hasLogoOficial
+                    ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade e Consultoria" width="180" style="display: block; margin: 0 auto; max-width: 180px; height: auto;" />`
+                    : `<h2 style="color: #600000; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">PRIVILEGE CONTABILIDADE E CONSULTORIA</h2>`
+                  }
                 </div>
-                <div class="footer">
-                  <strong>Privilege Consultoria Ltda</strong><br />
-                  Francisco Beltrão/PR · contato@privilegecontabilidade.com.br<br />
-                  Você está recebendo este e-mail por ser cliente parceiro da Privilege Consultoria.
+
+                <div class="content-box">
+                  ${isModoSomenteImagem ? `
+                    <!-- MODO SOMENTE IMAGEM / FLYER / COMUNICADO VISUAL -->
+                    <div style="text-align: center; margin: 8px 0 16px;">
+                      ${htmlImagens}
+                    </div>
+                  ` : `
+                    <!-- MODO TEXTO & COMUNICADO COMPLETO -->
+                    <p style="margin: 0 0 16px; font-size: 15px; color: #0f172a;">
+                      Prezado(a) <strong>${nomeDest}</strong>,
+                    </p>
+                    <div style="color: #334155;">
+                      ${bodyHtml}
+                    </div>
+                    ${htmlImagens}
+
+                    <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13.5px; color: #334155; line-height: 1.5;">
+                      <p style="margin: 0; font-weight: bold; color: #0f172a;">Privilege Assessoria Contábil</p>
+                      <p style="margin: 2px 0 12px; font-size: 12.5px; color: #64748b;">Contabilidade, orientação tributária e apoio à gestão empresarial.</p>
+                      <p style="margin: 0; font-size: 12.5px; color: #475569;">
+                        Obrigado,<br />
+                        <strong style="color: #0f172a;">MARCOS CANCELIER ASSESSORIA CONTABIL ME</strong><br />
+                        (46) 3035-1061 / (46) 3035-1018
+                      </p>
+                    </div>
+                  `}
+                </div>
+
+                <div class="footer-box">
+                  <strong>Precisa de ajuda?</strong> Entre em contato conosco pelo telefone (46) 3035-1061 ou responda a este e-mail.<br />
+                  Privilege Contabilidade e Consultoria · Francisco Beltrão/PR
                 </div>
                 ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
               </div>
