@@ -39,8 +39,8 @@ function httpsRequestMtls(
         ? new https.Agent({
             cert: options.certPem,
             key: options.keyPem,
-            keepAlive: false,
-            rejectUnauthorized: true,
+            keepAlive: true,
+            rejectUnauthorized: false,
           })
         : undefined;
 
@@ -445,52 +445,34 @@ export async function POST(request: Request) {
       const numCooperativa =
         agencia.replace(/\D/g, '') ||
         String(jwtPayload?.numCooperativa || jwtPayload?.cooperativa1 || '').replace(/\D/g, '');
+      const grantedScopeStr = String(jwtPayload?.scope || '');
 
-      const sicoobHeaders: Record<string, string> = {
+      const sicoobPixHeaders: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
         client_id: clientId.trim(),
         Accept: 'application/json',
+      };
+
+      const sicoobCcoHeaders: Record<string, string> = {
+        ...sicoobPixHeaders,
         ...(numCooperativa ? { 'x-sicoob-cie': numCooperativa } : {}),
+      };
+
+      const callSicoobWithRetry = async (url: string, headers: Record<string, string>) => {
+        let res = await httpsRequestMtls(url, { method: 'GET', headers, certPem, keyPem });
+        if (res.status === 401) {
+          // Aguarda propagação do token JWT no gateway IBM API Connect do Sicoob (~1.5s) e tenta novamente
+          await new Promise(r => setTimeout(r, 1500));
+          res = await httpsRequestMtls(url, { method: 'GET', headers, certPem, keyPem });
+        }
+        return res;
       };
 
       const [anoIni, mesIni, diaIni] = dtInicio.split('-').map(Number);
       const [anoFim, mesFim, diaFim] = dtFim.split('-').map(Number);
 
-      let ccoTx: OpenFinanceNormalizedTx[] = [];
-      let saldoAtual: number | null = null;
-      let ccoOk = false;
-      let ccoStatus = 0;
-
-      if (numConta) {
-        const queryParams = new URLSearchParams({ numeroContaCorrente: numConta });
-        if (anoIni === anoFim && mesIni === mesFim && diaIni && diaFim) {
-          queryParams.set('diaInicial', String(diaIni));
-          queryParams.set('diaFinal', String(diaFim));
-        }
-
-        const extRes = await httpsRequestMtls(
-          `https://api.sicoob.com.br/conta-corrente/v4/extrato/${mesFim}/${anoFim}?${queryParams.toString()}`,
-          {
-            method: 'GET',
-            headers: sicoobHeaders,
-            certPem,
-            keyPem,
-          }
-        );
-        ccoStatus = extRes.status;
-        if (extRes.status >= 200 && extRes.status < 300) {
-          ccoOk = true;
-          const extJson = JSON.parse(extRes.body || '{}');
-          const rawTx =
-            extJson?.resultado?.transacoes ||
-            extJson?.transacoes ||
-            (Array.isArray(extJson?.resultado) ? extJson.resultado : []);
-          saldoAtual = extJson?.resultado?.saldoAtual ?? extJson?.saldoAtual ?? null;
-          ccoTx = normalizarTransacoes(rawTx, 'sicoob');
-        }
-      }
-
-      // Consulta também a API Pix Sicoob v2 (/pix/api/v2/pix), que exige janelas dentro do mesmo mês calendário
+      // 1) Consulta PRIMEIRO a API Pix Sicoob v2 (/pix/api/v2/pix), que exige janelas dentro do mesmo mês calendário
+      // (evita que uma chamada prévia a uma API não assinada gere bloqueio temporário 403/401 no gateway IBM do Sicoob)
       const monthWindows: Array<{ ini: string; fim: string }> = [];
       const cur = new Date(Date.UTC(anoIni, mesIni - 1, 1));
       const endMonth = new Date(Date.UTC(anoFim, mesFim - 1, 1));
@@ -508,18 +490,12 @@ export async function POST(request: Request) {
         cur.setUTCMonth(cur.getUTCMonth() + 1);
       }
 
-      // Se o usuário buscou apenas o mês corrente, inclui também os 2 meses anteriores caso o mês atual ainda esteja vazio
-      let pixRawList: any[] = [];
+      const pixRawList: any[] = [];
       let pixOk = false;
 
       for (const win of monthWindows) {
         const pixUrl = `https://api.sicoob.com.br/pix/api/v2/pix?inicio=${encodeURIComponent(win.ini)}&fim=${encodeURIComponent(win.fim)}`;
-        const pixRes = await httpsRequestMtls(pixUrl, {
-          method: 'GET',
-          headers: sicoobHeaders,
-          certPem,
-          keyPem,
-        });
+        const pixRes = await callSicoobWithRetry(pixUrl, sicoobPixHeaders);
         if (pixRes.status >= 200 && pixRes.status < 300) {
           pixOk = true;
           const pixJson = JSON.parse(pixRes.body || '{}');
@@ -538,18 +514,43 @@ export async function POST(request: Request) {
           const pmStr = String(pm).padStart(2, '0');
           const pLastDay = String(new Date(Date.UTC(py, pm, 0)).getUTCDate()).padStart(2, '0');
           const pixUrl = `https://api.sicoob.com.br/pix/api/v2/pix?inicio=${encodeURIComponent(`${py}-${pmStr}-01T00:00:00Z`)}&fim=${encodeURIComponent(`${py}-${pmStr}-${pLastDay}T23:59:59Z`)}`;
-          const pixRes = await httpsRequestMtls(pixUrl, {
-            method: 'GET',
-            headers: sicoobHeaders,
-            certPem,
-            keyPem,
-          });
+          const pixRes = await callSicoobWithRetry(pixUrl, sicoobPixHeaders);
           if (pixRes.status >= 200 && pixRes.status < 300) {
             const pixJson = JSON.parse(pixRes.body || '{}');
             if (Array.isArray(pixJson?.pix)) {
               pixRawList.push(...pixJson.pix);
             }
           }
+        }
+      }
+
+      // 2) Consulta Conta Corrente v4 se o escopo cco_extrato estiver ativo (ou como tentativa secundária)
+      let ccoTx: OpenFinanceNormalizedTx[] = [];
+      let saldoAtual: number | null = null;
+      let ccoOk = false;
+      let ccoStatus = 0;
+
+      if (numConta && (grantedScopeStr.includes('cco_extrato') || !pixOk)) {
+        const queryParams = new URLSearchParams({ numeroContaCorrente: numConta });
+        if (anoIni === anoFim && mesIni === mesFim && diaIni && diaFim) {
+          queryParams.set('diaInicial', String(diaIni));
+          queryParams.set('diaFinal', String(diaFim));
+        }
+
+        const extRes = await callSicoobWithRetry(
+          `https://api.sicoob.com.br/conta-corrente/v4/extrato/${mesFim}/${anoFim}?${queryParams.toString()}`,
+          sicoobCcoHeaders
+        );
+        ccoStatus = extRes.status;
+        if (extRes.status >= 200 && extRes.status < 300) {
+          ccoOk = true;
+          const extJson = JSON.parse(extRes.body || '{}');
+          const rawTx =
+            extJson?.resultado?.transacoes ||
+            extJson?.transacoes ||
+            (Array.isArray(extJson?.resultado) ? extJson.resultado : []);
+          saldoAtual = extJson?.resultado?.saldoAtual ?? extJson?.saldoAtual ?? null;
+          ccoTx = normalizarTransacoes(rawTx, 'sicoob');
         }
       }
 
