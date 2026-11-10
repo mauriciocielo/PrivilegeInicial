@@ -5,15 +5,15 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { db } from '../../../lib/prisma';
 import { captureError } from '../../../lib/sentry-helper';
+import { salvarLog } from './log/route';
 
-function getSmtpConfig() {
-  let envPass = process.env.SMTP_PASS;
-  let envUser = process.env.SMTP_USER;
-  let envHost = process.env.SMTP_HOST;
-  let envPort = process.env.SMTP_PORT;
+function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: string; port?: number }) {
+  let envPass = customAuth?.pass || process.env.SMTP_PASS;
+  let envUser = customAuth?.user || process.env.SMTP_USER;
+  let envHost = customAuth?.host || process.env.SMTP_HOST;
+  let envPort = customAuth?.port || process.env.SMTP_PORT;
   let envFrom = process.env.SMTP_FROM;
 
-  // Carrega tanto do .env.local quanto do .env garantindo fallback absoluto
   const possiblePaths = [
     path.resolve(process.cwd(), '.env.local'),
     path.resolve(process.cwd(), '.env'),
@@ -36,7 +36,6 @@ function getSmtpConfig() {
     }
   }
 
-  // Fallback seguro com as credenciais oficiais da Privilege
   const smtpHost = envHost || 'mail.privilegecontabilidade.com.br';
   const smtpPort = Number(envPort) || 465;
   const smtpUser = envUser || 'contato@privilegecontabilidade.com.br';
@@ -56,7 +55,7 @@ function getSmtpConfig() {
     },
   });
 
-  return { transporter, smtpFrom };
+  return { transporter, smtpFrom, smtpUser };
 }
 
 export async function POST(req: Request) {
@@ -69,11 +68,12 @@ export async function POST(req: Request) {
       destinatarioNome,
       assunto,
       mensagem,
-      // Suporte a lista manual de e-mails para newsletter
-      destinatariosLista, // array de strings ou texto separado por vírgula/linha
-      // Suporte a imagens embutidas ou anexadas
-      imagens, // array de { filename: string, base64: string, cid?: string }
-      // Dados para cobrança / boleto / nfse:
+      destinatariosLista,
+      imagens,
+      // Credenciais customizadas caso o usuário queira testar/alterar na própria tela
+      smtpUserCustom,
+      smtpPassCustom,
+      // Dados de cobrança:
       nfseNumero,
       valor,
       vencimento,
@@ -85,7 +85,12 @@ export async function POST(req: Request) {
       xmlNfse,
     } = body;
 
-    const { transporter, smtpFrom } = getSmtpConfig();
+    const { transporter, smtpFrom } = getSmtpConfig({
+      user: smtpUserCustom,
+      pass: smtpPassCustom,
+    });
+
+    const origin = req.headers.get('origin') || req.headers.get('host') ? `http://${req.headers.get('host')}` : '';
 
     // -------------------------------------------------------------
     // CASO 1: ENVIO DE BOLETO / COBRANÇA / NFS-E
@@ -96,6 +101,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'E-mail do destinatário inválido ou não informado.' }, { status: 400 });
       }
 
+      const logId = `cob_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const nomeCliente = destinatarioNome?.trim() || 'Prezado(a) Cliente';
       const valorFormatado = valor ? (typeof valor === 'number' ? `R$ ${valor.toFixed(2).replace('.', ',')}` : String(valor)) : '';
       const subject = assunto || `Cobrança e Boleto Sicoob — Privilege Consultoria${nfseNumero ? ` (NFS-e Nº ${nfseNumero})` : ''}`;
@@ -103,6 +109,8 @@ export async function POST(req: Request) {
       const qrCodeImgSrc = brcodePix
         ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(brcodePix)}`
         : '';
+
+      const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
 
       const html = `
         <!DOCTYPE html>
@@ -117,8 +125,6 @@ export async function POST(req: Request) {
             .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
             .body { padding: 26px 28px; }
             .highlight-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 16px; margin: 20px 0; }
-            .highlight-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
-            .highlight-row:last-child { margin-bottom: 0; }
             .pix-box { text-align: center; background: #ffffff; border: 1.5px solid #003641; border-radius: 8px; padding: 18px; margin: 24px 0; }
             .pix-title { font-weight: 800; color: #003641; font-size: 15px; margin-bottom: 12px; }
             .code-box { background: #f3f4f6; border: 1px dashed #9ca3af; padding: 10px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 12px 0; border-radius: 4px; text-align: center; font-weight: bold; }
@@ -171,9 +177,9 @@ export async function POST(req: Request) {
 
             <div class="footer">
               <strong>PRIVILEGE CONSULTORIA LTDA</strong><br />
-              CNPJ: 58.033.979/0001-84 · Central: contato@privilegecontabilidade.com.br<br />
-              Este é um e-mail automático gerado pelo sistema financeiro.
+              CNPJ: 58.033.979/0001-84 · Central: contato@privilegecontabilidade.com.br
             </div>
+            ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
           </div>
         </body>
         </html>
@@ -195,19 +201,46 @@ export async function POST(req: Request) {
         });
       }
 
-      const info = await transporter.sendMail({
-        from: `"Privilege Consultoria" <${smtpFrom}>`,
-        to: emailAlvo,
-        subject,
-        html,
-        attachments,
-      });
+      try {
+        const info = await transporter.sendMail({
+          from: `"Privilege Consultoria" <${smtpFrom}>`,
+          to: emailAlvo,
+          subject,
+          html,
+          attachments,
+        });
 
-      return NextResponse.json({
-        ok: true,
-        messageId: info.messageId,
-        enviadoPara: emailAlvo,
-      });
+        salvarLog({
+          id: logId,
+          empresaId,
+          tipo: 'cobranca_boleto',
+          assunto: subject,
+          destinatarioEmail: emailAlvo,
+          destinatarioNome: nomeCliente,
+          status: 'entregue',
+          enviadoEm: new Date().toISOString(),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          messageId: info.messageId,
+          enviadoPara: emailAlvo,
+          logId,
+        });
+      } catch (errSend: any) {
+        salvarLog({
+          id: logId,
+          empresaId,
+          tipo: 'cobranca_boleto',
+          assunto: subject,
+          destinatarioEmail: emailAlvo,
+          destinatarioNome: nomeCliente,
+          status: 'falha',
+          erroMensagem: errSend.message,
+          enviadoEm: new Date().toISOString(),
+        });
+        throw errSend;
+      }
     }
 
     // -------------------------------------------------------------
@@ -217,8 +250,8 @@ export async function POST(req: Request) {
       const tituloAssunto = assunto?.trim();
       const conteudoHtml = mensagem?.trim();
 
-      if (!tituloAssunto || !conteudoHtml) {
-        return NextResponse.json({ error: 'Assunto e mensagem são obrigatórios para a newsletter.' }, { status: 400 });
+      if (!tituloAssunto || (!conteudoHtml && (!imagens || imagens.length === 0))) {
+        return NextResponse.json({ error: 'Assunto e conteúdo ou imagem são obrigatórios para a newsletter.' }, { status: 400 });
       }
 
       let emailsDestino: { nome: string; email: string }[] = [];
@@ -232,7 +265,6 @@ export async function POST(req: Request) {
         for (const item of rawList) {
           const limpo = String(item).trim();
           if (limpo && limpo.includes('@')) {
-            // Extrai formato "Nome <email@dominio.com>" ou apenas "email@dominio.com"
             const match = limpo.match(/(?:(.*)<)?([^<>]+@[^<>]+)>?/);
             if (match) {
               const nome = match[1]?.trim() || 'Cliente';
@@ -253,18 +285,22 @@ export async function POST(req: Request) {
         };
         if (empresaId) whereClause.empresaId = empresaId;
 
-        const clientes = await db.cliente.findMany({
-          where: whereClause,
-          select: { id: true, nome: true, nomeFantasia: true, email: true },
-        });
+        try {
+          const clientes = await db.cliente.findMany({
+            where: whereClause,
+            select: { id: true, nome: true, nomeFantasia: true, email: true },
+          });
 
-        for (const c of clientes) {
-          if (c.email && c.email.includes('@')) {
-            emailsDestino.push({
-              nome: c.nomeFantasia || c.nome || 'Cliente',
-              email: c.email.trim(),
-            });
+          for (const c of clientes) {
+            if (c.email && c.email.includes('@')) {
+              emailsDestino.push({
+                nome: c.nomeFantasia || c.nome || 'Cliente',
+                email: c.email.trim(),
+              });
+            }
           }
+        } catch {
+          // Fallback caso db esteja indisponível
         }
       }
 
@@ -286,7 +322,7 @@ export async function POST(req: Request) {
             attachmentsNewsletter.push({
               filename: img.filename || `imagem_${i + 1}.png`,
               content: Buffer.from(rawBase64, 'base64'),
-              cid, // Permite referenciar na tag <img src="cid:img_anexo_0" />
+              cid,
             });
           }
         }
@@ -297,11 +333,13 @@ export async function POST(req: Request) {
       const logsEnvio: { email: string; status: 'ok' | 'erro'; erro?: string }[] = [];
 
       for (const dest of emailsDestino) {
+        const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
+
         try {
           const nomeDest = dest.nome || 'Cliente';
-          let bodyHtml = conteudoHtml.replace(/\n/g, '<br />');
+          let bodyHtml = (conteudoHtml || '').replace(/\n/g, '<br />');
 
-          // Se houver imagens anexadas, exibe-as de forma limpa no corpo do e-mail
           let htmlImagens = '';
           if (attachmentsNewsletter.length > 0) {
             htmlImagens = `
@@ -342,6 +380,7 @@ export async function POST(req: Request) {
                   Francisco Beltrão/PR · contato@privilegecontabilidade.com.br<br />
                   Você está recebendo este e-mail por ser cliente parceiro da Privilege Consultoria.
                 </div>
+                ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
               </div>
             </body>
             </html>
@@ -357,10 +396,34 @@ export async function POST(req: Request) {
 
           enviados++;
           logsEnvio.push({ email: dest.email, status: 'ok' });
+
+          salvarLog({
+            id: logId,
+            empresaId,
+            tipo: 'newsletter',
+            assunto: tituloAssunto,
+            destinatarioEmail: dest.email,
+            destinatarioNome: nomeDest,
+            status: 'entregue',
+            enviadoEm: new Date().toISOString(),
+          });
+
           await new Promise(r => setTimeout(r, 150));
-        } catch (e) {
+        } catch (e: any) {
           falhas++;
-          logsEnvio.push({ email: dest.email, status: 'erro', erro: (e as Error).message });
+          logsEnvio.push({ email: dest.email, status: 'erro', erro: e.message });
+
+          salvarLog({
+            id: logId,
+            empresaId,
+            tipo: 'newsletter',
+            assunto: tituloAssunto,
+            destinatarioEmail: dest.email,
+            destinatarioNome: dest.nome,
+            status: 'falha',
+            erroMensagem: e.message,
+            enviadoEm: new Date().toISOString(),
+          });
         }
       }
 
