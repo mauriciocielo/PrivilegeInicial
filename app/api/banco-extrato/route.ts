@@ -562,6 +562,35 @@ export async function POST(request: Request) {
       } | null = null;
 
       try {
+        // Obtém token específico com os 6 escopos oficiais da API 1 - Cobrança Bancária v3
+        let tokenBoleto = accessToken;
+        const tokBolRes = await httpsRequestMtls(
+          'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              grant_type: 'client_credentials',
+              client_id: effectiveClientId,
+              scope:
+                'boletos_inclusao boletos_consulta boletos_alteracao webhooks_inclusao webhooks_consulta webhooks_alteracao',
+            }).toString(),
+            certPem,
+            keyPem,
+          }
+        );
+        if (tokBolRes.status >= 200 && tokBolRes.status < 300) {
+          const parsedBolTok = JSON.parse(tokBolRes.body || '{}');
+          if (parsedBolTok.access_token) tokenBoleto = parsedBolTok.access_token;
+        }
+
+        const headersBoletoV3: Record<string, string> = {
+          Authorization: `Bearer ${tokenBoleto}`,
+          client_id: effectiveClientId,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        };
+
         const payloadBoletoV3 = {
           numeroCliente: 4276485,
           codigoModalidade: 1,
@@ -599,9 +628,10 @@ export async function POST(request: Request) {
           ],
         };
 
+        await new Promise(r => setTimeout(r, 800));
         const bolRes = await httpsRequestMtls('https://api.sicoob.com.br/cobranca-bancaria/v3/boletos', {
           method: 'POST',
-          headers: headersCob,
+          headers: headersBoletoV3,
           body: JSON.stringify(payloadBoletoV3),
           certPem,
           keyPem,
@@ -621,7 +651,7 @@ export async function POST(request: Request) {
           }
         } else if (bolRes.status === 403 && bolRes.body.includes('Not registered to plan')) {
           motivoCodigoBarrasNaoRegistrado =
-            "A API 'Cobrança Bancária' ainda não está marcada no seu aplicativo do Portal Sicoob Developers (HTTP 403 Not registered to plan). Por isso, o QR Code Pix foi registrado online e já pode ser pago imediatamente, mas para que o Código de Barras de 44 dígitos também seja registrado online na CIP/FEBRABAN (sem precisar enviar arquivo CNAB 240), acesse developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs e marque também 'Cobrança Bancária'.";
+            "O servidor de autenticação do Sicoob liberou os 6 escopos (boletos_inclusao, boletos_consulta, etc.), mas o Gateway do Sicoob retornou 'HTTP 403 Not registered to plan' na URL /cobranca-bancaria/v3/boletos. Isso ocorre no Sicoob por 2 motivos: (1) A conta 175.204-9 (Beneficiário 4276485) precisa ter a 'Carteira de Cobrança Registrada via API/Webservice' ativa na Cooperativa 4342 (ou no Sicoobnet Empresarial > Cobrança Bancária), ou (2) Quando uma API é adicionada depois em um aplicativo já criado no developers.sicoob.com.br, o Gateway IBM do Sicoob exige clicar em Editar > Salvar novamente no aplicativo (ou criar um novo aplicativo já marcando Cobrança Bancária, Pix e Conta Corrente juntos). Enquanto isso, o QR Code Pix do boleto já está 100% registrado online e ativo para pagamento!";
         } else {
           motivoCodigoBarrasNaoRegistrado = `Retorno Sicoob Cobrança Bancária (HTTP ${bolRes.status}): ${bolRes.body.slice(0, 220)}`;
         }
