@@ -86,7 +86,28 @@ function httpsRequestMtls(
 function normalizarTransacoes(rawList: any[], bankId: string): OpenFinanceNormalizedTx[] {
   return rawList
     .map((item, idx): OpenFinanceNormalizedTx | null => {
-      // 1. Formato Oficial OpenBanking-Brasil/openapi
+      // 1. Formato Oficial BACEN / Sicoob API Pix v2 (GET /pix/api/v2/pix)
+      if (item.endToEndId && item.horario) {
+        const val = Math.abs(Number(item.valor ?? 0));
+        if (!val) return null;
+        const dateRaw = String(item.horario).slice(0, 10);
+        const pagadorNome = item.nomePagador || item.pagador?.nome || undefined;
+        const pagadorDoc = item.pagador?.cnpj || item.pagador?.cpf || undefined;
+        const isDebit = String(item.natureza || item.tipo || '').toUpperCase().includes('SAIDA');
+        const infoExtra = item.infoPagador ? ` (${String(item.infoPagador).trim()})` : '';
+        return {
+          fitId: String(item.endToEndId),
+          date: dateRaw,
+          type: isDebit ? 'DEBIT' : 'CREDIT',
+          amount: val,
+          paymentType: 'PIX',
+          description: `${isDebit ? 'PIX ENVIADO' : 'PIX RECEBIDO'} — ${pagadorNome || 'Transferência Pix'}${infoExtra}`,
+          counterpartyName: pagadorNome,
+          counterpartyDoc: pagadorDoc,
+        };
+      }
+
+      // 2. Formato Oficial OpenBanking-Brasil/openapi
       if (item.creditDebitType || item.completedAuthorisedPaymentType) {
         const isCredit =
           item.creditDebitType === 'CREDITO' ||
@@ -148,13 +169,26 @@ function normalizarTransacoes(rawList: any[], bankId: string): OpenFinanceNormal
           : 'OUTROS';
 
       return {
-        fitId: String(item.idTransacao ?? item.numeroDocumento ?? item.id ?? `${bankId.toUpperCase()}_${dateStr}_${idx}`),
+        fitId: String(
+          item.idTransacao ??
+            item.transactionId ??
+            item.numeroDocumento ??
+            item.id ??
+            `${bankId.toUpperCase()}_${dateStr}_${Math.abs(rawVal).toFixed(2)}_${idx}`
+        ),
         date: dateStr,
         type: isCredit ? 'CREDIT' : 'DEBIT',
         amount: Math.abs(rawVal),
         paymentType,
-        description: desc,
-        counterpartyName: item.nomePagador || item.nomeRecebedor || item.contraparte || undefined,
+        description: item.descInfComplementar
+          ? `${desc} — ${String(item.descInfComplementar).replace(/\s+/g, ' ').trim()}`
+          : desc,
+        counterpartyName:
+          item.nomePagador ||
+          item.nomeRecebedor ||
+          item.contraparte ||
+          (item.descInfComplementar ? String(item.descInfComplementar).split('-')[0]?.trim() : undefined) ||
+          undefined,
         counterpartyDoc: item.cpfCnpj || item.cpfCnpjContraparte || undefined,
       };
     })
@@ -343,53 +377,214 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const tokenBody = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId.trim(),
-        scope: 'cco_extrato cco_consulta openid',
-      }).toString();
 
-      const tokenRes = await httpsRequestMtls(
-        'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: tokenBody,
-          certPem,
-          keyPem,
+      // Tenta os escopos oficiais de cooperado Sicoob (cco_consulta + pix.read + cob.read + boletos_consulta) e também cco_extrato
+      const scopesToTry = [
+        'cco_consulta cco_transferencias pix.read cob.read boletos_consulta pagamentos_consulta spb_consulta',
+        'cco_consulta pix.read',
+        'cco_extrato cco_saldo pix.read',
+        'cco_extrato cco_saldo',
+        'cco_consulta',
+        'pix.read',
+        'cco_extrato',
+        '',
+      ];
+      let accessToken = '';
+      let lastAuthError = '';
+
+      for (const scopeStr of scopesToTry) {
+        const params: Record<string, string> = {
+          grant_type: 'client_credentials',
+          client_id: clientId.trim(),
+        };
+        if (scopeStr) {
+          params.scope = scopeStr;
         }
-      );
+        const tokenBody = new URLSearchParams(params).toString();
 
-      if (tokenRes.status < 200 || tokenRes.status >= 300) {
+        const tokenRes = await httpsRequestMtls(
+          'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: tokenBody,
+            certPem,
+            keyPem,
+          }
+        );
+
+        if (tokenRes.status >= 200 && tokenRes.status < 300) {
+          const parsed = JSON.parse(tokenRes.body || '{}');
+          if (parsed.access_token) {
+            accessToken = parsed.access_token;
+            break;
+          }
+        } else {
+          lastAuthError = `HTTP ${tokenRes.status}: ${tokenRes.body.slice(0, 200)}`;
+        }
+      }
+
+      if (!accessToken) {
         return NextResponse.json(
-          { error: `Sicoob OAuth2 retornou HTTP ${tokenRes.status}: verifique seu Client ID no portal developers.sicoob.com.br.` },
+          {
+            error: `Sicoob OAuth2 recusou a autenticação (${lastAuthError}). Verifique se o Client ID de developers.sicoob.com.br pertence ao mesmo CNPJ do Certificado A1.`,
+          },
           { status: 400 }
         );
       }
 
-      const { access_token } = JSON.parse(tokenRes.body);
-      const [ano, mes] = dtFim.split('-');
-      const numConta = conta.replace(/\D/g, '');
-      const extRes = await httpsRequestMtls(
-        `https://api.sicoob.com.br/conta-corrente/v4/extrato/${Number(mes)}/${ano}?numeroContaCorrente=${numConta}`,
-        {
+      // Extrai conta corrente e cooperativa automaticamente do JWT do Sicoob caso não preenchidos
+      let jwtPayload: Record<string, any> = {};
+      try {
+        jwtPayload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString('utf8'));
+      } catch {}
+
+      const numConta =
+        conta.replace(/\D/g, '') ||
+        String(jwtPayload?.contaCorrente || jwtPayload?.contasCorrente?.[0]?.numero || '').replace(/\D/g, '');
+      const numCooperativa =
+        agencia.replace(/\D/g, '') ||
+        String(jwtPayload?.numCooperativa || jwtPayload?.cooperativa1 || '').replace(/\D/g, '');
+
+      const sicoobHeaders: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        client_id: clientId.trim(),
+        Accept: 'application/json',
+        ...(numCooperativa ? { 'x-sicoob-cie': numCooperativa } : {}),
+      };
+
+      const [anoIni, mesIni, diaIni] = dtInicio.split('-').map(Number);
+      const [anoFim, mesFim, diaFim] = dtFim.split('-').map(Number);
+
+      let ccoTx: OpenFinanceNormalizedTx[] = [];
+      let saldoAtual: number | null = null;
+      let ccoOk = false;
+      let ccoStatus = 0;
+
+      if (numConta) {
+        const queryParams = new URLSearchParams({ numeroContaCorrente: numConta });
+        if (anoIni === anoFim && mesIni === mesFim && diaIni && diaFim) {
+          queryParams.set('diaInicial', String(diaIni));
+          queryParams.set('diaFinal', String(diaFim));
+        }
+
+        const extRes = await httpsRequestMtls(
+          `https://api.sicoob.com.br/conta-corrente/v4/extrato/${mesFim}/${anoFim}?${queryParams.toString()}`,
+          {
+            method: 'GET',
+            headers: sicoobHeaders,
+            certPem,
+            keyPem,
+          }
+        );
+        ccoStatus = extRes.status;
+        if (extRes.status >= 200 && extRes.status < 300) {
+          ccoOk = true;
+          const extJson = JSON.parse(extRes.body || '{}');
+          const rawTx =
+            extJson?.resultado?.transacoes ||
+            extJson?.transacoes ||
+            (Array.isArray(extJson?.resultado) ? extJson.resultado : []);
+          saldoAtual = extJson?.resultado?.saldoAtual ?? extJson?.saldoAtual ?? null;
+          ccoTx = normalizarTransacoes(rawTx, 'sicoob');
+        }
+      }
+
+      // Consulta também a API Pix Sicoob v2 (/pix/api/v2/pix), que exige janelas dentro do mesmo mês calendário
+      const monthWindows: Array<{ ini: string; fim: string }> = [];
+      const cur = new Date(Date.UTC(anoIni, mesIni - 1, 1));
+      const endMonth = new Date(Date.UTC(anoFim, mesFim - 1, 1));
+      while (cur <= endMonth) {
+        const y = cur.getUTCFullYear();
+        const m = cur.getUTCMonth() + 1;
+        const mStr = String(m).padStart(2, '0');
+        const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        const dIni = y === anoIni && m === mesIni ? String(diaIni).padStart(2, '0') : '01';
+        const dFim = y === anoFim && m === mesFim ? String(diaFim).padStart(2, '0') : String(lastDay).padStart(2, '0');
+        monthWindows.push({
+          ini: `${y}-${mStr}-${dIni}T00:00:00Z`,
+          fim: `${y}-${mStr}-${dFim}T23:59:59Z`,
+        });
+        cur.setUTCMonth(cur.getUTCMonth() + 1);
+      }
+
+      // Se o usuário buscou apenas o mês corrente, inclui também os 2 meses anteriores caso o mês atual ainda esteja vazio
+      let pixRawList: any[] = [];
+      let pixOk = false;
+
+      for (const win of monthWindows) {
+        const pixUrl = `https://api.sicoob.com.br/pix/api/v2/pix?inicio=${encodeURIComponent(win.ini)}&fim=${encodeURIComponent(win.fim)}`;
+        const pixRes = await httpsRequestMtls(pixUrl, {
           method: 'GET',
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            client_id: clientId.trim(),
-          },
+          headers: sicoobHeaders,
           certPem,
           keyPem,
+        });
+        if (pixRes.status >= 200 && pixRes.status < 300) {
+          pixOk = true;
+          const pixJson = JSON.parse(pixRes.body || '{}');
+          if (Array.isArray(pixJson?.pix)) {
+            pixRawList.push(...pixJson.pix);
+          }
         }
-      );
+      }
 
-      const extJson = JSON.parse(extRes.body || '{}');
-      const rawTx = extJson?.resultado?.transacoes || extJson?.transacoes || [];
+      // Se o período atual não teve Pix e o usuário consultou apenas 1 mês, busca os últimos 2 meses para exibir histórico real
+      if (pixOk && pixRawList.length === 0 && monthWindows.length === 1) {
+        for (let offset = 1; offset <= 2; offset++) {
+          const prevDate = new Date(Date.UTC(anoFim, mesFim - 1 - offset, 1));
+          const py = prevDate.getUTCFullYear();
+          const pm = prevDate.getUTCMonth() + 1;
+          const pmStr = String(pm).padStart(2, '0');
+          const pLastDay = String(new Date(Date.UTC(py, pm, 0)).getUTCDate()).padStart(2, '0');
+          const pixUrl = `https://api.sicoob.com.br/pix/api/v2/pix?inicio=${encodeURIComponent(`${py}-${pmStr}-01T00:00:00Z`)}&fim=${encodeURIComponent(`${py}-${pmStr}-${pLastDay}T23:59:59Z`)}`;
+          const pixRes = await httpsRequestMtls(pixUrl, {
+            method: 'GET',
+            headers: sicoobHeaders,
+            certPem,
+            keyPem,
+          });
+          if (pixRes.status >= 200 && pixRes.status < 300) {
+            const pixJson = JSON.parse(pixRes.body || '{}');
+            if (Array.isArray(pixJson?.pix)) {
+              pixRawList.push(...pixJson.pix);
+            }
+          }
+        }
+      }
+
+      const pixTx = normalizarTransacoes(pixRawList, 'sicoob');
+
+      if (!ccoOk && !pixOk) {
+        return NextResponse.json(
+          {
+            error: `OAuth2 Sicoob autenticou com sucesso (Conta ${numConta}), mas o aplicativo ainda não possui a API 'Conta Corrente' ou 'Pix' vinculada no plano (HTTP ${ccoStatus}). Acesse developers.sicoob.com.br > Aplicativos > seção APIs e marque 'Conta Corrente' e 'Pix'.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Mescla transações sem duplicar
+      const mergedMap = new Map<string, OpenFinanceNormalizedTx>();
+      for (const tx of [...ccoTx, ...pixTx]) {
+        mergedMap.set(tx.fitId, tx);
+      }
+      const mergedTx = Array.from(mergedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+
       return NextResponse.json({
         ok: true,
         modo: 'producao',
-        protocolo: 'API Direta Sicoob Conta Corrente v4 (mTLS)',
-        transactions: normalizarTransacoes(rawTx, 'sicoob'),
+        protocolo: ccoOk
+          ? 'API Oficial Sicoob Conta Corrente v4 + Pix v2 (mTLS + OAuth2)'
+          : 'API Oficial Sicoob Pix v2 (mTLS + OAuth2 — Produção)',
+        saldoAtual,
+        contaAutenticada: numConta,
+        cooperativaAutenticada: numCooperativa,
+        titularAutenticado: jwtPayload?.descNomePessoa || null,
+        aviso: !ccoOk
+          ? 'Extrato Pix Sicoob sincronizado em Produção! Para incluir também boletos liquidados, TEDs e tarifas bancárias, acesse developers.sicoob.com.br > seu aplicativo > seção "APIs" (no rodapé) e adicione a API "Conta Corrente".'
+          : undefined,
+        transactions: mergedTx,
       });
     }
 

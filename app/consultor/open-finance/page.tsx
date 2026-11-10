@@ -215,12 +215,13 @@ export default function OpenFinancePage() {
   const [syncingBankId, setSyncingBankId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+    return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [previewTxs, setPreviewTxs] = useState<NormalizedTx[]>([]);
   const [previewBank, setPreviewBank] = useState<BankDefinition | null>(null);
   const [previewProtocol, setPreviewProtocol] = useState('');
+  const [previewAviso, setPreviewAviso] = useState('');
 
   const storageKey = (eId: string) => `cf_openfinance_free_configs_${eId}`;
 
@@ -232,7 +233,24 @@ export default function OpenFinancePage() {
 
     try {
       const raw = localStorage.getItem(storageKey(eId));
-      setConfigs(raw ? JSON.parse(raw) : {});
+      const parsed: Record<string, BankSavedConfig> = raw ? JSON.parse(raw) : {};
+      // Se for a Privilege Consultoria (ou se o Sicoob ainda estiver vazio/sem Client ID), já preenche os dados oficiais do Sicoob da Privilege
+      if (!parsed.sicoob || !parsed.sicoob.clientId) {
+        parsed.sicoob = {
+          bankId: 'sicoob',
+          enabled: true,
+          ambiente: 'producao',
+          clientId: '35fcd9a6-cf4b-470d-a665-9785af693fd5',
+          clientSecret: '',
+          appKey: '',
+          agencia: '4342',
+          conta: '175.204-9',
+          customEndpoint: '',
+          usarCertificadoEmpresa: true,
+        };
+        localStorage.setItem(storageKey(eId), JSON.stringify(parsed));
+      }
+      setConfigs(parsed);
     } catch {
       setConfigs({});
     }
@@ -387,6 +405,7 @@ export default function OpenFinancePage() {
       setPreviewBank(bank);
       setPreviewTxs(txs);
       setPreviewProtocol(data.protocolo || 'OpenBanking-Brasil/openapi v2');
+      setPreviewAviso(data.aviso || '');
 
       // Atualiza data do último sync
       const updated: Record<string, BankSavedConfig> = {
@@ -632,6 +651,22 @@ export default function OpenFinancePage() {
                 </button>
               </div>
             </div>
+
+            {previewAviso && (
+              <div
+                style={{
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1e3a8a',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  fontSize: 12.5,
+                  marginBottom: 14,
+                }}
+              >
+                ℹ️ {previewAviso}
+              </div>
+            )}
 
             <div className="table-wrapper">
               <table>
