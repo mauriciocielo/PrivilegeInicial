@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa, Cliente } from '../../../lib/store';
 import { toast } from 'sonner';
-import { Mail, Send, Users, CheckCircle2, AlertCircle, FileText, Sparkles, Filter } from 'lucide-react';
+import { Mail, Send, Users, CheckCircle2, Image as ImageIcon, X, ListPlus, Sparkles } from 'lucide-react';
 
 export default function NewsletterPage() {
   const [empresaId, setEmpresaId] = useState('');
@@ -11,6 +11,9 @@ export default function NewsletterPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [assunto, setAssunto] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [modoDestinatarios, setModoDestinatarios] = useState<'clientes' | 'manual'>('clientes');
+  const [listaManual, setListaManual] = useState('');
+  const [imagens, setImagens] = useState<{ filename: string; base64: string }[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [resultadoEnvio, setResultadoEnvio] = useState<{
     ok: boolean;
@@ -37,6 +40,14 @@ export default function NewsletterPage() {
 
   const clientesComEmail = clientes.filter(c => c.email && c.email.includes('@'));
 
+  const destinatariosManuaisValidos = listaManual
+    .split(/[\n,;]+/)
+    .map(s => s.trim())
+    .filter(s => s.includes('@'));
+
+  const totalDestinatariosEstimados =
+    modoDestinatarios === 'clientes' ? clientesComEmail.length : destinatariosManuaisValidos.length;
+
   const modelosProntos = [
     {
       titulo: '📅 Lembrete de Envio de Documentos e Fechamento Mensal',
@@ -55,21 +66,50 @@ export default function NewsletterPage() {
     },
   ];
 
+  const handleUploadImagem = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) {
+        toast.error(`O arquivo ${file.name} não é uma imagem válida.`);
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        setImagens(prev => [...prev, { filename: file.name, base64 }]);
+        toast.success(`Imagem ${file.name} anexada com sucesso!`);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoverImagem = (index: number) => {
+    setImagens(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleDisparar = async () => {
     if (!assunto.trim()) {
       toast.error('Informe o assunto da newsletter.');
       return;
     }
-    if (!mensagem.trim()) {
-      toast.error('Escreva o conteúdo da mensagem.');
+    if (!mensagem.trim() && imagens.length === 0) {
+      toast.error('Escreva o conteúdo da mensagem ou anexe uma imagem.');
       return;
     }
-    if (clientesComEmail.length === 0) {
-      toast.error('Nenhum cliente com e-mail cadastrado nesta empresa.');
+    if (totalDestinatariosEstimados === 0) {
+      toast.error(
+        modoDestinatarios === 'clientes'
+          ? 'Nenhum cliente com e-mail cadastrado nesta empresa.'
+          : 'Insira pelo menos um e-mail válido na lista de disparo.'
+      );
       return;
     }
 
-    if (!confirm(`Confirmar o disparo deste informativo para ${clientesComEmail.length} cliente(s) cadastrado(s)?`)) {
+    if (!confirm(`Confirmar o disparo deste comunicado para ${totalDestinatariosEstimados} destinatário(s)?`)) {
       return;
     }
 
@@ -85,6 +125,12 @@ export default function NewsletterPage() {
           empresaId,
           assunto,
           mensagem,
+          destinatariosLista: modoDestinatarios === 'manual' ? listaManual : undefined,
+          imagens: imagens.map((img, idx) => ({
+            filename: img.filename,
+            base64: img.base64,
+            cid: `img_anexo_${idx}`,
+          })),
         }),
       });
 
@@ -95,7 +141,7 @@ export default function NewsletterPage() {
       }
 
       setResultadoEnvio(data);
-      toast.success(`Newsletter disparada com sucesso! (${data.enviados} enviados de ${data.totalDestinatarios})`);
+      toast.success(`Disparo realizado com sucesso! (${data.enviados} enviados de ${data.totalDestinatarios})`);
     } catch (err: any) {
       toast.error(`Falha na conexão: ${err.message}`);
     } finally {
@@ -117,7 +163,7 @@ export default function NewsletterPage() {
                 Disparador de Newsletter & Comunicados
               </h1>
               <p style={{ fontSize: 13, color: '#6b7280', margin: '2px 0 0' }}>
-                Envie comunicados fiscais, lembretes de fechamento e informativos por e-mail para todos os seus clientes parceiros
+                Envie comunicados fiscais, panfletos, imagens e informativos para a base de clientes ou lista personalizada de e-mails
               </p>
             </div>
           </div>
@@ -130,43 +176,45 @@ export default function NewsletterPage() {
         </div>
       </div>
 
-      {/* Cartões de Status da Base */}
+      {/* Cartões de Status */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 24 }}>
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 13, fontWeight: 600 }}>
-            <Users size={18} /> Total de Clientes Cadastrados
+            <Users size={18} /> Clientes Cadastrados
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#111827', marginTop: 6 }}>
             {clientes.length}
           </div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Registros no banco de dados</div>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{clientesComEmail.length} possuem e-mail válido</div>
         </div>
 
         <div style={{ background: '#fff', border: '1px solid #10b981', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#047857', fontSize: 13, fontWeight: 600 }}>
-            <CheckCircle2 size={18} /> Destinatários Prontos (Com E-mail)
+            <CheckCircle2 size={18} /> Destinatários do Disparo Atual
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#059669', marginTop: 6 }}>
-            {clientesComEmail.length}
+            {totalDestinatariosEstimados}
           </div>
-          <div style={{ fontSize: 11, color: '#059669', marginTop: 2 }}>Receberão o comunicado imediatamente</div>
+          <div style={{ fontSize: 11, color: '#059669', marginTop: 2 }}>
+            {modoDestinatarios === 'clientes' ? 'Base ativa de clientes' : 'Lista manual de e-mails'}
+          </div>
         </div>
 
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 13, fontWeight: 600 }}>
-            <Mail size={18} /> Servidor de Envio SMTP
+            <Mail size={18} /> Servidor SMTP
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginTop: 8 }}>
             mail.privilegecontabilidade.com.br
           </div>
-          <div style={{ fontSize: 11, color: '#10b981', marginTop: 2 }}>● Conexão SSL/TLS Autenticada Ativa</div>
+          <div style={{ fontSize: 11, color: '#10b981', marginTop: 2 }}>● E-mail institucional configurado</div>
         </div>
       </div>
 
       {/* Modelos Prontos */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 12 }}>
-          <Sparkles size={16} color="#8c1a22" /> Modelos Prontos de Comunicados (Clique para preencher)
+          <Sparkles size={16} color="#8c1a22" /> Modelos Prontos de Comunicados (Clique para carregar)
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
           {modelosProntos.map((mod, i) => (
@@ -197,12 +245,85 @@ export default function NewsletterPage() {
         </div>
       </div>
 
-      {/* Formulário de Redação da Mensagem */}
+      {/* Formulário Principal */}
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 16 }}>
-          ✏️ Redigir Informativo
+        {/* Seletor de Destinatários */}
+        <div style={{ marginBottom: 20 }}>
+          <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 8, display: 'block' }}>
+            🎯 Para quem enviar?
+          </label>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: modoDestinatarios === 'clientes' ? '#fdf2f2' : '#f8fafc',
+                border: `1.5px solid ${modoDestinatarios === 'clientes' ? '#8c1a22' : '#d1d5db'}`,
+                padding: '8px 16px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 13,
+                color: modoDestinatarios === 'clientes' ? '#8c1a22' : '#374151',
+              }}
+            >
+              <input
+                type="radio"
+                name="modoDestinatarios"
+                checked={modoDestinatarios === 'clientes'}
+                onChange={() => setModoDestinatarios('clientes')}
+              />
+              <Users size={16} /> Todos os Clientes Cadastrados ({clientesComEmail.length})
+            </label>
+
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: modoDestinatarios === 'manual' ? '#fdf2f2' : '#f8fafc',
+                border: `1.5px solid ${modoDestinatarios === 'manual' ? '#8c1a22' : '#d1d5db'}`,
+                padding: '8px 16px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 13,
+                color: modoDestinatarios === 'manual' ? '#8c1a22' : '#374151',
+              }}
+            >
+              <input
+                type="radio"
+                name="modoDestinatarios"
+                checked={modoDestinatarios === 'manual'}
+                onChange={() => setModoDestinatarios('manual')}
+              />
+              <ListPlus size={16} /> Digitar / Colar Lista de E-mails Personalizada
+            </label>
+          </div>
         </div>
 
+        {/* Caixa de Lista Manual de E-mails */}
+        {modoDestinatarios === 'manual' && (
+          <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
+            <label className="form-label" style={{ fontWeight: 600, fontSize: 13, color: '#334155' }}>
+              Cole os e-mails separados por vírgula ou um por linha:
+            </label>
+            <textarea
+              className="form-input"
+              rows={4}
+              style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', fontFamily: 'monospace' }}
+              placeholder="cliente1@empresa.com.br, cliente2@outro.com.br ou um por linha"
+              value={listaManual}
+              onChange={e => setListaManual(e.target.value)}
+            />
+            <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+              Total identificados: <strong>{destinatariosManuaisValidos.length} e-mail(s) válidos</strong>
+            </div>
+          </div>
+        )}
+
+        {/* Assunto */}
         <div className="form-group" style={{ marginBottom: 16 }}>
           <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
             Assunto do E-mail *
@@ -211,27 +332,95 @@ export default function NewsletterPage() {
             type="text"
             className="form-input"
             style={{ width: '100%', padding: '9px 12px', fontSize: 14, borderRadius: 6, border: '1px solid #d1d5db' }}
-            placeholder="Ex: Privilege Consultoria — Lembrete de Fechamento Fiscal"
+            placeholder="Ex: Privilege Consultoria — Informativo Mensal"
             value={assunto}
             onChange={e => setAssunto(e.target.value)}
           />
         </div>
 
-        <div className="form-group" style={{ marginBottom: 20 }}>
+        {/* Mensagem */}
+        <div className="form-group" style={{ marginBottom: 18 }}>
           <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
-            Mensagem / Conteúdo da Newsletter *
+            Texto da Mensagem
           </label>
           <textarea
             className="form-input"
-            rows={10}
+            rows={8}
             style={{ width: '100%', padding: '10px 12px', fontSize: 13.5, borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'Arial, sans-serif' }}
             placeholder="Digite aqui o texto do informativo..."
             value={mensagem}
             onChange={e => setMensagem(e.target.value)}
           />
-          <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 4 }}>
-            💡 O cabeçalho institucional com logotipo da Privilege e rodapé serão incluídos automaticamente. O nome do cliente será personalizado dinamicamente.
+        </div>
+
+        {/* Seção de Imagens Anexadas / Embutidas */}
+        <div style={{ marginBottom: 22, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <label style={{ fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ImageIcon size={16} color="#8c1a22" /> Imagens / Panfletos do E-mail (Exibidas diretamente no corpo do e-mail)
+            </label>
+            <label
+              className="btn btn-secondary btn-sm"
+              style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}
+            >
+              <span>+ Adicionar Imagem</span>
+              <input type="file" accept="image/*" multiple onChange={handleUploadImagem} style={{ display: 'none' }} />
+            </label>
           </div>
+
+          {imagens.length === 0 ? (
+            <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+              Nenhuma imagem anexada. Você pode adicionar panfletos, banners ou comunicados visuais em PNG/JPG.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {imagens.map((img, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: 'relative',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    padding: 4,
+                    background: '#fff',
+                    textAlign: 'center',
+                    maxWidth: 160,
+                  }}
+                >
+                  <img
+                    src={img.base64}
+                    alt={img.filename}
+                    style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 4, display: 'block' }}
+                  />
+                  <div style={{ fontSize: 11, color: '#374151', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {img.filename}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoverImagem(idx)}
+                    style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -6,
+                      background: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 20,
+                      height: 20,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Remover imagem"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Feedback de Envio */}
@@ -257,7 +446,7 @@ export default function NewsletterPage() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 12, color: '#6b7280' }}>
-            Destinatários: <strong>{clientesComEmail.length} cliente(s)</strong> ativos com e-mail
+            Destinatários: <strong>{totalDestinatariosEstimados} e-mail(s)</strong> selecionado(s)
           </div>
           <button
             type="button"
@@ -272,15 +461,14 @@ export default function NewsletterPage() {
               alignItems: 'center',
               gap: 8,
             }}
-            disabled={enviando || clientesComEmail.length === 0}
+            disabled={enviando || totalDestinatariosEstimados === 0}
             onClick={handleDisparar}
           >
             <Send size={16} />
-            {enviando ? '⏳ Disparando E-mails...' : `🚀 Disparar para os ${clientesComEmail.length} Clientes`}
+            {enviando ? '⏳ Disparando E-mails...' : `🚀 Disparar para os ${totalDestinatariosEstimados} Destinatários`}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

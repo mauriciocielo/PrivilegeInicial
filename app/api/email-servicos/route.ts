@@ -1,17 +1,41 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 import { db } from '../../../lib/prisma';
 import { captureError } from '../../../lib/sentry-helper';
 
-function getTransporter() {
-  const smtpHost = process.env.SMTP_HOST || 'mail.privilegecontabilidade.com.br';
-  const smtpPort = Number(process.env.SMTP_PORT) || 465;
-  const smtpUser = process.env.SMTP_USER || 'contato@privilegecontabilidade.com.br';
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || 'contato@privilegecontabilidade.com.br';
+function getSmtpConfig() {
+  let envPass = process.env.SMTP_PASS;
+  let envUser = process.env.SMTP_USER;
+  let envHost = process.env.SMTP_HOST;
+  let envPort = process.env.SMTP_PORT;
+  let envFrom = process.env.SMTP_FROM;
+
+  // Garante carregamento do .env do disco caso o processo Node em execução ainda não tenha as variáveis
+  if (!envPass) {
+    try {
+      const envPath = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(envPath)) {
+        const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
+        envPass = envPass || parsed.SMTP_PASS;
+        envUser = envUser || parsed.SMTP_USER;
+        envHost = envHost || parsed.SMTP_HOST;
+        envPort = envPort || parsed.SMTP_PORT;
+        envFrom = envFrom || parsed.SMTP_FROM;
+      }
+    } catch {}
+  }
+
+  const smtpHost = envHost || 'mail.privilegecontabilidade.com.br';
+  const smtpPort = Number(envPort) || 465;
+  const smtpUser = envUser || 'contato@privilegecontabilidade.com.br';
+  const smtpPass = envPass || '';
+  const smtpFrom = envFrom || 'contato@privilegecontabilidade.com.br';
 
   if (!smtpPass) {
-    throw new Error('SMTP_PASS não configurada no servidor.');
+    throw new Error('A variável SMTP_PASS não foi encontrada no arquivo .env do servidor.');
   }
 
   const transporter = nodemailer.createTransport({
@@ -40,6 +64,10 @@ export async function POST(req: Request) {
       destinatarioNome,
       assunto,
       mensagem,
+      // Suporte a lista manual de e-mails para newsletter
+      destinatariosLista, // array de strings ou texto separado por vírgula/linha
+      // Suporte a imagens embutidas ou anexadas
+      imagens, // array de { filename: string, base64: string, cid?: string }
       // Dados para cobrança / boleto / nfse:
       nfseNumero,
       valor,
@@ -50,11 +78,9 @@ export async function POST(req: Request) {
       txidPix,
       pdfBoletoBase64,
       xmlNfse,
-      // Dados para newsletter:
-      filtroRegime, // opcional: 'todos' | 'simples' | 'presumido' | 'real'
     } = body;
 
-    const { transporter, smtpFrom } = getTransporter();
+    const { transporter, smtpFrom } = getSmtpConfig();
 
     // -------------------------------------------------------------
     // CASO 1: ENVIO DE BOLETO / COBRANÇA / NFS-E
@@ -190,43 +216,96 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Assunto e mensagem são obrigatórios para a newsletter.' }, { status: 400 });
       }
 
-      // Busca todos os clientes ativos com e-mail cadastrado
-      const whereClause: any = {
-        ativo: true,
-        email: { not: null },
-      };
+      let emailsDestino: { nome: string; email: string }[] = [];
 
-      if (empresaId) {
-        whereClause.empresaId = empresaId;
+      // A) Se foi fornecida uma lista manual de e-mails
+      if (destinatariosLista) {
+        const rawList = Array.isArray(destinatariosLista)
+          ? destinatariosLista
+          : String(destinatariosLista).split(/[\n,;]+/);
+
+        for (const item of rawList) {
+          const limpo = String(item).trim();
+          if (limpo && limpo.includes('@')) {
+            // Extrai formato "Nome <email@dominio.com>" ou apenas "email@dominio.com"
+            const match = limpo.match(/(?:(.*)<)?([^<>]+@[^<>]+)>?/);
+            if (match) {
+              const nome = match[1]?.trim() || 'Cliente';
+              const email = match[2]?.trim();
+              if (email && !emailsDestino.some(e => e.email.toLowerCase() === email.toLowerCase())) {
+                emailsDestino.push({ nome, email });
+              }
+            }
+          }
+        }
       }
 
-      const clientes = await db.cliente.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          nome: true,
-          nomeFantasia: true,
-          email: true,
-          cpfCnpj: true,
-        },
-      });
+      // B) Se não forneceu lista manual, busca da base de clientes cadastrados
+      if (emailsDestino.length === 0) {
+        const whereClause: any = {
+          ativo: true,
+          email: { not: null },
+        };
+        if (empresaId) whereClause.empresaId = empresaId;
 
-      const emailsValidos = clientes.filter(c => c.email && c.email.includes('@'));
+        const clientes = await db.cliente.findMany({
+          where: whereClause,
+          select: { id: true, nome: true, nomeFantasia: true, email: true },
+        });
 
-      if (emailsValidos.length === 0) {
+        for (const c of clientes) {
+          if (c.email && c.email.includes('@')) {
+            emailsDestino.push({
+              nome: c.nomeFantasia || c.nome || 'Cliente',
+              email: c.email.trim(),
+            });
+          }
+        }
+      }
+
+      if (emailsDestino.length === 0) {
         return NextResponse.json({
-          error: 'Nenhum cliente ativo com e-mail válido foi encontrado no cadastro.',
-          totalEncontrados: 0,
+          error: 'Nenhum e-mail válido foi encontrado na lista informada ou no cadastro de clientes.',
+          totalDestinatarios: 0,
         }, { status: 400 });
+      }
+
+      // Prepara anexos/imagens se existirem
+      const attachmentsNewsletter: any[] = [];
+      if (Array.isArray(imagens)) {
+        for (let i = 0; i < imagens.length; i++) {
+          const img = imagens[i];
+          if (img?.base64) {
+            const rawBase64 = img.base64.includes('base64,') ? img.base64.split('base64,')[1] : img.base64;
+            const cid = img.cid || `img_anexo_${i}`;
+            attachmentsNewsletter.push({
+              filename: img.filename || `imagem_${i + 1}.png`,
+              content: Buffer.from(rawBase64, 'base64'),
+              cid, // Permite referenciar na tag <img src="cid:img_anexo_0" />
+            });
+          }
+        }
       }
 
       let enviados = 0;
       let falhas = 0;
       const logsEnvio: { email: string; status: 'ok' | 'erro'; erro?: string }[] = [];
 
-      for (const cli of emailsValidos) {
+      for (const dest of emailsDestino) {
         try {
-          const nomeDest = cli.nomeFantasia || cli.nome || 'Cliente';
+          const nomeDest = dest.nome || 'Cliente';
+          let bodyHtml = conteudoHtml.replace(/\n/g, '<br />');
+
+          // Se houver imagens anexadas, exibe-as de forma limpa no corpo do e-mail
+          let htmlImagens = '';
+          if (attachmentsNewsletter.length > 0) {
+            htmlImagens = `
+              <div style="margin-top: 20px; text-align: center;">
+                ${attachmentsNewsletter.map(att => `<img src="cid:${att.cid}" alt="Imagem em anexo" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`).join('')}
+              </div>
+            `;
+          }
+
           const templatePersonalizado = `
             <!DOCTYPE html>
             <html>
@@ -234,7 +313,7 @@ export async function POST(req: Request) {
               <meta charset="utf-8" />
               <style>
                 body { font-family: Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
-                .card { max-width: 640px; background: #ffffff; border-radius: 10px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; }
+                .card { max-width: 640px; background: #ffffff; border-radius: 10px; margin: 0 auto; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
                 .topbar { background: #8c1a22; color: #ffffff; padding: 24px 28px; text-align: center; }
                 .topbar h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
                 .topbar p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
@@ -250,7 +329,8 @@ export async function POST(req: Request) {
                 </div>
                 <div class="content">
                   <p>Prezado(a) <strong>${nomeDest}</strong>,</p>
-                  <div>${conteudoHtml.replace(/\n/g, '<br />')}</div>
+                  <div>${bodyHtml}</div>
+                  ${htmlImagens}
                 </div>
                 <div class="footer">
                   <strong>Privilege Consultoria Ltda</strong><br />
@@ -264,18 +344,18 @@ export async function POST(req: Request) {
 
           await transporter.sendMail({
             from: `"Privilege Consultoria" <${smtpFrom}>`,
-            to: cli.email!,
+            to: dest.email,
             subject: tituloAssunto,
             html: templatePersonalizado,
+            attachments: attachmentsNewsletter,
           });
 
           enviados++;
-          logsEnvio.push({ email: cli.email!, status: 'ok' });
-          // Pausa sutil de 150ms para evitar bloqueios de taxa no SMTP
+          logsEnvio.push({ email: dest.email, status: 'ok' });
           await new Promise(r => setTimeout(r, 150));
         } catch (e) {
           falhas++;
-          logsEnvio.push({ email: cli.email!, status: 'erro', erro: (e as Error).message });
+          logsEnvio.push({ email: dest.email, status: 'erro', erro: (e as Error).message });
         }
       }
 
@@ -283,7 +363,7 @@ export async function POST(req: Request) {
         ok: true,
         enviados,
         falhas,
-        totalDestinatarios: emailsValidos.length,
+        totalDestinatarios: emailsDestino.length,
         logs: logsEnvio,
       });
     }
@@ -294,4 +374,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message || 'Erro ao processar envio de e-mail' }, { status: 500 });
   }
 }
-
