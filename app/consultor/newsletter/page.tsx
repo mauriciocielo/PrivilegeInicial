@@ -1031,7 +1031,7 @@ export default function NewsletterPage() {
                         )}
                       </td>
                       <td style={{ padding: '10px 12px' }}>
-                        {log.visualizadoEm ? (
+                        {log.visualizadoEm || log.status === 'visualizado' ? (
                           <span
                             style={{
                               background: '#eff6ff',
@@ -1045,7 +1045,7 @@ export default function NewsletterPage() {
                               gap: 4,
                             }}
                           >
-                            <Eye size={13} /> Visualizado às {new Date(log.visualizadoEm).toLocaleTimeString('pt-BR')}
+                            <Eye size={13} /> Visualizado{log.visualizadoEm ? ` às ${new Date(log.visualizadoEm).toLocaleTimeString('pt-BR')}` : ''}
                           </span>
                         ) : (
                           <span style={{ color: '#94a3b8', fontSize: 12 }}>Aguardando abertura</span>

@@ -13,14 +13,16 @@ export async function GET(req: Request) {
   const logs = lerLogs();
   const item = logs.find(l => l.id === id);
 
+  // Registra visualização sempre que o link da web for acessado
+  if (item) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+    const ua = req.headers.get('user-agent') || '';
+    atualizarStatusLog(id, 'visualizado', ip, ua);
+  }
+
   if (!item || !item.html) {
     return NextResponse.redirect('https://privilegecontabilidade.cnt.br');
   }
-
-  // Registra visualização no histórico
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
-  const ua = req.headers.get('user-agent') || '';
-  atualizarStatusLog(id, 'visualizado', ip, ua);
 
   // Barra de navegação oficial no topo com link para o site
   const topBarSite = `

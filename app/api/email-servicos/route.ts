@@ -151,7 +151,10 @@ export async function POST(req: Request) {
       pass: smtpPassCustom,
     });
 
-    const origin = req.headers.get('origin') || req.headers.get('host') ? `http://${req.headers.get('host')}` : '';
+    const hostHeader = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
+    const protoHeader = req.headers.get('x-forwarded-proto') || (hostHeader.includes('localhost') ? 'http' : 'https');
+    const origin = req.headers.get('origin') || (hostHeader ? `${protoHeader}://${hostHeader}` : 'https://privilegecontabilidade.cnt.br');
+    const baseUrl = (origin && !origin.includes('localhost')) ? origin : 'https://privilegecontabilidade.cnt.br';
 
     const logoOficialPath = path.join(process.cwd(), 'public', 'privilege-logo-email.png');
     const hasLogoOficial = fs.existsSync(logoOficialPath);
@@ -174,7 +177,8 @@ export async function POST(req: Request) {
         ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(brcodePix)}`
         : '';
 
-      const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
+      const pixelUrl = `${baseUrl}/api/email-servicos/pixel?id=${logId}`;
+      const webViewUrl = `${baseUrl}/api/email-servicos/view?id=${logId}&ref=${Math.random().toString(36).slice(2, 10)}`;
 
       const html = `
         <!DOCTYPE html>
@@ -438,9 +442,8 @@ export async function POST(req: Request) {
       for (const dest of emailsDestino) {
         const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const randomRef = Math.random().toString(36).slice(2, 10);
-        const baseUrl = origin || 'https://privilegecontabilidade.cnt.br';
         const webViewUrl = `${baseUrl}/api/email-servicos/view?id=${logId}&ref=${randomRef}`;
-        const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
+        const pixelUrl = `${baseUrl}/api/email-servicos/pixel?id=${logId}`;
 
         try {
           const nomeDest = dest.nome || 'Cliente';
@@ -557,7 +560,7 @@ export async function POST(req: Request) {
                     <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #64748b; text-decoration: underline; font-weight: bold;">privilegecontabilidade.cnt.br</a>
                   </span>
                 </div>
-                ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
+                ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" border="0" style="width:1px;height:1px;min-width:1px;min-height:1px;border:none;margin:0;padding:0;outline:none;" alt="" />` : ''}
               </div>
             </body>
             </html>
