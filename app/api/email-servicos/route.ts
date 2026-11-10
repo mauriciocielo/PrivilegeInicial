@@ -245,20 +245,20 @@ export async function POST(req: Request) {
                 </div>
               ` : ''}
 
-              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 13.5px; color: #374151; line-height: 1.5;">
-                <p style="margin: 0; font-weight: bold; color: #111827;">Privilege Assessoria Contábil</p>
-                <p style="margin: 2px 0 10px; font-size: 12.5px; color: #6b7280;">Contabilidade, orientação tributária e apoio à gestão empresarial.</p>
-                <p style="margin: 0; font-size: 12.5px; color: #4b5563;">
-                  Obrigado,<br />
-                  <strong style="color: #111827;">MARCOS CANCELIER ASSESSORIA CONTABIL ME</strong><br />
-                  (46) 3035-1061 / (46) 3035-1018
+              <div style="margin-top: 26px; padding-top: 18px; border-top: 2px solid #600000; font-size: 13px; color: #334155; line-height: 1.6;">
+                <p style="margin: 0; font-weight: 800; font-size: 14px; color: #600000;">PRIVILEGE CONTABILIDADE E CONSULTORIA</p>
+                <p style="margin: 2px 0 10px; font-size: 12px; color: #64748b;">PRIVILEGE CONSULTORIA LTDA · CNPJ: 58.033.979/0001-84</p>
+                <p style="margin: 0; font-size: 12.5px; color: #475569;">
+                  📍 Rua Pará, 127, Sala 103, Centro – Francisco Beltrão / PR · CEP 85.601-290<br />
+                  📞 (46) 3035-1061 · (46) 3035-1018 · 📱 WhatsApp: (46) 99904-8990<br />
+                  ✉️ <a href="mailto:consultoria@privilegecontabilidade.com.br" style="color: #600000; text-decoration: none;">consultoria@privilegecontabilidade.com.br</a> · 🌐 <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #600000; text-decoration: none; font-weight: bold;">privilegecontabilidade.cnt.br</a>
                 </p>
               </div>
             </div>
 
             <div class="footer">
-              <strong>Precisa de ajuda?</strong> Entre em contato conosco pelo telefone (46) 3035-1061 ou responda a este e-mail.<br />
-              Privilege Contabilidade e Consultoria · Francisco Beltrão/PR
+              <strong>Precisa de ajuda com esta cobrança?</strong> Entre em contato pelos telefones (46) 3035-1061 / 3035-1018 ou WhatsApp (46) 99904-8990.<br />
+              Privilege Consultoria Ltda · <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #64748b; text-decoration: underline;">privilegecontabilidade.cnt.br</a>
             </div>
             ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}
           </div>
@@ -438,7 +438,7 @@ export async function POST(req: Request) {
       for (const dest of emailsDestino) {
         const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const randomRef = Math.random().toString(36).slice(2, 10);
-        const baseUrl = origin || 'https://privilegecontabilidade.com.br';
+        const baseUrl = origin || 'https://privilegecontabilidade.cnt.br';
         const webViewUrl = `${baseUrl}/api/email-servicos/view?id=${logId}&ref=${randomRef}`;
         const pixelUrl = origin ? `${origin}/api/email-servicos/pixel?id=${logId}` : '';
 
@@ -480,11 +480,11 @@ export async function POST(req: Request) {
                   Se houver problemas com o modo de exibição desta mensagem, 
                   <a href="${webViewUrl}" target="_blank" style="color: #600000; font-weight: 600; text-decoration: underline;">clique aqui para exibi-la em um navegador da Web</a>
                   ou acesse nosso site: 
-                  <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #600000; font-weight: 600; text-decoration: underline;">privilegecontabilidade.com.br</a>.
+                  <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #600000; font-weight: 600; text-decoration: underline;">privilegecontabilidade.cnt.br</a>.
                 </div>
                 
                 <div class="header-logo">
-                  <a href="https://privilegecontabilidade.com.br" target="_blank" style="display: inline-block; text-decoration: none;">
+                  <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="display: inline-block; text-decoration: none;">
                     ${hasLogoOficial
                       ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade e Consultoria" width="260" style="display: block; margin: 0 auto; max-width: 260px; height: auto;" />`
                       : `<h2 style="color: #600000; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">PRIVILEGE CONTABILIDADE E CONSULTORIA</h2>`
@@ -519,21 +519,29 @@ export async function POST(req: Request) {
                       <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; color: #475569; margin-top: 8px;">
                         <tr>
                           <td style="padding: 2px 0; vertical-align: top; width: 22px;">🏢</td>
-                          <td style="padding: 2px 0;"><strong>PRIVILEGE CONSULTORIA LTDA</strong> · CNPJ: <strong>58.033.979/0001-84</strong></td>
+                          <td style="padding: 2px 0;"><strong>Razão Social:</strong> PRIVILEGE CONSULTORIA LTDA · <strong>Nome Fantasia:</strong> PRIVILEGE CONTABILIDADE E CONSULTORIA</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top;">📋</td>
+                          <td style="padding: 2px 0;"><strong>CNPJ:</strong> 58.033.979/0001-84</td>
                         </tr>
                         <tr>
                           <td style="padding: 2px 0; vertical-align: top;">📍</td>
-                          <td style="padding: 2px 0;">Rua Pará, 127, Sala 103, Centro – Francisco Beltrão / PR · CEP 85.601-290</td>
+                          <td style="padding: 2px 0;"><strong>Endereço:</strong> Rua Pará, 127, Sala 103, Centro – Francisco Beltrão / PR · CEP 85.601-290</td>
                         </tr>
                         <tr>
                           <td style="padding: 2px 0; vertical-align: top;">📞</td>
-                          <td style="padding: 2px 0;">(46) 3035-1061 / (46) 3035-1018 · 📱 WhatsApp: <strong>(46) 99904-8990</strong></td>
+                          <td style="padding: 2px 0;"><strong>Telefones:</strong> (46) 3035-1061 · (46) 3035-1018 · 📱 <strong>WhatsApp Oficial:</strong> (46) 99904-8990</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 2px 0; vertical-align: top;">✉️</td>
+                          <td style="padding: 2px 0;"><strong>E-mail:</strong> <a href="mailto:consultoria@privilegecontabilidade.com.br" style="color: #600000; text-decoration: none; font-weight: bold;">consultoria@privilegecontabilidade.com.br</a></td>
                         </tr>
                         <tr>
                           <td style="padding: 2px 0; vertical-align: top;">🌐</td>
                           <td style="padding: 2px 0;">
-                            <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #600000; font-weight: bold; text-decoration: none;">privilegecontabilidade.com.br</a>
-                            · Instagram: <a href="https://instagram.com/privilegefb" target="_blank" style="color: #600000; text-decoration: none;">@privilegefb</a>
+                            <strong>Site Oficial:</strong> <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #600000; font-weight: bold; text-decoration: none;">privilegecontabilidade.cnt.br</a>
+                            · <strong>Instagram:</strong> <a href="https://instagram.com/privilegefb" target="_blank" style="color: #600000; font-weight: bold; text-decoration: none;">@privilegefb</a> e <a href="https://instagram.com/privilegeconsultoria.fb" target="_blank" style="color: #600000; font-weight: bold; text-decoration: none;">@privilegeconsultoria.fb</a>
                           </td>
                         </tr>
                       </table>
@@ -543,10 +551,10 @@ export async function POST(req: Request) {
 
                 <div class="footer-box">
                   <strong>Precisa de ajuda ou orientação contábil?</strong><br />
-                  Entre em contato com nossa equipe pelo telefone <strong>(46) 3035-1061</strong>, WhatsApp <strong>(46) 99904-8990</strong> ou responda a este e-mail.<br />
+                  Entre em contato com nossa equipe pelos telefones <strong>(46) 3035-1061 · (46) 3035-1018</strong>, WhatsApp <strong>(46) 99904-8990</strong> ou responda a este e-mail.<br />
                   <span style="display: inline-block; margin-top: 6px; color: #94a3b8;">
-                    Privilege Consultoria Ltda · Francisco Beltrão/PR · 
-                    <a href="https://privilegecontabilidade.com.br" target="_blank" style="color: #64748b; text-decoration: underline;">Visitar Nosso Site Oficial</a>
+                    PRIVILEGE CONSULTORIA LTDA (CNPJ 58.033.979/0001-84) · Rua Pará, 127, Sala 103, Centro – Francisco Beltrão/PR<br />
+                    <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="color: #64748b; text-decoration: underline; font-weight: bold;">privilegecontabilidade.cnt.br</a>
                   </span>
                 </div>
                 ${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />` : ''}

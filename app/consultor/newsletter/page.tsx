@@ -111,6 +111,7 @@ export default function NewsletterPage() {
   };
 
   useEffect(() => {
+    carregarLogsServidor();
     const saved = sessionStorage.getItem('cf_empresa_sel') || '';
     if (saved) load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
@@ -767,7 +768,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Inserir Link"
                       onClick={() => {
-                        const url = prompt('Digite a URL do link (ex: https://privilegecontabilidade.com.br):', 'https://');
+                        const url = prompt('Digite a URL do link (ex: https://privilegecontabilidade.cnt.br):', 'https://');
                         if (url) aplicarFormatacao('[', `](${url})`, 'Clique aqui');
                       }}
                       style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
