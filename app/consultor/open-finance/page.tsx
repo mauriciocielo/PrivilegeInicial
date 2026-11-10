@@ -223,6 +223,33 @@ export default function OpenFinancePage() {
   const [previewProtocol, setPreviewProtocol] = useState('');
   const [previewAviso, setPreviewAviso] = useState('');
 
+  // Modal de Emissão de Cobrança Direta via API (Sicoob Pix Cob / CobV)
+  const [showCobrancaModal, setShowCobrancaModal] = useState(false);
+  const [emittingCobranca, setEmittingCobranca] = useState(false);
+  const [cobForm, setCobForm] = useState({
+    tipoCobranca: 'pix_imediato' as 'pix_imediato' | 'pix_vencimento',
+    chavePix: '58033979000184',
+    valor: '',
+    pagadorNome: '',
+    pagadorDocumento: '',
+    descricao: 'Honorários Contábeis / Consultoria Privilege',
+    dataVencimento: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().slice(0, 10);
+    })(),
+    multaPercentual: '2',
+    jurosMensalPercentual: '1',
+    lancarContasReceber: true,
+  });
+  const [cobResult, setCobResult] = useState<{
+    txid: string;
+    brcode: string;
+    valor: string;
+    status: string;
+    chave: string;
+  } | null>(null);
+
   const storageKey = (eId: string) => `cf_openfinance_free_configs_${eId}`;
 
   const load = async (eId: string) => {
@@ -425,6 +452,88 @@ export default function OpenFinancePage() {
       toast.error(`Erro de conexão: ${(err as Error).message}`);
     } finally {
       setSyncingBankId(null);
+    }
+  };
+
+  const handleEmitirCobrancaSicoob = async () => {
+    const sicoobCfg = configs.sicoob;
+    const valorNum = Number(String(cobForm.valor).replace(',', '.'));
+    if (!valorNum || valorNum <= 0) {
+      toast.error('Informe o valor da cobrança (ex: 150.00).');
+      return;
+    }
+
+    setEmittingCobranca(true);
+    try {
+      const res = await fetch('/api/banco-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao: 'emitir-cobranca-sicoob',
+          empresaId,
+          bankId: 'sicoob',
+          ambiente: 'producao',
+          clientId: sicoobCfg?.clientId || '35fcd9a6-cf4b-470d-a665-9785af693fd5',
+          usarCertificadoEmpresa: true,
+          tipoCobranca: cobForm.tipoCobranca,
+          chavePix: cobForm.chavePix,
+          valor: valorNum,
+          pagadorNome: cobForm.pagadorNome,
+          pagadorDocumento: cobForm.pagadorDocumento,
+          descricao: cobForm.descricao,
+          dataVencimento: cobForm.dataVencimento,
+          multaPercentual: Number(cobForm.multaPercentual || 0),
+          jurosMensalPercentual: Number(cobForm.jurosMensalPercentual || 0),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Erro ao emitir cobrança na API do Sicoob.');
+        return;
+      }
+
+      setCobResult({
+        txid: data.txid,
+        brcode: data.brcode,
+        valor: data.valor,
+        status: data.status,
+        chave: data.chave,
+      });
+
+      if (cobForm.lancarContasReceber && empresaId) {
+        const portadorSicoob =
+          store.getPortadores(empresaId).find(p => p.nome.toLowerCase().includes('sicoob')) ||
+          store.getPortadores(empresaId)[0];
+        const planos = store.getPlanoContas(empresaId);
+        const planoReceita =
+          planos.find(p => p.tipo === 'receita' && p.nivel === 3 && p.ativo) || planos.find(p => p.tipo === 'receita');
+
+        store.saveLancamento({
+          id: `cob_sicoob_${data.txid}`,
+          empresaId,
+          tipo: 'receita',
+          descricao: `[COB PIX SICOOB] ${cobForm.descricao}${cobForm.pagadorNome ? ` — ${cobForm.pagadorNome}` : ''}`,
+          valor: valorNum,
+          data:
+            cobForm.tipoCobranca === 'pix_vencimento'
+              ? cobForm.dataVencimento
+              : new Date().toISOString().slice(0, 10),
+          status: 'previsto',
+          planoContaId: planoReceita?.id || 'pc4',
+          portadorId: portadorSicoob?.id || 'port_sicoob',
+          numeroDocumento: data.txid,
+          observacao: `Cobrança emitida via API Oficial Sicoob (TXID: ${data.txid}). Pix Copia e Cola: ${data.brcode}`,
+          origem: 'manual',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      toast.success('Cobrança Pix emitida direto na API do Sicoob com sucesso!');
+    } catch (err) {
+      toast.error(`Erro ao emitir cobrança: ${(err as Error).message}`);
+    } finally {
+      setEmittingCobranca(false);
     }
   };
 
@@ -786,28 +895,49 @@ export default function OpenFinancePage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ flex: 1, border: '1px solid var(--border)', fontSize: 12.5 }}
-                    onClick={() => openBankConfig(b)}
-                  >
-                    ⚙️ Configurar Grátis
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    style={{
-                      flex: 1,
-                      background: b.color,
-                      color: b.color === '#eab308' ? '#111' : '#fff',
-                      border: 'none',
-                      fontSize: 12.5,
-                    }}
-                    disabled={isSyncing}
-                    onClick={() => syncBankStatement(b)}
-                  >
-                    {isSyncing ? '⏳ Buscando...' : '↻ Puxar Extrato'}
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ flex: 1, border: '1px solid var(--border)', fontSize: 12.5 }}
+                      onClick={() => openBankConfig(b)}
+                    >
+                      ⚙️ Configurar Grátis
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        flex: 1,
+                        background: b.color,
+                        color: b.color === '#eab308' ? '#111' : '#fff',
+                        border: 'none',
+                        fontSize: 12.5,
+                      }}
+                      disabled={isSyncing}
+                      onClick={() => syncBankStatement(b)}
+                    >
+                      {isSyncing ? '⏳ Buscando...' : '↻ Puxar Extrato'}
+                    </button>
+                  </div>
+                  {b.id === 'sicoob' && (
+                    <button
+                      className="btn btn-secondary"
+                      style={{
+                        width: '100%',
+                        background: 'rgba(0, 168, 89, 0.1)',
+                        color: '#008a49',
+                        border: '1px solid rgba(0, 168, 89, 0.35)',
+                        fontWeight: 700,
+                        fontSize: 12.5,
+                      }}
+                      onClick={() => {
+                        setCobResult(null);
+                        setShowCobrancaModal(true);
+                      }}
+                    >
+                      ⚡ Emitir Cobrança Direta via API (Pix QR Code / CobV)
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1098,6 +1228,263 @@ export default function OpenFinancePage() {
                 Salvar Configuração
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Emissão de Cobrança Direta via API Oficial Sicoob (mTLS + OAuth2) */}
+      {showCobrancaModal && (
+        <div className="modal-overlay" onClick={() => setShowCobrancaModal(false)}>
+          <div className="modal" style={{ maxWidth: 680, maxHeight: '92vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    background: '#00a859',
+                    color: '#fff',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 13,
+                  }}
+                >
+                  756
+                </span>
+                <div>
+                  <span className="modal-title">Emitir Cobrança Direta — API Sicoob (mTLS)</span>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                    Cooperativa 4342 · Conta 175.204-9 · PRIVILEGE CONSULTORIA LTDA
+                  </div>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowCobrancaModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            {!cobResult ? (
+              <>
+                <div className="grid-2" style={{ gap: 12, marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Modalidade da Cobrança</label>
+                    <select
+                      className="form-select"
+                      value={cobForm.tipoCobranca}
+                      onChange={e =>
+                        setCobForm(prev => ({
+                          ...prev,
+                          tipoCobranca: e.target.value as 'pix_imediato' | 'pix_vencimento',
+                        }))
+                      }
+                    >
+                      <option value="pix_imediato">Pix Cobrança Imediata (PUT /pix/api/v2/cob)</option>
+                      <option value="pix_vencimento">Pix com Vencimento, Multa e Juros (PUT /pix/api/v2/cobv)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Chave Pix Sicoob Recebedora</label>
+                    <select
+                      className="form-select"
+                      value={cobForm.chavePix}
+                      onChange={e => setCobForm(prev => ({ ...prev, chavePix: e.target.value }))}
+                    >
+                      <option value="58033979000184">CNPJ: 58.033.979/0001-84 (Privilege Consultoria)</option>
+                      <option value="8f6adc95-716c-46bb-bb05-14bec147c2d9">Chave Aleatória: 8f6adc95-716c-46bb-bb05-14bec147c2d9</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid-2" style={{ gap: 12, marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Valor da Cobrança (R$) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="form-input"
+                      placeholder="Ex: 1500.00"
+                      value={cobForm.valor}
+                      onChange={e => setCobForm(prev => ({ ...prev, valor: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Data de Vencimento</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={cobForm.dataVencimento}
+                      onChange={e => setCobForm(prev => ({ ...prev, dataVencimento: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-2" style={{ gap: 12, marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">
+                      Nome / Razão Social do Pagador {cobForm.tipoCobranca === 'pix_vencimento' ? '*' : '(Opcional)'}
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Nome do cliente ou empresa"
+                      value={cobForm.pagadorNome}
+                      onChange={e => setCobForm(prev => ({ ...prev, pagadorNome: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">
+                      CPF ou CNPJ do Pagador {cobForm.tipoCobranca === 'pix_vencimento' ? '*' : '(Opcional)'}
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Somente números ou formatado"
+                      value={cobForm.pagadorDocumento}
+                      onChange={e => setCobForm(prev => ({ ...prev, pagadorDocumento: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {cobForm.tipoCobranca === 'pix_vencimento' && (
+                  <div className="grid-2" style={{ gap: 12, marginBottom: 14 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Multa após vencimento (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="form-input"
+                        value={cobForm.multaPercentual}
+                        onChange={e => setCobForm(prev => ({ ...prev, multaPercentual: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Juros ao mês (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="form-input"
+                        value={cobForm.jurosMensalPercentual}
+                        onChange={e => setCobForm(prev => ({ ...prev, jurosMensalPercentual: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label className="form-label">Descrição / Mensagem ao Pagador</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Ex: Honorários Contábeis ref. competência 11/2026"
+                    value={cobForm.descricao}
+                    onChange={e => setCobForm(prev => ({ ...prev, descricao: e.target.value }))}
+                  />
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, marginBottom: 18, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={cobForm.lancarContasReceber}
+                    onChange={e => setCobForm(prev => ({ ...prev, lancarContasReceber: e.target.checked }))}
+                  />
+                  Registrar automaticamente esta cobrança em Contas a Receber / Fluxo de Caixa
+                </label>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                  <button className="btn btn-secondary" onClick={() => setShowCobrancaModal(false)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ background: '#00a859', border: 'none' }}
+                    disabled={emittingCobranca}
+                    onClick={handleEmitirCobrancaSicoob}
+                  >
+                    {emittingCobranca ? '⏳ Gerando Cobrança no Sicoob...' : '⚡ Emitir Cobrança Agora'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '8px 0' }}>
+                <div
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)', marginBottom: 4 }}>
+                    ✓ Cobrança Registrada no Sicoob ({cobResult.status})
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                    <strong>TXID BACEN:</strong> <code style={{ fontSize: 12 }}>{cobResult.txid}</code> ·{' '}
+                    <strong>Valor:</strong> R$ {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                {cobResult.brcode && (
+                  <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(cobResult.brcode)}`}
+                      alt="QR Code Pix Sicoob"
+                      width={160}
+                      height={160}
+                      style={{ borderRadius: 12, border: '1px solid var(--border)', padding: 8, background: '#fff' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 240 }}>
+                      <label className="form-label">Código Pix Copia e Cola Oficial (BRCode BACEN)</label>
+                      <textarea
+                        className="form-input"
+                        rows={4}
+                        readOnly
+                        style={{ fontFamily: 'monospace', fontSize: 11.5 }}
+                        value={cobResult.brcode}
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button
+                          className="btn btn-primary"
+                          style={{ background: '#00a859', border: 'none', fontSize: 12.5 }}
+                          onClick={() => {
+                            navigator.clipboard.writeText(cobResult.brcode);
+                            toast.success('Código Pix Copia e Cola copiado!');
+                          }}
+                        >
+                          📋 Copiar Pix Copia e Cola
+                        </button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            `Olá${cobForm.pagadorNome ? ` ${cobForm.pagadorNome}` : ''}! Segue o código Pix Copia e Cola referente a ${cobForm.descricao} (Valor: R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):\n\n${cobResult.brcode}`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 12.5, textDecoration: 'none' }}
+                        >
+                          📲 Enviar no WhatsApp
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                  <button className="btn btn-secondary" onClick={() => setCobResult(null)}>
+                    + Emitir Outra Cobrança
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setShowCobrancaModal(false)}>
+                    Concluir
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

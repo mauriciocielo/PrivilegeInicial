@@ -473,6 +473,9 @@ export interface NfsE {
   valorLiquido: number;
   // Vínculo financeiro (só existe se gerarContaReceber for marcado)
   gerarContaReceber?: boolean;
+  emitirBoletoSicoob?: boolean;
+  cobrancaTxid?: string;
+  cobrancaBrcode?: string;
   lancamentoId?: string;       // ID do lançamento (Conta a Receber) gerado
   portadorId?: string;
   planoContaId?: string;

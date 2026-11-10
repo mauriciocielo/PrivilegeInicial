@@ -25,7 +25,7 @@ interface HttpResult {
 function httpsRequestMtls(
   urlStr: string,
   options: {
-    method: 'GET' | 'POST';
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH';
     headers?: Record<string, string>;
     body?: string;
     certPem?: string;
@@ -364,6 +364,181 @@ export async function POST(request: Request) {
       );
     }
 
+    // 2.5 Emissão de Cobrança Direta Sicoob (API Pix Cobrança Imediata / Com Vencimento via mTLS + OAuth2)
+    if (body.acao === 'emitir-cobranca-sicoob') {
+      if (!certPem || !keyPem) {
+        return NextResponse.json(
+          { error: 'Para emitir cobrança direta na API do Sicoob, o Certificado Digital A1 (mTLS) deve estar ativo.' },
+          { status: 400 }
+        );
+      }
+
+      const {
+        tipoCobranca = 'pix_imediato', // 'pix_imediato' | 'pix_vencimento'
+        chavePix = '58033979000184',
+        valor = 0,
+        pagadorNome = '',
+        pagadorDocumento = '',
+        descricao = '',
+        dataVencimento = '',
+        multaPercentual = 2,
+        jurosMensalPercentual = 1,
+      } = body;
+
+      const valorNum = Number(valor);
+      if (!valorNum || valorNum <= 0) {
+        return NextResponse.json({ error: 'Informe um valor válido maior que zero para a cobrança.' }, { status: 400 });
+      }
+
+      const docLimpo = String(pagadorDocumento || '').replace(/\D/g, '');
+      if (docLimpo && docLimpo.length !== 11 && docLimpo.length !== 14) {
+        return NextResponse.json({ error: 'O CPF (11 dígitos) ou CNPJ (14 dígitos) do pagador é inválido.' }, { status: 400 });
+      }
+      if (tipoCobranca === 'pix_vencimento' && (!docLimpo || !pagadorNome.trim() || !dataVencimento)) {
+        return NextResponse.json(
+          { error: 'Na Cobrança com Vencimento (CobV), o Nome, CPF/CNPJ do pagador e a Data de Vencimento são obrigatórios pelo BACEN.' },
+          { status: 400 }
+        );
+      }
+
+      const cobScopes = [
+        'cob.write cob.read cobv.write cobv.read pix.write pix.read boletos_inclusao boletos_consulta',
+        'cob.write cob.read cobv.write cobv.read pix.write pix.read',
+        'cob.write cob.read',
+        'cobv.write cobv.read',
+        'pix.write pix.read cob.read cobv.read',
+      ];
+
+      let accessToken = '';
+      let lastAuthError = '';
+      for (const sc of cobScopes) {
+        const tokenBody = new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: clientId.trim(),
+          scope: sc,
+        }).toString();
+
+        const tokRes = await httpsRequestMtls(
+          'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: tokenBody,
+            certPem,
+            keyPem,
+          }
+        );
+        if (tokRes.status >= 200 && tokRes.status < 300) {
+          const parsed = JSON.parse(tokRes.body || '{}');
+          if (parsed.access_token) {
+            accessToken = parsed.access_token;
+            break;
+          }
+        } else {
+          lastAuthError = `HTTP ${tokRes.status}: ${tokRes.body.slice(0, 200)}`;
+        }
+      }
+
+      if (!accessToken) {
+        return NextResponse.json(
+          {
+            error: `Não foi possível obter o escopo de emissão de cobrança (cob.write / cobv.write) no Sicoob (${lastAuthError}). No portal developers.sicoob.com.br > Aplicativos > API Pix, marque as permissões 'cob.write' e 'cobv.write'.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const headersCob: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        client_id: clientId.trim(),
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+
+      const devedorObj =
+        docLimpo && pagadorNome.trim()
+          ? docLimpo.length === 14
+            ? { cnpj: docLimpo, nome: pagadorNome.trim() }
+            : { cpf: docLimpo, nome: pagadorNome.trim() }
+          : undefined;
+
+      // Gera txid alfanumérico de 32 caracteres (exigido pelo padrão BACEN: [a-zA-Z0-9]{26,35})
+      const randomHex = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      const txid = (`PRIV${Date.now()}${randomHex}`).replace(/[^a-zA-Z0-9]/g, '').slice(0, 32).padEnd(28, '0');
+
+      let cobUrl = `https://api.sicoob.com.br/pix/api/v2/cob/${txid}`;
+      let cobPayload: Record<string, any> = {
+        calendario: { expiracao: 86400 },
+        ...(devedorObj ? { devedor: devedorObj } : {}),
+        valor: { original: valorNum.toFixed(2) },
+        chave: chavePix.trim() || '58033979000184',
+        solicitacaoPagador: (descricao || 'Cobrança Privilege Consultoria').slice(0, 140),
+      };
+
+      if (tipoCobranca === 'pix_vencimento') {
+        cobUrl = `https://api.sicoob.com.br/pix/api/v2/cobv/${txid}`;
+        cobPayload = {
+          calendario: {
+            dataDeVencimento: dataVencimento,
+            validadeAposVencimento: 30,
+          },
+          devedor: devedorObj,
+          valor: {
+            original: valorNum.toFixed(2),
+            ...(Number(multaPercentual) > 0
+              ? { multa: { modalidade: 2, valorPerc: Number(multaPercentual).toFixed(2) } }
+              : {}),
+            ...(Number(jurosMensalPercentual) > 0
+              ? { juros: { modalidade: 2, valorPerc: Number(jurosMensalPercentual).toFixed(2) } }
+              : {}),
+          },
+          chave: chavePix.trim() || '58033979000184',
+          solicitacaoPagador: (descricao || 'Cobrança Privilege Consultoria').slice(0, 140),
+        };
+      }
+
+      let cobRes = await httpsRequestMtls(cobUrl, {
+        method: 'PUT',
+        headers: headersCob,
+        body: JSON.stringify(cobPayload),
+        certPem,
+        keyPem,
+      });
+
+      if (cobRes.status === 401) {
+        await new Promise(r => setTimeout(r, 1500));
+        cobRes = await httpsRequestMtls(cobUrl, {
+          method: 'PUT',
+          headers: headersCob,
+          body: JSON.stringify(cobPayload),
+          certPem,
+          keyPem,
+        });
+      }
+
+      if (cobRes.status < 200 || cobRes.status >= 300) {
+        return NextResponse.json(
+          {
+            error: `Sicoob API Cobrança retornou HTTP ${cobRes.status}: ${cobRes.body.slice(0, 300)}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const cobJson = JSON.parse(cobRes.body || '{}');
+      return NextResponse.json({
+        ok: true,
+        txid: cobJson.txid || txid,
+        status: cobJson.status || 'ATIVA',
+        brcode: cobJson.brcode || cobJson.pixCopiaECola || '',
+        location: cobJson.location || cobJson.loc?.location || '',
+        valor: cobJson.valor?.original || valorNum.toFixed(2),
+        chave: cobJson.chave || chavePix,
+        calendario: cobJson.calendario || {},
+        devedor: cobJson.devedor || devedorObj || null,
+      });
+    }
+
     const hoje = new Date();
     const dtFim = endDate || hoje.toISOString().slice(0, 10);
     const dtInicio =
@@ -458,11 +633,18 @@ export async function POST(request: Request) {
         ...(numCooperativa ? { 'x-sicoob-cie': numCooperativa } : {}),
       };
 
+      let lastCallTime = 0;
       const callSicoobWithRetry = async (url: string, headers: Record<string, string>) => {
+        const elapsed = Date.now() - lastCallTime;
+        if (elapsed < 750) {
+          await new Promise(r => setTimeout(r, 750 - elapsed));
+        }
+        lastCallTime = Date.now();
         let res = await httpsRequestMtls(url, { method: 'GET', headers, certPem, keyPem });
-        if (res.status === 401) {
-          // Aguarda propagação do token JWT no gateway IBM API Connect do Sicoob (~1.5s) e tenta novamente
-          await new Promise(r => setTimeout(r, 1500));
+        if (res.status === 401 || res.status === 429) {
+          // Aguarda propagação do token ou janela de rate-limit (Assembly Rate Limit) do Sicoob e tenta novamente
+          await new Promise(r => setTimeout(r, 1600));
+          lastCallTime = Date.now();
           res = await httpsRequestMtls(url, { method: 'GET', headers, certPem, keyPem });
         }
         return res;
@@ -473,7 +655,7 @@ export async function POST(request: Request) {
 
       // 1) Consulta PRIMEIRO a API Pix Sicoob v2 (/pix/api/v2/pix), que exige janelas dentro do mesmo mês calendário
       // (evita que uma chamada prévia a uma API não assinada gere bloqueio temporário 403/401 no gateway IBM do Sicoob)
-      const monthWindows: Array<{ ini: string; fim: string }> = [];
+      const monthWindows: Array<{ ini: string; fim: string; ym: string }> = [];
       const cur = new Date(Date.UTC(anoIni, mesIni - 1, 1));
       const endMonth = new Date(Date.UTC(anoFim, mesFim - 1, 1));
       while (cur <= endMonth) {
@@ -486,8 +668,30 @@ export async function POST(request: Request) {
         monthWindows.push({
           ini: `${y}-${mStr}-${dIni}T00:00:00Z`,
           fim: `${y}-${mStr}-${dFim}T23:59:59Z`,
+          ym: `${y}-${mStr}`,
         });
         cur.setUTCMonth(cur.getUTCMonth() + 1);
+      }
+
+      // Se o filtro na tela cobrir até 2 meses, inclui automaticamente até 4 meses anteriores para carregar todo o histórico recente
+      if (monthWindows.length <= 2) {
+        const seenYm = new Set(monthWindows.map(w => w.ym));
+        for (let offset = 1; offset <= 4; offset++) {
+          const prevDate = new Date(Date.UTC(anoFim, mesFim - 1 - offset, 1));
+          const py = prevDate.getUTCFullYear();
+          const pm = prevDate.getUTCMonth() + 1;
+          const pmStr = String(pm).padStart(2, '0');
+          const ymKey = `${py}-${pmStr}`;
+          if (!seenYm.has(ymKey)) {
+            seenYm.add(ymKey);
+            const pLastDay = String(new Date(Date.UTC(py, pm, 0)).getUTCDate()).padStart(2, '0');
+            monthWindows.push({
+              ini: `${py}-${pmStr}-01T00:00:00Z`,
+              fim: `${py}-${pmStr}-${pLastDay}T23:59:59Z`,
+              ym: ymKey,
+            });
+          }
+        }
       }
 
       const pixRawList: any[] = [];
@@ -502,55 +706,48 @@ export async function POST(request: Request) {
           if (Array.isArray(pixJson?.pix)) {
             pixRawList.push(...pixJson.pix);
           }
-        }
-      }
-
-      // Se o período atual não teve Pix e o usuário consultou apenas 1 mês, busca os últimos 2 meses para exibir histórico real
-      if (pixOk && pixRawList.length === 0 && monthWindows.length === 1) {
-        for (let offset = 1; offset <= 2; offset++) {
-          const prevDate = new Date(Date.UTC(anoFim, mesFim - 1 - offset, 1));
-          const py = prevDate.getUTCFullYear();
-          const pm = prevDate.getUTCMonth() + 1;
-          const pmStr = String(pm).padStart(2, '0');
-          const pLastDay = String(new Date(Date.UTC(py, pm, 0)).getUTCDate()).padStart(2, '0');
-          const pixUrl = `https://api.sicoob.com.br/pix/api/v2/pix?inicio=${encodeURIComponent(`${py}-${pmStr}-01T00:00:00Z`)}&fim=${encodeURIComponent(`${py}-${pmStr}-${pLastDay}T23:59:59Z`)}`;
-          const pixRes = await callSicoobWithRetry(pixUrl, sicoobPixHeaders);
-          if (pixRes.status >= 200 && pixRes.status < 300) {
-            const pixJson = JSON.parse(pixRes.body || '{}');
-            if (Array.isArray(pixJson?.pix)) {
-              pixRawList.push(...pixJson.pix);
+          const totalPaginas = Number(pixJson?.parametros?.paginacao?.quantidadeDePaginas || 1);
+          for (let pag = 1; pag < totalPaginas && pag < 10; pag++) {
+            const pagRes = await callSicoobWithRetry(`${pixUrl}&paginacao.paginaAtual=${pag}`, sicoobPixHeaders);
+            if (pagRes.status >= 200 && pagRes.status < 300) {
+              const pagJson = JSON.parse(pagRes.body || '{}');
+              if (Array.isArray(pagJson?.pix)) {
+                pixRawList.push(...pagJson.pix);
+              }
             }
           }
         }
       }
 
-      // 2) Consulta Conta Corrente v4 se o escopo cco_extrato estiver ativo (ou como tentativa secundária)
+      // 2) Consulta Conta Corrente v4 em todos os meses do período se o escopo cco_extrato estiver ativo (ou como tentativa secundária)
       let ccoTx: OpenFinanceNormalizedTx[] = [];
       let saldoAtual: number | null = null;
       let ccoOk = false;
       let ccoStatus = 0;
 
       if (numConta && (grantedScopeStr.includes('cco_extrato') || !pixOk)) {
-        const queryParams = new URLSearchParams({ numeroContaCorrente: numConta });
-        if (anoIni === anoFim && mesIni === mesFim && diaIni && diaFim) {
-          queryParams.set('diaInicial', String(diaIni));
-          queryParams.set('diaFinal', String(diaFim));
-        }
-
-        const extRes = await callSicoobWithRetry(
-          `https://api.sicoob.com.br/conta-corrente/v4/extrato/${mesFim}/${anoFim}?${queryParams.toString()}`,
-          sicoobCcoHeaders
-        );
-        ccoStatus = extRes.status;
-        if (extRes.status >= 200 && extRes.status < 300) {
-          ccoOk = true;
-          const extJson = JSON.parse(extRes.body || '{}');
-          const rawTx =
-            extJson?.resultado?.transacoes ||
-            extJson?.transacoes ||
-            (Array.isArray(extJson?.resultado) ? extJson.resultado : []);
-          saldoAtual = extJson?.resultado?.saldoAtual ?? extJson?.saldoAtual ?? null;
-          ccoTx = normalizarTransacoes(rawTx, 'sicoob');
+        for (const win of monthWindows) {
+          const [wy, wm] = win.ym.split('-').map(Number);
+          const queryParams = new URLSearchParams({ numeroContaCorrente: numConta });
+          const extRes = await callSicoobWithRetry(
+            `https://api.sicoob.com.br/conta-corrente/v4/extrato/${wm}/${wy}?${queryParams.toString()}`,
+            sicoobCcoHeaders
+          );
+          ccoStatus = extRes.status;
+          if (extRes.status >= 200 && extRes.status < 300) {
+            ccoOk = true;
+            const extJson = JSON.parse(extRes.body || '{}');
+            const rawTx =
+              extJson?.resultado?.transacoes ||
+              extJson?.transacoes ||
+              (Array.isArray(extJson?.resultado) ? extJson.resultado : []);
+            if (saldoAtual === null) {
+              saldoAtual = extJson?.resultado?.saldoAtual ?? extJson?.saldoAtual ?? null;
+            }
+            ccoTx.push(...normalizarTransacoes(rawTx, 'sicoob'));
+          } else {
+            break;
+          }
         }
       }
 

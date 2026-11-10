@@ -451,6 +451,7 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
   const estimativa = estimarValoresNota(valorForm, aliquotaForm, issRetidoForm, totalRetidoFederal(retidosForm));
   const financeiroForm: FinanceiroNota = {
     gerarContaReceber: !!form.gerarContaReceber,
+    emitirBoletoSicoob: !!form.emitirBoletoSicoob,
     portadorId: form.portadorId || '',
     planoContaId: form.planoContaId || '',
     vencimento: form.vencimento || '',
@@ -896,7 +897,118 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
       ? `NFS-e ${envio.nota.numero} recuperada: a tentativa anterior já havia sido autorizada.`
       : `NFS-e ${envio.nota.numero} autorizada pelo Sefin.`);
     envio.alertas.forEach(alerta => toast.warning(alerta, { duration: 12000 }));
+    if (envio.nota.emitirBoletoSicoob || nfse.emitirBoletoSicoob) {
+      abrirModalCobrancaNfse(envio.nota, true);
+    }
     return true;
+  };
+
+  // ======================== EMISSÃO DE BOLETO / COBRANÇA PIX SICOOB PELA NFS-E ========================
+  const [notaCobrancaModal, setNotaCobrancaModal] = useState<NfsE | null>(null);
+  const [emitindoCobrancaNota, setEmitindoCobrancaNota] = useState(false);
+  const [tipoCobrancaNota, setTipoCobrancaNota] = useState<'pix_imediato' | 'pix_vencimento'>('pix_imediato');
+  const [chavePixNota, setChavePixNota] = useState('58033979000184');
+  const [vencimentoCobrancaNota, setVencimentoCobrancaNota] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const [resultadoCobrancaNota, setResultadoCobrancaNota] = useState<{
+    txid: string;
+    brcode: string;
+    valor: string;
+    status: string;
+    chave: string;
+  } | null>(null);
+
+  const emitirCobrancaDaNota = async (notaAlvo: NfsE, tipoOverride?: 'pix_imediato' | 'pix_vencimento', vencOverride?: string) => {
+    setEmitindoCobrancaNota(true);
+    try {
+      let sicoobClientId = '35fcd9a6-cf4b-470d-a665-9785af693fd5';
+      try {
+        const raw = localStorage.getItem(`cf_openfinance_free_configs_${empresaId}`);
+        const parsed = raw ? JSON.parse(raw) : {};
+        if (parsed?.sicoob?.clientId) sicoobClientId = parsed.sicoob.clientId;
+      } catch {}
+
+      const valorCob = Number(notaAlvo.valorLiquido || notaAlvo.valorServicos || 0);
+      const venc = vencOverride || notaAlvo.vencimento || vencimentoCobrancaNota;
+      const res = await fetch('/api/banco-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao: 'emitir-cobranca-sicoob',
+          empresaId,
+          bankId: 'sicoob',
+          ambiente: 'producao',
+          clientId: sicoobClientId,
+          usarCertificadoEmpresa: true,
+          tipoCobranca: tipoOverride || tipoCobrancaNota,
+          chavePix: chavePixNota,
+          valor: valorCob,
+          pagadorNome: notaAlvo.tomadorRazaoSocial,
+          pagadorDocumento: notaAlvo.tomadorCnpjCpf,
+          descricao: `NFS-e Nº ${notaAlvo.numero} — ${(notaAlvo.discriminacao || 'Serviços Prestados').slice(0, 90)}`,
+          dataVencimento: venc,
+          multaPercentual: 2,
+          jurosMensalPercentual: 1,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Erro ao emitir cobrança Sicoob para esta NFS-e.');
+        return;
+      }
+
+      const resultado = {
+        txid: data.txid,
+        brcode: data.brcode,
+        valor: data.valor,
+        status: data.status || 'ATIVA',
+        chave: data.chave || chavePixNota,
+      };
+      setResultadoCobrancaNota(resultado);
+
+      const notaAtualizada: NfsE = {
+        ...notaAlvo,
+        cobrancaTxid: data.txid,
+        cobrancaBrcode: data.brcode,
+        vencimento: venc,
+      };
+      store.saveNfsE(notaAtualizada);
+      setNfseList(store.getNfsE(empresaId));
+      toast.success(`Cobrança / Boleto Pix Sicoob emitido com sucesso para a NFS-e Nº ${notaAlvo.numero}!`);
+    } catch (err) {
+      toast.error(`Falha ao emitir cobrança Sicoob: ${(err as Error).message}`);
+    } finally {
+      setEmitindoCobrancaNota(false);
+    }
+  };
+
+  const abrirModalCobrancaNfse = (nota: NfsE, autoEmitir = false) => {
+    setNotaCobrancaModal(nota);
+    const venc =
+      nota.vencimento ||
+      (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        return d.toISOString().slice(0, 10);
+      })();
+    setVencimentoCobrancaNota(venc);
+    if (nota.cobrancaBrcode && nota.cobrancaTxid && !autoEmitir) {
+      setResultadoCobrancaNota({
+        txid: nota.cobrancaTxid,
+        brcode: nota.cobrancaBrcode,
+        valor: String(nota.valorLiquido || nota.valorServicos || 0),
+        status: 'ATIVA',
+        chave: chavePixNota,
+      });
+    } else {
+      setResultadoCobrancaNota(null);
+      if (autoEmitir) {
+        emitirCobrancaDaNota(nota, 'pix_imediato', venc);
+      }
+    }
   };
 
   // Só conta o que está na lista: uma ação nunca atinge uma nota que o filtro escondeu.
@@ -2136,6 +2248,24 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                                 </button>
                               </>
                             )}
+                            {!tomada && n.status === 'emitida' && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  fontSize: 12,
+                                  padding: '5px 10px',
+                                  background: n.cobrancaBrcode ? 'rgba(0, 168, 89, 0.12)' : '#fff',
+                                  border: '1px solid #00a859',
+                                  color: '#008a49',
+                                  borderRadius: 6,
+                                  fontWeight: 600,
+                                }}
+                                onClick={() => abrirModalCobrancaNfse(n, false)}
+                                title="Emitir ou visualizar Boleto / Cobrança Pix Sicoob vinculada a esta NFS-e"
+                              >
+                                {n.cobrancaBrcode ? '✓ Boleto / Pix' : '💳 Emitir Boleto'}
+                              </button>
+                            )}
                             {!tomada && n.status === 'emitida' && !n.cancelamentoEmAnalise && (
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -2684,6 +2814,13 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8, flexWrap: 'wrap' }}>
               <h2 className="modal-title" style={{ margin: 0 }}>NFS-e Nº {viewItem.numero}</h2>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ borderColor: '#00a859', color: '#008a49', fontWeight: 700 }}
+                  onClick={() => abrirModalCobrancaNfse(viewItem, false)}
+                >
+                  💳 Emitir Boleto / Pix Sicoob
+                </button>
                 <a className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} href={`/api/nfse/${viewItem.id}/danfse?baixar=1`}>Baixar PDF</a>
                 <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>Baixar XML</a>
                 <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
@@ -2922,6 +3059,164 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           empresaIdInicial={empresaId}
           onFechar={() => setShowCndModal(false)}
         />
+      )}
+
+      {/* ======================== MODAL BOLETO / COBRANÇA PIX SICOOB DA NFS-E ======================== */}
+      {notaCobrancaModal && (
+        <div className="modal-overlay" onClick={() => setNotaCobrancaModal(null)}>
+          <div
+            className="modal"
+            style={{ maxWidth: 660, maxHeight: '92vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title" style={{ margin: 0 }}>
+                  💳 Boleto / Cobrança Pix Sicoob — NFS-e Nº {notaCobrancaModal.numero}
+                </h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Tomador: <strong>{notaCobrancaModal.tomadorRazaoSocial}</strong> ({notaCobrancaModal.tomadorCnpjCpf}) · Valor Líquido:{' '}
+                  <strong>{fmt.currency(notaCobrancaModal.valorLiquido || notaCobrancaModal.valorServicos)}</strong>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setNotaCobrancaModal(null)}>
+                ✕
+              </button>
+            </div>
+
+            {!resultadoCobrancaNota ? (
+              <div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Modalidade Sicoob (API Direta mTLS)</label>
+                    <select
+                      className="form-control"
+                      value={tipoCobrancaNota}
+                      onChange={e => setTipoCobrancaNota(e.target.value as 'pix_imediato' | 'pix_vencimento')}
+                    >
+                      <option value="pix_imediato">Cobrança Pix Imediata (QR Code + Copia e Cola Oficial)</option>
+                      <option value="pix_vencimento">Boleto Pix com Vencimento, Multa (2%) e Juros (1% a.m.)</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimento</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={vencimentoCobrancaNota}
+                      onChange={e => setVencimentoCobrancaNota(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginTop: 10 }}>
+                  <label className="form-label">Chave Pix Sicoob Recebedora (Conta 175.204-9 · Coop. 4342)</label>
+                  <select
+                    className="form-control"
+                    value={chavePixNota}
+                    onChange={e => setChavePixNota(e.target.value)}
+                  >
+                    <option value="58033979000184">CNPJ: 58.033.979/0001-84 (Privilege Consultoria)</option>
+                    <option value="8f6adc95-716c-46bb-bb05-14bec147c2d9">Chave Aleatória: 8f6adc95-716c-46bb-bb05-14bec147c2d9</option>
+                  </select>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: 20 }}>
+                  <button className="btn btn-secondary" onClick={() => setNotaCobrancaModal(null)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ background: '#00a859', borderColor: '#00a859' }}
+                    disabled={emitindoCobrancaNota}
+                    onClick={() => emitirCobrancaDaNota(notaCobrancaModal)}
+                  >
+                    {emitindoCobrancaNota ? '⏳ Registrando Cobrança no Sicoob...' : '⚡ Emitir Cobrança Sicoob Agora'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #86efac',
+                    borderRadius: 10,
+                    padding: 14,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: '#166534' }}>
+                    ✓ Cobrança Sicoob Registrada ({resultadoCobrancaNota.status}) — Ref. NFS-e Nº {notaCobrancaModal.numero}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#15803d', marginTop: 4 }}>
+                    <strong>TXID BACEN:</strong> <code>{resultadoCobrancaNota.txid}</code> · <strong>Vencimento:</strong>{' '}
+                    {fmt.date(vencimentoCobrancaNota)} · <strong>Valor:</strong>{' '}
+                    {fmt.currency(Number(resultadoCobrancaNota.valor))}
+                  </div>
+                </div>
+
+                {resultadoCobrancaNota.brcode && (
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                        resultadoCobrancaNota.brcode
+                      )}`}
+                      alt="QR Code Pix Sicoob"
+                      width={155}
+                      height={155}
+                      style={{ borderRadius: 10, border: '1px solid #e5e7eb', padding: 8, background: '#fff' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 240 }}>
+                      <label className="form-label">Código Pix Copia e Cola Oficial (BRCode BACEN)</label>
+                      <textarea
+                        className="form-control"
+                        rows={4}
+                        readOnly
+                        style={{ fontFamily: 'monospace', fontSize: 11.5 }}
+                        value={resultadoCobrancaNota.brcode}
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          style={{ background: '#00a859', borderColor: '#00a859' }}
+                          onClick={() => {
+                            navigator.clipboard.writeText(resultadoCobrancaNota.brcode);
+                            toast.success('Pix Copia e Cola copiado!');
+                          }}
+                        >
+                          📋 Copiar Pix Copia e Cola
+                        </button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue a cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
+                              Number(resultadoCobrancaNota.valor)
+                            )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          📲 Enviar no WhatsApp
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-actions" style={{ marginTop: 16 }}>
+                  <button className="btn btn-secondary" onClick={() => setResultadoCobrancaNota(null)}>
+                    Reemitir / Alterar Modalidade
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setNotaCobrancaModal(null)}>
+                    Concluir
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   );
