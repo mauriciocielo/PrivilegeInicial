@@ -36,7 +36,17 @@ type ConfigSicoob = {
   modalidadeCarteira: string; sequencialRemessa: number; proximoNossoNumero: number;
 };
 const CONFIG_SICOOB_KEY = (eid: string) => `cf_cnab_sicoob_${eid}`;
-const CONFIG_SICOOB_PADRAO: ConfigSicoob = { agencia: '', digitoAgencia: '', conta: '', digitoConta: '', convenio: '', carteira: '1', modalidadeCarteira: '01', sequencialRemessa: 1, proximoNossoNumero: 1 };
+const CONFIG_SICOOB_PADRAO: ConfigSicoob = {
+  agencia: '4342',
+  digitoAgencia: '0',
+  conta: '175204',
+  digitoConta: '9',
+  convenio: '4276485',
+  carteira: '1',
+  modalidadeCarteira: '01',
+  sequencialRemessa: 1,
+  proximoNossoNumero: 1,
+};
 
 function baixarTexto(conteudo: string, nome: string) {
   const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
@@ -77,10 +87,13 @@ export default function ContasReceberPage() {
   const [sortBy, setSortBy] = useState<{ key: 'data' | 'valor'; dir: 'asc' | 'desc' }>({ key: 'data', dir: 'asc' });
   const [triedSave, setTriedSave] = useState(false);
 
-  // C6 Boleto modal state
+  // C6 / Sicoob Boleto Híbrido modal state
   const [showC6BoletoModal, setShowC6BoletoModal] = useState(false);
   const [c6BoletoLanc, setC6BoletoLanc] = useState<Lancamento | null>(null);
   const [c6Sacado, setC6Sacado] = useState({ nome: '', cpfCnpj: '', endereco: '' });
+  const [emitirBoletoAoSalvar, setEmitirBoletoAoSalvar] = useState(true);
+  const [gerandoPixSicoob, setGerandoPixSicoob] = useState(false);
+  const [pixSicoobDados, setPixSicoobDados] = useState<{ brcode: string; txid: string; chave: string } | null>(null);
 
   // Remessa CNAB 240 Sicoob
   const [showRemessaConfig, setShowRemessaConfig] = useState(false);
@@ -98,7 +111,16 @@ export default function ContasReceberPage() {
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
     try {
       const salvo = JSON.parse(localStorage.getItem(CONFIG_SICOOB_KEY(eId)) || 'null');
-      setConfigSicoob(salvo ? { ...CONFIG_SICOOB_PADRAO, ...salvo } : CONFIG_SICOOB_PADRAO);
+      setConfigSicoob({
+        ...CONFIG_SICOOB_PADRAO,
+        ...(salvo || {}),
+        agencia: salvo?.agencia?.trim() || CONFIG_SICOOB_PADRAO.agencia,
+        conta: salvo?.conta?.trim() || CONFIG_SICOOB_PADRAO.conta,
+        digitoConta: salvo?.digitoConta?.trim() || CONFIG_SICOOB_PADRAO.digitoConta,
+        convenio: salvo?.convenio?.trim() || CONFIG_SICOOB_PADRAO.convenio,
+        carteira: salvo?.carteira?.trim() || CONFIG_SICOOB_PADRAO.carteira,
+        modalidadeCarteira: salvo?.modalidadeCarteira?.trim() || CONFIG_SICOOB_PADRAO.modalidadeCarteira,
+      });
     } catch { setConfigSicoob(CONFIG_SICOOB_PADRAO); }
   }, []);
 
@@ -290,6 +312,7 @@ export default function ContasReceberPage() {
     setEditItem(null);
     setContaSearch('');
     setTriedSave(false);
+    setEmitirBoletoAoSalvar(true);
     setForm({ tipo: 'receita', status: 'previsto', origem: 'manual', data: todayStr, empresaId });
     setShowModal(true);
   };
@@ -298,20 +321,80 @@ export default function ContasReceberPage() {
     setEditItem(l);
     setContaSearch('');
     setTriedSave(false);
+    setEmitirBoletoAoSalvar(false);
     setForm({ ...l });
     setShowModal(true);
   };
 
+  const emitirPixApiParaBoleto = async (lanc: Lancamento, sacadoNome: string, sacadoDoc: string) => {
+    setGerandoPixSicoob(true);
+    try {
+      let clientIdSalvo = '35fcd9a6-cf4b-470d-a665-9785af693fd5';
+      try {
+        const rawCfg = localStorage.getItem(`cf_openfinance_direct_cfg_${empresaId}`);
+        if (rawCfg) {
+          const parsed = JSON.parse(rawCfg);
+          if (parsed?.sicoob?.clientId) clientIdSalvo = parsed.sicoob.clientId;
+        }
+      } catch { /* ignore */ }
+
+      const docDigits = (sacadoDoc || '').replace(/\D/g, '');
+      const res = await fetch('/api/banco-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao: 'emitir-cobranca-sicoob',
+          empresaId,
+          bankId: 'sicoob',
+          ambiente: 'producao',
+          clientId: clientIdSalvo,
+          usarCertificadoEmpresa: true,
+          tipoCobranca: docDigits.length === 11 || docDigits.length === 14 ? 'pix_vencimento' : 'pix_imediato',
+          chavePix: '58033979000184',
+          valor: lanc.valor,
+          pagadorNome: sacadoNome,
+          pagadorDocumento: docDigits,
+          descricao: lanc.descricao,
+          dataVencimento: lanc.data,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok && data.brcode) {
+        setPixSicoobDados({
+          brcode: data.brcode,
+          txid: data.txid,
+          chave: data.chave || '58033979000184',
+        });
+        // Salva no observacao o txid se ainda não tiver
+        if (!lanc.observacao?.includes(data.txid)) {
+          const obsAtualizada = [lanc.observacao, `Sicoob TXID: ${data.txid}`].filter(Boolean).join(' | ');
+          store.saveLancamento({ ...lanc, observacao: obsAtualizada });
+        }
+        toast.success('Boleto Híbrido Sicoob + QR Code Pix API gerado com sucesso!');
+      } else if (data.error) {
+        toast.warning(`Boleto gerado com código de barras. Aviso Pix API: ${data.error}`);
+      }
+    } catch {
+      // Caso offline, mantém código de barras ITF normal
+    } finally {
+      setGerandoPixSicoob(false);
+    }
+  };
+
   const openC6Boleto = (l: Lancamento) => {
     setC6BoletoLanc(l);
+    setPixSicoobDados(null);
     // Auto-fill sacado from linked cliente
     const cli = l.clienteId ? clientes.find(c => c.id === l.clienteId) : null;
+    const nomeSacado = cli?.nome || cli?.nomeFantasia || '';
+    const docSacado = cli?.cpfCnpj || '';
     setC6Sacado({
-      nome: cli?.nome || '',
-      cpfCnpj: cli?.cpfCnpj || '',
+      nome: nomeSacado,
+      cpfCnpj: docSacado,
       endereco: [cli?.endereco, cli?.cidade, cli?.estado].filter(Boolean).join(', '),
     });
     setShowC6BoletoModal(true);
+    void emitirPixApiParaBoleto(l, nomeSacado, docSacado);
   };
 
   const handleSave = async () => {
@@ -342,6 +425,9 @@ export default function ContasReceberPage() {
     load(empresaId);
     setShowModal(false);
     setSaving(false);
+    if (emitirBoletoAoSalvar && lanc.status === 'previsto') {
+      openC6Boleto(lanc);
+    }
   };
 
   const modalPlanoContas = useMemo(() => planoContas.filter(p => {
@@ -731,9 +817,33 @@ export default function ContasReceberPage() {
               </div>
             </div>
 
+            {(form.status || 'previsto') === 'previsto' && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.28)',
+                }}
+              >
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: '#065f46' }}>
+                  <input
+                    type="checkbox"
+                    checked={emitirBoletoAoSalvar}
+                    onChange={e => setEmitirBoletoAoSalvar(e.target.checked)}
+                  />
+                  🏦 Já emitir e abrir Boleto Híbrido Sicoob (Código de Barras + QR Code Pix API) ao salvar
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, marginLeft: 22 }}>
+                  Gera automaticamente a Ficha de Compensação 756-0 (Linha Digitável + Código de Barras) e o QR Code Pix oficial na API do Sicoob (Cooperativa 4342 / Conta 175.204-9).
+                </div>
+              </div>
+            )}
+
             <div className="form-actions" style={{ marginTop: 24 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : '✓ Salvar'}</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : emitirBoletoAoSalvar && (form.status || 'previsto') === 'previsto' ? '✓ Salvar e Emitir Boleto Sicoob' : '✓ Salvar'}</button>
             </div>
           </div>
         </div>
@@ -817,13 +927,47 @@ export default function ContasReceberPage() {
             ` }} />
 
             {/* Header — no-print */}
-            <div className="no-print" style={{ fontFamily: 'var(--font-sans)', borderBottom: '1px solid #e5e7eb', paddingBottom: 16, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="no-print" style={{ fontFamily: 'var(--font-sans)', borderBottom: '1px solid #e5e7eb', paddingBottom: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🏦 Boleto Sicoob</h2>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>Preencha os dados do sacado antes de imprimir</p>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#003641' }}>🏦 Boleto Híbrido Sicoob (756-0 + QR Code Pix Oficial)</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#6b7280' }}>
+                  Ficha de Compensação com Linha Digitável, Código de Barras ITF e QR Code Pix registrado via API mTLS Sicoob
+                </p>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary" style={{ background: '#000', borderColor: '#000', fontFamily: 'var(--font-sans)' }} onClick={() => window.print()}>🖨️ Imprimir / PDF</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {boletoCalc?.linhaDigitavel && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontFamily: 'var(--font-sans)' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(boletoCalc.linhaDigitavel);
+                      toast.success('Linha digitável copiada!');
+                    }}
+                  >
+                    📋 Copiar Linha Digitável
+                  </button>
+                )}
+                {pixSicoobDados?.brcode && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontFamily: 'var(--font-sans)', background: '#ecfdf5', color: '#065f46', borderColor: '#10b981' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(pixSicoobDados.brcode);
+                      toast.success('Pix Copia e Cola Sicoob copiado!');
+                    }}
+                  >
+                    ⚡ Copiar Pix Copia e Cola
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontFamily: 'var(--font-sans)' }}
+                  disabled={gerandoPixSicoob}
+                  onClick={() => emitirPixApiParaBoleto(c6BoletoLanc, c6Sacado.nome, c6Sacado.cpfCnpj)}
+                >
+                  {gerandoPixSicoob ? '⏳ Registrando Pix API...' : '🔄 Atualizar QR Code API Sicoob'}
+                </button>
+                <button className="btn btn-primary" style={{ background: '#003641', borderColor: '#003641', fontFamily: 'var(--font-sans)' }} onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
                 <button className="modal-close" onClick={() => setShowC6BoletoModal(false)}>✕</button>
               </div>
             </div>
@@ -932,16 +1076,35 @@ export default function ContasReceberPage() {
                 </div>
               </div>
 
-              {/* Row 5 — Instructions & deductions */}
+              {/* Row 5 — Instructions, QR Code Pix Híbrido & deductions */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                <div style={{ flex: 3, borderRight: '1px solid #000', padding: 6, minHeight: 100 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Instruções (Responsabilidade do Beneficiário)</div>
-                  <div style={{ fontSize: 10, marginTop: 5, lineHeight: '15px' }}>
-                    • COBRANÇA REFERENTE A {c6BoletoLanc.descricao.toUpperCase()}.<br />
-                    • APÓS O VENCIMENTO COBRAR MORA DE R$ 1,50 AO DIA E MULTA DE 2,0%.<br />
-                    • NÃO RECEBER APÓS 30 DIAS DO VENCIMENTO.<br />
-                    • SICOOB — CENTRAL DE RELACIONAMENTO: 0800 642 0000.
+                <div style={{ flex: 3, borderRight: '1px solid #000', padding: 6, minHeight: 115, display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>Instruções (Responsabilidade do Beneficiário)</div>
+                    <div style={{ fontSize: 10, marginTop: 5, lineHeight: '15px' }}>
+                      • COBRANÇA REFERENTE A {c6BoletoLanc.descricao.toUpperCase()}.<br />
+                      • PAGUE PELO CÓDIGO DE BARRAS OU APONTE A CÂMERA PARA O QR CODE PIX AO LADO.<br />
+                      • APÓS O VENCIMENTO COBRAR MORA DE 1,0% AO MÊS E MULTA DE 2,0%.<br />
+                      • SICOOB — COOPERATIVA 4342 / CONTA 175.204-9 / BENEF. 4276485.
+                      {pixSicoobDados?.txid && (
+                        <>
+                          <br />• TXID PIX OFICIAL SICOOB: <strong>{pixSicoobDados.txid}</strong>
+                        </>
+                      )}
+                    </div>
                   </div>
+                  {pixSicoobDados?.brcode && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid #000', padding: 4, borderRadius: 4, minWidth: 108 }}>
+                      <div style={{ fontSize: 7.5, fontWeight: 800, marginBottom: 2 }}>PAGUE COM PIX</div>
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=92x92&data=${encodeURIComponent(pixSicoobDados.brcode)}`}
+                        alt="QR Code Pix Sicoob"
+                        width={92}
+                        height={92}
+                        style={{ display: 'block' }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>

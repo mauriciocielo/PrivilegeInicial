@@ -3,6 +3,32 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador } from '../../../lib/store';
 import { toast } from 'sonner';
+import { barrasITF } from '../../../lib/cnab/boleto-sicoob';
+
+function CodigoBarrasBoleto({ codigo, altura = 48 }: { codigo: string; altura?: number }) {
+  let larguras: number[];
+  try {
+    larguras = barrasITF(codigo);
+  } catch {
+    return null;
+  }
+  const unidade = 1.1;
+  const total = larguras.reduce((a, b) => a + b, 0) * unidade;
+  let x = 0;
+  const barras: { x: number; w: number }[] = [];
+  larguras.forEach((l, i) => {
+    const w = l * unidade;
+    if (i % 2 === 0) barras.push({ x, w });
+    x += w;
+  });
+  return (
+    <svg width={total} height={altura} viewBox={`0 0 ${total} ${altura}`} style={{ display: 'block', maxWidth: '100%' }}>
+      {barras.map((b, i) => (
+        <rect key={i} x={b.x} y={0} width={b.w} height={altura} fill="#000" />
+      ))}
+    </svg>
+  );
+}
 
 interface BankDefinition {
   id: string;
@@ -248,6 +274,15 @@ export default function OpenFinancePage() {
     valor: string;
     status: string;
     chave: string;
+    boleto?: {
+      linhaDigitavel: string;
+      codigoBarras: string;
+      nossoNumero: string;
+      agencia: string;
+      convenio: string;
+      conta: string;
+      dataVencimento: string;
+    } | null;
   } | null>(null);
 
   const storageKey = (eId: string) => `cf_openfinance_free_configs_${eId}`;
@@ -499,6 +534,7 @@ export default function OpenFinancePage() {
         valor: data.valor,
         status: data.status,
         chave: data.chave,
+        boleto: data.boleto || null,
       });
 
       if (cobForm.lancarContasReceber && empresaId) {
@@ -1411,77 +1447,193 @@ export default function OpenFinancePage() {
                 </div>
               </>
             ) : (
-              <div style={{ padding: '8px 0' }}>
+              <div style={{ padding: '8px 0' }} className="boleto-print-wrapper">
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @media print {
+                    body * { visibility: hidden !important; }
+                    .boleto-sicoob-printable, .boleto-sicoob-printable * { visibility: visible !important; }
+                    .boleto-sicoob-printable {
+                      position: absolute !important; left: 0 !important; top: 0 !important;
+                      width: 100% !important; margin: 0 !important; padding: 14px !important;
+                    }
+                    .no-print { display: none !important; }
+                  }
+                ` }} />
                 <div
+                  className="no-print"
                   style={{
                     background: 'rgba(16, 185, 129, 0.1)',
                     border: '1px solid rgba(16, 185, 129, 0.35)',
                     borderRadius: 12,
-                    padding: 16,
-                    marginBottom: 16,
+                    padding: 14,
+                    marginBottom: 14,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 10,
                   }}
                 >
-                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)', marginBottom: 4 }}>
-                    ✓ Cobrança Registrada no Sicoob ({cobResult.status})
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)' }}>
+                      ✓ Boleto Híbrido + Cobrança Pix Emitido no Sicoob ({cobResult.status})
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      <strong>TXID BACEN:</strong> <code>{cobResult.txid}</code> · <strong>Valor:</strong> R${' '}
+                      {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                    <strong>TXID BACEN:</strong> <code style={{ fontSize: 12 }}>{cobResult.txid}</code> ·{' '}
-                    <strong>Valor:</strong> R$ {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {cobResult.boleto?.linhaDigitavel && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(cobResult.boleto!.linhaDigitavel);
+                          toast.success('Linha digitável copiada!');
+                        }}
+                      >
+                        📋 Copiar Linha Digitável
+                      </button>
+                    )}
+                    {cobResult.brcode && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(cobResult.brcode);
+                          toast.success('Código Pix Copia e Cola copiado!');
+                        }}
+                      >
+                        ⚡ Copiar Pix Copia e Cola
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ background: '#003641', border: 'none' }}
+                      onClick={() => window.print()}
+                    >
+                      🖨️ Imprimir Boleto / Salvar PDF
+                    </button>
                   </div>
                 </div>
 
-                {cobResult.brcode && (
-                  <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(cobResult.brcode)}`}
-                      alt="QR Code Pix Sicoob"
-                      width={160}
-                      height={160}
-                      style={{ borderRadius: 12, border: '1px solid var(--border)', padding: 8, background: '#fff' }}
-                    />
-                    <div style={{ flex: 1, minWidth: 240 }}>
-                      <label className="form-label">Código Pix Copia e Cola Oficial (BRCode BACEN)</label>
-                      <textarea
-                        className="form-input"
-                        rows={4}
-                        readOnly
-                        style={{ fontFamily: 'monospace', fontSize: 11.5 }}
-                        value={cobResult.brcode}
-                      />
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button
-                          className="btn btn-primary"
-                          style={{ background: '#00a859', border: 'none', fontSize: 12.5 }}
-                          onClick={() => {
-                            navigator.clipboard.writeText(cobResult.brcode);
-                            toast.success('Código Pix Copia e Cola copiado!');
-                          }}
-                        >
-                          📋 Copiar Pix Copia e Cola
-                        </button>
-                        <a
-                          href={`https://wa.me/?text=${encodeURIComponent(
-                            `Olá${cobForm.pagadorNome ? ` ${cobForm.pagadorNome}` : ''}! Segue o código Pix Copia e Cola referente a ${cobForm.descricao} (Valor: R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):\n\n${cobResult.brcode}`
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-secondary"
-                          style={{ fontSize: 12.5, textDecoration: 'none' }}
-                        >
-                          📲 Enviar no WhatsApp
-                        </a>
+                {/* Ficha de Compensação Boleto Híbrido Sicoob (756-0) */}
+                {cobResult.boleto && (
+                  <div
+                    className="boleto-sicoob-printable"
+                    style={{
+                      border: '2px solid #000',
+                      padding: 12,
+                      background: '#fff',
+                      color: '#000',
+                      fontFamily: 'Courier New, monospace',
+                      marginBottom: 16,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 6, alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          background: '#003641',
+                          color: '#fff',
+                          padding: '2px 8px',
+                          borderRadius: 3,
+                          fontFamily: 'sans-serif',
+                          fontWeight: 800,
+                          marginRight: 10,
+                        }}
+                      >
+                        SICOOB
+                      </span>
+                      <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 10px', fontSize: 16, fontWeight: 900 }}>
+                        756-0
                       </div>
+                      <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 900 }}>
+                        {cobResult.boleto.linhaDigitavel}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
+                      <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
+                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
+                        <div style={{ fontSize: 10, fontWeight: 'bold' }}>
+                          {activeCompany?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'} — CNPJ: {activeCompany?.cnpj || '58.033.979/0001-84'}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, padding: 4 }}>
+                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
+                        <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
+                          {cobForm.dataVencimento.split('-').reverse().join('/')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
+                      <div style={{ flex: 2, borderRight: '1px solid #000', padding: 4 }}>
+                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Beneficiário</div>
+                        <div style={{ fontSize: 10 }}>
+                          {cobResult.boleto.agencia} / {cobResult.boleto.convenio}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
+                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
+                        <div style={{ fontSize: 10 }}>{cobResult.boleto.nossoNumero}</div>
+                      </div>
+                      <div style={{ flex: 1, padding: 4 }}>
+                        <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
+                        <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
+                          R$ {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: 6, gap: 10, alignItems: 'center' }}>
+                      <div style={{ flex: 1, fontSize: 9.5, lineHeight: '14px' }}>
+                        <strong>Instruções:</strong> {cobForm.descricao}<br />
+                        • Pague pelo Código de Barras abaixo ou aponte a câmera para o QR Code Pix Oficial.<br />
+                        • Pagador: <strong>{cobForm.pagadorNome || 'Consumidor / Cliente'}</strong>{' '}
+                        {cobForm.pagadorDocumento ? `(${cobForm.pagadorDocumento})` : ''}<br />
+                        • TXID BACEN: {cobResult.txid}
+                      </div>
+                      {cobResult.brcode && (
+                        <div style={{ border: '1px solid #000', padding: 4, textAlign: 'center' }}>
+                          <div style={{ fontSize: 7, fontWeight: 800 }}>QR CODE PIX</div>
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=88x88&data=${encodeURIComponent(cobResult.brcode)}`}
+                            alt="QR Code Pix"
+                            width={84}
+                            height={84}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ paddingTop: 8 }}>
+                      <CodigoBarrasBoleto codigo={cobResult.boleto.codigoBarras} altura={46} />
                     </div>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                  <button className="btn btn-secondary" onClick={() => setCobResult(null)}>
-                    + Emitir Outra Cobrança
-                  </button>
-                  <button className="btn btn-primary" onClick={() => setShowCobrancaModal(false)}>
-                    Concluir
-                  </button>
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Olá${cobForm.pagadorNome ? ` ${cobForm.pagadorNome}` : ''}! Segue o boleto/cobrança referente a ${cobForm.descricao} (Valor: R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):\n\nLinha Digitável do Boleto:\n${cobResult.boleto?.linhaDigitavel || ''}\n\nPix Copia e Cola:\n${cobResult.brcode}`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-secondary"
+                    style={{ fontSize: 12.5, textDecoration: 'none' }}
+                  >
+                    📲 Enviar Boleto + Pix no WhatsApp
+                  </a>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button className="btn btn-secondary" onClick={() => setCobResult(null)}>
+                      + Emitir Outra Cobrança
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setShowCobrancaModal(false)}>
+                      Concluir
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

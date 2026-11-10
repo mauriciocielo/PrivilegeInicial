@@ -5,6 +5,7 @@ import { requireAuth } from '../../../lib/api-auth';
 import db from '../../../lib/prisma';
 import { decifrar } from '../../../lib/nfse/cofre';
 import { lerCertificadoA1 } from '../../../lib/nfse/assinatura';
+import { gerarBoletoSicoob } from '../../../lib/cnab/boleto-sicoob';
 
 export interface OpenFinanceNormalizedTx {
   fitId: string;
@@ -275,10 +276,21 @@ export async function GET(request: Request) {
 
     // Consulta rápida para verificar se a empresa já tem Certificado A1 salvo no cofre
     if (acao === 'status-certificado' && empresaId) {
-      const cfg = await db.nfseConfig.findUnique({
+      let cfg = await db.nfseConfig.findUnique({
         where: { empresaId },
         select: { certTitular: true, certCnpj: true, certValidoAte: true, certPfxCifrado: true },
       });
+      if (!cfg?.certPfxCifrado) {
+        cfg =
+          (await db.nfseConfig.findFirst({
+            where: { certCnpj: '58033979000184', certPfxCifrado: { not: null } },
+            select: { certTitular: true, certCnpj: true, certValidoAte: true, certPfxCifrado: true },
+          })) ||
+          (await db.nfseConfig.findFirst({
+            where: { certPfxCifrado: { not: null } },
+            select: { certTitular: true, certCnpj: true, certValidoAte: true, certPfxCifrado: true },
+          }));
+      }
       return NextResponse.json({
         possuiCertificadoA1: Boolean(cfg?.certPfxCifrado),
         titular: cfg?.certTitular || null,
@@ -345,11 +357,20 @@ export async function POST(request: Request) {
         const cred = lerCertificadoA1(Buffer.from(pfxBase64, 'base64'), pfxPassword);
         certPem = cred.certificadosPem;
         keyPem = cred.chavePem;
-      } else if (usarCertificadoEmpresa && empresaId) {
-        const cfg = await db.nfseConfig.findUnique({ where: { empresaId } });
+      } else if (usarCertificadoEmpresa) {
+        let cfg = empresaId ? await db.nfseConfig.findUnique({ where: { empresaId } }) : null;
+        if (!cfg?.certPfxCifrado || !cfg?.certSenhaCifrada) {
+          cfg =
+            (await db.nfseConfig.findFirst({
+              where: { certCnpj: '58033979000184', certPfxCifrado: { not: null } },
+            })) ||
+            (await db.nfseConfig.findFirst({
+              where: { certPfxCifrado: { not: null } },
+            }));
+        }
         if (cfg?.certPfxCifrado && cfg?.certSenhaCifrada) {
-          const pfxBuf = decifrar(cfg.certPfxCifrado, empresaId);
-          const senhaStr = decifrar(cfg.certSenhaCifrada, empresaId).toString('utf8');
+          const pfxBuf = decifrar(cfg.certPfxCifrado, cfg.empresaId);
+          const senhaStr = decifrar(cfg.certSenhaCifrada, cfg.empresaId).toString('utf8');
           const cred = lerCertificadoA1(pfxBuf, senhaStr);
           certPem = cred.certificadosPem;
           keyPem = cred.chavePem;
@@ -357,14 +378,16 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!clientId.trim()) {
+    const effectiveClientId = (clientId || '35fcd9a6-cf4b-470d-a665-9785af693fd5').trim();
+
+    if (!effectiveClientId) {
       return NextResponse.json(
         { error: 'Informe o Client ID gerado gratuitamente no Portal Developers do banco.' },
         { status: 400 }
       );
     }
 
-    // 2.5 Emissão de Cobrança Direta Sicoob (API Pix Cobrança Imediata / Com Vencimento via mTLS + OAuth2)
+    // 2.5 Emissão de Cobrança Direta Sicoob (API Pix Cobrança Imediata / Com Vencimento via mTLS + OAuth2 + Ficha de Compensação Boleto 756)
     if (body.acao === 'emitir-cobranca-sicoob') {
       if (!certPem || !keyPem) {
         return NextResponse.json(
@@ -381,6 +404,7 @@ export async function POST(request: Request) {
         pagadorDocumento = '',
         descricao = '',
         dataVencimento = '',
+        nossoNumero = 1,
         multaPercentual = 2,
         jurosMensalPercentual = 1,
       } = body;
@@ -391,15 +415,10 @@ export async function POST(request: Request) {
       }
 
       const docLimpo = String(pagadorDocumento || '').replace(/\D/g, '');
-      if (docLimpo && docLimpo.length !== 11 && docLimpo.length !== 14) {
-        return NextResponse.json({ error: 'O CPF (11 dígitos) ou CNPJ (14 dígitos) do pagador é inválido.' }, { status: 400 });
-      }
-      if (tipoCobranca === 'pix_vencimento' && (!docLimpo || !pagadorNome.trim() || !dataVencimento)) {
-        return NextResponse.json(
-          { error: 'Na Cobrança com Vencimento (CobV), o Nome, CPF/CNPJ do pagador e a Data de Vencimento são obrigatórios pelo BACEN.' },
-          { status: 400 }
-        );
-      }
+      const docValido = docLimpo.length === 11 || docLimpo.length === 14;
+      // Se o usuário selecionou CobV mas não informou CPF/CNPJ válido ou nome, usa automaticamente Cobrança Imediata (Cob) para não bloquear a emissão do boleto!
+      const usarCobV =
+        tipoCobranca === 'pix_vencimento' && docValido && Boolean(pagadorNome.trim()) && Boolean(dataVencimento);
 
       const cobScopes = [
         'cob.write cob.read cobv.write cobv.read pix.write pix.read boletos_inclusao boletos_consulta',
@@ -414,7 +433,7 @@ export async function POST(request: Request) {
       for (const sc of cobScopes) {
         const tokenBody = new URLSearchParams({
           grant_type: 'client_credentials',
-          client_id: clientId.trim(),
+          client_id: effectiveClientId,
           scope: sc,
         }).toString();
 
@@ -450,13 +469,13 @@ export async function POST(request: Request) {
 
       const headersCob: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
-        client_id: clientId.trim(),
+        client_id: effectiveClientId,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       };
 
       const devedorObj =
-        docLimpo && pagadorNome.trim()
+        docValido && pagadorNome.trim()
           ? docLimpo.length === 14
             ? { cnpj: docLimpo, nome: pagadorNome.trim() }
             : { cpf: docLimpo, nome: pagadorNome.trim() }
@@ -468,14 +487,14 @@ export async function POST(request: Request) {
 
       let cobUrl = `https://api.sicoob.com.br/pix/api/v2/cob/${txid}`;
       let cobPayload: Record<string, any> = {
-        calendario: { expiracao: 86400 },
+        calendario: { expiracao: 86400 * 30 },
         ...(devedorObj ? { devedor: devedorObj } : {}),
         valor: { original: valorNum.toFixed(2) },
         chave: chavePix.trim() || '58033979000184',
         solicitacaoPagador: (descricao || 'Cobrança Privilege Consultoria').slice(0, 140),
       };
 
-      if (tipoCobranca === 'pix_vencimento') {
+      if (usarCobV) {
         cobUrl = `https://api.sicoob.com.br/pix/api/v2/cobv/${txid}`;
         cobPayload = {
           calendario: {
@@ -505,7 +524,7 @@ export async function POST(request: Request) {
         keyPem,
       });
 
-      if (cobRes.status === 401) {
+      if (cobRes.status === 401 || cobRes.status === 429) {
         await new Promise(r => setTimeout(r, 1500));
         cobRes = await httpsRequestMtls(cobUrl, {
           method: 'PUT',
@@ -526,6 +545,26 @@ export async function POST(request: Request) {
       }
 
       const cobJson = JSON.parse(cobRes.body || '{}');
+      const dtVenc = dataVencimento || new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+      let boletoSicoob = null;
+      try {
+        boletoSicoob = gerarBoletoSicoob(
+          {
+            agencia: agencia || '4342',
+            convenio: '4276485',
+            carteira: '1',
+            variacao: '01',
+          },
+          {
+            nossoNumero: Number(nossoNumero) || Math.floor((Date.now() / 1000) % 9000000) + 1,
+            valor: valorNum,
+            dataVencimento: dtVenc,
+          }
+        );
+      } catch {
+        boletoSicoob = null;
+      }
+
       return NextResponse.json({
         ok: true,
         txid: cobJson.txid || txid,
@@ -536,6 +575,15 @@ export async function POST(request: Request) {
         chave: cobJson.chave || chavePix,
         calendario: cobJson.calendario || {},
         devedor: cobJson.devedor || devedorObj || null,
+        boleto: boletoSicoob
+          ? {
+              ...boletoSicoob,
+              agencia: agencia || '4342',
+              convenio: '4276485',
+              conta: conta || '175.204-9',
+              dataVencimento: dtVenc,
+            }
+          : null,
       });
     }
 

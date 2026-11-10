@@ -14,6 +14,32 @@ import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse
 import NfseCopiarModal from './NfseCopiarModal';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
+import { gerarBoletoSicoob, barrasITF } from '../lib/cnab/boleto-sicoob';
+
+function CodigoBarrasBoletoNfse({ codigo, altura = 46 }: { codigo: string; altura?: number }) {
+  let larguras: number[];
+  try {
+    larguras = barrasITF(codigo);
+  } catch {
+    return null;
+  }
+  const unidade = 1.1;
+  const total = larguras.reduce((a, b) => a + b, 0) * unidade;
+  let x = 0;
+  const barras: { x: number; w: number }[] = [];
+  larguras.forEach((l, i) => {
+    const w = l * unidade;
+    if (i % 2 === 0) barras.push({ x, w });
+    x += w;
+  });
+  return (
+    <svg width={total} height={altura} viewBox={`0 0 ${total} ${altura}`} style={{ display: 'block', maxWidth: '100%' }}>
+      {barras.map((b, i) => (
+        <rect key={i} x={b.x} y={0} width={b.w} height={altura} fill="#000" />
+      ))}
+    </svg>
+  );
+}
 import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
@@ -3137,82 +3163,214 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
               </div>
             ) : (
               <div>
-                <div
-                  style={{
-                    background: '#f0fdf4',
-                    border: '1px solid #86efac',
-                    borderRadius: 10,
-                    padding: 14,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: '#166534' }}>
-                    ✓ Cobrança Sicoob Registrada ({resultadoCobrancaNota.status}) — Ref. NFS-e Nº {notaCobrancaModal.numero}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#15803d', marginTop: 4 }}>
-                    <strong>TXID BACEN:</strong> <code>{resultadoCobrancaNota.txid}</code> · <strong>Vencimento:</strong>{' '}
-                    {fmt.date(vencimentoCobrancaNota)} · <strong>Valor:</strong>{' '}
-                    {fmt.currency(Number(resultadoCobrancaNota.valor))}
-                  </div>
-                </div>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @media print {
+                    body * { visibility: hidden !important; }
+                    .nfse-boleto-printable, .nfse-boleto-printable * { visibility: visible !important; }
+                    .nfse-boleto-printable {
+                      position: absolute !important; left: 0 !important; top: 0 !important;
+                      width: 100% !important; margin: 0 !important; padding: 14px !important;
+                    }
+                    .no-print { display: none !important; }
+                  }
+                ` }} />
+                {(() => {
+                  let boletoLocal = null;
+                  try {
+                    boletoLocal = gerarBoletoSicoob(
+                      { agencia: '4342', convenio: '4276485', carteira: '1', variacao: '01' },
+                      {
+                        nossoNumero: parseInt(notaCobrancaModal.numero.replace(/\D/g, ''), 10) || 1,
+                        valor: Number(resultadoCobrancaNota.valor) || Number(notaCobrancaModal.valorLiquido || notaCobrancaModal.valorServicos),
+                        dataVencimento: vencimentoCobrancaNota,
+                      }
+                    );
+                  } catch {
+                    boletoLocal = null;
+                  }
+                  return (
+                    <>
+                      <div
+                        className="no-print"
+                        style={{
+                          background: '#f0fdf4',
+                          border: '1px solid #86efac',
+                          borderRadius: 10,
+                          padding: 14,
+                          marginBottom: 14,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 14.5, fontWeight: 800, color: '#166534' }}>
+                            ✓ Boleto Híbrido + Cobrança Pix Sicoob ({resultadoCobrancaNota.status}) — NFS-e Nº {notaCobrancaModal.numero}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#15803d', marginTop: 2 }}>
+                            <strong>TXID BACEN:</strong> <code>{resultadoCobrancaNota.txid}</code> · <strong>Valor:</strong>{' '}
+                            {fmt.currency(Number(resultadoCobrancaNota.valor))}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {boletoLocal?.linhaDigitavel && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(boletoLocal.linhaDigitavel);
+                                toast.success('Linha digitável copiada!');
+                              }}
+                            >
+                              📋 Copiar Linha Digitável
+                            </button>
+                          )}
+                          {resultadoCobrancaNota.brcode && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(resultadoCobrancaNota.brcode);
+                                toast.success('Pix Copia e Cola copiado!');
+                              }}
+                            >
+                              ⚡ Copiar Pix Copia e Cola
+                            </button>
+                          )}
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#003641', borderColor: '#003641' }}
+                            onClick={() => window.print()}
+                          >
+                            🖨️ Imprimir Boleto / PDF
+                          </button>
+                        </div>
+                      </div>
 
-                {resultadoCobrancaNota.brcode && (
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                        resultadoCobrancaNota.brcode
-                      )}`}
-                      alt="QR Code Pix Sicoob"
-                      width={155}
-                      height={155}
-                      style={{ borderRadius: 10, border: '1px solid #e5e7eb', padding: 8, background: '#fff' }}
-                    />
-                    <div style={{ flex: 1, minWidth: 240 }}>
-                      <label className="form-label">Código Pix Copia e Cola Oficial (BRCode BACEN)</label>
-                      <textarea
-                        className="form-control"
-                        rows={4}
-                        readOnly
-                        style={{ fontFamily: 'monospace', fontSize: 11.5 }}
-                        value={resultadoCobrancaNota.brcode}
-                      />
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                        <button
-                          className="btn btn-primary btn-sm"
-                          style={{ background: '#00a859', borderColor: '#00a859' }}
-                          onClick={() => {
-                            navigator.clipboard.writeText(resultadoCobrancaNota.brcode);
-                            toast.success('Pix Copia e Cola copiado!');
+                      {boletoLocal && (
+                        <div
+                          className="nfse-boleto-printable"
+                          style={{
+                            border: '2px solid #000',
+                            padding: 12,
+                            background: '#fff',
+                            color: '#000',
+                            fontFamily: 'Courier New, monospace',
+                            marginBottom: 16,
+                            borderRadius: 4,
                           }}
                         >
-                          📋 Copiar Pix Copia e Cola
-                        </button>
+                          <div style={{ display: 'flex', borderBottom: '2px solid #000', paddingBottom: 6, alignItems: 'center' }}>
+                            <span
+                              style={{
+                                fontSize: 14,
+                                background: '#003641',
+                                color: '#fff',
+                                padding: '2px 8px',
+                                borderRadius: 3,
+                                fontFamily: 'sans-serif',
+                                fontWeight: 800,
+                                marginRight: 10,
+                              }}
+                            >
+                              SICOOB
+                            </span>
+                            <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 10px', fontSize: 16, fontWeight: 900 }}>
+                              756-0
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 900 }}>
+                              {boletoLocal.linhaDigitavel}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
+                            <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
+                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
+                              <div style={{ fontSize: 10, fontWeight: 'bold' }}>
+                                {empresa?.razaoSocial || 'PRIVILEGE CONSULTORIA LTDA'} — CNPJ: {empresa?.cnpj || '58.033.979/0001-84'}
+                              </div>
+                            </div>
+                            <div style={{ flex: 1, padding: 4 }}>
+                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
+                              <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
+                                {fmt.date(vencimentoCobrancaNota)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
+                            <div style={{ flex: 2, borderRight: '1px solid #000', padding: 4 }}>
+                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Beneficiário</div>
+                              <div style={{ fontSize: 10 }}>4342 / 4276485</div>
+                            </div>
+                            <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
+                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>Documento / Nosso Número</div>
+                              <div style={{ fontSize: 10 }}>
+                                NFS-e {notaCobrancaModal.numero} / {boletoLocal.nossoNumero}
+                              </div>
+                            </div>
+                            <div style={{ flex: 1, padding: 4 }}>
+                              <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
+                              <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>
+                                {fmt.currency(Number(resultadoCobrancaNota.valor))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: 6, gap: 10, alignItems: 'center' }}>
+                            <div style={{ flex: 1, fontSize: 9.5, lineHeight: '14px' }}>
+                              <strong>Referência:</strong> NFS-e Nº {notaCobrancaModal.numero} — {(notaCobrancaModal.discriminacao || '').slice(0, 90)}<br />
+                              • Pagador: <strong>{notaCobrancaModal.tomadorRazaoSocial}</strong> ({notaCobrancaModal.tomadorCnpjCpf})<br />
+                              • Pague pelo Código de Barras abaixo ou pelo QR Code Pix Oficial ao lado.<br />
+                              • TXID BACEN: {resultadoCobrancaNota.txid}
+                            </div>
+                            {resultadoCobrancaNota.brcode && (
+                              <div style={{ border: '1px solid #000', padding: 4, textAlign: 'center' }}>
+                                <div style={{ fontSize: 7, fontWeight: 800 }}>QR CODE PIX</div>
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=88x88&data=${encodeURIComponent(
+                                    resultadoCobrancaNota.brcode
+                                  )}`}
+                                  alt="QR Code Pix Sicoob"
+                                  width={84}
+                                  height={84}
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ paddingTop: 8 }}>
+                            <CodigoBarrasBoletoNfse codigo={boletoLocal.codigoBarras} altura={46} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="no-print form-actions" style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between' }}>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
-                            `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue a cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
+                            `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue o boleto/cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
                               Number(resultadoCobrancaNota.valor)
-                            )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
+                            )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nLinha Digitável do Boleto:\n${boletoLocal?.linhaDigitavel || ''}\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
                           )}`}
                           target="_blank"
                           rel="noreferrer"
                           className="btn btn-secondary btn-sm"
                           style={{ textDecoration: 'none' }}
                         >
-                          📲 Enviar no WhatsApp
+                          📲 Enviar Boleto + Pix no WhatsApp
                         </a>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn btn-secondary" onClick={() => setResultadoCobrancaNota(null)}>
+                            Reemitir / Alterar Modalidade
+                          </button>
+                          <button className="btn btn-primary" onClick={() => setNotaCobrancaModal(null)}>
+                            Concluir
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="form-actions" style={{ marginTop: 16 }}>
-                  <button className="btn btn-secondary" onClick={() => setResultadoCobrancaNota(null)}>
-                    Reemitir / Alterar Modalidade
-                  </button>
-                  <button className="btn btn-primary" onClick={() => setNotaCobrancaModal(null)}>
-                    Concluir
-                  </button>
-                </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
