@@ -107,6 +107,11 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: strin
   const smtpFrom = envFrom || 'consultoria@privilegecontabilidade.com.br';
 
   const transporter = nodemailer.createTransport({
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
     host: smtpHost,
     port: smtpPort,
     secure: smtpPort === 465,
@@ -114,9 +119,9 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: strin
       user: smtpUser,
       pass: smtpPass,
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 25000,
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 20000,
     tls: {
       rejectUnauthorized: false,
     },
