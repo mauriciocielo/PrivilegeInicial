@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { lerLogs, atualizarStatusLog } from '../log/route';
+import { lerLogs, atualizarStatusLog } from '../../../../lib/email-log-service';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

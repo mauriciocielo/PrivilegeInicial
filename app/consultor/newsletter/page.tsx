@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Mail, Send, Users, CheckCircle2, Image as ImageIcon, X, ListPlus, Sparkles,
   Eye, Download, RefreshCw, Key, ShieldCheck, AlertCircle, Bold, Italic, Underline,
-  Heading2, List, Quote, Link as LinkIcon, Palette
+  Heading2, List, Quote, Link as LinkIcon, Palette, Clock, Play, Pause, Trash2, Timer, Layers
 } from 'lucide-react';
 
 export default function NewsletterPage() {
@@ -23,6 +23,7 @@ export default function NewsletterPage() {
   const [linkDestinoImagem, setLinkDestinoImagem] = useState('https://wa.me/5546999048990');
   const [enviando, setEnviando] = useState(false);
   const [filtrarHotmailOutlook, setFiltrarHotmailOutlook] = useState(false);
+  const [evitarDuplicados, setEvitarDuplicados] = useState(true);
   const [progressoEnvio, setProgressoEnvio] = useState<{
     ativo: boolean;
     atual: number;
@@ -39,9 +40,20 @@ export default function NewsletterPage() {
   // Logs e Auditoria de E-mails
   const [logs, setLogs] = useState<any[]>([]);
   const [carregandoLogs, setCarregandoLogs] = useState(false);
-  const [abaAtiva, setAbaAtiva] = useState<'novo' | 'historico'>('novo');
+  const [abaAtiva, setAbaAtiva] = useState<'novo' | 'fila' | 'historico'>('novo');
   const [abaMensagem, setAbaMensagem] = useState<'editor' | 'previa'>('editor');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fila de Disparos em Lotes a cada 65 minutos
+  const [campanhaAtiva, setCampanhaAtiva] = useState<any>(null);
+  const [filas, setFilas] = useState<any[]>([]);
+  const [carregandoFila, setCarregandoFila] = useState(false);
+  const [processandoAcaoFila, setProcessandoAcaoFila] = useState(false);
+  const [modoEnvio, setModoEnvio] = useState<'fila' | 'imediato'>('fila');
+  const [tamanhoLoteFila, setTamanhoLoteFila] = useState<number>(70);
+  const [intervaloMinutosFila, setIntervaloMinutosFila] = useState<number>(65);
+  const [iniciarFilaEmMinutos, setIniciarFilaEmMinutos] = useState<number>(65);
+  const [tempoRestanteFormatado, setTempoRestanteFormatado] = useState<string>('');
 
   const aplicarFormatacao = (prefixo: string, sufixo: string = '', textoPadrao: string = '') => {
     const textarea = textareaRef.current;
@@ -126,14 +138,85 @@ export default function NewsletterPage() {
     }
   };
 
+  const carregarFilaServidor = async () => {
+    setCarregandoFila(true);
+    try {
+      const res = await fetch('/api/email-servicos/queue');
+      if (res.ok) {
+        const data = await res.json();
+        setCampanhaAtiva(data.campanhaAtiva || null);
+        setFilas(data.fila || []);
+      }
+    } catch {}
+    finally {
+      setCarregandoFila(false);
+    }
+  };
+
+  const executarAcaoFila = async (action: 'process_now' | 'pause' | 'resume' | 'delete', cId?: string) => {
+    const targetId = cId || campanhaAtiva?.id;
+    if (!targetId && action !== 'process_now') return;
+    setProcessandoAcaoFila(true);
+    try {
+      const res = await fetch('/api/email-servicos/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, campanhaId: targetId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'Erro ao processar ação na fila.');
+      } else {
+        if (action === 'process_now') toast.success('Lote processado com sucesso!');
+        if (action === 'pause') toast.info('Fila pausada.');
+        if (action === 'resume') toast.success('Fila retomada!');
+        if (action === 'delete') toast.success('Fila cancelada.');
+        carregarFilaServidor();
+        carregarLogsServidor();
+      }
+    } catch (e: any) {
+      toast.error(`Falha: ${e.message}`);
+    } finally {
+      setProcessandoAcaoFila(false);
+    }
+  };
+
   useEffect(() => {
     carregarLogsServidor();
+    carregarFilaServidor();
+
+    const timerFila = setInterval(() => {
+      carregarFilaServidor();
+    }, 20000);
+
     const saved = sessionStorage.getItem('cf_empresa_sel') || '';
     if (saved) load(saved);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);
-    return () => window.removeEventListener('empresaChange', handler);
+    return () => {
+      window.removeEventListener('empresaChange', handler);
+      clearInterval(timerFila);
+    };
   }, []);
+
+  // Timer regressivo para o próximo lote a cada 65 min
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!campanhaAtiva || campanhaAtiva.status !== 'aguardando' || !campanhaAtiva.proximoLoteEm) {
+        setTempoRestanteFormatado('');
+        return;
+      }
+      const diff = new Date(campanhaAtiva.proximoLoteEm).getTime() - Date.now();
+      if (diff <= 0) {
+        setTempoRestanteFormatado('Pronto para disparar!');
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTempoRestanteFormatado(`${m}m ${s < 10 ? '0' : ''}${s}s`);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [campanhaAtiva]);
 
   const clientesComEmail = clientes.filter(c => c.email && c.email.includes('@'));
 
@@ -158,7 +241,30 @@ export default function NewsletterPage() {
     return lower.includes('@hotmail') || lower.includes('@outlook') || lower.includes('@live.');
   }).length;
 
-  const totalDestinatariosEstimados = destinatariosFinais.length;
+  // Proteção Antiduplicação: Checa se já houve envio deste mesmo assunto nas últimas 24h
+  const emailsJaEnviadosHoje = new Set(
+    logs
+      .filter(l => {
+        if (!l.destinatarioEmail || (l.status !== 'entregue' && l.status !== 'visualizado')) return false;
+        if (assunto.trim() && l.assunto?.trim().toLowerCase() === assunto.trim().toLowerCase()) {
+          const diffHoras = (Date.now() - new Date(l.enviadoEm).getTime()) / (1000 * 60 * 60);
+          return diffHoras < 24;
+        }
+        return false;
+      })
+      .map(l => l.destinatarioEmail.trim().toLowerCase())
+  );
+
+  const destinatariosPendentes = destinatariosFinais.filter(e => {
+    if (!evitarDuplicados) return true;
+    return !emailsJaEnviadosHoje.has(e.trim().toLowerCase());
+  });
+
+  const totalJaEnviadosHoje = destinatariosFinais.filter(e =>
+    emailsJaEnviadosHoje.has(e.trim().toLowerCase())
+  ).length;
+
+  const totalDestinatariosEstimados = evitarDuplicados ? destinatariosPendentes.length : destinatariosFinais.length;
 
   const modelosProntos = [
     {
@@ -262,9 +368,9 @@ export default function NewsletterPage() {
       return;
     }
 
-    const listaParaEnviar = destinatariosFinais;
+    const listaParaEnviar = evitarDuplicados ? destinatariosPendentes : destinatariosFinais;
     if (listaParaEnviar.length === 0) {
-      toast.error('Nenhum destinatário válido selecionado para o disparo.');
+      toast.error('Nenhum destinatário pendente para envio. Todos já receberam este comunicado ou a lista está vazia.');
       return;
     }
 
@@ -333,6 +439,50 @@ export default function NewsletterPage() {
         })
       );
 
+      // CASO A: Envio através da Fila Inteligente (Lotes a cada 65 min)
+      if (modoEnvio === 'fila') {
+        const resQueue = await fetch('/api/email-servicos/queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'enqueue',
+            empresaId,
+            assunto,
+            mensagem: tipoFormato === 'imagem' ? '' : mensagem,
+            somenteImagem: tipoFormato === 'imagem',
+            linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
+            destinatarios: listaParaEnviar.map(email => ({ email, nome: 'Cliente' })),
+            tamanhoLote: tamanhoLoteFila,
+            intervaloMinutos: intervaloMinutosFila,
+            iniciarEmMinutos: iniciarFilaEmMinutos,
+            smtpUserCustom: smtpUser.trim(),
+            smtpPassCustom: smtpPass.trim(),
+            imagens: imagensOtimizadas.map((img, idx) => ({
+              filename: img.filename,
+              base64: img.base64,
+              cid: `img_anexo_${idx}`,
+            })),
+          }),
+        });
+
+        const dataQueue = await resQueue.json();
+        if (!resQueue.ok || dataQueue.error) {
+          toast.error(dataQueue.error || 'Erro ao colocar campanha na fila.');
+          return;
+        }
+
+        if (iniciarFilaEmMinutos > 0) {
+          toast.success(`Campanha adicionada à fila! O 1º lote será disparado em ${iniciarFilaEmMinutos} minutos.`);
+        } else {
+          toast.success(`1º lote disparado! Próximos lotes serão enviados automaticamente a cada ${intervaloMinutosFila} min.`);
+        }
+        setAbaAtiva('fila');
+        carregarFilaServidor();
+        carregarLogsServidor();
+        return;
+      }
+
+      // CASO B: Disparo Imediato
       for (let i = 0; i < lotes.length; i++) {
         const lote = lotes[i];
         setProgressoEnvio({
@@ -472,7 +622,7 @@ export default function NewsletterPage() {
         </div>
       )}
 
-      {/* Abas: Novo Disparo vs Histórico & Rastreamento */}
+      {/* Abas: Novo Disparo vs Fila Automática vs Histórico & Rastreamento */}
       <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: 20 }}>
         <button
           onClick={() => setAbaAtiva('novo')}
@@ -488,6 +638,32 @@ export default function NewsletterPage() {
           }}
         >
           ✉️ Novo Disparo de E-mail
+        </button>
+        <button
+          onClick={() => {
+            setAbaAtiva('fila');
+            carregarFilaServidor();
+          }}
+          style={{
+            padding: '10px 20px',
+            fontWeight: 700,
+            fontSize: 14,
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            borderBottom: abaAtiva === 'fila' ? '3px solid #8c1a22' : '3px solid transparent',
+            color: abaAtiva === 'fila' ? '#8c1a22' : '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Clock size={16} /> ⏳ Fila Automática (a cada 65 min)
+          {campanhaAtiva && campanhaAtiva.destinatariosPendentes?.length > 0 && (
+            <span style={{ background: '#f59e0b', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 800 }}>
+              {campanhaAtiva.destinatariosPendentes.length} pendentes
+            </span>
+          )}
         </button>
         <button
           onClick={() => {
@@ -512,7 +688,7 @@ export default function NewsletterPage() {
         </button>
       </div>
 
-      {abaAtiva === 'novo' ? (
+      {abaAtiva === 'novo' && (
         <>
           {/* Cartões de Status */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 20 }}>
@@ -749,6 +925,28 @@ export default function NewsletterPage() {
                   />
                   <span>
                     Pular temporariamente contas @hotmail e @outlook (disparar apenas para os outros {todosDestinatariosBrutos.length - totalHotmailOutlook} e-mails até o IP ser deslistado)
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Proteção Antiduplicação (Não reenviar para quem já recebeu este assunto hoje) */}
+            {totalJaEnviadosHoje > 0 && (
+              <div style={{ marginBottom: 18, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#166534' }}>
+                  <ShieldCheck size={18} color="#16a34a" /> 🛡️ Proteção Antiduplicação Inteligente
+                </div>
+                <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, lineHeight: 1.5 }}>
+                  Identificamos que <strong>{totalJaEnviadosHoje}</strong> destinatário(s) desta lista já receberam com sucesso este mesmo comunicado nas últimas 24 horas.
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: '#166534' }}>
+                  <input
+                    type="checkbox"
+                    checked={evitarDuplicados}
+                    onChange={e => setEvitarDuplicados(e.target.checked)}
+                  />
+                  <span>
+                    Não reenviar para quem já recebeu hoje (enviar apenas para os {destinatariosPendentes.length} pendentes)
                   </span>
                 </label>
               </div>
@@ -1217,9 +1415,111 @@ export default function NewsletterPage() {
               </div>
             )}
 
+            {/* Seletor de Modo de Envio: Fila a cada 65 min vs Disparo Imediato */}
+            <div style={{ marginBottom: 20, background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Timer size={16} color="#8c1a22" /> Escolha o Modo de Envio
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div
+                  onClick={() => setModoEnvio('fila')}
+                  style={{
+                    border: `2px solid ${modoEnvio === 'fila' ? '#8c1a22' : '#e2e8f0'}`,
+                    background: modoEnvio === 'fila' ? '#fdf2f2' : '#fff',
+                    borderRadius: 8,
+                    padding: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: modoEnvio === 'fila' ? '#8c1a22' : '#1e293b' }}>
+                    <Clock size={16} /> ⏳ Fila Segura (Lotes a cada 65 min)
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    <strong>Recomendado!</strong> Envia em lotes de {tamanhoLoteFila} e-mails a cada {intervaloMinutosFila} min. <strong>Nunca estoura o limite por hora</strong> da hospedagem.
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setModoEnvio('imediato')}
+                  style={{
+                    border: `2px solid ${modoEnvio === 'imediato' ? '#8c1a22' : '#e2e8f0'}`,
+                    background: modoEnvio === 'imediato' ? '#fdf2f2' : '#fff',
+                    borderRadius: 8,
+                    padding: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: modoEnvio === 'imediato' ? '#8c1a22' : '#1e293b' }}>
+                    <Send size={16} /> ⚡ Disparo Direto Imediato
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    Dispara todos os {totalDestinatariosEstimados} e-mails na sequência agora (pode falhar se o limite da hospedagem já estiver esgotado).
+                  </div>
+                </div>
+              </div>
+
+              {modoEnvio === 'fila' && (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                        E-mails por Ciclo (Tamanho do Lote)
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={150}
+                        value={tamanhoLoteFila}
+                        onChange={e => setTamanhoLoteFila(Number(e.target.value) || 70)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Recomendado: 60 a 80</span>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                        Intervalo entre Lotes (Minutos)
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={180}
+                        value={intervaloMinutosFila}
+                        onChange={e => setIntervaloMinutosFila(Number(e.target.value) || 65)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Recomendado: 65 min</span>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                        Quando Iniciar o 1º Lote?
+                      </label>
+                      <select
+                        value={iniciarFilaEmMinutos}
+                        onChange={e => setIniciarFilaEmMinutos(Number(e.target.value))}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                      >
+                        <option value={65}>Em 65 min (pois a hospedagem já bateu o limite)</option>
+                        <option value={0}>Imediatamente agora (1º lote)</option>
+                        <option value={30}>Em 30 minutos</option>
+                      </select>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Garante que não bloqueie</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 12, color: '#6b7280' }}>
-                Destinatários: <strong>{totalDestinatariosEstimados} e-mail(s)</strong>
+                Destinatários: <strong>{totalDestinatariosEstimados} e-mail(s) pendente(s)</strong>
+                {totalJaEnviadosHoje > 0 && evitarDuplicados && (
+                  <span style={{ color: '#16a34a', marginLeft: 8, fontWeight: 600 }}>
+                    ({totalJaEnviadosHoje} já entregue(s) hoje preservado(s))
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -1233,18 +1533,252 @@ export default function NewsletterPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
+                  opacity: (enviando || totalDestinatariosEstimados === 0) ? 0.7 : 1,
+                  cursor: (enviando || totalDestinatariosEstimados === 0) ? 'not-allowed' : 'pointer',
                 }}
-                disabled={enviando}
+                disabled={enviando || totalDestinatariosEstimados === 0}
                 onClick={handleDisparar}
               >
                 <Send size={16} />
-                {enviando ? '⏳ Disparando E-mails...' : `🚀 Disparar para os ${totalDestinatariosEstimados} Destinatários`}
+                {enviando
+                  ? '⏳ Processando Disparo...'
+                  : totalDestinatariosEstimados === 0 && totalJaEnviadosHoje > 0
+                  ? '✓ Todos já Receberam Hoje'
+                  : modoEnvio === 'fila'
+                  ? `📦 Adicionar à Fila (${totalDestinatariosEstimados} a cada ${intervaloMinutosFila} min)`
+                  : `🚀 Disparar Imediatamente para os ${totalDestinatariosEstimados} Destinatários`}
               </button>
             </div>
           </div>
         </>
-      ) : (
-        /* Aba 2: HISTÓRICO COMPLETO COM RASTREAMENTO (Entregue, Visualizado, Baixado) */
+      )}
+
+      {/* ABA 2: FILA AUTOMÁTICA DE DISPAROS (A CADA 65 MINUTOS) */}
+      {abaAtiva === 'fila' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#111827' }}>
+                    📦 Fila de Disparos em Lotes Automáticos
+                  </h2>
+                  {campanhaAtiva && (
+                    <span style={{
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 12,
+                      background: campanhaAtiva.status === 'processando' ? '#dbeafe' : campanhaAtiva.status === 'pausada' ? '#fef3c7' : campanhaAtiva.status === 'concluida' ? '#dcfce7' : '#fef3c7',
+                      color: campanhaAtiva.status === 'processando' ? '#1d4ed8' : campanhaAtiva.status === 'pausada' ? '#b45309' : campanhaAtiva.status === 'concluida' ? '#15803d' : '#b45309',
+                    }}>
+                      {campanhaAtiva.status === 'processando' && '🔄 Processando Lote Agora...'}
+                      {campanhaAtiva.status === 'aguardando' && '⏳ Aguardando Próximo Ciclo'}
+                      {campanhaAtiva.status === 'pausada' && '⏸ Fila Pausada'}
+                      {campanhaAtiva.status === 'concluida' && '✅ Campanha Concluída'}
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 12.5, color: '#64748b', margin: '4px 0 0' }}>
+                  Os lotes são processados automaticamente a cada 65 minutos no servidor para respeitar a cota de envio da sua hospedagem.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => carregarFilaServidor()}
+                  disabled={carregandoFila}
+                >
+                  <RefreshCw size={14} className={carregandoFila ? 'spin' : ''} /> Atualizar Fila
+                </button>
+              </div>
+            </div>
+
+            {campanhaAtiva ? (
+              <>
+                {/* Assunto e Detalhes da Campanha */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 18 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Assunto da Mensagem</span>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 2 }}>
+                        {campanhaAtiva.assunto}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Regra de Envio dos Lotes</span>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginTop: 2 }}>
+                        {campanhaAtiva.tamanhoLote} e-mails a cada {campanhaAtiva.intervaloMinutos} minutos
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alerta de tempo limite ou erro do servidor */}
+                  {campanhaAtiva.erroUltimaTentativa && (
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 12.5, color: '#92400e' }}>
+                      <strong>⚠️ Observação da Hospedagem:</strong> {campanhaAtiva.erroUltimaTentativa}
+                    </div>
+                  )}
+
+                  {/* Contagem Regressiva para o Próximo Lote */}
+                  {campanhaAtiva.status === 'aguardando' && campanhaAtiva.proximoLoteEm && (
+                    <div style={{ marginTop: 14, background: '#fdf2f2', border: '1.5px solid #8c1a22', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Timer size={22} color="#8c1a22" />
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#8c1a22' }}>
+                            Próximo Lote Agendado
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                            Disparo automático às {new Date(campanhaAtiva.proximoLoteEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#8c1a22', fontFamily: 'monospace' }}>
+                        ⏳ {tempoRestanteFormatado || 'Calculando...'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Métricas e Barra de Progresso */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Total de Destinatários</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>{campanhaAtiva.totalDestinatarios}</div>
+                  </div>
+
+                  <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11.5, color: '#166534', fontWeight: 600 }}>Enviados com Sucesso</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#15803d', marginTop: 4 }}>{campanhaAtiva.destinatariosEnviados?.length || 0}</div>
+                  </div>
+
+                  <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11.5, color: '#854d0e', fontWeight: 600 }}>Pendentes na Fila</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#a16207', marginTop: 4 }}>{campanhaAtiva.destinatariosPendentes?.length || 0}</div>
+                  </div>
+
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11.5, color: '#991b1b', fontWeight: 600 }}>Falhas Registradas</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#b91c1c', marginTop: 4 }}>{campanhaAtiva.destinatariosFalhas?.length || 0}</div>
+                  </div>
+                </div>
+
+                {/* Barra de Progresso Geral */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                    <span>Progresso da Campanha</span>
+                    <span>{Math.round(((campanhaAtiva.destinatariosEnviados?.length || 0) / Math.max(campanhaAtiva.totalDestinatarios, 1)) * 100)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 12, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${Math.round(((campanhaAtiva.destinatariosEnviados?.length || 0) / Math.max(campanhaAtiva.totalDestinatarios, 1)) * 100)}%`,
+                        height: '100%',
+                        background: '#8c1a22',
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Painel de Controle da Fila */}
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', borderTop: '1px solid #e2e8f0', paddingTop: 18 }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ background: '#8c1a22', borderColor: '#8c1a22', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    disabled={processandoAcaoFila || campanhaAtiva.destinatariosPendentes?.length === 0}
+                    onClick={() => executarAcaoFila('process_now')}
+                    title="Dispara o próximo lote imediatamente sem esperar os 65 minutos"
+                  >
+                    <Play size={16} /> Disparar Próximo Lote Agora ({Math.min(campanhaAtiva.tamanhoLote, campanhaAtiva.destinatariosPendentes?.length || 0)} e-mails)
+                  </button>
+
+                  {campanhaAtiva.status === 'pausada' ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      disabled={processandoAcaoFila}
+                      onClick={() => executarAcaoFila('resume')}
+                    >
+                      <Play size={16} /> Retomar Fila
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      disabled={processandoAcaoFila || campanhaAtiva.status === 'concluida'}
+                      onClick={() => executarAcaoFila('pause')}
+                    >
+                      <Pause size={16} /> Pausar Fila
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}
+                    disabled={processandoAcaoFila}
+                    onClick={() => {
+                      if (confirm('Deseja realmente cancelar e excluir esta campanha da fila?')) {
+                        executarAcaoFila('delete');
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} /> Cancelar Fila
+                  </button>
+                </div>
+
+                {/* Próximos Destinatários na Linha */}
+                {campanhaAtiva.destinatariosPendentes?.length > 0 && (
+                  <div style={{ marginTop: 22 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Users size={16} /> Próximos e-mails da fila ({campanhaAtiva.destinatariosPendentes.length} restantes):
+                    </div>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 14px', maxHeight: 150, overflowY: 'auto', fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
+                      {campanhaAtiva.destinatariosPendentes.slice(0, 30).map((d: any, idx: number) => (
+                        <div key={idx} style={{ padding: '2px 0' }}>
+                          #{idx + 1}: {d.email}
+                        </div>
+                      ))}
+                      {campanhaAtiva.destinatariosPendentes.length > 30 && (
+                        <div style={{ padding: '4px 0', color: '#94a3b8', fontStyle: 'italic' }}>
+                          ... e mais {campanhaAtiva.destinatariosPendentes.length - 30} destinatários aguardando os próximos lotes.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '50px 20px', color: '#9ca3af' }}>
+                <Clock size={48} style={{ margin: '0 auto 12px', opacity: 0.5, color: '#8c1a22' }} />
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Nenhuma fila em andamento no momento</div>
+                <p style={{ fontSize: 13, color: '#64748b', maxWidth: 440, margin: '6px auto 16px' }}>
+                  Quando você fizer um disparo de newsletter e escolher a opção <strong>"Fila Segura (Lotes a cada 65 min)"</strong>, ela aparecerá aqui e disparará os lotes automaticamente a cada 65 min sem estourar o limite da sua hospedagem.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ background: '#8c1a22', borderColor: '#8c1a22', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => setAbaAtiva('novo')}
+                >
+                  <Mail size={16} /> Iniciar Novo Disparo de E-mail
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ABA 3: HISTÓRICO COMPLETO COM RASTREAMENTO (Entregue, Visualizado, Baixado) */}
+      {abaAtiva === 'historico' && (
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>

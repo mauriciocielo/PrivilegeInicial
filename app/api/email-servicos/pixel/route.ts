@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { atualizarStatusLog } from '../log/route';
+import { atualizarStatusLog } from '../../../../lib/email-log-service';
 
 // GIF transparente 1x1 pixel em Base64
 const PIXEL_PNG = Buffer.from(

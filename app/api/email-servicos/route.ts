@@ -5,7 +5,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { db } from '../../../lib/prisma';
 import { captureError } from '../../../lib/sentry-helper';
-import { salvarLog } from './log/route';
+import { salvarLog, lerLogs } from '../../../lib/email-log-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -453,12 +453,35 @@ export async function POST(req: Request) {
 
       let enviados = 0;
       let falhas = 0;
-      const logsEnvio: { email: string; status: 'ok' | 'erro'; erro?: string }[] = [];
+      const logsEnvio: { email: string; status: 'ok' | 'erro'; erro?: string; jaEnviado?: boolean }[] = [];
 
       const temImagensAnexadas = attachmentsNewsletter.some(a => a.cid.startsWith('img_anexo_'));
       const isModoSomenteImagem = body.somenteImagem || (!conteudoHtml && temImagensAnexadas);
 
+      // Proteção Antiduplicação: Evita reenviar para quem já recebeu este assunto com sucesso nas últimas 24h
+      const logsRecentes = lerLogs();
+      const destinatariosJaEnviados = new Set(
+        logsRecentes
+          .filter(l => {
+            if (!l.destinatarioEmail || (l.status !== 'entregue' && l.status !== 'visualizado')) return false;
+            if (l.assunto?.trim().toLowerCase() === tituloAssunto.toLowerCase()) {
+              const diffHoras = (Date.now() - new Date(l.enviadoEm).getTime()) / (1000 * 60 * 60);
+              return diffHoras < 24;
+            }
+            return false;
+          })
+          .map(l => l.destinatarioEmail.trim().toLowerCase())
+      );
+
       for (const dest of emailsDestino) {
+        const emailLower = dest.email.trim().toLowerCase();
+        if (body.evitarDuplicados !== false && destinatariosJaEnviados.has(emailLower)) {
+          // Já foi entregue com sucesso nas últimas 24 horas! Não duplica
+          logsEnvio.push({ email: dest.email, status: 'ok', jaEnviado: true });
+          enviados++;
+          continue;
+        }
+
         const logId = `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const randomRef = Math.random().toString(36).slice(2, 10);
         const webViewUrl = `${baseUrl}/api/email-servicos/view?id=${logId}&ref=${randomRef}`;

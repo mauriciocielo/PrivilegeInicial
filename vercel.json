@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/email-servicos/queue/cron", "schedule": "*/10 * * * *" },
     { "path": "/api/cron/daily-report", "schedule": "0 10 * * *" },
     { "path": "/api/nfe/monitor/executar", "schedule": "0 1 * * *" },
     { "path": "/api/nfe/monitor/executar", "schedule": "0 4 * * *" },
