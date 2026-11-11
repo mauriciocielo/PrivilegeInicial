@@ -246,6 +246,44 @@ export default function NewsletterPage() {
     setResultadoEnvio(null);
 
     try {
+      // 1. Otimiza previamente qualquer imagem para no máximo 800px / JPEG 75% (< 100KB)
+      const imagensOtimizadas = await Promise.all(
+        imagens.map(async (img) => {
+          if (!img.base64 || img.base64.length < 250000) return img;
+          return new Promise<{ filename: string; base64: string }>((resolve) => {
+            const imageObj = new Image();
+            imageObj.onload = () => {
+              const canvas = document.createElement('canvas');
+              const maxDim = 800;
+              let { width, height } = imageObj;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(imageObj, 0, 0, width, height);
+                resolve({
+                  filename: img.filename.replace(/\.[^.]+$/, '.jpg'),
+                  base64: canvas.toDataURL('image/jpeg', 0.75),
+                });
+              } else {
+                resolve(img);
+              }
+            };
+            imageObj.onerror = () => resolve(img);
+            imageObj.src = img.base64;
+          });
+        })
+      );
+
       const res = await fetch('/api/email-servicos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -259,7 +297,7 @@ export default function NewsletterPage() {
           smtpUserCustom: smtpUser.trim(),
           smtpPassCustom: smtpPass.trim(),
           linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
-          imagens: imagens.map((img, idx) => ({
+          imagens: imagensOtimizadas.map((img, idx) => ({
             filename: img.filename,
             base64: img.base64,
             cid: `img_anexo_${idx}`,
@@ -267,7 +305,25 @@ export default function NewsletterPage() {
         }),
       });
 
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        const matchTitle = rawText.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const matchH1 = rawText.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+        const errorDetail = matchTitle?.[1] || matchH1?.[1] || `Erro HTTP ${res.status}: ${res.statusText || 'Resposta inesperada do servidor'}`;
+        
+        if (res.status === 413 || rawText.toLowerCase().includes('too large') || rawText.toLowerCase().includes('entity too large')) {
+          toast.error('A imagem selecionada é muito pesada para o servidor. Reduzimos o tamanho, tente disparar novamente.');
+        } else if (res.status === 504 || rawText.toLowerCase().includes('time-out') || rawText.toLowerCase().includes('timeout')) {
+          toast.error('Tempo limite de conexão com o servidor de e-mail (504). Tente disparar novamente em alguns instantes.');
+        } else {
+          toast.error(`Falha no servidor (${res.status}): ${errorDetail}`);
+        }
+        return;
+      }
+
       if (!res.ok || data.error) {
         toast.error(data.error || 'Erro ao realizar o disparo da newsletter.');
         return;

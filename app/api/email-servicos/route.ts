@@ -7,6 +7,9 @@ import { db } from '../../../lib/prisma';
 import { captureError } from '../../../lib/sentry-helper';
 import { salvarLog } from './log/route';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 /**
  * Converte marcações de texto e markdown em HTML seguro e estilizado para e-mails
  */
@@ -111,6 +114,9 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: strin
       user: smtpUser,
       pass: smtpPass,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 25000,
     tls: {
       rejectUnauthorized: false,
     },
