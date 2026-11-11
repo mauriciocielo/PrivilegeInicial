@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { store, Empresa, Cliente } from '../../../lib/store';
+import { LISTA_PADRAO_CLIENTES_NEWSLETTER } from '../../../lib/lista-clientes-newsletter';
 import { toast } from 'sonner';
 import {
   Mail, Send, Users, CheckCircle2, Image as ImageIcon, X, ListPlus, Sparkles,
@@ -21,6 +22,14 @@ export default function NewsletterPage() {
   const [imagens, setImagens] = useState<{ filename: string; base64: string }[]>([]);
   const [linkDestinoImagem, setLinkDestinoImagem] = useState('https://wa.me/5546999048990');
   const [enviando, setEnviando] = useState(false);
+  const [filtrarHotmailOutlook, setFiltrarHotmailOutlook] = useState(false);
+  const [progressoEnvio, setProgressoEnvio] = useState<{
+    ativo: boolean;
+    atual: number;
+    total: number;
+    loteAtual: number;
+    totalLotes: number;
+  } | null>(null);
   
   // Customização / Ajuste de Senha SMTP em tela
   const [showSmtpConfig, setShowSmtpConfig] = useState(false);
@@ -133,8 +142,23 @@ export default function NewsletterPage() {
     .map(s => s.trim())
     .filter(s => s.includes('@'));
 
-  const totalDestinatariosEstimados =
-    modoDestinatarios === 'clientes' ? clientesComEmail.length : destinatariosManuaisValidos.length;
+  const todosDestinatariosBrutos =
+    modoDestinatarios === 'clientes'
+      ? clientesComEmail.map(c => c.email!)
+      : destinatariosManuaisValidos;
+
+  const destinatariosFinais = todosDestinatariosBrutos.filter(e => {
+    if (!filtrarHotmailOutlook) return true;
+    const lower = e.toLowerCase();
+    return !lower.includes('@hotmail') && !lower.includes('@outlook') && !lower.includes('@live.');
+  });
+
+  const totalHotmailOutlook = todosDestinatariosBrutos.filter(e => {
+    const lower = e.toLowerCase();
+    return lower.includes('@hotmail') || lower.includes('@outlook') || lower.includes('@live.');
+  }).length;
+
+  const totalDestinatariosEstimados = destinatariosFinais.length;
 
   const modelosProntos = [
     {
@@ -238,12 +262,37 @@ export default function NewsletterPage() {
       return;
     }
 
-    if (!confirm(`Confirmar o disparo deste comunicado para ${totalDestinatariosEstimados} destinatário(s)?`)) {
+    const listaParaEnviar = destinatariosFinais;
+    if (listaParaEnviar.length === 0) {
+      toast.error('Nenhum destinatário válido selecionado para o disparo.');
+      return;
+    }
+
+    if (!confirm(`Confirmar o disparo deste comunicado para ${listaParaEnviar.length} destinatário(s)?`)) {
       return;
     }
 
     setEnviando(true);
     setResultadoEnvio(null);
+
+    // Dividir em lotes de 15 destinatários para prevenir qualquer tempo limite (timeout 504)
+    const CHUNK_SIZE = 15;
+    const lotes: string[][] = [];
+    for (let i = 0; i < listaParaEnviar.length; i += CHUNK_SIZE) {
+      lotes.push(listaParaEnviar.slice(i, i + CHUNK_SIZE));
+    }
+
+    setProgressoEnvio({
+      ativo: true,
+      atual: 0,
+      total: listaParaEnviar.length,
+      loteAtual: 1,
+      totalLotes: lotes.length,
+    });
+
+    let totalEnviados = 0;
+    let totalFalhas = 0;
+    let todosLogs: any[] = [];
 
     try {
       // 1. Otimiza previamente qualquer imagem para no máximo 800px / JPEG 75% (< 100KB)
@@ -284,62 +333,78 @@ export default function NewsletterPage() {
         })
       );
 
-      const res = await fetch('/api/email-servicos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'newsletter',
-          somenteImagem: tipoFormato === 'imagem',
-          empresaId,
-          assunto,
-          mensagem: tipoFormato === 'imagem' ? '' : mensagem,
-          destinatariosLista: modoDestinatarios === 'manual' ? listaManual : undefined,
-          smtpUserCustom: smtpUser.trim(),
-          smtpPassCustom: smtpPass.trim(),
-          linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
-          imagens: imagensOtimizadas.map((img, idx) => ({
-            filename: img.filename,
-            base64: img.base64,
-            cid: `img_anexo_${idx}`,
-          })),
-        }),
+      for (let i = 0; i < lotes.length; i++) {
+        const lote = lotes[i];
+        setProgressoEnvio({
+          ativo: true,
+          atual: totalEnviados + totalFalhas,
+          total: listaParaEnviar.length,
+          loteAtual: i + 1,
+          totalLotes: lotes.length,
+        });
+
+        try {
+          const res = await fetch('/api/email-servicos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'newsletter',
+              somenteImagem: tipoFormato === 'imagem',
+              empresaId,
+              assunto,
+              mensagem: tipoFormato === 'imagem' ? '' : mensagem,
+              destinatariosLista: lote,
+              smtpUserCustom: smtpUser.trim(),
+              smtpPassCustom: smtpPass.trim(),
+              linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
+              imagens: imagensOtimizadas.map((img, idx) => ({
+                filename: img.filename,
+                base64: img.base64,
+                cid: `img_anexo_${idx}`,
+              })),
+            }),
+          });
+
+          const rawText = await res.text();
+          let data: any;
+          try {
+            data = JSON.parse(rawText);
+          } catch {
+            totalFalhas += lote.length;
+            continue;
+          }
+
+          if (res.ok && data) {
+            totalEnviados += data.enviados || 0;
+            totalFalhas += data.falhas || 0;
+            if (data.logs) todosLogs = [...todosLogs, ...data.logs];
+          } else {
+            totalFalhas += lote.length;
+          }
+        } catch {
+          totalFalhas += lote.length;
+        }
+      }
+
+      setResultadoEnvio({
+        ok: totalEnviados > 0,
+        enviados: totalEnviados,
+        falhas: totalFalhas,
+        totalDestinatarios: listaParaEnviar.length,
+        logs: todosLogs,
       });
 
-      const rawText = await res.text();
-      let data: any;
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        const matchTitle = rawText.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const matchH1 = rawText.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-        const errorDetail = matchTitle?.[1] || matchH1?.[1] || `Erro HTTP ${res.status}: ${res.statusText || 'Resposta inesperada do servidor'}`;
-        
-        if (res.status === 413 || rawText.toLowerCase().includes('too large') || rawText.toLowerCase().includes('entity too large')) {
-          toast.error('A imagem selecionada é muito pesada para o servidor. Reduzimos o tamanho, tente disparar novamente.');
-        } else if (res.status === 504 || rawText.toLowerCase().includes('time-out') || rawText.toLowerCase().includes('timeout')) {
-          toast.error('Tempo limite de conexão com o servidor de e-mail (504). Tente disparar novamente em alguns instantes.');
-        } else {
-          toast.error(`Falha no servidor (${res.status}): ${errorDetail}`);
-        }
-        return;
-      }
-
-      if (!res.ok || data.error) {
-        toast.error(data.error || 'Erro ao realizar o disparo da newsletter.');
-        return;
-      }
-
-      setResultadoEnvio(data);
-      if (data.enviados > 0) {
-        toast.success(`Disparo realizado! ${data.enviados} enviado(s) com sucesso.`);
+      if (totalEnviados > 0) {
+        toast.success(`Disparo realizado! ${totalEnviados} enviado(s) de ${listaParaEnviar.length}.`);
       } else {
-        toast.error(`Falha no envio: verifique a senha do e-mail (${data.logs?.[0]?.erro || 'Erro de autenticação'})`);
+        toast.error('Falha no envio de e-mails. Verifique as credenciais ou a conexão SMTP.');
       }
       carregarLogsServidor();
     } catch (err: any) {
       toast.error(`Falha na conexão: ${err.message}`);
     } finally {
       setEnviando(false);
+      setProgressoEnvio(null);
     }
   };
 
@@ -639,19 +704,53 @@ export default function NewsletterPage() {
                   value={listaManual}
                   onChange={e => setListaManual(e.target.value)}
                 />
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <span>Total identificados: <strong>{destinatariosManuaisValidos.length} e-mail(s) válidos</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setListaManual(prev => (prev ? `${prev}, consultoria@privilegecontabilidade.com.br` : 'consultoria@privilegecontabilidade.com.br'));
-                      toast.success('consultoria@privilegecontabilidade.com.br adicionado!');
-                    }}
-                    style={{ fontSize: 11, background: '#e2e8f0', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}
-                  >
-                    + Inserir consultoria@privilegecontabilidade.com.br
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setListaManual(LISTA_PADRAO_CLIENTES_NEWSLETTER.join(';\n'));
+                        toast.success('351 e-mails da base carregados na lista!');
+                      }}
+                      style={{ fontSize: 11, background: '#fdf2f2', border: '1px solid #8c1a22', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontWeight: 700, color: '#8c1a22' }}
+                    >
+                      📋 Carregar Base Geral (351 e-mails)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setListaManual(prev => (prev ? `${prev}, consultoria@privilegecontabilidade.com.br` : 'consultoria@privilegecontabilidade.com.br'));
+                        toast.success('consultoria@privilegecontabilidade.com.br adicionado!');
+                      }}
+                      style={{ fontSize: 11, background: '#e2e8f0', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}
+                    >
+                      + Inserir consultoria@...
+                    </button>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {/* Aviso sobre Bloqueio Spamhaus em Hotmail/Outlook */}
+            {totalHotmailOutlook > 0 && (
+              <div style={{ marginBottom: 18, background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#92400e' }}>
+                  <AlertCircle size={16} /> Atenção aos e-mails @hotmail e @outlook ({totalHotmailOutlook} contatos)
+                </div>
+                <div style={{ fontSize: 12, color: '#78350f', marginTop: 4, lineHeight: 1.5 }}>
+                  O IP do servidor de envio da Privilege (<code>177.101.135.181</code>) está em lista de verificação na Spamhaus. Por esse motivo, a Microsoft devolve esses e-mails com <em>MAILER-DAEMON</em>.
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: '#b45309' }}>
+                  <input
+                    type="checkbox"
+                    checked={filtrarHotmailOutlook}
+                    onChange={e => setFiltrarHotmailOutlook(e.target.checked)}
+                  />
+                  <span>
+                    Pular temporariamente contas @hotmail e @outlook (disparar apenas para os outros {todosDestinatariosBrutos.length - totalHotmailOutlook} e-mails até o IP ser deslistado)
+                  </span>
+                </label>
               </div>
             )}
 
@@ -1091,6 +1190,30 @@ export default function NewsletterPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Barra de Progresso em Tempo Real (Lotes) */}
+            {progressoEnvio?.ativo && (
+              <div style={{ background: '#fdf2f2', border: '1.5px solid #8c1a22', borderRadius: 8, padding: 14, marginBottom: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, fontSize: 13, color: '#8c1a22' }}>
+                  <span>📨 Enviando em Lotes: Lote {progressoEnvio.loteAtual} de {progressoEnvio.totalLotes}...</span>
+                  <span>{progressoEnvio.atual} / {progressoEnvio.total} ({Math.round((progressoEnvio.atual / Math.max(progressoEnvio.total, 1)) * 100)}%)</span>
+                </div>
+                <div style={{ width: '100%', height: 10, background: '#fee2e2', borderRadius: 5, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${Math.round((progressoEnvio.atual / Math.max(progressoEnvio.total, 1)) * 100)}%`,
+                      height: '100%',
+                      background: '#8c1a22',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Enviando com pool SMTP protegido contra tempo limite.</span>
+                  <span>Aguarde a conclusão de todos os lotes...</span>
+                </div>
               </div>
             )}
 
