@@ -92,7 +92,13 @@ export default function NewsletterPage() {
     if (!eId) return;
     setEmpresaId(eId);
     setEmpresa(store.getEmpresas().find(e => e.id === eId) || null);
-    const clis = store.getClientes(eId).filter(c => c.ativo);
+    let clis = store.getClientes(eId).filter(c => c.ativo);
+    if (clis.filter(c => c.email && c.email.includes('@')).length === 0) {
+      const todos = store.getEmpresas().flatMap(emp => store.getClientes(emp.id)).filter(c => c.ativo);
+      if (todos.filter(c => c.email && c.email.includes('@')).length > 0) {
+        clis = todos;
+      }
+    }
     setClientes(clis);
     carregarLogsServidor();
   };
@@ -160,10 +166,41 @@ export default function NewsletterPage() {
       }
       const reader = new FileReader();
       reader.onload = () => {
-        const base64 = reader.result as string;
-        setImagens(prev => [...prev, { filename: file.name, base64 }]);
-        setTipoFormato('imagem');
-        toast.success(`Imagem ${file.name} anexada! Modo "Somente Imagem" ativado.`);
+        const rawBase64 = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const opt = canvas.toDataURL('image/jpeg', 0.85);
+              setImagens(prev => [...prev, { filename: file.name.replace(/\.[^.]+$/, '.jpg'), base64: opt }]);
+            } else {
+              setImagens(prev => [...prev, { filename: file.name, base64: rawBase64 }]);
+            }
+          } else {
+            setImagens(prev => [...prev, { filename: file.name, base64: rawBase64 }]);
+          }
+          setTipoFormato('imagem');
+          toast.success(`Imagem ${file.name} carregada e otimizada!`);
+        };
+        img.onerror = () => {
+          setImagens(prev => [...prev, { filename: file.name, base64: rawBase64 }]);
+          setTipoFormato('imagem');
+        };
+        img.src = rawBase64;
       };
       reader.readAsDataURL(file);
     }
@@ -546,8 +583,18 @@ export default function NewsletterPage() {
                   value={listaManual}
                   onChange={e => setListaManual(e.target.value)}
                 />
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
-                  Total identificados: <strong>{destinatariosManuaisValidos.length} e-mail(s) válidos</strong>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <span>Total identificados: <strong>{destinatariosManuaisValidos.length} e-mail(s) válidos</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setListaManual(prev => (prev ? `${prev}, consultoria@privilegecontabilidade.com.br` : 'consultoria@privilegecontabilidade.com.br'));
+                      toast.success('consultoria@privilegecontabilidade.com.br adicionado!');
+                    }}
+                    style={{ fontSize: 11, background: '#e2e8f0', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}
+                  >
+                    + Inserir consultoria@privilegecontabilidade.com.br
+                  </button>
                 </div>
               </div>
             )}
@@ -1008,7 +1055,7 @@ export default function NewsletterPage() {
                   alignItems: 'center',
                   gap: 8,
                 }}
-                disabled={enviando || totalDestinatariosEstimados === 0}
+                disabled={enviando}
                 onClick={handleDisparar}
               >
                 <Send size={16} />

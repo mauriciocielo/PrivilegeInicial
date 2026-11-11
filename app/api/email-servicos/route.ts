@@ -379,10 +379,18 @@ export async function POST(req: Request) {
         if (empresaId) whereClause.empresaId = empresaId;
 
         try {
-          const clientes = await db.cliente.findMany({
+          let clientes = await db.cliente.findMany({
             where: whereClause,
             select: { id: true, nome: true, nomeFantasia: true, email: true },
           });
+
+          // Se a empresa filtrada não possuir clientes com e-mail, busca em toda a base ativa da consultoria
+          if (clientes.length === 0 && empresaId) {
+            clientes = await db.cliente.findMany({
+              where: { ativo: true, email: { not: null } },
+              select: { id: true, nome: true, nomeFantasia: true, email: true },
+            });
+          }
 
           for (const c of clientes) {
             if (c.email && c.email.includes('@')) {
