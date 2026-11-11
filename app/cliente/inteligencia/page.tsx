@@ -18,12 +18,10 @@ const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: 
 type ActiveTab = 'geral' | 'dre' | 'capital' | 'chat';
 
 export default function InteligenciaFinanceiraPage() {
-  // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
+  // Dynamically initialize from the user's assigned company
   const [empresaId, setEmpresaId] = useState(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
-    return saved || defaultEmpresaId || 'e1';
+    return store.getSafeEmpresaId(saved);
   });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
@@ -347,14 +345,13 @@ INSTRUÇÕES DE COMPORTAMENTO:
   };
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const safeId = store.getSafeEmpresaId(saved);
+    load(safeId);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-      load(current);
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(current));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);

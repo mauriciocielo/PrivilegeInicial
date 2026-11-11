@@ -70,6 +70,11 @@ export default function LoginPage() {
 
       store.setCurrentUser(result.user);
 
+      if (result.user.role === 'cliente') {
+        const allowed = result.user.empresaIds || [];
+        sessionStorage.setItem('cf_empresa_sel', allowed[0] || '');
+      }
+
       // Nova funcionalidade: Hidratação de dados no login
       const empIds = result.user.empresaIds;
       if (empIds && empIds.length > 0) {
@@ -107,6 +112,11 @@ export default function LoginPage() {
       }
 
       store.setCurrentUser(result.user);
+
+      if (result.user.role === 'cliente') {
+        const allowed = result.user.empresaIds || [];
+        sessionStorage.setItem('cf_empresa_sel', allowed[0] || '');
+      }
 
       // Nova funcionalidade: Hidratação de dados no 2FA
       const empIds = result.user.empresaIds;
@@ -160,6 +170,11 @@ export default function LoginPage() {
       store.saveUser(result.user);
       store.setCurrentUser(result.user);
 
+      if (result.user.role === 'cliente') {
+        const allowed = result.user.empresaIds || [];
+        sessionStorage.setItem('cf_empresa_sel', allowed[0] || '');
+      }
+
       // Nova funcionalidade: Hidratação de dados no login (Google)
       const empIds = result.user.empresaIds;
       if (empIds && empIds.length > 0) {
@@ -205,6 +220,11 @@ export default function LoginPage() {
 
       store.saveUser(result.user);
       store.setCurrentUser(result.user);
+
+      if (result.user.role === 'cliente') {
+        const allowed = result.user.empresaIds || [];
+        sessionStorage.setItem('cf_empresa_sel', allowed[0] || '');
+      }
 
       // Nova funcionalidade: Hidratação de dados no login (Google)
       const empIds = result.user.empresaIds;

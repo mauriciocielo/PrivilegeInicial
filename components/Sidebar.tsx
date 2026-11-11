@@ -380,10 +380,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
       const saved = sessionStorage.getItem('cf_empresa_sel');
       let targetId = '';
-      if (saved && (saved.startsWith('grupo:') || allowed.find(e => e.id === saved))) {
-        targetId = saved;
-      } else if (allowed.length > 0) {
-        targetId = allowed[0].id;
+      if (u.role === 'cliente') {
+        // Usuário cliente: NUNCA aceita grupo ou empresa fora da sua lista autorizada
+        if (saved && !saved.startsWith('grupo:') && allowed.find(e => e.id === saved)) {
+          targetId = saved;
+        } else if (allowed.length > 0) {
+          targetId = allowed[0].id;
+        }
+      } else {
+        if (saved && (saved.startsWith('grupo:') || allowed.find(e => e.id === saved))) {
+          targetId = saved;
+        } else if (allowed.length > 0) {
+          targetId = allowed[0].id;
+        }
       }
 
       setSelectedEmpresa(targetId);
@@ -591,23 +600,29 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         <BrandLogo size={42} />
       </div>
 
-      {isConsultorOrAdmin && !isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
+      {!isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
         <div ref={companyDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
           <div
-            onClick={() => setShowCompanyDropdown(o => !o)}
+            onClick={() => {
+              if (selectableEmpresas.length > 1 || isConsultorOrAdmin) {
+                setShowCompanyDropdown(o => !o);
+              }
+            }}
             style={{
-              display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 7, cursor: (selectableEmpresas.length > 1 || isConsultorOrAdmin) ? 'pointer' : 'default',
               padding: '6px 12px', borderRadius: 99, background: '#ffffff',
               border: '1px solid #e5e5e5', maxWidth: 195,
               transition: 'border-color 0.2s',
             }}
-            title="Trocar de empresa"
+            title={selectableEmpresas.length > 1 ? "Trocar de empresa" : "Empresa ativa"}
           >
             <Building2 size={13} style={{ flexShrink: 0, color: '#600000' }} />
             <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial || 'Selecionar empresa'}
             </span>
-            <ChevronDown size={13} style={{ flexShrink: 0, color: '#737373', transform: showCompanyDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+            {(selectableEmpresas.length > 1 || isConsultorOrAdmin) && (
+              <ChevronDown size={13} style={{ flexShrink: 0, color: '#737373', transform: showCompanyDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+            )}
           </div>
 
           {showCompanyDropdown && (
@@ -650,7 +665,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 </div>
               )}
 
-              {!searchEmpresa && gruposEconomicos.length > 0 && (
+              {!searchEmpresa && gruposEconomicos.length > 0 && isConsultorOrAdmin && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Globe size={11} /> Grupos econômicos
@@ -668,7 +683,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               <div>
                 <div style={{ fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
-                  Todas as empresas ({selectableEmpresas.length})
+                  {isConsultorOrAdmin ? `Todas as empresas (${selectableEmpresas.length})` : `Empresas autorizadas (${selectableEmpresas.length})`}
                 </div>
                 {selectableEmpresas
                   .filter(e => !searchEmpresa || `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase()))

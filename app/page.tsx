@@ -515,7 +515,7 @@ export default function HomePage() {
                   @mauricio.cielo ↗
                 </a>
                 <p style={{ fontSize: 14, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
-                  Bacharel em Ciências Contábeis (CRC-PR 082974/O-7) com extensões em Auditoria e Riscos. Com mais de 200 empresas atendidas, lidera as divisões de inteligência financeira, reestruturação de fluxo de caixa e planejamento tributário estratégico na Privilege Consultoria.
+                  Bacharel em Ciências Contábeis (CRC-PR 082974/O-7) com extensões em Auditoria e Riscos. Com mais de 500 empresas atendidas, lidera as divisões de inteligência financeira, reestruturação de fluxo de caixa e planejamento tributário estratégico na Privilege Consultoria.
                 </p>
               </div>
             </div>

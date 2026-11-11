@@ -6,10 +6,8 @@ import { fmt } from '../../../lib/reports';
 export default function ClienteExtrato() {
   // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
   const [empresaId, setEmpresaId] = useState(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
-    return saved || defaultEmpresaId || 'e1';
+    return store.getSafeEmpresaId(saved);
   });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
@@ -23,21 +21,22 @@ export default function ClienteExtrato() {
   });
 
   const load = useCallback((eId: string) => {
-    setEmpresaId(eId);
-    setLancamentos(store.getLancamentos(eId));
-    setPlanoContas(store.getPlanoContas(eId));
-    setPortadores(store.getPortadores(eId));
+    const safeId = store.getSafeEmpresaId(eId);
+    if (!safeId) return;
+    setEmpresaId(safeId);
+    setLancamentos(store.getLancamentos(safeId));
+    setPlanoContas(store.getPlanoContas(safeId));
+    setPortadores(store.getPortadores(safeId));
   }, []);
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const safeId = store.getSafeEmpresaId(saved);
+    load(safeId);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-      load(current);
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(current));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);

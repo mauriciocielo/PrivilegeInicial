@@ -95,12 +95,10 @@ const detectCardImportColumns = (headers: string[]) => {
 };
 
 export default function LancamentosPage() {
-  // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
+  // Dynamically initialize from the user's assigned company
   const [empresaId, setEmpresaId] = useState(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
-    return saved || defaultEmpresaId || 'e1';
+    return store.getSafeEmpresaId(saved);
   });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
@@ -238,13 +236,15 @@ export default function LancamentosPage() {
   };
 
   const load = useCallback((eId: string) => {
-    setEmpresaId(eId);
-    setLancamentos(store.getLancamentos(eId));
+    const safeId = store.getSafeEmpresaId(eId);
+    if (!safeId) return;
+    setEmpresaId(safeId);
+    setLancamentos(store.getLancamentos(safeId));
     // Carrega todas as contas analíticas (nível 3) incluindo transferências
-    setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
-    setPortadores(store.getPortadores(eId).filter(p => p.ativo));
+    setPlanoContas(store.getPlanoContas(safeId).filter(p => p.nivel === 3 && p.ativo));
+    setPortadores(store.getPortadores(safeId).filter(p => p.ativo));
 
-    const emp = store.getEmpresas().find(e => e.id === eId) || null;
+    const emp = store.getEmpresas().find(e => e.id === safeId) || null;
     setActiveCompany(emp);
   }, []);
 
@@ -263,16 +263,15 @@ export default function LancamentosPage() {
   };
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const safeId = store.getSafeEmpresaId(saved);
+    load(safeId);
     const handler = (e: Event) => load((e as CustomEvent).detail);
     const dataChangeHandler = () => {
-      const user = store.getCurrentUser();
-      const current = sessionStorage.getItem('cf_empresa_sel') || user?.empresaIds?.[0] || (store.getEmpresas()[0]?.id ?? '');
-      setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
-      setLancamentos(store.getLancamentos(current));
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      const safeCurrent = store.getSafeEmpresaId(current);
+      setPlanoContas(store.getPlanoContas(safeCurrent).filter(p => p.nivel === 3 && p.ativo));
+      setLancamentos(store.getLancamentos(safeCurrent));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);

@@ -1307,9 +1307,20 @@ class DataStore {
   // dois efeitos: a gravação escapava da proteção contra armazenamento cheio e,
   // como não disparava o evento 'cfDataChange', o envio automático nunca era
   // acionado — a coleção estava registrada para sincronizar, mas nada avisava.
-  getAgendaTasks(): AgendaTask[] {
+  getAgendaTasks(empresaId?: string): AgendaTask[] {
     this.init();
-    return this.get<AgendaTask[]>('cf_agenda_semanal', []);
+    const all = this.get<AgendaTask[]>('cf_agenda_semanal', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(t => t.empresaId === effective);
+      }
+      return all.filter(t => allowed.includes(t.empresaId));
+    }
+    return empresaId ? all.filter(t => t.empresaId === empresaId) : all;
   }
 
   saveAgendaTasks(tasks: AgendaTask[]) {
@@ -1369,7 +1380,27 @@ class DataStore {
   getEmpresas(): Empresa[] {
     this.init();
     const list = this.get<Empresa[]>('cf_empresas', DEFAULT_EMPRESAS);
-    return Array.from(new Map(list.map(e => [e.id, e])).values());
+    const unique = Array.from(new Map(list.map(e => [e.id, e])).values());
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      return unique.filter(e => allowed.includes(e.id));
+    }
+    return unique;
+  }
+
+  getSafeEmpresaId(requestedId?: string | null): string {
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (requestedId && allowed.includes(requestedId)) return requestedId;
+      return allowed[0] || '';
+    }
+    const all = this.getEmpresas();
+    if (requestedId && (requestedId.startsWith('grupo:') || all.some(e => e.id === requestedId))) {
+      return requestedId;
+    }
+    return all[0]?.id || '';
   }
   saveEmpresa(empresa: Empresa) {
     if (empresa && typeof empresa === "object") empresa.updatedAt = new Date().toISOString();
@@ -1424,6 +1455,16 @@ class DataStore {
   getPlanoContas(empresaId?: string): PlanoConta[] {
     this.init();
     const all = this.get<PlanoConta[]>('cf_plano_contas', DEFAULT_PLANO_CONTAS);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(p => p.empresaId === effective);
+      }
+      return all.filter(p => allowed.includes(p.empresaId));
+    }
     return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
   }
   savePlanoConta(pc: PlanoConta) {
@@ -1553,6 +1594,16 @@ class DataStore {
   getPortadores(empresaId?: string): Portador[] {
     this.init();
     const all = this.get<Portador[]>('cf_portadores', DEFAULT_PORTADORES);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(p => p.empresaId === effective);
+      }
+      return all.filter(p => allowed.includes(p.empresaId));
+    }
     return empresaId ? all.filter(p => p.empresaId === empresaId) : all;
   }
   savePortador(portador: Portador) {
@@ -1714,6 +1765,16 @@ class DataStore {
       this.ensureLancamentosCache().catch(() => { });
     }
     const all = this._lancamentosCache as Lancamento[];
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effectiveEmpresaId = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effectiveEmpresaId && allowed.includes(effectiveEmpresaId)) {
+        return all.filter(l => l.empresaId === effectiveEmpresaId);
+      }
+      return all.filter(l => allowed.includes(l.empresaId));
+    }
     return empresaId ? all.filter(l => l.empresaId === empresaId) : [...all];
   }
 
@@ -2171,6 +2232,16 @@ class DataStore {
   getClientes(empresaId?: string): Cliente[] {
     this.init();
     const all = this.get<Cliente[]>('cf_clientes', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(c => c.empresaId === effective);
+      }
+      return all.filter(c => allowed.includes(c.empresaId));
+    }
     return empresaId ? all.filter(c => c.empresaId === empresaId) : all;
   }
   saveCliente(cliente: Cliente) {
@@ -2250,6 +2321,16 @@ class DataStore {
   getEndividamentos(empresaId?: string): Endividamento[] {
     this.init();
     const all = this.get<Endividamento[]>('cf_endividamentos', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(l => l.empresaId === effective);
+      }
+      return all.filter(l => allowed.includes(l.empresaId));
+    }
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveEndividamento(endividamento: Endividamento) {
@@ -2268,6 +2349,16 @@ class DataStore {
   getAtas(empresaId?: string): AtaAtendimento[] {
     this.init();
     const all = this.get<AtaAtendimento[]>('cf_atas', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(a => a.empresaId === effective);
+      }
+      return all.filter(a => allowed.includes(a.empresaId));
+    }
     return empresaId ? all.filter(a => a.empresaId === empresaId) : all;
   }
   saveAta(ata: AtaAtendimento) {
@@ -2340,6 +2431,16 @@ class DataStore {
   getIndicadores(empresaId?: string): IndicadorMensal[] {
     this.init();
     const all = this.get<IndicadorMensal[]>('cf_indicadores', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(l => l.empresaId === effective);
+      }
+      return all.filter(l => allowed.includes(l.empresaId));
+    }
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveIndicador(indicador: IndicadorMensal) {
@@ -2358,6 +2459,16 @@ class DataStore {
   getOrcamentos(empresaId?: string): OrcamentoMensal[] {
     this.init();
     const all = this.get<OrcamentoMensal[]>('cf_orcamentos', []);
+    const user = this.getCurrentUser();
+    if (user && user.role === 'cliente') {
+      const allowed = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+      if (empresaId && !allowed.includes(empresaId)) return [];
+      const effective = empresaId || (typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null);
+      if (effective && allowed.includes(effective)) {
+        return all.filter(l => l.empresaId === effective);
+      }
+      return all.filter(l => allowed.includes(l.empresaId));
+    }
     return empresaId ? all.filter(l => l.empresaId === empresaId) : all;
   }
   saveOrcamento(orcamento: OrcamentoMensal) {

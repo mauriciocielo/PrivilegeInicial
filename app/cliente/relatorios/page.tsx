@@ -42,32 +42,24 @@ export default function RelatoriosPage() {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   const load = useCallback((eId: string) => {
-    const list = store.getEmpresas();
-    let targetId = eId;
-    if (!list.find(e => e.id === targetId)) {
-      if (list.length > 0) {
-        targetId = list[0].id;
-        sessionStorage.setItem('cf_empresa_sel', targetId);
-      }
-    }
+    const targetId = store.getSafeEmpresaId(eId);
+    if (!targetId) return;
     setEmpresaId(targetId);
-    setEmpresa(list.find(e => e.id === targetId) || null);
+    setEmpresa(store.getEmpresas().find(e => e.id === targetId) || null);
   }, []);
 
   useEffect(() => {
     const user = store.getCurrentUser();
     setCurrentUser(user);
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
 
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);
 
     const dataHandler = () => {
-      const user = store.getCurrentUser();
-      const currentSaved = sessionStorage.getItem('cf_empresa_sel') || user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-      load(currentSaved);
+      const currentSaved = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(currentSaved));
     };
     window.addEventListener('cfDataChange', dataHandler);
 

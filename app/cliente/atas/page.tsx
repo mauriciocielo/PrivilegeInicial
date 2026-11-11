@@ -25,27 +25,25 @@ export default function AtasClientePage() {
   };
 
   const loadData = useCallback((empId: string) => {
-    const user = store.getCurrentUser();
-    if (!user || !user.empresaIds.includes(empId)) return;
+    const safeId = store.getSafeEmpresaId(empId);
+    if (!safeId) return;
 
-    const emp = store.getEmpresas().find(e => e.id === empId);
+    const emp = store.getEmpresas().find(e => e.id === safeId);
     setEmpresa(emp || null);
-    setAtas(store.getAtas(empId));
+    setAtas(store.getAtas(safeId));
     setConsultores(store.getUsers().filter(u => u.role === 'consultor' || u.role === 'administrador'));
   }, []);
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    if (saved) loadData(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const safeId = store.getSafeEmpresaId(saved);
+    if (safeId) loadData(safeId);
 
     const handleEmpresaChange = (event: Event) => loadData((event as CustomEvent<string>).detail);
     const handleDataChange = () => {
-      const user = store.getCurrentUser();
-      const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-      const currentEmp = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-      if (currentEmp) loadData(currentEmp);
+      const currentEmp = sessionStorage.getItem('cf_empresa_sel');
+      const safeCurrent = store.getSafeEmpresaId(currentEmp);
+      if (safeCurrent) loadData(safeCurrent);
     };
 
     window.addEventListener('empresaChange', handleEmpresaChange);

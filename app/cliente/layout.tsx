@@ -19,6 +19,18 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
     const user = store.getCurrentUser();
     if (!user) { router.replace('/login'); return; }
     if (user.role !== 'cliente') { router.replace('/consultor/dashboard'); return; }
+
+    // Trava estrita de segurança: garante que o cliente SEMPRE acesse apenas sua empresa autorizada
+    const allowedEmpresas = Array.isArray(user.empresaIds) ? user.empresaIds : [];
+    const currentSaved = sessionStorage.getItem('cf_empresa_sel');
+    if (!currentSaved || currentSaved.startsWith('grupo:') || !allowedEmpresas.includes(currentSaved)) {
+      const defaultEmp = allowedEmpresas[0] || '';
+      if (defaultEmp) {
+        sessionStorage.setItem('cf_empresa_sel', defaultEmp);
+        window.dispatchEvent(new CustomEvent('empresaChange', { detail: defaultEmp }));
+      }
+    }
+
     if (acessoNfse.carregando) { setAuthorized(false); return; }
 
     const isDashboard2 = pathname.startsWith('/cliente/dashboard2');
@@ -52,6 +64,23 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
+
+  // Intercepta qualquer tentativa de trocar para empresa não permitida
+  useEffect(() => {
+    const handleEmpresaChange = (e: Event) => {
+      const u = store.getCurrentUser();
+      if (!u || u.role !== 'cliente') return;
+      const target = (e as CustomEvent).detail;
+      const allowed = Array.isArray(u.empresaIds) ? u.empresaIds : [];
+      if (target && (target.startsWith('grupo:') || !allowed.includes(target))) {
+        const safe = allowed[0] || '';
+        sessionStorage.setItem('cf_empresa_sel', safe);
+        window.dispatchEvent(new CustomEvent('empresaChange', { detail: safe }));
+      }
+    };
+    window.addEventListener('empresaChange', handleEmpresaChange);
+    return () => window.removeEventListener('empresaChange', handleEmpresaChange);
+  }, []);
 
   const [isSidebarCompact, setIsSidebarCompact] = useState(false);
 

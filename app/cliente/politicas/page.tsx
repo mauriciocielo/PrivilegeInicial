@@ -60,15 +60,13 @@ export default function ClientePoliticasPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
 
     const handler = (e: Event) => load((e as CustomEvent).detail);
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-      load(current);
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(current));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);

@@ -8,12 +8,10 @@ import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function ImportarOFXPage() {
-  // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
+  // Dynamically initialize from the user's assigned company
   const [empresaId, setEmpresaId] = useState(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
-    return saved || defaultEmpresaId || 'e1';
+    return store.getSafeEmpresaId(saved);
   });
   const [transactions, setTransactions] = useState<OFXTransaction[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -101,11 +99,11 @@ export default function ImportarOFXPage() {
   }, [empresaId]);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
     const handler = (e: Event) => {
       const id = (e as CustomEvent).detail;
-      load(id);
+      load(store.getSafeEmpresaId(id));
     };
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);

@@ -66,11 +66,9 @@ export default function ClienteContasErpPage() {
   }, []);
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    setEmpresaId(saved);
-    const handler = (e: Event) => setEmpresaId((e as CustomEvent).detail || defaultEmpresaId);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    setEmpresaId(store.getSafeEmpresaId(saved));
+    const handler = (e: Event) => setEmpresaId(store.getSafeEmpresaId((e as CustomEvent).detail));
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);
   }, []);

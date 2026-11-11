@@ -15,12 +15,10 @@ import {
 
 export default function ClienteDashboard() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
+  // Dynamically initialize from the user's assigned company
   const [empresaId, setEmpresaId] = useState(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
-    return saved || defaultEmpresaId || 'e1';
+    return store.getSafeEmpresaId(saved);
   });
   const [resumo, setResumo] = useState<ReturnType<typeof store.getResumoMensal>>([]);
   const [totais, setTotais] = useState({ receitas: 0, despesas: 0, saldo: 0, portadores: 0 });
@@ -65,18 +63,19 @@ export default function ClienteDashboard() {
   const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
 
   const load = useCallback((eId: string, mesSel: string) => {
-    const user = store.getCurrentUser();
-    const e = store.getEmpresas().find(x => x.id === eId && (!user || user.empresaIds.includes(x.id))) || null;
+    const safeId = store.getSafeEmpresaId(eId);
+    if (!safeId) return;
+    const e = store.getEmpresas().find(x => x.id === safeId) || null;
     setEmpresa(e);
-    setEmpresaId(eId);
+    setEmpresaId(safeId);
 
-    const r = store.getResumoMensal(eId, 6);
+    const r = store.getResumoMensal(safeId, 6);
     setResumo(r);
     setTendencia(r);
 
-    const lancs = store.getLancamentos(eId).filter(l => l.status === 'realizado');
+    const lancs = store.getLancamentos(safeId).filter(l => l.status === 'realizado');
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSel));
-    const plano = store.getPlanoContas(eId);
+    const plano = store.getPlanoContas(safeId);
     const rec = lancsMs.filter(l => {
       if (l.planoContaId === 'transf') return false;
       const pc = plano.find(p => p.id === l.planoContaId);
@@ -166,16 +165,14 @@ export default function ClienteDashboard() {
   }, []);
 
   useEffect(() => {
-    const user = store.getCurrentUser();
-    const defaultEmpresaId = user?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-    const saved = sessionStorage.getItem('cf_empresa_sel') || defaultEmpresaId;
-    load(saved, mesSelecionado);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    const safeId = store.getSafeEmpresaId(saved);
+    load(safeId, mesSelecionado);
     
     const handler = (e: Event) => load((e as CustomEvent).detail, mesSelecionado);
     const dataHandler = () => {
-      const u = store.getCurrentUser();
-      const current = sessionStorage.getItem('cf_empresa_sel') || u?.empresaIds?.[0] || store.getEmpresas()[0]?.id || '';
-      load(current, mesSelecionado);
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(current), mesSelecionado);
     };
 
     window.addEventListener('empresaChange', handler);
