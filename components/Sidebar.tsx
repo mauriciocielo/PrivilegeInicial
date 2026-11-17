@@ -11,7 +11,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -99,6 +99,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Empresas', href: '/consultor/empresas', icon: Building2 },
       { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
       { label: 'Disparador de Newsletter', href: '/consultor/newsletter', icon: Mail },
+      { label: 'WhatsApp & Bot IA', href: '/consultor/whatsapp', icon: MessageSquare },
       { label: 'Usuários', href: '/consultor/usuarios', icon: UserCog },
       { label: 'Plano de Contas', href: '/consultor/plano-de-contas', icon: ListTree },
       { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: Tag },
