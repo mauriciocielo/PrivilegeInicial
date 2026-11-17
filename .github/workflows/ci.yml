@@ -39,5 +39,14 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # O next/font baixa as fontes do Google Fonts durante o build, e esse download às
+      # vezes falha no runner do GitHub ("module-not-found" em [next]/internal/font/google).
+      # Uma falha de rede não deve reprovar o código: tenta de novo antes de desistir.
       - name: Build
-        run: npm run build
+        run: |
+          for tentativa in 1 2 3; do
+            npm run build && exit 0
+            echo "::warning::Build falhou na tentativa $tentativa (provável falha ao baixar fontes do Google). Tentando de novo..."
+            sleep 20
+          done
+          exit 1
