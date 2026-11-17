@@ -386,7 +386,7 @@ export default function WhatsAppPage() {
   // Estados para Campanhas & Transmissão em Massa (Anti-Banimento)
   const [campName, setCampName] = useState('');
   const [campMessage, setCampMessage] = useState(
-    '{Olá|Oi|Tudo bem}, *{primeiro_nome}*! {saudacao}! 😊\n\nAqui é da *Privilege Contabilidade e Consultoria*. Passando para compartilhar uma atualização importante com você. Caso precise de suporte em qualquer área (Contábil, Fiscal, Financeiro, Pessoas, Mkt ou Comercial), basta responder esta mensagem!'
+    '{Olá|Oi|Tudo bem}, *{primeiro_nome}*! {saudacao}! Aqui é o Léo, da Privilege Consultoria de Francisco Beltrão.\n\nEstamos apoiando empresas da região na montagem do Planejamento Estratégico e Financeiro para 2027. Vocês já definiram as metas de caixa e vendas para o ano novo ou ainda estão fechando este ano?'
   );
   const [campSelectedChatIds, setCampSelectedChatIds] = useState<string[]>([]);
   const [campManualNumbers, setCampManualNumbers] = useState('');
@@ -399,6 +399,7 @@ export default function WhatsAppPage() {
   const [campSimulateTyping, setCampSimulateTyping] = useState(true);
   const [campPersonalizeGreeting, setCampPersonalizeGreeting] = useState(true);
   const [campCloseTicketAfterSend, setCampCloseTicketAfterSend] = useState(true);
+  const [campAiRewrite, setCampAiRewrite] = useState(true);
   const [campMediaType, setCampMediaType] = useState<'text' | 'image' | 'document'>('text');
   const [campMediaUrl, setCampMediaUrl] = useState<string>('');
   const [campFileName, setCampFileName] = useState<string>('');
@@ -930,6 +931,7 @@ export default function WhatsAppPage() {
             simulateTyping: campSimulateTyping,
             personalizeGreeting: campPersonalizeGreeting,
             closeTicketAfterSend: campCloseTicketAfterSend,
+            aiRewritePerLead: campAiRewrite,
           },
           recipients: recipientsList,
           startImmediately,
@@ -5598,20 +5600,28 @@ export default function WhatsAppPage() {
                 </div>
               </div>
 
-              {/* Modelos rápidos de campanha */}
+              {/* Modelos rápidos de campanha (Prospecção Fria Modo 1 & Lembretes) */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {[
                   {
-                    label: '🚀 Consultoria 360º',
-                    text: '{Olá|Oi|Tudo bem}, *{primeiro_nome}*! {saudacao}! 😊\n\nAqui é da *Privilege Contabilidade e Consultoria*. Estamos com diagnósticos abertos para nossa *Consultoria Empresarial 360º* (Financeiro, Comercial, Marketing e Pessoas — ou áreas separadas).\n\nTem interesse em entender como podemos apoiar sua empresa neste mês?',
+                    label: '🎯 Frio A: Planejamento 2027',
+                    text: '{Olá|Oi|Tudo bem}, *{primeiro_nome}*! {saudacao}! Aqui é o Léo, da Privilege Consultoria de Francisco Beltrão.\n\nEstamos apoiando empresas da região na montagem do Planejamento Estratégico e Financeiro para 2027. Vocês já definiram as metas de caixa e vendas para o ano novo ou ainda estão fechando este ano?',
+                  },
+                  {
+                    label: '💰 Frio B: Margem, Caixa & Impostos',
+                    text: '{Bom dia|Olá|Tudo bem}, *{primeiro_nome}*! {saudacao}! Sou o Léo, assistente da Privilege Contabilidade e Consultoria.\n\nEstamos conversando com empresários locais sobre proteção de margem de lucro e revisão tributária para 2027. Hoje o foco maior de vocês para o próximo ano é melhorar o caixa, reduzir impostos ou acelerar o comercial?',
+                  },
+                  {
+                    label: '🚀 Frio C: Gestão 360º',
+                    text: '{Oi|Olá|Tudo certo}, *{primeiro_nome}*! Aqui é o Léo, da Privilege Consultoria Empresarial aqui de Beltrão.\n\nAtuamos ajudando empresas a alinharem Financeiro, Comercial e Gestão de Pessoas para crescerem com lucro em 2027. Com quem eu consigo falar rapidamente sobre a gestão estratégica da empresa de vocês?',
+                  },
+                  {
+                    label: '🔄 Repescagem Lead Frio',
+                    text: '{Oi|Olá}, *{primeiro_nome}*! Imagino que a rotina aí esteja corrida.\n\nMuitos empresários comentam que já têm contador, mas vale lembrar que nossa Consultoria 360º e Planejamento 2027 atuam de forma totalmente separada da contabilidade atual. Faz sentido trocarmos uma ideia rápida sobre isso?',
                   },
                   {
                     label: '📅 Lembrete Fiscal / Documentos',
                     text: '{Olá|Oi}, *{primeiro_nome}*! {saudacao}!\n\nPassando pela *Privilege Contabilidade* para lembrar do envio dos documentos e extratos do fechamento mensal. Caso já tenha enviado, pode desconsiderar! Qualquer dúvida estamos à disposição.',
-                  },
-                  {
-                    label: '🤝 Reativação de Leads',
-                    text: '{Olá|Oi}, *{primeiro_nome}*! {saudacao}! 😊\n\nConversamos anteriormente aqui na *Privilege Contabilidade e Consultoria* e gostaríamos de saber como estão os projetos da sua empresa e se podemos retomar nossa conversa!',
                   },
                 ].map(tpl => (
                   <button
@@ -5823,6 +5833,15 @@ export default function WhatsAppPage() {
                     onChange={e => setCampCloseTicketAfterSend(e.target.checked)}
                   />
                   <span>🧹 <strong>Fila Limpa:</strong> manter o chamado encerrado após o envio (só abre na fila se o cliente responder)</span>
+                </label>
+
+                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={campAiRewrite}
+                    onChange={e => setCampAiRewrite(e.target.checked)}
+                  />
+                  <span>✨ <strong>Reescrita Única por IA (Leads Frios Anti-Spam):</strong> reescrever cada mensagem com Gemini/Claude variando sinônimos e estrutura para zero bloqueio</span>
                 </label>
               </div>
             </div>
