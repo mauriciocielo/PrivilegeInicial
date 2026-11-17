@@ -17,12 +17,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
+      # Mesma versão do ambiente de desenvolvimento: o package-lock.json é gerado pelo
+      # npm 11 (Node 24), e o npm 10 do Node 20 o recusa no `npm ci`.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
