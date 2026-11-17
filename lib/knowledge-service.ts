@@ -13,6 +13,175 @@ export interface KnowledgeLesson {
 }
 
 let __kbEnsured = false;
+let __kbSeeded = false;
+
+const DEFAULT_PRIVILEGE_LESSONS: Array<{
+  topic: string;
+  question: string;
+  answer: string;
+  keywords: string[];
+}> = [
+  {
+    topic: 'Consultoria 360º',
+    question: 'Como funciona a consultoria empresarial 360 da Privilege?',
+    answer:
+      'Nossa Consultoria 360º integra 4 pilares essenciais da sua empresa: Financeiro, Comercial, Marketing e Pessoas. Você pode contratar o pacote completo ou apenas a área que mais precisa no momento. Me conta qual é o maior desafio da sua empresa hoje para eu direcionar nossa equipe!',
+    keywords: ['consultoria', '360', 'pilares', 'areas', 'separado', 'marketing', 'comercial'],
+  },
+  {
+    topic: 'BPO Financeiro',
+    question: 'Vocês fazem BPO financeiro e controle de contas a pagar e receber?',
+    answer:
+      'Sim! No BPO Financeiro da Privilege assumimos sua rotina de contas a pagar e receber, conciliação bancária diária, projeção de fluxo de caixa e relatórios gerenciais para você focar no crescimento do negócio. Quer que eu chame um especialista da equipe para avaliar sua operação?',
+    keywords: ['bpo', 'financeiro', 'contas', 'pagar', 'receber', 'conciliacao', 'fluxo', 'caixa'],
+  },
+  {
+    topic: 'Abertura de Empresa',
+    question: 'Quero abrir uma empresa ou CNPJ, como funciona e quanto tempo leva?',
+    answer:
+      'Cuidamos de todo o processo de abertura do seu CNPJ: estudo do melhor regime tributário, contrato social, registros na Junta Comercial, Receita Federal, Prefeitura e alvarás. Se quiser, me diga qual será a atividade e a cidade para eu chamar nossa equipe te orientar por aqui mesmo!',
+    keywords: ['abrir', 'abertura', 'empresa', 'cnpj', 'contrato', 'social', 'mei', 'alvara'],
+  },
+  {
+    topic: 'Troca de Contabilidade',
+    question: 'Quero trocar de contador e trazer minha empresa para a Privilege',
+    answer:
+      'Fazemos toda a transição da sua contabilidade de forma segura e sem dor de cabeça, cuidando da comunicação e da conferência fiscal/contábil com o escritório anterior. Me informe o nome da sua empresa ou CNPJ para eu chamar nossa equipe e cuidar disso com você!',
+    keywords: ['trocar', 'contador', 'contabilidade', 'migrar', 'mudar', 'transferir'],
+  },
+  {
+    topic: 'Tributário',
+    question: 'Como saber se minha empresa está pagando imposto a mais ou no regime errado?',
+    answer:
+      'Fazemos um Diagnóstico Tributário comparando Simples Nacional, Lucro Presumido e Lucro Real com base no seu faturamento e folha. O valor e a economia dependem dessa avaliação. Quer que eu passe seu contato para nossa equipe analisar o seu caso?',
+    keywords: ['imposto', 'tributario', 'simples', 'nacional', 'lucro', 'presumido', 'real', 'planejamento'],
+  },
+  {
+    topic: 'Notas Fiscais',
+    question: 'Preciso de ajuda para emitir nota fiscal NFS-e ou NF-e',
+    answer:
+      'Ajudamos tanto na parametrização quanto na emissão de NFS-e e NF-e, conferindo alíquotas, retenções e códigos de serviço para evitar multas. Me diga qual é a dúvida ou o número da nota/empresa para nossa equipe te ajudar por aqui!',
+    keywords: ['nota', 'fiscal', 'nfse', 'nfe', 'emitir', 'emissao', 'retencao', 'iss'],
+  },
+  {
+    topic: 'Guias e Impostos',
+    question: 'Preciso da segunda via da guia de imposto DAS, DARF, FGTS ou INSS',
+    answer:
+      'Claro! Para agilizar o envio da guia atualizada, me informe o nome da empresa e qual imposto ou mês você precisa (ex: DAS, DARF, FGTS ou INSS), que já passo para nossa equipe verificar e te enviar por aqui mesmo.',
+    keywords: ['guia', 'das', 'darf', 'fgts', 'inss', 'boleto', 'vencida', 'recalcular'],
+  },
+  {
+    topic: 'Certidões (CND)',
+    question: 'Preciso tirar certidão negativa CND Federal, Estadual ou Municipal',
+    answer:
+      'Nós consultamos a situação fiscal e emitimos as certidões (Receita Federal/PGFN, Estadual, Municipal e FGTS), além de identificar eventuais pendências que estejam travando a CND. Me informe o CNPJ ou nome da empresa para nossa equipe conferir!',
+    keywords: ['certidao', 'cnd', 'negativa', 'regularidade', 'sitfis', 'pendencia', 'receita'],
+  },
+  {
+    topic: 'Departamento Pessoal',
+    question: 'Vocês cuidam de folha de pagamento, admissão, férias e rescisão?',
+    answer:
+      'Sim! Nosso Departamento Pessoal cuida da folha mensal, admissões, férias, 13º salário, rescisões, eSocial e obrigações trabalhistas. Me diga o que você precisa no DP hoje para eu direcionar ao nosso time!',
+    keywords: ['folha', 'pagamento', 'funcionario', 'admissao', 'rescisao', 'ferias', 'esocial', 'holerite'],
+  },
+  {
+    topic: 'Regularização Fiscal',
+    question: 'Minha empresa está com débitos, dívida ativa ou precisa de parcelamento',
+    answer:
+      'Ajudamos a levantar todos os débitos na Receita Federal, PGFN, Estado e Prefeitura para montar a melhor estratégia de parcelamento e regularização. Se puder, me diga qual é a empresa para eu chamar nossa equipe te atender por aqui.',
+    keywords: ['parcelamento', 'debito', 'divida', 'ativa', 'malha', 'regularizar', 'pgfn'],
+  },
+  {
+    topic: 'Reunião e Diagnóstico',
+    question: 'Gostaria de agendar uma reunião ou diagnóstico para minha empresa',
+    answer:
+      'Será um prazer conversar com você! Me diga qual assunto você quer tratar na reunião e os dias/horários que prefere, que já passo para a nossa equipe confirmar o melhor horário com você.',
+    keywords: ['reuniao', 'agendar', 'conversa', 'chamada', 'diagnostico', 'horario', 'visita'],
+  },
+  {
+    topic: 'Documentos',
+    question: 'Onde posso enviar os extratos bancários, XMLs ou documentos do mês?',
+    answer:
+      'Pode enviar os documentos, extratos ou XMLs diretamente por aqui mesmo no WhatsApp! Assim que você mandar, nossa equipe já recebe e dá andamento.',
+    keywords: ['documento', 'extrato', 'xml', 'ofx', 'comprovante', 'enviar', 'mandar', 'arquivo'],
+  },
+  {
+    topic: 'Condomínios',
+    question: 'Vocês fazem administração financeira e contabilidade para condomínios?',
+    answer:
+      'Sim! Temos um núcleo especializado em gestão financeira e contábil para condomínios, com emissão de boletos, controle de inadimplência, prestação de contas transparente para síndicos e atas. Quer conversar com nossa equipe sobre o seu condomínio?',
+    keywords: ['condominio', 'sindico', 'taxa', 'condominial', 'inadimplencia', 'prestacao', 'contas'],
+  },
+  {
+    topic: 'Comercial',
+    question: 'Como a Privilege pode ajudar minha empresa a crescer e organizar o comercial?',
+    answer:
+      'Além da contabilidade e do financeiro, atuamos na estruturação Comercial e de Marketing: metas, funil de vendas, precificação correta e indicadores para aumentar lucro com previsibilidade. Me conta um pouco do seu negócio para eu chamar nossa equipe!',
+    keywords: ['crescer', 'vendas', 'lucro', 'precificacao', 'estruturar', 'comercial', 'proposta'],
+  },
+  {
+    topic: 'Contabilidade Atual',
+    question: 'Já tenho contador, posso contratar só a consultoria ou o planejamento 2027?',
+    answer:
+      'Com certeza! Nossa Consultoria Empresarial 360º, o BPO Financeiro, o Planejamento Estratégico 2027 e os Treinamentos funcionam de forma totalmente independente da contabilidade tradicional, sem você precisar trocar de contador se não quiser.',
+    keywords: ['ja tenho contador', 'outro contador', 'sem trocar', 'independente', 'planejamento 2027'],
+  },
+  {
+    topic: 'Planejamento 2027',
+    question: 'Como funciona o Planejamento Estratégico e Orçamentário 2027?',
+    answer:
+      'Entrar em 2027 sem orçamento e metas claras faz a empresa trabalhar muito e ver pouco dinheiro sobrar. No Planejamento 2027, fechamos a análise de 2026, desenhamos metas de faturamento e lucro mês a mês, orçamento de custos, plano de ação 5W2H e alinhamento tributário e de caixa.',
+    keywords: ['planejamento', '2027', 'orcamento', 'metas', 'dre projetado', '5w2h'],
+  },
+  {
+    topic: 'MEI e Preços',
+    question: 'Quanto custa a consultoria, o planejamento 2027 ou os planos MEI?',
+    answer:
+      'Para consultorias, treinamentos e empresas no Simples, Presumido ou Real, o projeto é desenhado sob medida após uma Sessão de Diagnóstico Estratégico (30 min, sem custo inicial) com nossos especialistas Mauricio Cielo ou Marcos Cancelier. Para MEI com contabilidade mensal, temos os planos Essencial (R$ 100/mês), Plus (R$ 150/mês) e Premium (R$ 200/mês).',
+    keywords: ['quanto custa', 'preco', 'valor', 'mensalidade', 'mei', 'plano'],
+  },
+  {
+    topic: 'Treinamentos',
+    question: 'Vocês fazem treinamentos corporativos e palestras in-company para equipes?',
+    answer:
+      'Sim! Realizamos treinamentos práticos (presenciais em Francisco Beltrão e região ou online ao vivo) nas trilhas Financeira, Comercial (Vendas Consultivas e WhatsApp), Liderança/Pessoas e Reforma Tributária na Prática para empresas, associações e cooperativas.',
+    keywords: ['treinamento', 'palestra', 'in-company', 'capacitacao', 'equipe', 'lideranca'],
+  },
+  {
+    topic: 'Diagnóstico e Endereço',
+    question: 'Onde fica o escritório da Privilege e como funciona a reunião de diagnóstico?',
+    answer:
+      'Nosso escritório fica na Rua Pará, 127, Sala 103/3, Centro, em Francisco Beltrão - PR (e atendemos online em todo o Brasil). A Sessão de Diagnóstico Estratégico dura cerca de 30 minutos com Mauricio Cielo ou Marcos Cancelier — você prefere presencial ou por vídeo chamada, e no turno da manhã ou tarde?',
+    keywords: ['endereco', 'onde fica', 'beltrao', 'reuniao', 'diagnostico', 'mauricio', 'marcos'],
+  },
+];
+
+async function seedDefaultPrivilegeLessons(pool: any) {
+  if (__kbSeeded) return;
+  __kbSeeded = true;
+  try {
+    const existingRes = await pool.query(`SELECT question FROM whatsapp_knowledge_base`);
+    const existingNorms = new Set<string>(
+      (existingRes.rows || []).map((r: any) => normalizeText(String(r.question || ''))).filter(Boolean)
+    );
+
+    for (const item of DEFAULT_PRIVILEGE_LESSONS) {
+      const norm = normalizeText(item.question);
+      if (existingNorms.has(norm)) continue;
+      const id = 'kb_seed_' + Math.random().toString(36).substring(2, 10);
+      await pool
+        .query(
+          `INSERT INTO whatsapp_knowledge_base (id, topic, question, answer, keywords, learned_from, usage_count, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, 'manual', 0, NOW(), NOW())`,
+          [id, item.topic, item.question, item.answer, JSON.stringify(item.keywords)]
+        )
+        .catch(() => {});
+      existingNorms.add(norm);
+    }
+  } catch (err) {
+    console.warn('[KnowledgeService] Aviso ao semear lições padrão:', err);
+  }
+}
 
 async function ensureKnowledgeTable(pool: any) {
   if (__kbEnsured) return;
@@ -31,6 +200,7 @@ async function ensureKnowledgeTable(pool: any) {
       );
     `);
     __kbEnsured = true;
+    await seedDefaultPrivilegeLessons(pool);
   } catch (err) {
     console.warn('[KnowledgeService] Aviso ao garantir tabela whatsapp_knowledge_base:', err);
   }
