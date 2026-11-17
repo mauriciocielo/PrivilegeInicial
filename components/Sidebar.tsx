@@ -832,6 +832,29 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
 
+        <button
+          type="button"
+          onClick={() => router.push(role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp')}
+          title="Abrir WhatsApp & Bot IA"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 11px',
+            borderRadius: 99,
+            background: pathname?.includes('/whatsapp') ? '#15803d' : 'rgba(22, 163, 74, 0.1)',
+            color: pathname?.includes('/whatsapp') ? '#ffffff' : '#15803d',
+            border: '1px solid rgba(22, 163, 74, 0.3)',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <MessageSquare size={14} />
+          {!isSidebarCompact && <span>WhatsApp</span>}
+        </button>
+
         {/* Popover de Perfil Compacto */}
         <div ref={profilePopoverRef} style={{ position: 'relative' }}>
           <div 
