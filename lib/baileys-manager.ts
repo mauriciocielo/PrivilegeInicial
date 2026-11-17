@@ -260,7 +260,7 @@ export async function getLiveBaileysQR(
     console.error(`[Baileys:${ownerId}] Erro ao iniciar socket:`, err)
   );
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 16; i++) {
     await new Promise(r => setTimeout(r, 500));
     if (st.qr) {
       return { qr_code: st.qr, status: 'qrcode' };

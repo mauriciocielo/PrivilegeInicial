@@ -505,6 +505,32 @@ export default function WhatsAppPage() {
     };
   }, [selectedChat, activeTab]);
 
+  // Polling automático para carregar o QR Code enquanto a aba de conexão estiver aberta
+  useEffect(() => {
+    if (activeTab !== 'qrcode' || config?.status === 'conectado') return;
+    let cancelled = false;
+
+    async function pollQr() {
+      try {
+        const res = await waFetch(`/api/whatsapp/qrcode?_t=${Date.now()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled || !data?.success) return;
+        if (data.status === 'conectado') {
+          loadConfig();
+        } else if (data.qr_code) {
+          setConfig(prev => (prev ? { ...prev, qr_code: data.qr_code, status: 'qrcode' } : prev));
+        }
+      } catch {}
+    }
+
+    pollQr();
+    const timer = setInterval(pollQr, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeTab, config?.status, selectedLine]);
+
   // Rola apenas internamente na caixa de mensagens e somente quando mudar de conversa ou chegar nova mensagem
   useEffect(() => {
     const container = messagesContainerRef.current;

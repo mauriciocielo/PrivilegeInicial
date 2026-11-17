@@ -8,6 +8,7 @@ import {
   getLiveBaileysQR,
   startBaileysSocket,
   disconnectBaileysSocket,
+  ensureBaileysConnected,
 } from '@/lib/baileys-manager';
 import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
@@ -19,7 +20,8 @@ export async function GET(req: NextRequest) {
   try {
     const ownerId = resolveWhatsAppOwnerId(req);
     const config = await getWhatsAppConfig(ownerId);
-    if (config.status === 'conectado') {
+    const liveSock = await ensureBaileysConnected(false, ownerId).catch(() => null);
+    if (config.status === 'conectado' && liveSock?.user) {
       return NextResponse.json({
         success: true,
         status: 'conectado',
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'WhatsApp desconectado com sucesso' });
     }
 
-    await startBaileysSocket(true, ownerId);
+    startBaileysSocket(true, ownerId).catch(console.error);
     const liveQR = await getLiveBaileysQR(ownerId);
 
     return NextResponse.json({
