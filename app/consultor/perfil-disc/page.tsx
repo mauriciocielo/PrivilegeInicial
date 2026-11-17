@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { store, type Empresa } from '../../../lib/store';
 import { PDF_BRAND_NAME } from '../../../lib/pdf-branding';
 import { confirmAsync } from '../../../components/ConfirmProvider';
@@ -256,7 +257,21 @@ export default function PerfilDiscPage() {
                             ) : a.token && (
                               <>
                                 <button className="btn btn-secondary btn-sm" onClick={() => copiar(mensagemConvite(a.token!, a.nomeRespondente), 'Convite copiado.')}>Copiar convite</button>
-                                <a className="btn btn-secondary btn-sm" href={`https://wa.me/?text=${encodeURIComponent(mensagemConvite(a.token, a.nomeRespondente))}`} target="_blank" rel="noreferrer">WhatsApp</a>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={() =>
+                                    redirectToWhatsAppShare(
+                                      {
+                                        name: a.nomeRespondente || undefined,
+                                        text: mensagemConvite(a.token!, a.nomeRespondente),
+                                      },
+                                      router.push
+                                    )
+                                  }
+                                >
+                                  WhatsApp
+                                </button>
                               </>
                             )}
                             <button className="btn btn-danger btn-sm" onClick={() => excluir(a)} title={a.status === 'concluida' || a.expirado ? 'Excluir da lista' : 'Cancelar link'}>
@@ -292,7 +307,21 @@ export default function PerfilDiscPage() {
                     <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 10px', background: 'var(--bg-hover)', borderRadius: 8 }}>
                       <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{urlDoLink(c.token)}</span>
                       <button className="btn btn-secondary btn-sm" onClick={() => copiar(mensagemConvite(c.token, c.nomeRespondente), `Convite ${criados.length > 1 ? i + 1 : ''} copiado.`)}>Copiar</button>
-                      <a className="btn btn-secondary btn-sm" href={`https://wa.me/?text=${encodeURIComponent(mensagemConvite(c.token, c.nomeRespondente))}`} target="_blank" rel="noreferrer">WhatsApp</a>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() =>
+                          redirectToWhatsAppShare(
+                            {
+                              name: c.nomeRespondente || undefined,
+                              text: mensagemConvite(c.token, c.nomeRespondente),
+                            },
+                            router.push
+                          )
+                        }
+                      >
+                        WhatsApp
+                      </button>
                     </div>
                   ))}
                 </div>

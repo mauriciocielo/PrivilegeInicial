@@ -4,6 +4,7 @@ import {
   store, type NfsE, type Cliente, type Empresa, type Portador, type PlanoConta, uid,
 } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { toast } from 'sonner';
 import { confirmAsync } from './ConfirmProvider';
 import NfseConfigModal, { type NfseConfigResposta } from './NfseConfigModal';
@@ -3334,19 +3335,21 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
                           >
                             ✉️ {enviandoEmailNfse ? 'Enviando E-mail...' : 'Enviar por E-mail ao Cliente'}
                           </button>
-                          <a
-                            href={`https://wa.me/?text=${encodeURIComponent(
-                              `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue o boleto/cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
-                                Number(resultadoCobrancaNota.valor)
-                              )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nLinha Digitável do Boleto:\n${boletoLocal?.linhaDigitavel || ''}\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`
-                            )}`}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() =>
+                              redirectToWhatsAppShare({
+                                phone: (notaCobrancaModal as any).tomadorTelefone || '',
+                                name: notaCobrancaModal.tomadorRazaoSocial,
+                                text: `Olá, ${notaCobrancaModal.tomadorRazaoSocial}! Segue o boleto/cobrança referente à NFS-e Nº ${notaCobrancaModal.numero} no valor de ${fmt.currency(
+                                  Number(resultadoCobrancaNota.valor)
+                                )} (Vencimento: ${fmt.date(vencimentoCobrancaNota)}).\n\nLinha Digitável do Boleto:\n${boletoLocal?.linhaDigitavel || ''}\n\nCódigo Pix Copia e Cola:\n${resultadoCobrancaNota.brcode}`,
+                              })
+                            }
                             className="btn btn-secondary btn-sm"
-                            style={{ textDecoration: 'none' }}
                           >
                             📲 Enviar no WhatsApp
-                          </a>
+                          </button>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button className="btn btn-secondary" onClick={() => setResultadoCobrancaNota(null)}>

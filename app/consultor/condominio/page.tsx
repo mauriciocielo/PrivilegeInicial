@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, type Empresa, type Unidade, type Lancamento, type PlanoConta, type Portador } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { uid } from '../../../lib/store';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
@@ -875,25 +876,35 @@ export default function CondominioHubPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <a 
-                                href={`https://api.whatsapp.com/send?phone=${item.unidade.telefone?.replace(/\D/g, '')}&text=${msg}`}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  redirectToWhatsAppShare({
+                                    phone: item.unidade.telefone || '',
+                                    name: item.unidade.proprietario || item.unidade.identificacao,
+                                    text: decodeURIComponent(msg),
+                                  })
+                                }
                                 className="btn btn-secondary btn-sm"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '4px 10px', justifyContent: 'center' }}
                               >
                                 💬 Cobrar Proprietário
-                              </a>
+                              </button>
                               {item.unidade.moradorTelefone && item.unidade.moradorTelefone !== item.unidade.telefone && (
-                                <a 
-                                  href={`https://api.whatsapp.com/send?phone=${item.unidade.moradorTelefone?.replace(/\D/g, '')}&text=${encodeURIComponent(`Olá ${item.unidade.moradorNome}, informamos que constam taxas condominiais pendentes para a unidade ${item.unidade.identificacao} referentes aos meses: ${item.parcelas.join(', ')}, totalizando ${fmt.currency(item.totalDevido)}. Favor regularizar os débitos ou repassar ao proprietário. Atenciosamente, Administradora Privilege.`)}`}
-                                  target="_blank"
-                                  rel="noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    redirectToWhatsAppShare({
+                                      phone: item.unidade.moradorTelefone || '',
+                                      name: item.unidade.moradorNome || item.unidade.identificacao,
+                                      text: `Olá ${item.unidade.moradorNome}, informamos que constam taxas condominiais pendentes para a unidade ${item.unidade.identificacao} referentes aos meses: ${item.parcelas.join(', ')}, totalizando ${fmt.currency(item.totalDevido)}. Favor regularizar os débitos ou repassar ao proprietário. Atenciosamente, Administradora Privilege.`,
+                                    })
+                                  }
                                   className="btn btn-ghost btn-sm"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '3px 8px', border: '1px solid var(--border)', justifyContent: 'center' }}
                                 >
                                   💬 Cobrar Morador
-                                </a>
+                                </button>
                               )}
                             </div>
                           </td>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, type Lancamento, type PlanoConta, type Portador, type Empresa, type Cliente, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
@@ -688,21 +689,23 @@ export default function ContasReceberPage() {
                             const cli = l.clienteId ? clientes.find(c => c.id === l.clienteId) : null;
                             const tel = cli?.celular || cli?.telefone || '';
                             if (!tel) return null;
-                            const cleanTel = tel.replace(/\D/g, '');
-                            const msg = encodeURIComponent(
-                              `Olá, ${cli?.nomeFantasia || cli?.nome}!\n\nRelembramos que a cobrança "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} vence em ${new Date(l.data + 'T12:00:00').toLocaleDateString('pt-BR')}.\n\nPara efetuar o pagamento rápido, utilize o Pix copia e cola abaixo:\n\n00020101021226870014br.gov.bcb.pix2565api.c6bank.com.br/qr/v2/cobv/${l.id}\n\nQualquer dúvida, fale conosco.\nAtenciosamente,\n${empresa?.nomeFantasia || empresa?.razaoSocial}`
-                            );
+                            const rawMsg = `Olá, ${cli?.nomeFantasia || cli?.nome}!\n\nRelembramos que a cobrança "${l.descricao}" no valor de R$ ${l.valor.toFixed(2)} vence em ${new Date(l.data + 'T12:00:00').toLocaleDateString('pt-BR')}.\n\nPara efetuar o pagamento rápido, utilize o Pix copia e cola abaixo:\n\n00020101021226870014br.gov.bcb.pix2565api.c6bank.com.br/qr/v2/cobv/${l.id}\n\nQualquer dúvida, fale conosco.\nAtenciosamente,\n${empresa?.nomeFantasia || empresa?.razaoSocial}`;
                             return (
-                              <a
-                                href={`https://wa.me/55${cleanTel}?text=${msg}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  redirectToWhatsAppShare({
+                                    phone: tel,
+                                    name: cli?.nomeFantasia || cli?.nome,
+                                    text: rawMsg,
+                                  })
+                                }
                                 className="btn btn-secondary btn-sm"
-                                style={{ fontSize: 11, padding: '4px 8px', background: 'rgba(37, 211, 102, 0.08)', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                                style={{ fontSize: 11, padding: '4px 8px', background: 'rgba(37, 211, 102, 0.08)', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                 title="Enviar cobrança via WhatsApp"
                               >
                                 💬 Cobrar
-                              </a>
+                              </button>
                             );
                           })()}
                           {l.status === 'previsto' ? (

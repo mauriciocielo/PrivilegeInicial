@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { toast } from 'sonner';
+import { WHATSAPP_SHARE_STORAGE_KEY, WhatsAppSharePayload } from '@/lib/whatsapp-share';
+import { store } from '@/lib/store';
 import './whatsapp.css';
 import {
   MessageSquare,
@@ -239,6 +242,59 @@ export default function WhatsAppPage() {
   const [closeTicketOnFollowup, setCloseTicketOnFollowup] = useState(false);
   const [followupFilter, setFollowupFilter] = useState<'pendentes' | 'atrasados' | 'concluidos' | 'todos'>('pendentes');
 
+  // Estados para criar tarefa na Agenda a partir de demanda
+  const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+  const [agendaTitle, setAgendaTitle] = useState('');
+  const [agendaDate, setAgendaDate] = useState('');
+  const [agendaHorario, setAgendaHorario] = useState('09:00');
+  const [agendaSaving, setAgendaSaving] = useState(false);
+
+  function openAgendaModalForChat(chat: WhatsAppChat, customText?: string) {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const localDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const nextH = now.getHours() < 8 || now.getHours() >= 17 ? 9 : now.getHours() + 1;
+    const baseText = (customText || chat.last_message || '').trim().slice(0, 120);
+    setAgendaTitle(`[WhatsApp] ${chat.name || chat.phone}: ${baseText}`);
+    setAgendaDate(localDate);
+    setAgendaHorario(`${pad(nextH)}:00`);
+    setIsAgendaModalOpen(true);
+  }
+
+  async function handleSaveAgendaTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!agendaTitle.trim() || !selectedChat) return;
+    setAgendaSaving(true);
+    try {
+      const res = await fetch('/api/whatsapp/agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: agendaTitle.trim(),
+          dateStr: agendaDate,
+          horario: agendaHorario,
+          clienteParticipante: selectedChat.name || selectedChat.phone,
+          location: 'WhatsApp',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Erro ao criar tarefa na Agenda');
+        return;
+      }
+      if (data.task) {
+        const existing = store.getAgendaTasks();
+        store.saveAgendaTasks([...existing, data.task]);
+      }
+      toast.success('Tarefa criada na Agenda com sucesso!');
+      setIsAgendaModalOpen(false);
+    } catch {
+      toast.error('Erro de conexão ao salvar na Agenda');
+    } finally {
+      setAgendaSaving(false);
+    }
+  }
+
   // Estados para Campanhas & Transmissão em Massa (Anti-Banimento)
   const [campName, setCampName] = useState('');
   const [campMessage, setCampMessage] = useState(
@@ -353,9 +409,11 @@ export default function WhatsAppPage() {
       loadChats(false);
     };
     window.addEventListener('waOpenChat', handleWaOpenChat);
+    window.addEventListener('waSharePayload', handleWaOpenChat);
     return () => {
       clearInterval(interval);
       window.removeEventListener('waOpenChat', handleWaOpenChat);
+      window.removeEventListener('waSharePayload', handleWaOpenChat);
     };
   }, [selectedChat, activeTab]);
 
@@ -433,7 +491,7 @@ export default function WhatsAppPage() {
 
     try {
       if (force && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-        Notification.requestPermission().catch(() => {});
+        Notification.requestPermission().catch(() => { });
       }
 
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
@@ -501,6 +559,66 @@ export default function WhatsAppPage() {
         }
 
         setChats(incomingChats);
+        const rawShare =
+          typeof window !== 'undefined' ? sessionStorage.getItem(WHATSAPP_SHARE_STORAGE_KEY) : null;
+        if (rawShare) {
+          sessionStorage.removeItem(WHATSAPP_SHARE_STORAGE_KEY);
+          try {
+            const sharePayload: WhatsAppSharePayload = JSON.parse(rawShare);
+            setActiveTab('inbox');
+            let targetChat: WhatsAppChat | undefined;
+            const targetDigits = (sharePayload.phone || '').replace(/\D/g, '');
+            if (targetDigits) {
+              const tail = targetDigits.slice(-8);
+              targetChat = incomingChats.find((c: WhatsAppChat) => {
+                const cDigits = (c.phone || '').replace(/\D/g, '');
+                return cDigits === targetDigits || (tail.length >= 8 && cDigits.endsWith(tail));
+              });
+              if (!targetChat) {
+                const createRes = await fetch('/api/whatsapp/chats', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'create_chat',
+                    phone: targetDigits,
+                    name: sharePayload.name || targetDigits,
+                  }),
+                });
+                const createData = await createRes.json();
+                if (createData.success && createData.chat) {
+                  targetChat = createData.chat;
+                  setChats((prev) => [createData.chat, ...prev.filter((x) => x.id !== createData.chat.id)]);
+                }
+              }
+            } else if (incomingChats.length > 0) {
+              targetChat =
+                incomingChats.find((c: WhatsAppChat) => c.id === selectedChatIdRef.current) ||
+                incomingChats.find((c: WhatsAppChat) => (c.ticket_status || 'aberto') === 'aberto') ||
+                incomingChats[0];
+            }
+
+            if (targetChat) {
+              await selectChat(targetChat);
+            }
+            if (sharePayload.text) {
+              setMessageInput(sharePayload.text);
+            }
+            if (sharePayload.attachment) {
+              setPendingAttachment({
+                mediaType: sharePayload.attachment.mediaType,
+                mediaUrl: sharePayload.attachment.dataUrl,
+                fileName: sharePayload.attachment.fileName,
+                mimeType: sharePayload.attachment.mimeType || 'application/octet-stream',
+              });
+            }
+            if (!targetDigits) {
+              toast.success('Conteúdo carregado! Escolha o contato na lista ou clique em + para enviar.');
+              if (!targetChat) setIsNewChatModalOpen(true);
+            }
+            return;
+          } catch { }
+        }
+
         const pendingOpenId =
           typeof window !== 'undefined' ? sessionStorage.getItem('wa_open_chat_id') : null;
         if (pendingOpenId) {
@@ -2314,6 +2432,16 @@ export default function WhatsAppPage() {
 
                     <button
                       type="button"
+                      onClick={() => openAgendaModalForChat(selectedChat)}
+                      className="wa-btn wa-btn-secondary"
+                      style={{ padding: '5px 9px', fontSize: 11.5 }}
+                      title="Criar tarefa na Agenda para esta demanda"
+                    >
+                      📅 Agenda
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => handleToggleBot(selectedChat.id, selectedChat.bot_enabled)}
                       className="wa-btn wa-btn-secondary"
                       style={{ padding: 6 }}
@@ -3956,10 +4084,71 @@ export default function WhatsAppPage() {
                     </div>
                   </div>
 
-                  {/* 3. Webhook */}
+                  {/* 3. Conectar Gemini (Google Gemini CLI / Antigravity MCP) */}
+                  <div className="leo-site-box">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                      <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)' }}>
+                        🔵 3. Conectar ao Gemini (Gemini CLI / Antigravity / MCP)
+                      </label>
+                      <span className="wa-tag" style={{ background: 'rgba(37,99,235,0.1)', color: 'var(--blue)' }}>
+                        MCP HTTP / JSON-RPC 2.0
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', margin: 0 }}>
+                      Conecte o Google Gemini via MCP (no <strong>Gemini CLI</strong>, <strong>Antigravity</strong> ou clientes compatíveis com <code>mcpServers</code>) para ler conversas, responder clientes e gerenciar o WhatsApp.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <input type="text" readOnly value={mcpUrl} className="leo-input-dark" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(mcpUrl);
+                          toast.success('URL MCP copiada para conectar no Gemini!');
+                        }}
+                        className="leo-btn-green"
+                      >
+                        <Copy size={13} /> Copiar URL MCP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const geminiConfig = JSON.stringify(
+                            {
+                              mcpServers: {
+                                'privilege-whatsapp': {
+                                  httpUrl: mcpUrl,
+                                },
+                              },
+                            },
+                            null,
+                            2
+                          );
+                          navigator.clipboard.writeText(geminiConfig);
+                          toast.success('JSON do ~/.gemini/settings.json copiado!');
+                        }}
+                        className="wa-btn wa-btn-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        <Copy size={13} /> Copiar Config Gemini (JSON)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`gemini mcp add --transport http privilege-whatsapp ${mcpUrl}`);
+                          toast.success('Comando gemini mcp add copiado!');
+                        }}
+                        className="wa-btn wa-btn-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        <Copy size={13} /> Copiar Comando CLI
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4. Webhook */}
                   <div className="leo-site-box">
                     <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      🔗 3. Webhook de Recebimento em Tempo Real
+                      🔗 4. Webhook de Recebimento em Tempo Real
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input type="text" readOnly value={webhookUrl} className="leo-input-dark" />
@@ -6146,6 +6335,72 @@ export default function WhatsAppPage() {
                     <Check size={14} /> Salvar Follow-up
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isAgendaModalOpen && selectedChat && (
+        <div className="wa-modal-overlay" onClick={() => !agendaSaving && setIsAgendaModalOpen(false)}>
+          <div className="wa-modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>📅 Criar Tarefa na Agenda</h3>
+              <button
+                type="button"
+                onClick={() => setIsAgendaModalOpen(false)}
+                className="wa-btn wa-btn-secondary"
+                style={{ padding: '4px 8px', fontSize: 12 }}
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSaveAgendaTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label className="wa-label">Descrição da Demanda / Tarefa</label>
+                <textarea
+                  className="wa-input"
+                  rows={3}
+                  value={agendaTitle}
+                  onChange={e => setAgendaTitle(e.target.value)}
+                  required
+                  placeholder="Ex: Emitir guia DAS e enviar para o cliente"
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="wa-label">Data</label>
+                  <input
+                    type="date"
+                    className="wa-input"
+                    value={agendaDate}
+                    onChange={e => setAgendaDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="wa-label">Horário</label>
+                  <input
+                    type="time"
+                    className="wa-input"
+                    value={agendaHorario}
+                    onChange={e => setAgendaHorario(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAgendaModalOpen(false)}
+                  className="wa-btn wa-btn-secondary"
+                  disabled={agendaSaving}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="wa-btn wa-btn-primary" disabled={agendaSaving}>
+                  <Check size={14} /> {agendaSaving ? 'Salvando...' : 'Salvar na Agenda'}
+                </button>
               </div>
             </form>
           </div>

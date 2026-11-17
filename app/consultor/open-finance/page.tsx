@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { store, Empresa, Portador } from '../../../lib/store';
 import { toast } from 'sonner';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import BoletoSicoobOficial from '../../../components/BoletoSicoobOficial';
 
 interface BankDefinition {
@@ -1545,17 +1546,19 @@ export default function OpenFinancePage() {
                 )}
 
                 <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Olá${cobForm.pagadorNome ? ` ${cobForm.pagadorNome}` : ''}! Segue o boleto/cobrança referente a ${cobForm.descricao} (Valor: R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):\n\nLinha Digitável do Boleto:\n${cobResult.boleto?.linhaDigitavel || ''}\n\nPix Copia e Cola:\n${cobResult.brcode}`
-                    )}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      redirectToWhatsAppShare({
+                        name: cobForm.pagadorNome || undefined,
+                        text: `Olá${cobForm.pagadorNome ? ` ${cobForm.pagadorNome}` : ''}! Segue o boleto/cobrança referente a ${cobForm.descricao} (Valor: R$ ${Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):\n\nLinha Digitável do Boleto:\n${cobResult.boleto?.linhaDigitavel || ''}\n\nPix Copia e Cola:\n${cobResult.brcode}`,
+                      })
+                    }
                     className="btn btn-secondary"
-                    style={{ fontSize: 12.5, textDecoration: 'none' }}
+                    style={{ fontSize: 12.5 }}
                   >
                     📲 Enviar Boleto + Pix no WhatsApp
-                  </a>
+                  </button>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn btn-secondary" onClick={() => setCobResult(null)}>
                       + Emitir Outra Cobrança

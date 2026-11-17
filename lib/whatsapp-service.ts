@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext } from './knowledge-service';
 import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected } from './baileys-manager';
 import { runTriageStep } from './triage-agent';
+import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import {
   AssistantPersona,
   DEFAULT_ASSISTANTS,
@@ -1537,6 +1538,14 @@ export async function processIncomingMessage(params: {
       cleanText = transcript;
     }
   }
+
+  // Se surgir uma demanda acionável (inclusive por áudio transcrito), registra tarefa na Agenda automaticamente
+  detectAndCreateDemandTask({
+    clientName: params.name || params.phone,
+    phone: params.phone,
+    messageText: cleanText,
+    ownerId,
+  }).catch(() => {});
 
   const lowerText = cleanText.toLowerCase();
 

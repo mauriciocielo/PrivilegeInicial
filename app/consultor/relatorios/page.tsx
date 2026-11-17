@@ -4,6 +4,7 @@ import { store, Empresa } from '../../../lib/store';
 import { fmt, generatePDF, generateXLS, buildFluxoCaixaData } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import { toast } from 'sonner';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 
 const isContaRedutoraReceita = (descricao: string) => descricao.trim().startsWith('( - )');
@@ -580,46 +581,16 @@ export default function RelatoriosPage() {
   };
 
   const handleWhatsAppSend = async () => {
-    if (!whatsappPhone || !whatsappMessage) {
-      toast.error('Por favor, informe o telefone e a mensagem.');
+    if (!whatsappMessage) {
+      toast.error('Por favor, informe a mensagem.');
       return;
     }
-    setSendingWhatsApp(true);
-    try {
-      const res = await fetch('/api/send-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: whatsappPhone, message: whatsappMessage })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Relatório enviado com sucesso via WhatsApp!');
-        setShowWhatsAppModal(false);
-      } else {
-        const confirmFallback = await confirmAsync(
-          `Falha ao enviar pelo Zappfy.\nErro: ${data.details || data.error || 'Desconhecido'}\n\nDeseja abrir o WhatsApp Web/App para enviar manualmente?`
-        );
-        if (confirmFallback) {
-          const cleanPhone = whatsappPhone.replace(/\D/g, '');
-          const encodedText = encodeURIComponent(whatsappMessage);
-          window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`, '_blank');
-          setShowWhatsAppModal(false);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      const confirmFallback = (await confirmAsync(
-        'Falha de rede ao conectar com o servidor. Deseja abrir o WhatsApp para enviar manualmente?'
-      ));
-      if (confirmFallback) {
-        const cleanPhone = whatsappPhone.replace(/\D/g, '');
-        const encodedText = encodeURIComponent(whatsappMessage);
-        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`, '_blank');
-        setShowWhatsAppModal(false);
-      }
-    } finally {
-      setSendingWhatsApp(false);
-    }
+    setShowWhatsAppModal(false);
+    redirectToWhatsAppShare({
+      phone: whatsappPhone,
+      name: empresa?.nomeFantasia || empresa?.razaoSocial,
+      text: whatsappMessage,
+    });
   };
 
   const renderGroupRow = (id: string, group: any, months: Date[]) => {
