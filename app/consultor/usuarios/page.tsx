@@ -6,7 +6,7 @@ import { hashPassword } from '../../../lib/auth-hash';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
-import { ROTA_SOMENTE_FISCAL } from '../../../components/Sidebar';
+import { ROTA_SOMENTE_FISCAL, ROTA_SOMENTE_WHATSAPP } from '../../../components/Sidebar';
 
 const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 
@@ -37,6 +37,7 @@ const AVAILABLE_SCREENS = [
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
   { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
   { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
+  { label: '💬 WhatsApp & Bot IA', route: '/consultor/whatsapp' },
   { label: '🏢 Empresas', route: '/consultor/empresas' },
   { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
   { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
@@ -58,6 +59,7 @@ const AVAILABLE_CLIENT_SCREENS = [
   { label: '📂 Importar OFX', route: '/cliente/importar-ofx' },
   { label: '🏦 Contas via ERP', route: '/cliente/contas-erp' },
   { label: '📈 Relatórios', route: '/cliente/relatorios' },
+  { label: '💬 WhatsApp & Bot IA', route: '/cliente/whatsapp' },
   { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
   { label: '📋 Políticas Financeiras', route: '/cliente/politicas' },
   { label: '📝 Atas de Atendimento', route: '/cliente/atas' },
@@ -844,6 +846,32 @@ export default function UsuariosPage() {
                     onChange={() => toggleRoute(ROTA_SOMENTE_FISCAL)}
                   />
                   <span>🛡️ <strong>Somente Painel Fiscal</strong> — esconde o Dashboard Financeiro; o usuário abre direto no Dashboard 2 (Fiscal &amp; CNDs).</span>
+                </label>
+
+                <label
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 12px',
+                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                    border: `1px solid ${(form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? '#16a34a' : 'var(--border-light)'}`,
+                    background: (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? 'rgba(22, 163, 74, 0.12)' : 'transparent',
+                    color: (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? '#15803d' : 'var(--text-secondary)',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={(form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP)}
+                    onChange={() => {
+                      const waRoute = form.role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp';
+                      const has = (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP);
+                      setForm(f => ({
+                        ...f,
+                        allowedRoutes: has
+                          ? (f.allowedRoutes || []).filter(r => r !== ROTA_SOMENTE_WHATSAPP)
+                          : [ROTA_SOMENTE_WHATSAPP, waRoute],
+                      }));
+                    }}
+                  />
+                  <span>💬 <strong>Somente WhatsApp (Atendente)</strong> — acesso exclusivo à tela de WhatsApp para responder clientes, sem acesso aos demais módulos.</span>
                 </label>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>

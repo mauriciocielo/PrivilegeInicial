@@ -1,5 +1,10 @@
 import { getEmailDbPool } from './email-db';
-import { sendMessage } from './whatsapp-service';
+import { sendMessage, getWhatsAppConfig } from './whatsapp-service';
+import {
+  getBaileysSocketForOwner,
+  buildChatIdForOwner,
+  ensureBaileysConnected,
+} from './baileys-manager';
 
 export interface AntiBanConfig {
   minDelaySec: number;
@@ -17,12 +22,17 @@ export interface CampaignRecipient {
   name: string;
   phone: string;
   status: 'pendente' | 'enviado' | 'falha';
+  deliveryStatus?: 'pendente' | 'enviado' | 'entregue' | 'visualizado' | 'falha';
+  waMessageId?: string;
   sentAt?: string;
+  deliveredAt?: string;
+  readAt?: string;
   error?: string;
 }
 
 export interface WhatsAppCampaign {
   id: string;
+  owner_id?: string;
   name: string;
   message_template: string;
   media_type?: 'text' | 'image' | 'audio' | 'document';
@@ -34,6 +44,7 @@ export interface WhatsAppCampaign {
   recipients: CampaignRecipient[];
   total_count: number;
   sent_count: number;
+  read_count?: number;
   failed_count: number;
   current_action?: string | null;
   next_send_at?: string | null;
@@ -69,12 +80,17 @@ export async function ensureCampaignsTable() {
         recipients JSONB DEFAULT '[]'::jsonb,
         total_count INTEGER DEFAULT 0,
         sent_count INTEGER DEFAULT 0,
+        read_count INTEGER DEFAULT 0,
         failed_count INTEGER DEFAULT 0,
+        owner_id TEXT DEFAULT 'default',
         current_action TEXT,
         next_send_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE whatsapp_campaigns
+        ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT 'default',
+        ADD COLUMN IF NOT EXISTS read_count INTEGER DEFAULT 0;
     `);
     __tableEnsured = true;
   } catch (err) {
@@ -142,8 +158,8 @@ export function buildPersonalizedMessage(
 /**
  * Simula presença "Digitando..." no WhatsApp antes do envio para comportamento humano
  */
-async function simulateHumanTyping(phone: string, durationMs: number) {
-  const sock = g.__baileysSock;
+async function simulateHumanTyping(phone: string, durationMs: number, ownerId = 'default') {
+  const sock = getBaileysSocketForOwner(ownerId);
   if (!sock) {
     await new Promise(r => setTimeout(r, durationMs));
     return;
@@ -167,8 +183,11 @@ async function simulateHumanTyping(phone: string, durationMs: number) {
 }
 
 function mapRowToCampaign(r: any): WhatsAppCampaign {
+  const recipients: CampaignRecipient[] =
+    typeof r.recipients === 'string' ? JSON.parse(r.recipients) : r.recipients || [];
   return {
     id: r.id,
+    owner_id: r.owner_id || 'default',
     name: r.name,
     message_template: r.message_template,
     media_type: r.media_type || 'text',
@@ -188,10 +207,12 @@ function mapRowToCampaign(r: any): WhatsAppCampaign {
             personalizeGreeting: true,
             closeTicketAfterSend: true,
           },
-    recipients:
-      typeof r.recipients === 'string' ? JSON.parse(r.recipients) : r.recipients || [],
+    recipients,
     total_count: Number(r.total_count || 0),
     sent_count: Number(r.sent_count || 0),
+    read_count: Number(
+      r.read_count ?? recipients.filter((rec) => rec.deliveryStatus === 'visualizado').length
+    ),
     failed_count: Number(r.failed_count || 0),
     current_action: r.current_action || null,
     next_send_at: r.next_send_at || null,
@@ -200,15 +221,20 @@ function mapRowToCampaign(r: any): WhatsAppCampaign {
   };
 }
 
-export async function listCampaigns(): Promise<WhatsAppCampaign[]> {
+export async function listCampaigns(ownerId?: string): Promise<WhatsAppCampaign[]> {
   await ensureCampaignsTable();
   const pool = getEmailDbPool();
   if (!pool) return [];
 
   try {
-    const res = await pool.query(
-      `SELECT * FROM whatsapp_campaigns ORDER BY created_at DESC LIMIT 50`
-    );
+    const res = ownerId
+      ? await pool.query(
+          `SELECT * FROM whatsapp_campaigns WHERE COALESCE(owner_id, 'default') = $1 ORDER BY created_at DESC LIMIT 50`,
+          [ownerId]
+        )
+      : await pool.query(
+          `SELECT * FROM whatsapp_campaigns ORDER BY created_at DESC LIMIT 50`
+        );
     const list = res.rows.map(mapRowToCampaign);
     // Se houver alguma campanha em andamento e o worker não estiver rodando, aciona
     if (list.some(c => c.status === 'em_andamento') && !g.__waCampaignWorkerRunning) {
@@ -222,6 +248,7 @@ export async function listCampaigns(): Promise<WhatsAppCampaign[]> {
 }
 
 export async function createCampaign(params: {
+  ownerId?: string;
   name: string;
   message_template: string;
   media_type?: 'text' | 'image' | 'audio' | 'document';
@@ -236,6 +263,7 @@ export async function createCampaign(params: {
   const pool = getEmailDbPool();
   if (!pool) throw new Error('Banco de dados indisponível');
 
+  const ownerId = params.ownerId || 'default';
   const id = 'camp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
 
   // Higieniza e remove números duplicados
@@ -253,10 +281,11 @@ export async function createCampaign(params: {
 
     cleanRecipients.push({
       id: 'rec_' + digits,
-      chatId: item.chatId || `chat_${digits}`,
+      chatId: item.chatId || buildChatIdForOwner(digits, ownerId),
       name: (item.name || digits).trim(),
       phone: digits,
       status: 'pendente',
+      deliveryStatus: 'pendente',
     });
   }
 
@@ -267,12 +296,13 @@ export async function createCampaign(params: {
 
   const res = await pool.query(
     `INSERT INTO whatsapp_campaigns (
-      id, name, message_template, media_type, media_url, file_name, mime_type,
-      status, anti_ban_config, recipients, total_count, sent_count, failed_count, current_action
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, $12)
+      id, owner_id, name, message_template, media_type, media_url, file_name, mime_type,
+      status, anti_ban_config, recipients, total_count, sent_count, read_count, failed_count, current_action
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, 0, 0, $13)
     RETURNING *`,
     [
       id,
+      ownerId,
       params.name.trim(),
       params.message_template,
       params.media_type || 'text',
@@ -379,15 +409,22 @@ export async function startCampaignWorker(): Promise<void> {
 
       const recipient = camp.recipients[nextIdx];
       const cfg = camp.anti_ban_config;
+      const ownerId = camp.owner_id || 'default';
+      const targetChatId = recipient.chatId?.includes('chat_')
+        ? recipient.chatId
+        : buildChatIdForOwner(recipient.phone, ownerId);
+
+      // Garante sessão Baileys ativa para o usuário dono da campanha
+      await ensureBaileysConnected(false, ownerId).catch(() => null);
 
       // 1. Garante que o contato exista em whatsapp_chats
       const ticketStatus = cfg.closeTicketAfterSend ? 'encerrado' : 'aberto';
       await pool
         .query(
-          `INSERT INTO whatsapp_chats (id, phone, name, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
-           VALUES ($1, $2, $3, 'Campanha de transmissão', NOW(), 0, TRUE, 'lead', $4)
+          `INSERT INTO whatsapp_chats (id, owner_id, phone, name, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
+           VALUES ($1, $2, $3, $4, 'Campanha de transmissão', NOW(), 0, TRUE, 'lead', $5)
            ON CONFLICT (id) DO NOTHING`,
-          [recipient.chatId, recipient.phone, recipient.name, ticketStatus]
+          [targetChatId, ownerId, recipient.phone, recipient.name, ticketStatus]
         )
         .catch(() => {});
 
@@ -401,7 +438,7 @@ export async function startCampaignWorker(): Promise<void> {
           [`✍️ Simulando digitação para ${recipient.name} (${recipient.phone})...`, camp.id]
         );
         emitCampaignUpdate();
-        await simulateHumanTyping(recipient.phone, typingMs);
+        await simulateHumanTyping(recipient.phone, typingMs, ownerId);
       }
 
       // Revalida se a campanha não foi pausada/cancelada durante a digitação
@@ -422,9 +459,16 @@ export async function startCampaignWorker(): Promise<void> {
 
       let sentOk = false;
       let errMsg = '';
+      let waMessageId: string | undefined;
       try {
-        await sendMessage({
-          chatId: recipient.chatId,
+        const ownerCfg = await getWhatsAppConfig(ownerId);
+        const hasExternalApi =
+          ownerCfg.api_url &&
+          ownerCfg.api_url.startsWith('http') &&
+          !ownerCfg.api_url.includes('example');
+
+        const sentMsg = await sendMessage({
+          chatId: targetChatId,
           text: finalMsg,
           sentBy: 'consultor',
           senderName: `Campanha: ${camp.name}`,
@@ -432,7 +476,13 @@ export async function startCampaignWorker(): Promise<void> {
           mediaUrl: camp.media_url || undefined,
           fileName: camp.file_name || undefined,
           mimeType: camp.mime_type || undefined,
+          ownerId,
         });
+
+        waMessageId = sentMsg?.wa_key?.id;
+        if (!waMessageId && !hasExternalApi) {
+          throw new Error('WhatsApp desconectado. Conecte o QR Code para disparar.');
+        }
         sentOk = true;
 
         // Se configurado para manter a fila de chamados limpa após envio da campanha
@@ -440,7 +490,7 @@ export async function startCampaignWorker(): Promise<void> {
           await pool
             .query(
               `UPDATE whatsapp_chats SET ticket_status = 'encerrado', unread_count = 0 WHERE id = $1`,
-              [recipient.chatId]
+              [targetChatId]
             )
             .catch(() => {});
         }
@@ -451,7 +501,10 @@ export async function startCampaignWorker(): Promise<void> {
       // 4. Atualiza destinatário e contadores
       camp.recipients[nextIdx] = {
         ...recipient,
+        chatId: targetChatId,
         status: sentOk ? 'enviado' : 'falha',
+        deliveryStatus: sentOk ? 'enviado' : 'falha',
+        waMessageId,
         sentAt: new Date().toISOString(),
         error: errMsg || undefined,
       };

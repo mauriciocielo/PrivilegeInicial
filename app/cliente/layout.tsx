@@ -39,6 +39,15 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
     const isComparadorSped = pathname.startsWith('/cliente/comparador-sped');
     const isWhatsApp = pathname.startsWith('/cliente/whatsapp');
 
+    if ((user.allowedRoutes || []).includes('somente-whatsapp')) {
+      if (!isWhatsApp) {
+        router.replace('/cliente/whatsapp');
+        return;
+      }
+      setAuthorized(true);
+      return;
+    }
+
     // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto ao WhatsApp, Dashboards e Comparador SPED
     if (acessoNfse.liberado) {
       if (pathname === ROTA_NFSE || isDashboard2 || isDashboard || isComparadorSped || isWhatsApp) {

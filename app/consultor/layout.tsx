@@ -71,6 +71,10 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
       setAuthorized(true);
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard'];
+      if (allowed.includes('somente-whatsapp') && !pathname.startsWith('/consultor/whatsapp')) {
+        router.replace('/consultor/whatsapp');
+        return;
+      }
       const userOk = pathname === '/consultor/dashboard' || pathname.startsWith('/consultor/whatsapp') || allowed.some(route => pathname.startsWith(route));
       
       const isGroup = selectedEmpresaId.startsWith('grupo:');

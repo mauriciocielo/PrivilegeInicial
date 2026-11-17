@@ -17,6 +17,7 @@ import {
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
 // (esconde o Dashboard Financeiro). Precisa ser idêntico ao usado na tela de Usuários.
 export const ROTA_SOMENTE_FISCAL = 'somente-painel-fiscal';
+export const ROTA_SOMENTE_WHATSAPP = 'somente-whatsapp';
 
 const getAvatarGradient = (name: string) => {
   const colors = [
@@ -489,8 +490,24 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   // Marcador manual (definido pelo admin na tela de Usuários) para esconder o Dashboard
   // Financeiro e deixar o usuário apenas no painel fiscal. Ausente = mostra os dois (padrão).
   const somenteFiscal = (user?.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL);
+  const somenteWhatsApp = (user?.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP);
 
   const getFilteredNav = () => {
+    if (somenteWhatsApp) {
+      return [
+        {
+          section: 'Atendimento',
+          items: [
+            {
+              label: 'WhatsApp & Bot IA',
+              href: role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp',
+              icon: MessageSquare,
+            },
+          ],
+        },
+      ];
+    }
+
     if (role === 'cliente') {
       if (acessoNfse.carregando) return [];
       const allowedClient = user?.allowedRoutes || [];
@@ -596,7 +613,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           flexShrink: 0,
         }}
         onClick={() => router.push(
-          somenteFiscal
+          somenteWhatsApp
+            ? (role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp')
+            : somenteFiscal
             ? (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard2')
             : (role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')
         )}

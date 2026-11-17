@@ -11,7 +11,8 @@ import path from 'path';
 import fs from 'fs';
 import QRCode from 'qrcode';
 import { getEmailDbPool } from './email-db';
-import { processIncomingMessage } from './whatsapp-service';
+import { processIncomingMessage, ensureChatColumns } from './whatsapp-service';
+import { updateMessageDeliveryAndReadStatus } from './campaign-read-tracker';
 
 interface BaileysSessionState {
   sock: WASocket | null;
@@ -629,6 +630,7 @@ export async function startBaileysSocket(
 
         if (m.key.fromMe) {
           if (pool) {
+            await ensureChatColumns(pool);
             const msgId = 'msg_out_' + (m.key.id || Date.now());
             await pool
               .query(
@@ -690,11 +692,26 @@ export async function startBaileysSocket(
         });
       }
     });
+
+    // Rastreia entrega e visualização (check azul) das mensagens enviadas
+    sock.ev.on('messages.update', async (updates) => {
+      for (const u of updates) {
+        const waId = u.key?.id;
+        const status = Number(u.update?.status || 0);
+        if (!waId || status < 3) continue;
+        const deliveryStatus = status >= 4 ? 'visualizado' : 'entregue';
+        updateMessageDeliveryAndReadStatus(waId, deliveryStatus).catch(() => {});
+      }
+    });
   } catch (err) {
     console.error(`[Baileys:${ownerId}] Falha geral no startBaileysSocket:`, err);
   } finally {
     st.starting = false;
   }
+}
+
+export function getBaileysSocketForOwner(ownerId = 'default'): WASocket | null {
+  return getSessionState(ownerId).sock;
 }
 
 export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void> {

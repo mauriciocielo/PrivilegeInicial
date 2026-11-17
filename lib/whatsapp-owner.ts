@@ -16,17 +16,28 @@ export function resolveWhatsAppOwnerId(req?: Request): string {
     const session = getSessionFromRequest(req);
 
     if (!session) {
-      return explicitScope === 'default' ? 'default' : 'default';
+      return explicitScope === 'linha2' ? 'default_linha2' : 'default';
     }
 
-    if (session.role === 'administrador') {
-      if (explicitScope && explicitScope.trim()) {
-        return explicitScope.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+    const baseOwner =
+      session.role === 'administrador'
+        ? 'default'
+        : `user_${String(session.userId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+    if (explicitScope && explicitScope.trim()) {
+      const cleanScope = explicitScope.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      if (cleanScope === 'linha2' || cleanScope === `${baseOwner}_linha2`) {
+        return `${baseOwner}_linha2`;
       }
-      return 'default';
+      if (cleanScope === 'linha1' || cleanScope === baseOwner) {
+        return baseOwner;
+      }
+      if (session.role === 'administrador') {
+        return cleanScope;
+      }
     }
 
-    return `user_${String(session.userId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    return baseOwner;
   } catch {
     return 'default';
   }

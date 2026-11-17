@@ -148,6 +148,7 @@ export interface WhatsAppChat {
   followup_message?: string | null;
   followup_auto_send?: boolean;
   ticket_status?: 'aberto' | 'encerrado';
+  protocol_number?: string | null;
   closed_at?: string | null;
   closed_reason?: string | null;
   internal_notes?: string | null;
@@ -192,6 +193,41 @@ function getContactAvatarUrl(chat: WhatsAppChat): string {
 }
 
 export default function WhatsAppPage() {
+  const [selectedLine, setSelectedLine] = useState<'1' | '2'>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cf_whatsapp_line') === '2' ? '2' : '1';
+    }
+    return '1';
+  });
+  const selectedLineRef = useRef<'1' | '2'>(selectedLine);
+  selectedLineRef.current = selectedLine;
+
+  function waFetch(input: RequestInfo | URL, init?: RequestInit) {
+    const headers = new Headers(init?.headers || {});
+    if (selectedLineRef.current === '2') {
+      headers.set('x-whatsapp-owner', 'linha2');
+    }
+    return fetch(input, { ...init, headers });
+  }
+
+  function switchWhatsAppLine(line: '1' | '2') {
+    if (line === selectedLineRef.current) return;
+    selectedLineRef.current = line;
+    setSelectedLine(line);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cf_whatsapp_line', line);
+    }
+    setSelectedChat(null);
+    selectedChatIdRef.current = null;
+    setMessages([]);
+    lastMessagesJsonRef.current = '';
+    prevTotalUnreadRef.current = null;
+    toast.success(`Alternado para Número ${line}${line === '2' ? ' (Comercial / Extra)' : ' (Principal)'}`);
+    loadConfig();
+    loadChats(true);
+    loadCampaigns();
+  }
+
   const [activeTab, setActiveTab] = useState<
     'inbox' | 'qrcode' | 'bot' | 'crm' | 'knowledge' | 'campaigns'
   >('inbox');
@@ -248,6 +284,56 @@ export default function WhatsAppPage() {
   const [agendaDate, setAgendaDate] = useState('');
   const [agendaHorario, setAgendaHorario] = useState('09:00');
   const [agendaSaving, setAgendaSaving] = useState(false);
+
+  // Estados para Protocolos de Atendimento
+  const [isProtocolModalOpen, setIsProtocolModalOpen] = useState(false);
+  const [protocolSubject, setProtocolSubject] = useState('');
+  const [protocolSummary, setProtocolSummary] = useState('');
+  const [protocolSendToClient, setProtocolSendToClient] = useState(true);
+  const [protocolSaving, setProtocolSaving] = useState(false);
+
+  function openProtocolModalForChat(chat: WhatsAppChat) {
+    setProtocolSubject('Atendimento WhatsApp');
+    setProtocolSummary(chat.triage_summary || chat.last_message || '');
+    setProtocolSendToClient(true);
+    setIsProtocolModalOpen(true);
+  }
+
+  async function handleSaveProtocol(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedChat) return;
+    setProtocolSaving(true);
+    try {
+      const res = await fetch('/api/whatsapp/protocols', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: selectedChat.id,
+          subject: protocolSubject.trim() || 'Atendimento WhatsApp',
+          summary: protocolSummary.trim(),
+          status: selectedChat.ticket_status === 'encerrado' ? 'encerrado' : 'aberto',
+          sendToClient: protocolSendToClient,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Erro ao salvar protocolo');
+        return;
+      }
+      const protNum = data.protocol?.protocol_number;
+      if (protNum) {
+        setSelectedChat(prev => (prev ? { ...prev, protocol_number: protNum } : prev));
+        setChats(prev => prev.map(c => (c.id === selectedChat.id ? { ...c, protocol_number: protNum } : c)));
+      }
+      toast.success(`Protocolo ${protNum || ''} salvo com sucesso!`);
+      setIsProtocolModalOpen(false);
+      loadMessages(selectedChat.id, false);
+    } catch {
+      toast.error('Erro de conexão ao salvar protocolo');
+    } finally {
+      setProtocolSaving(false);
+    }
+  }
 
   function openAgendaModalForChat(chat: WhatsAppChat, customText?: string) {
     const now = new Date();
@@ -932,9 +1018,16 @@ export default function WhatsAppPage() {
       if (data.success && data.message) {
         setMessages(prev => [...prev, data.message]);
         loadChats(false);
+      } else {
+        toast.error(data.error || 'Não foi possível enviar a mensagem.');
+        if (textInput) setMessageInput(textInput);
+        if (attachment) setPendingAttachment(attachment);
       }
     } catch (err) {
       console.error(err);
+      toast.error('Erro de conexão ao enviar mensagem.');
+      if (textInput) setMessageInput(textInput);
+      if (attachment) setPendingAttachment(attachment);
     } finally {
       setSending(false);
     }
@@ -1924,6 +2017,51 @@ export default function WhatsAppPage() {
                   Aguardando Conexão QR Code
                 </span>
               )}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: 3,
+                  borderRadius: 99,
+                  background: 'var(--bg-card2)',
+                  border: '1px solid var(--border)',
+                }}
+                title="Alterne entre até 2 números de WhatsApp cadastrados na sua conta"
+              >
+                <button
+                  type="button"
+                  onClick={() => switchWhatsAppLine('1')}
+                  style={{
+                    border: 'none',
+                    borderRadius: 99,
+                    padding: '4px 10px',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: selectedLine === '1' ? 'var(--accent)' : 'transparent',
+                    color: selectedLine === '1' ? '#ffffff' : 'var(--text-secondary)',
+                  }}
+                >
+                  📱 Número 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchWhatsAppLine('2')}
+                  style={{
+                    border: 'none',
+                    borderRadius: 99,
+                    padding: '4px 10px',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: selectedLine === '2' ? '#16a34a' : 'transparent',
+                    color: selectedLine === '2' ? '#ffffff' : 'var(--text-secondary)',
+                  }}
+                >
+                  📱 Número 2
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -2431,6 +2569,31 @@ export default function WhatsAppPage() {
                         <Pause size={13} /> Assumir (30m)
                       </button>
                     )}
+
+                    {selectedChat.protocol_number && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedChat.protocol_number || '');
+                          toast.success(`Protocolo ${selectedChat.protocol_number} copiado!`);
+                        }}
+                        className="wa-btn wa-btn-secondary"
+                        style={{ padding: '4px 8px', fontSize: 11, fontFamily: 'monospace' }}
+                        title="Clique para copiar o número do protocolo"
+                      >
+                        🎫 {selectedChat.protocol_number}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => openProtocolModalForChat(selectedChat)}
+                      className="wa-btn wa-btn-secondary"
+                      style={{ padding: '5px 9px', fontSize: 11.5 }}
+                      title="Gerar ou salvar protocolo deste atendimento"
+                    >
+                      🎫 Protocolo
+                    </button>
 
                     <button
                       type="button"
@@ -5625,10 +5788,14 @@ export default function WhatsAppPage() {
 
                         {/* Barra de Progresso */}
                         <div style={{ marginTop: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
                             <span>
                               Enviados: <strong>{camp.sent_count}</strong> de <strong>{camp.total_count}</strong>
-                              {camp.failed_count > 0 ? ` (${camp.failed_count} falhas)` : ''}
+                              {' · '}
+                              <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                                👁️ Visualizados: {camp.read_count ?? (Array.isArray(camp.recipients) ? camp.recipients.filter((r: any) => r.deliveryStatus === 'visualizado').length : 0)}
+                              </span>
+                              {camp.failed_count > 0 ? ` · ${camp.failed_count} falhas` : ''}
                             </span>
                             <strong>{pct}%</strong>
                           </div>
@@ -5715,7 +5882,7 @@ export default function WhatsAppPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            {isExpanded ? 'Ocultar Destinatários ▲' : 'Ver Destinatários ▼'}
+                            {isExpanded ? 'Ocultar Log ▲' : 'Ver Log & Visualizações ▼'}
                           </button>
                         </div>
 
@@ -5723,7 +5890,7 @@ export default function WhatsAppPage() {
                           <div
                             style={{
                               marginTop: 10,
-                              maxHeight: 190,
+                              maxHeight: 240,
                               overflowY: 'auto',
                               borderTop: '1px solid var(--border)',
                               paddingTop: 8,
@@ -5732,38 +5899,64 @@ export default function WhatsAppPage() {
                               gap: 4,
                             }}
                           >
-                            {camp.recipients.map((rec: any) => (
-                              <div
-                                key={rec.id}
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  fontSize: 11.5,
-                                  padding: '4px 6px',
-                                  borderRadius: 6,
-                                  background: 'var(--bg-card2)',
-                                }}
-                              >
-                                <span>
-                                  <strong>{rec.name}</strong> ({rec.phone})
-                                </span>
-                                <span
+                            {camp.recipients.map((rec: any) => {
+                              const dStatus = rec.deliveryStatus || rec.status;
+                              const isRead = dStatus === 'visualizado';
+                              const isDelivered = dStatus === 'entregue';
+                              const isSent = rec.status === 'enviado';
+                              const isFail = rec.status === 'falha';
+                              return (
+                                <div
+                                  key={rec.id}
                                   style={{
-                                    fontWeight: 700,
-                                    color:
-                                      rec.status === 'enviado'
-                                        ? 'var(--green)'
-                                        : rec.status === 'falha'
-                                          ? 'var(--red)'
-                                          : 'var(--text-muted)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    fontSize: 11.5,
+                                    padding: '5px 8px',
+                                    borderRadius: 6,
+                                    background: 'var(--bg-card2)',
                                   }}
                                 >
-                                  {rec.status === 'enviado' && '✅ Enviado'}
-                                  {rec.status === 'pendente' && '⏳ Na fila'}
-                                  {rec.status === 'falha' && '❌ Falha'}
-                                </span>
-                              </div>
-                            ))}
+                                  <div style={{ minWidth: 0 }}>
+                                    <strong>{rec.name}</strong> ({rec.phone})
+                                    {rec.error && (
+                                      <div style={{ fontSize: 10.5, color: 'var(--red)', marginTop: 1 }}>
+                                        {rec.error}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                    <span
+                                      style={{
+                                        fontWeight: 700,
+                                        color: isRead
+                                          ? '#2563eb'
+                                          : isDelivered || isSent
+                                            ? 'var(--green)'
+                                            : isFail
+                                              ? 'var(--red)'
+                                              : 'var(--text-muted)',
+                                      }}
+                                    >
+                                      {isRead && '👁️ Visualizado ✓✓'}
+                                      {!isRead && isDelivered && '✓✓ Entregue'}
+                                      {!isRead && !isDelivered && isSent && '✓ Enviado'}
+                                      {rec.status === 'pendente' && '⏳ Na fila'}
+                                      {isFail && '❌ Falha'}
+                                    </span>
+                                    {(rec.readAt || rec.sentAt) && (
+                                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                        {rec.readAt
+                                          ? `Lido ${new Date(rec.readAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                                          : `Env ${new Date(rec.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -6402,6 +6595,82 @@ export default function WhatsAppPage() {
                 </button>
                 <button type="submit" className="wa-btn wa-btn-primary" disabled={agendaSaving}>
                   <Check size={14} /> {agendaSaving ? 'Salvando...' : 'Salvar na Agenda'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isProtocolModalOpen && selectedChat && (
+        <div className="wa-modal-overlay" onClick={() => !protocolSaving && setIsProtocolModalOpen(false)}>
+          <div className="wa-modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🎫 Protocolo de Atendimento</h3>
+              <button
+                type="button"
+                onClick={() => setIsProtocolModalOpen(false)}
+                className="wa-btn wa-btn-secondary"
+                style={{ padding: '4px 8px', fontSize: 12 }}
+              >
+                ✕
+              </button>
+            </div>
+            {selectedChat.protocol_number && (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: 'var(--bg-card2)',
+                  border: '1px solid var(--border)',
+                  fontSize: 12,
+                }}
+              >
+                Protocolo atual: <strong style={{ fontFamily: 'monospace' }}>{selectedChat.protocol_number}</strong>
+              </div>
+            )}
+            <form onSubmit={handleSaveProtocol} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label className="wa-label">Assunto do Atendimento</label>
+                <input
+                  type="text"
+                  className="wa-input"
+                  value={protocolSubject}
+                  onChange={e => setProtocolSubject(e.target.value)}
+                  required
+                  placeholder="Ex: Emissão de NFS-e / Dúvida Fiscal"
+                />
+              </div>
+              <div>
+                <label className="wa-label">Resumo / Observações para Salvar</label>
+                <textarea
+                  className="wa-input"
+                  rows={3}
+                  value={protocolSummary}
+                  onChange={e => setProtocolSummary(e.target.value)}
+                  placeholder="Resumo do que foi tratado e resolvido..."
+                />
+              </div>
+              <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={protocolSendToClient}
+                  onChange={e => setProtocolSendToClient(e.target.checked)}
+                />
+                <span>Enviar número do protocolo para o cliente no WhatsApp</span>
+              </label>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsProtocolModalOpen(false)}
+                  className="wa-btn wa-btn-secondary"
+                  disabled={protocolSaving}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="wa-btn wa-btn-primary" disabled={protocolSaving}>
+                  <Check size={14} /> {protocolSaving ? 'Salvando...' : 'Salvar Protocolo'}
                 </button>
               </div>
             </form>

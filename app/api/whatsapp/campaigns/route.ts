@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
+import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 import {
   listCampaigns,
   createCampaign,
@@ -13,8 +14,9 @@ export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   try {
-    const campaigns = await listCampaigns();
-    return NextResponse.json({ success: true, campaigns });
+    const ownerId = resolveWhatsAppOwnerId(req);
+    const campaigns = await listCampaigns(ownerId);
+    return NextResponse.json({ success: true, campaigns, ownerId });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -24,6 +26,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
   try {
+    const ownerId = resolveWhatsAppOwnerId(req);
     const body = await req.json();
     const { action } = body;
 
@@ -36,6 +39,7 @@ export async function POST(req: NextRequest) {
       }
 
       const campaign = await createCampaign({
+        ownerId,
         name: body.name,
         message_template: body.message_template,
         media_type: body.media_type || 'text',

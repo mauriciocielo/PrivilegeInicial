@@ -472,7 +472,7 @@ export async function disconnectWhatsApp(ownerId = 'default'): Promise<WhatsAppC
 
 let __chatColumnsEnsured = false;
 
-async function ensureChatColumns(pool: any) {
+export async function ensureChatColumns(pool: any) {
   if (__chatColumnsEnsured) return;
   try {
     await pool.query(`
@@ -483,11 +483,27 @@ async function ensureChatColumns(pool: any) {
         ADD COLUMN IF NOT EXISTS closed_reason TEXT,
         ADD COLUMN IF NOT EXISTS followup_status TEXT DEFAULT 'nenhum',
         ADD COLUMN IF NOT EXISTS followup_message TEXT,
-        ADD COLUMN IF NOT EXISTS followup_auto_send BOOLEAN DEFAULT FALSE;
+        ADD COLUMN IF NOT EXISTS followup_auto_send BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS protocol_number TEXT;
     `);
     await pool.query(`
       ALTER TABLE whatsapp_messages
         ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT 'default';
+    `).catch(() => {});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_protocols (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT DEFAULT 'default',
+        chat_id TEXT NOT NULL,
+        protocol_number TEXT NOT NULL,
+        contact_name TEXT,
+        contact_phone TEXT,
+        subject TEXT,
+        summary TEXT,
+        status TEXT DEFAULT 'aberto',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        closed_at TIMESTAMPTZ
+      );
     `).catch(() => {});
     await pool.query(`UPDATE whatsapp_chats SET ticket_status = 'aberto' WHERE ticket_status IS NULL`);
     await pool.query(`UPDATE whatsapp_chats SET owner_id = 'default' WHERE owner_id IS NULL`);
@@ -495,6 +511,102 @@ async function ensureChatColumns(pool: any) {
   } catch (err) {
     console.warn('[WhatsAppService] Aviso ao verificar colunas de chamado/followup:', err);
   }
+}
+
+export function generateProtocolNumber(): string {
+  const now = new Date();
+  const brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const y = brt.getFullYear();
+  const m = String(brt.getMonth() + 1).padStart(2, '0');
+  const d = String(brt.getDate()).padStart(2, '0');
+  const rand = String(Math.floor(1000 + Math.random() * 9000));
+  return `PROT-${y}${m}${d}-${rand}`;
+}
+
+export async function createOrSaveProtocol(params: {
+  chatId: string;
+  ownerId?: string;
+  subject?: string;
+  summary?: string;
+  status?: 'aberto' | 'encerrado';
+}) {
+  const pool = getEmailDbPool();
+  if (!pool) throw new Error('Banco de dados indisponível');
+  await ensureChatColumns(pool);
+
+  const ownerId = params.ownerId || 'default';
+  const chatRes = await pool.query(
+    `SELECT id, name, phone, protocol_number, triage_summary FROM whatsapp_chats WHERE id = $1`,
+    [params.chatId]
+  );
+  const chat = chatRes.rows[0];
+  const protocolNumber = chat?.protocol_number || generateProtocolNumber();
+  const id = 'prot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  const status = params.status || 'aberto';
+
+  const existing = await pool.query(
+    `SELECT id FROM whatsapp_protocols WHERE chat_id = $1 AND protocol_number = $2 LIMIT 1`,
+    [params.chatId, protocolNumber]
+  );
+
+  if (existing.rows.length > 0) {
+    await pool.query(
+      `UPDATE whatsapp_protocols
+       SET subject = COALESCE($1, subject),
+           summary = COALESCE($2, summary),
+           status = $3,
+           closed_at = CASE WHEN $3 = 'encerrado' THEN COALESCE(closed_at, NOW()) ELSE NULL END
+       WHERE id = $4`,
+      [params.subject || null, params.summary || null, status, existing.rows[0].id]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO whatsapp_protocols (id, owner_id, chat_id, protocol_number, contact_name, contact_phone, subject, summary, status, closed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $9 = 'encerrado' THEN NOW() ELSE NULL END)`,
+      [
+        id,
+        ownerId,
+        params.chatId,
+        protocolNumber,
+        chat?.name || params.chatId,
+        chat?.phone || '',
+        params.subject || 'Atendimento WhatsApp',
+        params.summary || chat?.triage_summary || '',
+        status,
+      ]
+    );
+  }
+
+  await pool.query(
+    `UPDATE whatsapp_chats SET protocol_number = $1 WHERE id = $2`,
+    [protocolNumber, params.chatId]
+  );
+
+  const savedRes = await pool.query(
+    `SELECT * FROM whatsapp_protocols WHERE chat_id = $1 AND protocol_number = $2 LIMIT 1`,
+    [params.chatId, protocolNumber]
+  );
+  return savedRes.rows[0] || { protocol_number: protocolNumber, status };
+}
+
+export async function listProtocols(ownerId = 'default', chatId?: string) {
+  const pool = getEmailDbPool();
+  if (!pool) return [];
+  await ensureChatColumns(pool);
+
+  if (chatId) {
+    const res = await pool.query(
+      `SELECT * FROM whatsapp_protocols WHERE chat_id = $1 ORDER BY created_at DESC LIMIT 30`,
+      [chatId]
+    );
+    return res.rows;
+  }
+
+  const res = await pool.query(
+    `SELECT * FROM whatsapp_protocols WHERE COALESCE(owner_id, 'default') = $1 ORDER BY created_at DESC LIMIT 100`,
+    [ownerId]
+  );
+  return res.rows;
 }
 
 let __checkingFollowups = false;
@@ -778,6 +890,7 @@ export async function sendMessage(params: {
 
   // 1. Envia via Baileys Multi-Device (WhatsApp Oficial ao vivo da instância do usuário)
   let waKey: any = null;
+  let baileysSent = false;
   try {
     const bRes = await sendBaileysLiveMessage(
       params.chatId,
@@ -790,6 +903,7 @@ export async function sendMessage(params: {
       },
       ownerId
     );
+    baileysSent = !!bRes.sent;
     if (bRes.waKey) {
       waKey = bRes.waKey;
       message.wa_key = waKey;
@@ -798,10 +912,19 @@ export async function sendMessage(params: {
     console.warn(`[WhatsAppService:${ownerId}] Falha no despacho via Baileys:`, bErr);
   }
 
+  const hasExternalApi = !!(
+    config.api_url &&
+    config.api_url.startsWith('http') &&
+    !config.api_url.includes('example')
+  );
+  if (!baileysSent && !hasExternalApi) {
+    throw new Error('WhatsApp desconectado. Escaneie o QR Code na aba Conexão QR Code para enviar mensagens.');
+  }
+
   // 2. Se tiver API externa configurada (Zappfy ou Evolution API), despacha também
   if (config.api_url && config.api_url.startsWith('http') && !config.api_url.includes('example')) {
     try {
-      let cleanNumber = params.chatId.replace(/^chat_/, '').replace(/[^0-9]/g, '');
+      let cleanNumber = params.chatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
       if (cleanNumber.length === 10 || cleanNumber.length === 11) {
         cleanNumber = '55' + cleanNumber;
       }
@@ -1557,8 +1680,8 @@ export async function processIncomingMessage(params: {
         : '🎤 Mensagem de áudio'
       : cleanText;
     await pool.query(
-      `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 1, TRUE, 'em_atendimento', 'aberto')
+      `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status, protocol_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 1, TRUE, 'em_atendimento', 'aberto', $8)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = EXCLUDED.owner_id,
          name = COALESCE(EXCLUDED.name, whatsapp_chats.name),
@@ -1567,6 +1690,7 @@ export async function processIncomingMessage(params: {
          last_message = EXCLUDED.last_message,
          last_message_time = NOW(),
          ticket_status = 'aberto',
+         protocol_number = COALESCE(whatsapp_chats.protocol_number, EXCLUDED.protocol_number),
          unread_count = whatsapp_chats.unread_count + 1`,
       [
         params.chatId,
@@ -1576,6 +1700,7 @@ export async function processIncomingMessage(params: {
         params.profilePic || null,
         params.remoteJid || null,
         snippetForChat,
+        generateProtocolNumber(),
       ]
     );
 
