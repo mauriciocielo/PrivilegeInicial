@@ -6,6 +6,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  serverExternalPackages: ['@whiskeysockets/baileys', 'pino', 'thread-stream'],
   // Necessário no Next.js 16: declara explicitamente o uso do Turbopack
   // para silenciar o erro quando plugins (ex: next-pwa) adicionam config webpack.
   turbopack: {},
