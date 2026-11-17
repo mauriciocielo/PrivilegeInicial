@@ -137,7 +137,7 @@ export default function CondominioHubPage() {
 
   const finSummary = useMemo(() => {
     const hoje = new Date().toISOString().slice(0, 7);
-    
+
     let aReceberPendente = 0;
     let aPagarPendente = 0;
     let recebidoMes = 0;
@@ -173,7 +173,7 @@ export default function CondominioHubPage() {
     const active = list.find(e => e.id === eId) || null;
     setCondoId(eId);
     setCondo(active);
-    
+
     if (active && active.tipo === 'condominio') {
       setUnidades(store.getUnidades(eId));
       setLancamentos(store.getLancamentos(eId));
@@ -192,7 +192,7 @@ export default function CondominioHubPage() {
 
     const handler = (e: Event) => load((e as CustomEvent).detail);
     window.addEventListener('empresaChange', handler);
-    
+
     const dataHandler = () => {
       const currentSaved = sessionStorage.getItem('cf_empresa_sel') || '';
       load(currentSaved);
@@ -215,7 +215,7 @@ export default function CondominioHubPage() {
 
     const reservePortador = store.getPortadores(condoId).find(p => p.nome.includes('Reserva'));
     const reserveBalance = reservePortador ? store.getSaldoPortador(reservePortador.id, condoId) : 0;
-    
+
     const allPortadores = store.getPortadores(condoId);
     const totalCaixa = allPortadores.reduce((acc, p) => acc + store.getSaldoPortador(p.id, condoId), 0);
 
@@ -231,7 +231,7 @@ export default function CondominioHubPage() {
     // Agrupa receitas vs despesas nos últimos 6 meses
     const dataMap: Record<string, { mes: string; Receitas: number; Despesas: number }> = {};
     const hoje = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const k = d.toISOString().slice(0, 7);
@@ -301,19 +301,19 @@ export default function CondominioHubPage() {
       toast.error('Cadastre unidades primeiro para poder faturar as taxas.');
       return;
     }
-    
+
     // Procura por conta de receita condominial e conta de fundo de reserva
     const ordinariaPc = planoContas.find(p => p.codigo.startsWith('1.1.1.001') || p.descricao.includes('Ordinárias'));
     const reservaPc = planoContas.find(p => p.codigo.startsWith('1.1.1.004') || p.descricao.includes('Reserva'));
     const mainPortador = store.getPortadores(condoId).find(p => p.tipo === 'conta_corrente');
-    
+
     if (!mainPortador) {
       toast.error('Cadastre um portador do tipo Conta Corrente para receber as taxas.');
       return;
     }
 
     const targetOrdId = ordinariaPc?.id || planoContas[0]?.id || 'pc1';
-    
+
     let count = 0;
     const novosLancamentos: Lancamento[] = [];
 
@@ -323,7 +323,7 @@ export default function CondominioHubPage() {
       if (exists) return;
 
       const valorOrdinario = tipoRateio === 'fixo' ? valorFixo : (orcamentoTotal * uni.fracaoIdeal);
-      
+
       // Cria lançamento principal de cobrança ordinária
       const mainLanc: Lancamento = {
         id: uid(),
@@ -348,7 +348,7 @@ export default function CondominioHubPage() {
         const valorReserva = valorOrdinario * (condo.fundoReservaPct / 100);
         const reservePortador = store.getPortadores(condoId).find(p => p.nome.includes('Reserva'));
         const targetResId = reservaPc?.id || targetOrdId;
-        
+
         if (reservePortador) {
           const resLanc: Lancamento = {
             id: uid(),
@@ -380,7 +380,7 @@ export default function CondominioHubPage() {
   // --- ABA 4: PRESTACAO DE CONTAS ---
   const prestacaoData = useMemo(() => {
     const list = lancamentos.filter(l => l.data.startsWith(mesPrestacao) && l.status === 'realizado');
-    
+
     // Agrupamentos
     let taxasOrdinarias = 0;
     let taxasExtra = 0;
@@ -636,15 +636,15 @@ export default function CondominioHubPage() {
                 <div className="form-group">
                   <label className="form-label">Modelo de Rateio</label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button 
-                      className={`btn ${tipoRateio === 'fixo' ? 'btn-primary' : 'btn-secondary'}`} 
+                    <button
+                      className={`btn ${tipoRateio === 'fixo' ? 'btn-primary' : 'btn-secondary'}`}
                       style={{ flex: 1, fontSize: 12 }}
                       onClick={() => setTipoRateio('fixo')}
                     >
                       Valor Fixo Igual
                     </button>
-                    <button 
-                      className={`btn ${tipoRateio === 'fracao' ? 'btn-primary' : 'btn-secondary'}`} 
+                    <button
+                      className={`btn ${tipoRateio === 'fracao' ? 'btn-primary' : 'btn-secondary'}`}
                       style={{ flex: 1, fontSize: 12 }}
                       onClick={() => setTipoRateio('fracao')}
                     >
@@ -951,20 +951,20 @@ export default function CondominioHubPage() {
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                   <div className="search-bar">
                     <span>🔍</span>
-                    <input 
-                      placeholder="Buscar descrição..." 
-                      value={finSearch} 
-                      onChange={e => setFinSearch(e.target.value)} 
+                    <input
+                      placeholder="Buscar descrição..."
+                      value={finSearch}
+                      onChange={e => setFinSearch(e.target.value)}
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Mês</label>
-                    <input 
-                      type="month" 
-                      className="form-control" 
+                    <input
+                      type="month"
+                      className="form-control"
                       style={{ height: 38 }}
-                      value={finMesFilter} 
-                      onChange={e => setFinMesFilter(e.target.value)} 
+                      value={finMesFilter}
+                      onChange={e => setFinMesFilter(e.target.value)}
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
@@ -998,7 +998,7 @@ export default function CondominioHubPage() {
                     </button>
                   )}
                 </div>
-                
+
                 <button className="btn btn-primary" onClick={handleOpenNewFin}>
                   ＋ Lançar Conta
                 </button>
@@ -1059,16 +1059,16 @@ export default function CondominioHubPage() {
                               <div style={{ display: 'flex', gap: 6 }}>
                                 {l.status === 'previsto' && (
                                   <>
-                                    <button 
-                                      className="btn btn-ghost btn-sm" 
-                                      style={{ padding: '4px 8px', fontSize: 11, border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', gap: 4 }} 
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      style={{ padding: '4px 8px', fontSize: 11, border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                       onClick={() => handleQuickPayReceive(l)}
                                     >
                                       ✓ Liquidar
                                     </button>
                                     {l.tipo === 'receita' && (
-                                      <button 
-                                        className="btn btn-secondary btn-sm" 
+                                      <button
+                                        className="btn btn-secondary btn-sm"
                                         style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                         onClick={() => handleOpenBoleto(l)}
                                       >
@@ -1101,26 +1101,26 @@ export default function CondominioHubPage() {
               <h2 className="modal-title">{editUni ? 'Editar Unidade' : 'Cadastrar Unidade'}</h2>
               <button className="modal-close" onClick={() => setShowUniModal(false)}>✕</button>
             </div>
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Identificação da Unidade *</label>
-                <input 
-                  className="form-control" 
-                  placeholder="Ex: Apto 101, Casa 12" 
-                  value={uniForm.identificacao || ''} 
-                  onChange={e => setUniForm(f => ({ ...f, identificacao: e.target.value }))} 
+                <input
+                  className="form-control"
+                  placeholder="Ex: Apto 101, Casa 12"
+                  value={uniForm.identificacao || ''}
+                  onChange={e => setUniForm(f => ({ ...f, identificacao: e.target.value }))}
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">Fração Ideal (Proporção) *</label>
-                <input 
+                <input
                   type="number"
                   step="0.0001"
-                  className="form-control" 
-                  placeholder="Ex: 0.125" 
-                  value={uniForm.fracaoIdeal || 0.1} 
-                  onChange={e => setUniForm(f => ({ ...f, fracaoIdeal: Number(e.target.value) }))} 
+                  className="form-control"
+                  placeholder="Ex: 0.125"
+                  value={uniForm.fracaoIdeal || 0.1}
+                  onChange={e => setUniForm(f => ({ ...f, fracaoIdeal: Number(e.target.value) }))}
                 />
               </div>
             </div>
@@ -1130,20 +1130,20 @@ export default function CondominioHubPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Nome do Proprietário *</label>
-                  <input 
-                    className="form-control" 
-                    placeholder="Ex: Carlos Santos" 
-                    value={uniForm.proprietario || ''} 
-                    onChange={e => setUniForm(f => ({ ...f, proprietario: e.target.value }))} 
+                  <input
+                    className="form-control"
+                    placeholder="Ex: Carlos Santos"
+                    value={uniForm.proprietario || ''}
+                    onChange={e => setUniForm(f => ({ ...f, proprietario: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
                   <label className="form-label">CPF do Proprietário</label>
-                  <input 
-                    className="form-control" 
-                    placeholder="Ex: 111.111.111-11" 
-                    value={uniForm.proprietarioCpf || ''} 
-                    onChange={e => setUniForm(f => ({ ...f, proprietarioCpf: e.target.value }))} 
+                  <input
+                    className="form-control"
+                    placeholder="Ex: 111.111.111-11"
+                    value={uniForm.proprietarioCpf || ''}
+                    onChange={e => setUniForm(f => ({ ...f, proprietarioCpf: e.target.value }))}
                   />
                 </div>
               </div>
@@ -1151,32 +1151,32 @@ export default function CondominioHubPage() {
               <div className="form-row" style={{ marginTop: 10 }}>
                 <div className="form-group">
                   <label className="form-label">E-mail de Contato</label>
-                  <input 
+                  <input
                     type="email"
-                    className="form-control" 
-                    placeholder="Ex: carlos@email.com" 
-                    value={uniForm.email || ''} 
-                    onChange={e => setUniForm(f => ({ ...f, email: e.target.value }))} 
+                    className="form-control"
+                    placeholder="Ex: carlos@email.com"
+                    value={uniForm.email || ''}
+                    onChange={e => setUniForm(f => ({ ...f, email: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Telefone (Cobrança WhatsApp)</label>
-                  <input 
-                    className="form-control" 
-                    placeholder="Ex: 54991112222" 
-                    value={uniForm.telefone || ''} 
-                    onChange={e => setUniForm(f => ({ ...f, telefone: e.target.value }))} 
+                  <input
+                    className="form-control"
+                    placeholder="Ex: 54991112222"
+                    value={uniForm.telefone || ''}
+                    onChange={e => setUniForm(f => ({ ...f, telefone: e.target.value }))}
                   />
                 </div>
               </div>
             </fieldset>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 13, userSelect: 'none', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                id="moradorMesmo" 
-                checked={moradorMesmo} 
-                onChange={e => setMoradorMesmo(e.target.checked)} 
+              <input
+                type="checkbox"
+                id="moradorMesmo"
+                checked={moradorMesmo}
+                onChange={e => setMoradorMesmo(e.target.checked)}
                 style={{ cursor: 'pointer', width: 16, height: 16 }}
               />
               <label htmlFor="moradorMesmo" style={{ cursor: 'pointer', fontWeight: 600 }}>Morador é o mesmo que o Proprietário</label>
@@ -1185,24 +1185,24 @@ export default function CondominioHubPage() {
             {!moradorMesmo && (
               <fieldset style={{ border: '1px solid var(--border-light)', borderRadius: 8, padding: '12px 16px', margin: '12px 0' }}>
                 <legend style={{ fontSize: 11.5, fontWeight: 700, padding: '0 8px', color: 'var(--primary)' }}>Dados do Morador</legend>
-                
+
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Nome do Morador *</label>
-                    <input 
-                      className="form-control" 
-                      placeholder="Ex: Pedro Alvares" 
-                      value={uniForm.moradorNome || ''} 
-                      onChange={e => setUniForm(f => ({ ...f, moradorNome: e.target.value }))} 
+                    <input
+                      className="form-control"
+                      placeholder="Ex: Pedro Alvares"
+                      value={uniForm.moradorNome || ''}
+                      onChange={e => setUniForm(f => ({ ...f, moradorNome: e.target.value }))}
                     />
                   </div>
                   <div className="form-group">
                     <label className="form-label">CPF do Morador</label>
-                    <input 
-                      className="form-control" 
-                      placeholder="Ex: 000.000.000-00" 
-                      value={uniForm.moradorCpf || ''} 
-                      onChange={e => setUniForm(f => ({ ...f, moradorCpf: e.target.value }))} 
+                    <input
+                      className="form-control"
+                      placeholder="Ex: 000.000.000-00"
+                      value={uniForm.moradorCpf || ''}
+                      onChange={e => setUniForm(f => ({ ...f, moradorCpf: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1210,21 +1210,21 @@ export default function CondominioHubPage() {
                 <div className="form-row" style={{ marginTop: 10 }}>
                   <div className="form-group">
                     <label className="form-label">E-mail do Morador</label>
-                    <input 
+                    <input
                       type="email"
-                      className="form-control" 
-                      placeholder="Ex: morador@email.com" 
-                      value={uniForm.moradorEmail || ''} 
-                      onChange={e => setUniForm(f => ({ ...f, moradorEmail: e.target.value }))} 
+                      className="form-control"
+                      placeholder="Ex: morador@email.com"
+                      value={uniForm.moradorEmail || ''}
+                      onChange={e => setUniForm(f => ({ ...f, moradorEmail: e.target.value }))}
                     />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Telefone do Morador</label>
-                    <input 
-                      className="form-control" 
-                      placeholder="Ex: 54991118888" 
-                      value={uniForm.moradorTelefone || ''} 
-                      onChange={e => setUniForm(f => ({ ...f, moradorTelefone: e.target.value }))} 
+                    <input
+                      className="form-control"
+                      placeholder="Ex: 54991118888"
+                      value={uniForm.moradorTelefone || ''}
+                      onChange={e => setUniForm(f => ({ ...f, moradorTelefone: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1268,7 +1268,7 @@ export default function CondominioHubPage() {
                 );
               })}
             </div>
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Data de Vencimento *</label>
@@ -1354,7 +1354,8 @@ export default function CondominioHubPage() {
       {showBoletoModal && boletoLanc && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowBoletoModal(false)}>
           <div className="modal boleto-modal-container" style={{ maxWidth: 800, padding: 24, background: '#fff', color: '#000', fontFamily: 'Courier New, monospace', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               @media print {
                 body * {
                   visibility: hidden !important;
@@ -1540,13 +1541,13 @@ export default function CondominioHubPage() {
                       const isWide = (idx * 7) % 3 === 0;
                       const isGap = (idx * 5) % 4 === 0;
                       return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            width: isWide ? 4 : 1.5, 
-                            background: isGap ? 'transparent' : '#000', 
-                            marginRight: 1 
-                          }} 
+                        <div
+                          key={idx}
+                          style={{
+                            width: isWide ? 4 : 1.5,
+                            background: isGap ? 'transparent' : '#000',
+                            marginRight: 1
+                          }}
                         />
                       );
                     })}
@@ -1560,13 +1561,13 @@ export default function CondominioHubPage() {
                     {Array.from({ length: 64 }).map((_, idx) => {
                       const fill = (idx * 3) % 2 === 0 || idx < 8 || idx % 8 === 0 || (idx > 55 && idx % 2 === 0);
                       return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            width: '12.5%', 
-                            height: '12.5%', 
-                            background: fill ? '#000' : 'transparent' 
-                          }} 
+                        <div
+                          key={idx}
+                          style={{
+                            width: '12.5%',
+                            height: '12.5%',
+                            background: fill ? '#000' : 'transparent'
+                          }}
                         />
                       );
                     })}

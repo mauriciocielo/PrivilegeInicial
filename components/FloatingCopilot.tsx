@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { askClaude } from '../lib/claude-client';
 
 // Telas fiscais: aqui o copilot troca o contexto financeiro pelo fiscal (notas, CND, certificados).
 const EH_TELA_FISCAL = (p: string) => /\/dashboard2|\/nfe-destinadas|\/nfse|\/cnd-federal/.test(p);
@@ -140,21 +141,17 @@ Regras:
     }));
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: chatHist,
-            systemInstruction: { parts: [{ text: systemInstruction }] }
-          })
+      const text = await askClaude({
+        messages: chatHist.map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.parts.map(p => p.text).join('\n'),
+        })),
+        systemInstruction,
+        maxTokens: 1400,
       });
 
-      if(response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if(text) {
-           setMessages(prev => [...prev, { sender: 'ai', text, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
-        }
+      if (text) {
+        setMessages(prev => [...prev, { sender: 'ai', text, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
       }
     } catch(err) {
       console.error(err);

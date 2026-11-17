@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { store, CurvaAbc } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { askClaude } from '../lib/claude-client';
 
 interface CurvaTipsProps {
   empresaId: string;
@@ -47,27 +48,17 @@ Retorne estritamente um array JSON válido (e nada mais) no formato:
 ]`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          }),
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          const parsed = JSON.parse(text.trim()) as TipItem[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setTips(parsed);
-            setLoading(false);
-            return;
-          }
+      const text = await askClaude({
+        prompt,
+        jsonMode: true,
+        maxTokens: 1000,
+      });
+      if (text) {
+        const parsed = JSON.parse(text.trim()) as TipItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTips(parsed);
+          setLoading(false);
+          return;
         }
       }
     } catch (err) {

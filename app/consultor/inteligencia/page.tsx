@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, type Lancamento, type PlanoConta, type Portador, type Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { askClaude } from '@/lib/claude-client';
 import dynamic from 'next/dynamic';
 
 // Carrega os componentes do Recharts dinamicamente sem SSR para evitar erros de hidratação no Next.js
@@ -113,27 +114,17 @@ Retorne estritamente um array JSON válido sem blocos de código ou markdown adi
 Responda em Português do Brasil.`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          }),
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          const parsed = JSON.parse(text.trim());
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setAiInsights(parsed);
-            setAiLoading(false);
-            return;
-          }
+      const text = await askClaude({
+        prompt,
+        jsonMode: true,
+        maxTokens: 1200,
+      });
+      if (text) {
+        const parsed = JSON.parse(text.trim());
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAiInsights(parsed);
+          setAiLoading(false);
+          return;
         }
       }
     } catch (err) {
@@ -293,26 +284,18 @@ INSTRUÇÕES DE COMPORTAMENTO:
     }));
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: contextPrompt }]
-            }
-          }),
-        }
-      );
+      const text = await askClaude({
+        messages: contents.map(c => ({
+          role: c.role === 'user' ? 'user' : 'assistant',
+          content: c.parts.map(p => p.text).join('\n'),
+        })),
+        systemInstruction: contextPrompt,
+        maxTokens: 1400,
+      });
 
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          setChatMessages(prev => [
-            ...prev,
+      if (text) {
+        setChatMessages(prev => [
+          ...prev,
             {
               sender: 'ai',
               text: text,
@@ -321,7 +304,6 @@ INSTRUÇÕES DE COMPORTAMENTO:
           ]);
           setChatLoading(false);
           return;
-        }
       }
     } catch (err) {
       console.error('Gemini Chat Error:', err);

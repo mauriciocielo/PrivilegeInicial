@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { store, Empresa, InteligenciaDoc } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import { askClaude } from '@/lib/claude-client';
 
 type PolicyType = 'receber' | 'cobranca' | 'compras' | 'pagamentos' | 'credito';
 
@@ -149,24 +150,12 @@ REGRAS DE FORMATAÇÃO E ESTRUTURA:
     const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          }),
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          setAiDraft(text.trim());
-        } else {
-          toast.error('Não foi possível obter uma resposta estruturada do Gemini AI.');
-        }
+      const text = await askClaude({
+        prompt,
+        maxTokens: 1600,
+      });
+      if (text) {
+        setAiDraft(text.trim());
       } else {
         throw new Error('Erro na chamada da API');
       }

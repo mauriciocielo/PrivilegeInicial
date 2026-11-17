@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
+import { askClaude } from '../lib/claude-client';
 import type {
   ResultadoComparacaoSped,
   ItemComparacaoSped,
@@ -340,20 +341,12 @@ Por favor, elabore um parecer executivo formal e direto em 4 tópicos:
 
 Responda em Português do Brasil com linguagem profissional e objetiva de auditoria fiscal.`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
+      const resposta = await askClaude({
+        prompt,
+        maxTokens: 1400,
       });
-
-      if (!res.ok) throw new Error('Falha na resposta do serviço de IA.');
-      const data = await res.json();
-      const resposta = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (resposta) {
-        setAnaliseIaGerada(resposta);
-      }
+      if (!resposta) throw new Error('Falha na resposta do serviço de IA.');
+      setAnaliseIaGerada(resposta);
     } catch (err: any) {
       console.error('Erro na auditoria com IA:', err);
       toast.error('Não foi possível gerar o parecer de IA no momento.');

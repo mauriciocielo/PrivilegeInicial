@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { NfsE, Empresa } from '../lib/store';
 import { fmt } from '../lib/reports';
+import { askClaude } from '../lib/claude-client';
 import type { NfseConfigResposta } from './NfseConfigModal';
 import {
   Sparkles, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown,
@@ -254,20 +255,12 @@ Escreva um parecer executivo conciso em 3 pontos objetivos:
 
 Responda em linguagem direta, profissional, em Português do Brasil, formatado com tópicos claros.`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
+      const respostaTexto = await askClaude({
+        prompt,
+        maxTokens: 1200,
       });
-
-      if (!res.ok) throw new Error('Falha na comunicação com o Gemini');
-      const data = await res.json();
-      const respostaTexto = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (respostaTexto) {
-        setAnaliseIaGerada(respostaTexto);
-      }
+      if (!respostaTexto) throw new Error('Falha na comunicação com o Claude');
+      setAnaliseIaGerada(respostaTexto);
     } catch (err) {
       console.error('Erro ao gerar análise profunda de NFS-e com IA:', err);
       setAnaliseIaGerada('Não foi possível conectar com o motor de IA no momento. Consulte as recomendações automáticas acima.');
