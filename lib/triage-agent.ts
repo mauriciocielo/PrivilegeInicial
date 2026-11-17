@@ -53,12 +53,29 @@ export async function runTriageStep(params: {
   const text = params.userMessage.trim();
   const lower = text.toLowerCase();
 
-  const state: TriageState = {
-    nomeCliente: params.currentData?.nomeCliente || (isValidContactName(params.name) ? params.name : undefined),
-    oQueProcura: params.currentData?.oQueProcura,
-    perguntouPreco: params.currentData?.perguntouPreco || false,
-    status: params.currentData?.status || 'coletando_nome',
-  };
+  const isSimpleGreeting = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa'].includes(lower);
+  const isStaleCompleted =
+    params.currentData?.status === 'pronto_para_equipe' ||
+    params.currentData?.status === 'atendido' ||
+    params.currentData?.status === 'concluido';
+
+  const state: TriageState = isStaleCompleted
+    ? {
+        nomeCliente: params.currentData?.nomeCliente || (isValidContactName(params.name) ? params.name : undefined),
+        oQueProcura: undefined,
+        perguntouPreco: false,
+        status: params.currentData?.nomeCliente || isValidContactName(params.name) ? 'coletando_demanda' : 'coletando_nome',
+      }
+    : {
+        nomeCliente: params.currentData?.nomeCliente || (isValidContactName(params.name) ? params.name : undefined),
+        oQueProcura: params.currentData?.oQueProcura,
+        perguntouPreco: params.currentData?.perguntouPreco || false,
+        status: params.currentData?.status || 'coletando_nome',
+      };
+
+  if (isSimpleGreeting && state.status === 'coletando_nome') {
+    state.oQueProcura = undefined;
+  }
 
   // 1. Urgência imediata (prisão em flagrante, emergência) -> Chama a equipe imediatamente
   const isImmediateEmergency =
@@ -149,16 +166,19 @@ export async function runTriageStep(params: {
   }
 
   // 5. Coleta progressiva de Nome e O que Procura
-  const isSimpleGreeting = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa'].includes(lower);
-
   if (!isSimpleGreeting) {
     if (!state.nomeCliente && state.status === 'coletando_nome' && text.split(/\s+/).length <= 5) {
       const extracted = text
         .replace(/^(oi,?\s*|ol[áa],?\s*)?(meu nome [ée]|sou o|sou a|me chamo|aqui [ée] o|aqui [ée] a)\s+/i, '')
         .trim();
       state.nomeCliente = getFirstName(extracted) || extracted;
+      state.oQueProcura = undefined;
     } else if (!state.oQueProcura && text.length > 3) {
-      state.oQueProcura = text;
+      const firstFromText = getFirstName(text);
+      const firstFromState = getFirstName(state.nomeCliente);
+      if (!firstFromState || firstFromText.toLowerCase() !== firstFromState.toLowerCase() || text.split(/\s+/).length > 2) {
+        state.oQueProcura = text;
+      }
     }
   }
 

@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
              closed_reason = $1,
              unread_count = 0,
              bot_paused_until = NULL,
-             triage_status = 'concluido'
+             triage_status = 'concluido',
+             triage_data = NULL
          WHERE id = $2`,
         [reason, chatId]
       );

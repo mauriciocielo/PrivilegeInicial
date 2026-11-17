@@ -660,14 +660,15 @@ export async function checkAndDispatchDueFollowups(pool: any) {
 /**
  * Executa o ciclo de background (disparo de follow-ups vencidos) mesmo sem tela aberta
  */
-let __historyLearnedOnce = false;
+let __lastAutoLearnAt = 0;
 
 export async function runWhatsAppBackgroundTick(): Promise<void> {
   const pool = getEmailDbPool();
   if (!pool) return;
   await checkAndDispatchDueFollowups(pool);
-  if (!__historyLearnedOnce) {
-    __historyLearnedOnce = true;
+  const now = Date.now();
+  if (now - __lastAutoLearnAt > 10 * 60 * 1000) {
+    __lastAutoLearnAt = now;
     learnFromAllHistoricalMessages().catch(() => {});
   }
 }
@@ -1369,8 +1370,13 @@ export async function executeMcpTool(name: string, args: Record<string, any>): P
 /**
  * Responde a uma mensagem usando o motor de inteligência selecionado (Claude, ChatGPT / OpenAI ou Google Gemini) ou fallback contábil
  */
-export async function generateGeminiBotReply(userMessage: string, customPrompt?: string): Promise<string> {
-  const config = await getWhatsAppConfig().catch(() => DEFAULT_CONFIG);
+export async function generateGeminiBotReply(
+  userMessage: string,
+  customPrompt?: string,
+  ownerId = 'default',
+  chatId?: string
+): Promise<string> {
+  const config = await getWhatsAppConfig(ownerId).catch(() => DEFAULT_CONFIG);
 
   const geminiKey =
     config.gemini_api_key ||
@@ -1396,11 +1402,33 @@ export async function generateGeminiBotReply(userMessage: string, customPrompt?:
   const prompt = customPrompt || config.bot_prompt || DEFAULT_CONFIG.bot_prompt;
   const taughtContext = await getTaughtLessonsContext().catch(() => '');
 
+  let historyContext = '';
+  if (chatId) {
+    const pool = getEmailDbPool();
+    if (pool) {
+      try {
+        const histRes = await pool.query(
+          `SELECT from_me, sender_name, text FROM whatsapp_messages
+           WHERE chat_id = $1 AND media_type = 'text' AND text IS NOT NULL
+           ORDER BY timestamp DESC LIMIT 10`,
+          [chatId]
+        );
+        const rows = (histRes.rows || []).reverse();
+        if (rows.length > 0) {
+          historyContext = rows
+            .map((r: any) => `${r.from_me ? 'Privilege/Léo' : 'Cliente'}: ${String(r.text || '').trim()}`)
+            .join('\n');
+        }
+      } catch {}
+    }
+  }
+
   const enrichedPrompt = `
 ${prompt}
 
-CONHECIMENTO OFICIAL ENSINADO PELA EQUIPE DA PRIVILEGE CONTABILIDADE:
+CONHECIMENTO OFICIAL ENSINADO E APRENDIDO PELA EQUIPE DA PRIVILEGE CONTABILIDADE:
 ${taughtContext || 'Nenhuma lição específica cadastrada ainda.'}
+${historyContext ? `\nHISTÓRICO RECENTE DESTA CONVERSA:\n${historyContext}` : ''}
 
 INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
 1. Utilize estritamente as informações e regras acima para responder ao cliente com mensagens curtas, naturais, humanas e simpáticas.
@@ -1813,6 +1841,7 @@ export async function processIncomingMessage(params: {
         text: triageRes.reply,
         config,
         isIncomingAudio,
+        ownerId,
       });
       return {
         reply: triageRes.reply,
@@ -1874,6 +1903,48 @@ export async function processIncomingMessage(params: {
     return { reply: config.welcome_message, source: 'rule' };
   }
 
+  const hasAiKey = Boolean(
+    config.gemini_api_key ||
+      config.claude_api_key ||
+      config.openai_api_key ||
+      (config.api_key && config.api_key.length > 20) ||
+      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30) ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.OPENAI_API_KEY
+  );
+
+  const isRealQuestionOrConversation =
+    cleanText.includes('?') ||
+    cleanText.split(/\s+/).length >= 4 ||
+    Boolean(currentTriage?.nomeCliente && !isGreeting);
+
+  // Quando estiver em modo IA ou Híbrido com chave configurada e o cliente já tiver nome/dúvida real,
+  // usa o Gemini/Claude com todo o histórico e base aprendida antes de cair nas respostas fixas de triagem.
+  if ((config.bot_mode === 'ia' || config.bot_mode === 'hibrido') && hasAiKey && isRealQuestionOrConversation) {
+    const assistantsList =
+      Array.isArray(config.assistants) && config.assistants.length > 0
+        ? config.assistants
+        : DEFAULT_ASSISTANTS;
+    const activePersona =
+      assistantsList.find(a => a.id === config.active_assistant_id) || assistantsList[0];
+    const personaPrompt = activePersona?.customPrompt
+      ? `${config.bot_prompt}\n\nVocê está atuando como ${activePersona.name} (${activePersona.role}):\n${activePersona.customPrompt}`
+      : activePersona && activePersona.id !== 'leo'
+      ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
+      : config.bot_prompt;
+
+    const aiReply = await generateGeminiBotReply(cleanText, personaPrompt, ownerId, params.chatId);
+    await dispatchBotReply({
+      chatId: params.chatId,
+      text: aiReply,
+      config,
+      isIncomingAudio,
+      ownerId,
+    });
+    return { reply: aiReply, source: 'ai' };
+  }
+
   // Triagem inteligente do Léo: coleta nome e o que procura antes de chamar a equipe
   const triageRes = await runTriageStep({
     chatId: params.chatId,
@@ -1889,6 +1960,7 @@ export async function processIncomingMessage(params: {
       text: triageRes.reply,
       config,
       isIncomingAudio,
+      ownerId,
     });
     return {
       reply: triageRes.reply,
@@ -1910,12 +1982,13 @@ export async function processIncomingMessage(params: {
       ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
       : config.bot_prompt;
 
-    const aiReply = await generateGeminiBotReply(cleanText, personaPrompt);
+    const aiReply = await generateGeminiBotReply(cleanText, personaPrompt, ownerId, params.chatId);
     await dispatchBotReply({
       chatId: params.chatId,
       text: aiReply,
       config,
       isIncomingAudio,
+      ownerId,
     });
     return { reply: aiReply, source: 'ai' };
   }
