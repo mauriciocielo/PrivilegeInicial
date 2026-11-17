@@ -820,13 +820,19 @@ export async function updateChatCrm(
 /**
  * Obtém mensagens de uma conversa específica
  */
-export async function getChatMessages(chatId: string, limit = 100): Promise<WhatsAppMessage[]> {
+export async function getChatMessages(chatId: string, limit = 200): Promise<WhatsAppMessage[]> {
   const pool = getEmailDbPool();
   if (!pool) return [];
 
   try {
     const res = await pool.query(
-      `SELECT * FROM whatsapp_messages WHERE chat_id = $1 ORDER BY timestamp ASC LIMIT $2`,
+      `SELECT * FROM (
+         SELECT * FROM whatsapp_messages
+         WHERE chat_id = $1
+         ORDER BY timestamp DESC
+         LIMIT $2
+       ) sub
+       ORDER BY timestamp ASC`,
       [chatId, limit]
     );
 
@@ -1690,6 +1696,9 @@ export async function processIncomingMessage(params: {
          last_message = EXCLUDED.last_message,
          last_message_time = NOW(),
          ticket_status = 'aberto',
+         closed_at = NULL,
+         closed_reason = NULL,
+         crm_stage = CASE WHEN whatsapp_chats.crm_stage = 'fechado' THEN 'em_atendimento' ELSE whatsapp_chats.crm_stage END,
          protocol_number = COALESCE(whatsapp_chats.protocol_number, EXCLUDED.protocol_number),
          unread_count = whatsapp_chats.unread_count + 1`,
       [

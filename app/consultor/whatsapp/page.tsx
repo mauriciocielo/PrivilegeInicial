@@ -304,7 +304,7 @@ export default function WhatsAppPage() {
     if (!selectedChat) return;
     setProtocolSaving(true);
     try {
-      const res = await fetch('/api/whatsapp/protocols', {
+      const res = await waFetch('/api/whatsapp/protocols', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -352,7 +352,7 @@ export default function WhatsAppPage() {
     if (!agendaTitle.trim() || !selectedChat) return;
     setAgendaSaving(true);
     try {
-      const res = await fetch('/api/whatsapp/agenda', {
+      const res = await waFetch('/api/whatsapp/agenda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -522,7 +522,7 @@ export default function WhatsAppPage() {
 
   async function loadConfig() {
     try {
-      const res = await fetch('/api/whatsapp/config', { cache: 'no-store' });
+      const res = await waFetch('/api/whatsapp/config', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && data.config) {
         setConfig(data.config);
@@ -615,7 +615,7 @@ export default function WhatsAppPage() {
   async function loadChats(showLoading = true) {
     if (showLoading) setLoading(true);
     try {
-      const res = await fetch('/api/whatsapp/chats', { cache: 'no-store' });
+      const res = await waFetch('/api/whatsapp/chats', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && Array.isArray(data.chats)) {
         const incomingChats: WhatsAppChat[] = data.chats;
@@ -663,7 +663,7 @@ export default function WhatsAppPage() {
                 return cDigits === targetDigits || (tail.length >= 8 && cDigits.endsWith(tail));
               });
               if (!targetChat) {
-                const createRes = await fetch('/api/whatsapp/chats', {
+                const createRes = await waFetch('/api/whatsapp/chats', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -766,7 +766,7 @@ export default function WhatsAppPage() {
 
   async function loadLessons() {
     try {
-      const res = await fetch('/api/whatsapp/knowledge', { cache: 'no-store' });
+      const res = await waFetch('/api/whatsapp/knowledge', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && Array.isArray(data.lessons)) {
         setLessons(data.lessons);
@@ -778,7 +778,7 @@ export default function WhatsAppPage() {
 
   async function loadCampaigns() {
     try {
-      const res = await fetch('/api/whatsapp/campaigns', { cache: 'no-store' });
+      const res = await waFetch('/api/whatsapp/campaigns', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && Array.isArray(data.campaigns)) {
         setCampaigns(data.campaigns);
@@ -883,7 +883,7 @@ export default function WhatsAppPage() {
 
     setCreatingCampaign(true);
     try {
-      const res = await fetch('/api/whatsapp/campaigns', {
+      const res = await waFetch('/api/whatsapp/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -931,7 +931,7 @@ export default function WhatsAppPage() {
   ) {
     if (action === 'delete' && !confirm('Deseja excluir esta campanha do histórico?')) return;
     try {
-      await fetch('/api/whatsapp/campaigns', {
+      await waFetch('/api/whatsapp/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, campaignId }),
@@ -948,7 +948,7 @@ export default function WhatsAppPage() {
     lastMessagesJsonRef.current = '';
     setPendingAttachment(null);
     loadMessages(chat.id, true);
-    fetch('/api/whatsapp/chats', {
+    waFetch('/api/whatsapp/chats', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'mark_read', chatId: chat.id }),
@@ -1001,7 +1001,7 @@ export default function WhatsAppPage() {
             : `📄 ${attachment.fileName}`)
         : textInput;
 
-      const res = await fetch('/api/whatsapp/messages', {
+      const res = await waFetch('/api/whatsapp/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1146,7 +1146,7 @@ export default function WhatsAppPage() {
     setActiveReactionMsgId(null);
 
     try {
-      const res = await fetch('/api/whatsapp/messages', {
+      const res = await waFetch('/api/whatsapp/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1172,7 +1172,7 @@ export default function WhatsAppPage() {
     if (!newKbQuestion.trim() || !newKbAnswer.trim()) return;
 
     try {
-      const res = await fetch('/api/whatsapp/knowledge', {
+      const res = await waFetch('/api/whatsapp/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1203,7 +1203,7 @@ export default function WhatsAppPage() {
   async function handleDeleteLesson(id: string) {
     if (!confirm('Deseja excluir este item de conhecimento?')) return;
     try {
-      await fetch('/api/whatsapp/knowledge', {
+      await waFetch('/api/whatsapp/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id }),
@@ -1219,7 +1219,7 @@ export default function WhatsAppPage() {
     if (!siteUrlInput.trim() || scrapingSite) return;
     setScrapingSite(true);
     try {
-      const res = await fetch('/api/whatsapp/knowledge', {
+      const res = await waFetch('/api/whatsapp/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'scrape_url', url: siteUrlInput.trim() }),
@@ -1241,7 +1241,7 @@ export default function WhatsAppPage() {
     if (!file) return;
     try {
       const text = await file.text();
-      const res = await fetch('/api/whatsapp/knowledge', {
+      const res = await waFetch('/api/whatsapp/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1269,7 +1269,7 @@ export default function WhatsAppPage() {
 
   async function handleUpdateCrmStage(chatId: string, stage: CrmStage) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_crm', chatId, crm_stage: stage }),
@@ -1326,7 +1326,7 @@ export default function WhatsAppPage() {
     const isoDate = new Date(followupDate).toISOString();
 
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1367,7 +1367,7 @@ export default function WhatsAppPage() {
 
   async function handleSendFollowupNow(chatId: string, customText?: string) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1391,7 +1391,7 @@ export default function WhatsAppPage() {
 
   async function handleCompleteFollowup(chatId: string) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1415,7 +1415,7 @@ export default function WhatsAppPage() {
 
   async function handleCloseTicket(chatId: string, reason = 'Atendimento concluído') {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1466,7 +1466,7 @@ export default function WhatsAppPage() {
 
   async function handleReopenTicket(chatId: string) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1516,7 +1516,7 @@ export default function WhatsAppPage() {
     }
 
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1538,7 +1538,7 @@ export default function WhatsAppPage() {
 
   async function handleToggleBot(chatId: string, currentStatus: boolean) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1563,7 +1563,7 @@ export default function WhatsAppPage() {
 
   async function handlePauseBot(chatId: string, minutes = 30) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'pause_bot', chatId, minutes }),
@@ -1585,7 +1585,7 @@ export default function WhatsAppPage() {
 
   async function handleResumeBot(chatId: string) {
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'resume_bot', chatId }),
@@ -1606,7 +1606,7 @@ export default function WhatsAppPage() {
 
   async function handleRefreshQR() {
     try {
-      const res = await fetch('/api/whatsapp/qrcode', {
+      const res = await waFetch('/api/whatsapp/qrcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'generate' }),
@@ -1622,7 +1622,7 @@ export default function WhatsAppPage() {
 
   async function handleSimulateConnect() {
     try {
-      const res = await fetch('/api/whatsapp/qrcode', {
+      const res = await waFetch('/api/whatsapp/qrcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'simulate_connect' }),
@@ -1639,7 +1639,7 @@ export default function WhatsAppPage() {
   async function handleDisconnect() {
     if (!confirm('Deseja realmente desconectar o WhatsApp desta sessão?')) return;
     try {
-      const res = await fetch('/api/whatsapp/qrcode', {
+      const res = await waFetch('/api/whatsapp/qrcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'disconnect' }),
@@ -1735,7 +1735,7 @@ export default function WhatsAppPage() {
         openai_api_key: config?.openai_api_key,
         gemini_api_key: config?.gemini_api_key,
       };
-      const res = await fetch('/api/whatsapp/mcp', {
+      const res = await waFetch('/api/whatsapp/mcp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1760,7 +1760,7 @@ export default function WhatsAppPage() {
   async function handleSaveConfig(updates: Partial<WhatsAppConfig>) {
     try {
       setConfig(prev => (prev ? { ...prev, ...updates } : null));
-      const res = await fetch('/api/whatsapp/config', {
+      const res = await waFetch('/api/whatsapp/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -1786,7 +1786,7 @@ export default function WhatsAppPage() {
     await handleSaveConfig({ bot_prompt: updatedPrompt });
 
     // Também registra na base de conhecimento para aplicação imediata
-    await fetch('/api/whatsapp/knowledge', {
+    await waFetch('/api/whatsapp/knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1804,7 +1804,7 @@ export default function WhatsAppPage() {
     if (!newChatPhone.trim()) return;
 
     try {
-      const res = await fetch('/api/whatsapp/chats', {
+      const res = await waFetch('/api/whatsapp/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1898,7 +1898,7 @@ export default function WhatsAppPage() {
     setSimLoading(true);
 
     try {
-      const res = await fetch('/api/whatsapp/test-bot', {
+      const res = await waFetch('/api/whatsapp/test-bot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: userText, triageState: simTriageState }),
