@@ -38,6 +38,7 @@ const AVAILABLE_SCREENS = [
   { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
   { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
   { label: '💬 WhatsApp & Bot IA', route: '/consultor/whatsapp' },
+  { label: '🎮 Quiz Arena (Kahoot)', route: '/consultor/quiz-game' },
   { label: '🏢 Empresas', route: '/consultor/empresas' },
   { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
   { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },

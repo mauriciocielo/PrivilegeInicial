@@ -11,7 +11,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -88,6 +88,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Inteligência Tributária', href: '/consultor/inteligencia-tributaria', icon: Lightbulb },
       { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
       { label: 'Perfil Comportamental', href: '/consultor/perfil-disc', icon: UserSearch },
+      { label: 'Quiz Arena (Kahoot)', href: '/consultor/quiz-game', icon: Gamepad2 },
       { label: 'Valuation & Real-Value', href: '/consultor/valuation', icon: Calculator },
       { label: 'Simulador de Cenários', href: '/consultor/simulador-cenarios', icon: Sliders },
       { label: 'Benchmarking Cloud', href: '/consultor/benchmarking', icon: Activity },
