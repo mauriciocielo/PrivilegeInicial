@@ -314,6 +314,54 @@ export async function listCampaigns(ownerId?: string): Promise<WhatsAppCampaign[
   }
 }
 
+export function normalizeCampaignPhoneDigits(raw: string): string {
+  let digits = (raw || '').replace(/[^0-9]/g, '');
+  if (!digits || digits.length < 10) return '';
+  if (digits.length === 10 || digits.length === 11) {
+    digits = '55' + digits;
+  }
+  return digits;
+}
+
+function getPhoneVariants(digits: string): string[] {
+  const variants = new Set<string>([digits]);
+  if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') {
+    variants.add(digits.slice(0, 4) + digits.slice(5));
+  } else if (digits.startsWith('55') && digits.length === 12) {
+    variants.add(digits.slice(0, 4) + '9' + digits.slice(4));
+  }
+  return Array.from(variants);
+}
+
+export async function getAlreadySentPhones(ownerId = 'default'): Promise<Set<string>> {
+  await ensureCampaignsTable();
+  const pool = getEmailDbPool();
+  const sent = new Set<string>();
+  if (!pool) return sent;
+
+  try {
+    const res = await pool.query(
+      `SELECT recipients FROM whatsapp_campaigns WHERE COALESCE(owner_id, 'default') = $1`,
+      [ownerId]
+    );
+    for (const row of res.rows) {
+      const recs: CampaignRecipient[] =
+        typeof row.recipients === 'string' ? JSON.parse(row.recipients) : row.recipients || [];
+      for (const rec of recs) {
+        if (rec.status === 'enviado' && rec.phone) {
+          const norm = normalizeCampaignPhoneDigits(rec.phone);
+          if (norm) {
+            for (const v of getPhoneVariants(norm)) sent.add(v);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[CampaignManager] Erro ao verificar números já enviados:', err);
+  }
+  return sent;
+}
+
 export async function createCampaign(params: {
   ownerId?: string;
   name: string;
@@ -325,26 +373,32 @@ export async function createCampaign(params: {
   anti_ban_config: AntiBanConfig;
   recipients: Array<{ name: string; phone: string; chatId?: string }>;
   startImmediately?: boolean;
-}): Promise<WhatsAppCampaign> {
+  skipAlreadySent?: boolean;
+}): Promise<WhatsAppCampaign & { skipped_duplicates_count?: number }> {
   await ensureCampaignsTable();
   const pool = getEmailDbPool();
   if (!pool) throw new Error('Banco de dados indisponível');
 
   const ownerId = params.ownerId || 'default';
   const id = 'camp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  const skipAlreadySent = params.skipAlreadySent !== false;
+  const alreadySentPhones = skipAlreadySent ? await getAlreadySentPhones(ownerId) : new Set<string>();
 
-  // Higieniza e remove números duplicados
+  // Higieniza, remove números duplicados na própria lista e pula números já enviados em campanhas anteriores
   const seenPhones = new Set<string>();
   const cleanRecipients: CampaignRecipient[] = [];
+  const skippedDuplicates: Array<{ name: string; phone: string }> = [];
 
   for (const item of params.recipients) {
-    let digits = (item.phone || '').replace(/[^0-9]/g, '');
-    if (!digits || digits.length < 10) continue;
-    if (digits.length === 10 || digits.length === 11) {
-      digits = '55' + digits;
-    }
+    const digits = normalizeCampaignPhoneDigits(item.phone || '');
+    if (!digits) continue;
     if (seenPhones.has(digits)) continue;
     seenPhones.add(digits);
+
+    if (skipAlreadySent && getPhoneVariants(digits).some(v => alreadySentPhones.has(v))) {
+      skippedDuplicates.push({ name: (item.name || digits).trim(), phone: digits });
+      continue;
+    }
 
     cleanRecipients.push({
       id: 'rec_' + digits,
@@ -354,6 +408,15 @@ export async function createCampaign(params: {
       status: 'pendente',
       deliveryStatus: 'pendente',
     });
+  }
+
+  if (cleanRecipients.length === 0) {
+    if (skippedDuplicates.length > 0) {
+      throw new Error(
+        `Todos os ${skippedDuplicates.length} número(s) informado(s) já receberam envio em campanhas anteriores. Nenhum envio duplicado foi criado.`
+      );
+    }
+    throw new Error('Nenhum número de telefone válido foi encontrado na lista informada.');
   }
 
   const initialStatus = params.startImmediately ? 'em_andamento' : 'rascunho';
@@ -390,7 +453,10 @@ export async function createCampaign(params: {
     startCampaignWorker().catch(() => {});
   }
 
-  return created;
+  return {
+    ...created,
+    skipped_duplicates_count: skippedDuplicates.length,
+  };
 }
 
 export async function updateCampaignStatus(

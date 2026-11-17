@@ -400,6 +400,7 @@ export default function WhatsAppPage() {
   const [campPersonalizeGreeting, setCampPersonalizeGreeting] = useState(true);
   const [campCloseTicketAfterSend, setCampCloseTicketAfterSend] = useState(true);
   const [campAiRewrite, setCampAiRewrite] = useState(true);
+  const [campSkipAlreadySent, setCampSkipAlreadySent] = useState(true);
   const [campMediaType, setCampMediaType] = useState<'text' | 'image' | 'document'>('text');
   const [campMediaUrl, setCampMediaUrl] = useState<string>('');
   const [campFileName, setCampFileName] = useState<string>('');
@@ -935,6 +936,7 @@ export default function WhatsAppPage() {
           },
           recipients: recipientsList,
           startImmediately,
+          skipAlreadySent: campSkipAlreadySent,
         }),
       });
       const data = await res.json();
@@ -945,6 +947,11 @@ export default function WhatsAppPage() {
         setCampFileName('');
         setCampMediaType('text');
         await loadCampaigns();
+        if (data.skipped_duplicates_count > 0) {
+          alert(
+            `Campanha criada com ${data.campaign?.total_count || 0} contato(s) novo(s)! ${data.skipped_duplicates_count} número(s) já haviam recebido envio em campanhas anteriores e foram pulados automaticamente.`
+          );
+        }
       } else {
         alert(data.error || 'Erro ao criar campanha');
       }
@@ -5572,6 +5579,72 @@ export default function WhatsAppPage() {
                 onChange={e => setCampManualNumbers(e.target.value)}
                 style={{ width: '100%', padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
               />
+              {(() => {
+                const alreadySentSet = new Set<string>();
+                for (const camp of campaigns) {
+                  for (const rec of (camp.recipients || [])) {
+                    if (rec.status === 'enviado' && rec.phone) {
+                      let d = String(rec.phone).replace(/[^0-9]/g, '');
+                      if (d.length === 10 || d.length === 11) d = '55' + d;
+                      if (d.length >= 10) {
+                        alreadySentSet.add(d);
+                        if (d.startsWith('55') && d.length === 13 && d[4] === '9') {
+                          alreadySentSet.add(d.slice(0, 4) + d.slice(5));
+                        } else if (d.startsWith('55') && d.length === 12) {
+                          alreadySentSet.add(d.slice(0, 4) + '9' + d.slice(4));
+                        }
+                      }
+                    }
+                  }
+                }
+                const parsedDigits: string[] = [];
+                for (const chatId of campSelectedChatIds) {
+                  const ch = chats.find(item => item.id === chatId);
+                  if (ch?.phone) {
+                    let d = String(ch.phone).replace(/[^0-9]/g, '');
+                    if (d.length === 10 || d.length === 11) d = '55' + d;
+                    if (d.length >= 10) parsedDigits.push(d);
+                  }
+                }
+                for (const line of campManualNumbers.split(/\r?\n/)) {
+                  const cleanLine = line.trim();
+                  if (!cleanLine) continue;
+                  let rawPhone = cleanLine;
+                  if (cleanLine.includes(',') || cleanLine.includes(';')) {
+                    const parts = cleanLine.split(cleanLine.includes(',') ? ',' : ';').map(p => p.trim());
+                    rawPhone = parts[0].replace(/[^0-9]/g, '').length >= 10 ? parts[0] : (parts[1] || '');
+                  }
+                  let d = rawPhone.replace(/[^0-9]/g, '');
+                  if (d.length === 10 || d.length === 11) d = '55' + d;
+                  if (d.length >= 10) parsedDigits.push(d);
+                }
+                if (parsedDigits.length === 0) return null;
+                const uniqueDigits = Array.from(new Set(parsedDigits));
+                const dupInside = parsedDigits.length - uniqueDigits.length;
+                const alreadyCount = uniqueDigits.filter(d => alreadySentSet.has(d)).length;
+                const newCount = campSkipAlreadySent ? uniqueDigits.length - alreadyCount : uniqueDigits.length;
+                return (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '7px 10px',
+                      borderRadius: 6,
+                      fontSize: 11.5,
+                      background: alreadyCount > 0 ? 'rgba(234, 179, 8, 0.12)' : 'rgba(22, 163, 74, 0.08)',
+                      border: `1px solid ${alreadyCount > 0 ? 'rgba(234, 179, 8, 0.35)' : 'rgba(22, 163, 74, 0.25)'}`,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    📊 <strong>{uniqueDigits.length}</strong> número(s) válido(s)
+                    {dupInside > 0 ? ` (${dupInside} repetido(s) na lista removidos)` : ''}
+                    {' · '}
+                    <strong style={{ color: '#b45309' }}>{alreadyCount}</strong> já enviado(s) anteriormente
+                    {campSkipAlreadySent && alreadyCount > 0 ? ' (serão pulados)' : ''}
+                    {' · '}
+                    <strong style={{ color: '#15803d' }}>{newCount}</strong> novo(s) para disparo
+                  </div>
+                );
+              })()}
             </div>
 
             {/* 3. Mensagem com Variáveis & Spintax Anti-Ban */}
@@ -5842,6 +5915,15 @@ export default function WhatsAppPage() {
                     onChange={e => setCampAiRewrite(e.target.checked)}
                   />
                   <span>✨ <strong>Reescrita Única por IA (Leads Frios Anti-Spam):</strong> reescrever cada mensagem com Gemini/Claude variando sinônimos e estrutura para zero bloqueio</span>
+                </label>
+
+                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={campSkipAlreadySent}
+                    onChange={e => setCampSkipAlreadySent(e.target.checked)}
+                  />
+                  <span>🛡️ <strong>Evitar Duplicidade (Pular já enviados):</strong> ignorar automaticamente números que já receberam disparo em campanhas anteriores</span>
                 </label>
               </div>
             </div>

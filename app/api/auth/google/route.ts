@@ -6,7 +6,7 @@ import { hashPassword } from '../../../../lib/auth-hash';
 import { checkRateLimit, getClientKey } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
 import { TIPO_EMPRESA_SO_EMISSOR } from '../../../../lib/nfse/emissor';
-import { createSessionToken, createTwoFactorPendingToken, sessionCookieHeader } from '../../../../lib/session';
+import { createSessionToken, createTwoFactorPendingToken, extractWhatsAppScopeFromRoutes, sessionCookieHeader } from '../../../../lib/session';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const client = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
@@ -110,6 +110,7 @@ export async function POST(request: Request) {
       email: user.email,
       role: user.role,
       empresaIds: user.empresaIds,
+      whatsappScope: extractWhatsAppScopeFromRoutes(user.allowedRoutes),
     });
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = user;

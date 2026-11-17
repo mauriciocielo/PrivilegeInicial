@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import { verifyPassword, isHashed, hashPassword } from '../../../../lib/auth-hash';
-import { createSessionToken, createTwoFactorPendingToken, sessionCookieHeader } from '../../../../lib/session';
+import { createSessionToken, createTwoFactorPendingToken, extractWhatsAppScopeFromRoutes, sessionCookieHeader } from '../../../../lib/session';
 import { checkRateLimit, getClientKey } from '../../../../lib/rate-limit';
 import { captureError } from '../../../../lib/sentry-helper';
 
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       email: finalUser.email,
       role: finalUser.role,
       empresaIds: finalUser.empresaIds,
+      whatsappScope: extractWhatsAppScopeFromRoutes(finalUser.allowedRoutes),
     });
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = finalUser;

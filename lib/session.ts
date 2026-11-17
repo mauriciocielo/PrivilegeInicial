@@ -22,10 +22,25 @@ export interface SessionPayload {
   role: string;
   empresaIds: string[];
   /**
+   * Escopo de instância WhatsApp do usuário ('default' = número compartilhado da equipe,
+   * 'individual' = número próprio user_<id>).
+   */
+  whatsappScope?: 'default' | 'individual';
+  /**
    * Presente quando a lista de empresas não coube no cookie: requireAuth a lê do
    * banco. Guarda a impressão digital da lista, para notar quando ela mudar.
    */
   carteiraNoBanco?: string;
+}
+
+export function extractWhatsAppScopeFromRoutes(
+  allowedRoutes?: string[] | null
+): 'default' | 'individual' | undefined {
+  const routes = allowedRoutes || [];
+  if (routes.includes('wa-scope:default')) return 'default';
+  if (routes.includes('wa-scope:individual')) return 'individual';
+  if (routes.includes('somente-whatsapp')) return 'default';
+  return undefined;
 }
 
 export function impressaoCarteira(empresaIds: string[]): string {

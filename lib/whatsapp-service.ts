@@ -1672,6 +1672,12 @@ async function dispatchBotReply(params: {
   const senderName = `${activeAssistant?.name || 'Léo'} (Assistente Virtual)`;
 
   if (shouldSendAudio) {
+    const geminiKey =
+      config.gemini_api_key ||
+      (config.api_key && config.api_key.startsWith('AIza') ? config.api_key : '') ||
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      '';
     const openaiKey =
       config.openai_api_key ||
       (config.api_key && config.api_key.startsWith('sk-') && !config.api_key.startsWith('sk-ant-')
@@ -1684,7 +1690,10 @@ async function dispatchBotReply(params: {
       text,
       gender: activeAssistant?.gender || 'male',
       voiceId: activeAssistant?.voiceId,
+      assistantId: activeAssistant?.id,
+      assistantName: activeAssistant?.name,
       openaiKey,
+      geminiKey,
     }).catch(() => null);
 
     if (voiceRes?.audioDataUrl) {

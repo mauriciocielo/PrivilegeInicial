@@ -863,16 +863,78 @@ export default function UsuariosPage() {
                     onChange={() => {
                       const waRoute = form.role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp';
                       const has = (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP);
+                      const currentScope = (form.allowedRoutes || []).includes('wa-scope:individual')
+                        ? 'wa-scope:individual'
+                        : 'wa-scope:default';
                       setForm(f => ({
                         ...f,
                         allowedRoutes: has
-                          ? (f.allowedRoutes || []).filter(r => r !== ROTA_SOMENTE_WHATSAPP)
-                          : [ROTA_SOMENTE_WHATSAPP, waRoute],
+                          ? (f.allowedRoutes || []).filter(r => r !== ROTA_SOMENTE_WHATSAPP && !r.startsWith('wa-scope:'))
+                          : [ROTA_SOMENTE_WHATSAPP, waRoute, currentScope],
                       }));
                     }}
                   />
                   <span>💬 <strong>Somente WhatsApp (Atendente)</strong> — acesso exclusivo à tela de WhatsApp para responder clientes, sem acesso aos demais módulos.</span>
                 </label>
+
+                {((form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ||
+                  (form.allowedRoutes || []).includes('/consultor/whatsapp') ||
+                  (form.allowedRoutes || []).includes('/cliente/whatsapp')) && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-light)',
+                      background: 'var(--bg-card2)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>
+                      📱 Número de WhatsApp utilizado por este usuário:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="wa-scope"
+                          checked={!(form.allowedRoutes || []).includes('wa-scope:individual')}
+                          onChange={() => {
+                            setForm(f => ({
+                              ...f,
+                              allowedRoutes: [
+                                ...(f.allowedRoutes || []).filter(r => !r.startsWith('wa-scope:')),
+                                'wa-scope:default',
+                              ],
+                            }));
+                          }}
+                        />
+                        <span>
+                          <strong>Compartilhado da Equipe (Mesmo número)</strong> — vê todas as conversas, histórico, CRM e protocolos sem perder informações
+                        </span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="wa-scope"
+                          checked={(form.allowedRoutes || []).includes('wa-scope:individual')}
+                          onChange={() => {
+                            setForm(f => ({
+                              ...f,
+                              allowedRoutes: [
+                                ...(f.allowedRoutes || []).filter(r => !r.startsWith('wa-scope:')),
+                                'wa-scope:individual',
+                              ],
+                            }));
+                          }}
+                        />
+                        <span>
+                          <strong>Número Individual Próprio</strong> — conecta outro QR Code isolado só para este usuário
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   {(form.role === 'consultor' ? AVAILABLE_SCREENS : AVAILABLE_CLIENT_SCREENS).map(screen => {

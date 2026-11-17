@@ -57,9 +57,14 @@ export async function POST(req: NextRequest) {
         },
         recipients: body.recipients,
         startImmediately: body.startImmediately !== false,
+        skipAlreadySent: body.skipAlreadySent !== false,
       });
 
-      return NextResponse.json({ success: true, campaign });
+      return NextResponse.json({
+        success: true,
+        campaign,
+        skipped_duplicates_count: campaign.skipped_duplicates_count || 0,
+      });
     }
 
     if (action === 'start' || action === 'resume') {

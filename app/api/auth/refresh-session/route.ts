@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
-import { createSessionToken, impressaoCarteira, sessionCookieHeader, clearSessionCookieHeader } from '../../../../lib/session';
+import { createSessionToken, extractWhatsAppScopeFromRoutes, impressaoCarteira, sessionCookieHeader, clearSessionCookieHeader } from '../../../../lib/session';
 import { captureError } from '../../../../lib/sentry-helper';
 
 // O cookie de sessão (JWT) carrega `role`/`empresaIds` congelados no momento
@@ -31,7 +31,9 @@ export async function GET(request: Request) {
       ? auth.session.carteiraNoBanco !== impressaoCarteira(user.empresaIds)
       : JSON.stringify([...user.empresaIds].sort()) !== JSON.stringify([...auth.session.empresaIds].sort());
     const roleMudou = user.role !== auth.session.role;
-    const mudou = empresaIdsMudou || roleMudou;
+    const novoScope = extractWhatsAppScopeFromRoutes(user.allowedRoutes);
+    const scopeMudou = novoScope !== auth.session.whatsappScope;
+    const mudou = empresaIdsMudou || roleMudou || scopeMudou;
 
     const response = NextResponse.json({ user: userSemSenha, changed: mudou });
 
@@ -41,6 +43,7 @@ export async function GET(request: Request) {
         email: user.email,
         role: user.role,
         empresaIds: user.empresaIds,
+        whatsappScope: novoScope,
       });
       response.headers.set('Set-Cookie', sessionCookieHeader(novoToken));
     }

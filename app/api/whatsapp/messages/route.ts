@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, reactions });
     }
 
-    const { chatId, text, sentBy, mediaType, mediaUrl, fileName, mimeType } = body;
+    const { chatId, text, sentBy, senderName, mediaType, mediaUrl, fileName, mimeType } = body;
 
     if (!chatId || ((!text || !text.trim()) && !mediaUrl)) {
       return NextResponse.json({ success: false, error: 'chatId e conteúdo são obrigatórios' }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       chatId,
       text: (text || '').trim(),
       sentBy: sentBy === 'bot' ? 'bot' : 'consultor',
+      senderName: typeof senderName === 'string' && senderName.trim() ? senderName.trim() : undefined,
       mediaType: mediaType || 'text',
       mediaUrl,
       fileName,
