@@ -12,12 +12,37 @@ export interface KnowledgeLesson {
   updated_at?: string;
 }
 
+let __kbEnsured = false;
+
+async function ensureKnowledgeTable(pool: any) {
+  if (__kbEnsured) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_knowledge_base (
+        id TEXT PRIMARY KEY,
+        topic TEXT DEFAULT 'Geral',
+        question TEXT NOT NULL,
+        answer TEXT NOT NULL,
+        keywords JSONB DEFAULT '[]'::jsonb,
+        learned_from TEXT DEFAULT 'manual',
+        usage_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    __kbEnsured = true;
+  } catch (err) {
+    console.warn('[KnowledgeService] Aviso ao garantir tabela whatsapp_knowledge_base:', err);
+  }
+}
+
 /**
  * Lista as lições ensinadas ao assistente
  */
 export async function getKnowledgeList(search?: string, topic?: string): Promise<KnowledgeLesson[]> {
   const pool = getEmailDbPool();
   if (!pool) return [];
+  await ensureKnowledgeTable(pool);
 
   try {
     let query = `SELECT * FROM whatsapp_knowledge_base`;
@@ -70,6 +95,7 @@ export async function teachAssistant(data: {
 }): Promise<KnowledgeLesson> {
   const pool = getEmailDbPool();
   if (!pool) throw new Error('Banco de dados indisponível');
+  await ensureKnowledgeTable(pool);
 
   const id = 'kb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
   const keywords = data.keywords && data.keywords.length > 0
@@ -230,7 +256,7 @@ export async function getTaughtLessonsContext(): Promise<string> {
   if (lessons.length === 0) return '';
 
   return lessons
-    .slice(0, 15)
+    .slice(0, 40)
     .map((l, i) => `[Lição Ensinada #${i + 1} - ${l.topic}]\nPergunta do Cliente: "${l.question}"\nResposta Oficial da Privilege: "${l.answer}"`)
     .join('\n\n');
 }

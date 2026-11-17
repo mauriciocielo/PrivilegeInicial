@@ -1,3 +1,10 @@
 [build.environment]
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
   SECRETS_SCAN_OMIT_PATHS = ".netlify/**,node_modules/@whiskeysockets/baileys/**"
+
+[[redirects]]
+  from = "/api/whatsapp/*"
+  to = "https://privilegeinicial-production.up.railway.app/api/whatsapp/:splat"
+  status = 200
+  force = true
+
