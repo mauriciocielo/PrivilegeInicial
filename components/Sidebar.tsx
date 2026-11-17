@@ -157,6 +157,7 @@ const condominioNav: { section: string; items: NavItem[] }[] = [
       { label: 'Importar OFX', href: '/consultor/importar-ofx', icon: FolderInput },
       { label: 'Atas de Reunião', href: '/consultor/atas', icon: FileText },
       { label: 'Portadores / Contas', href: '/consultor/portadores', icon: Wallet },
+      { label: 'WhatsApp & Bot IA', href: '/consultor/whatsapp', icon: MessageSquare },
     ],
   },
   {
@@ -529,7 +530,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
       if (item.href === '/consultor/administrativo') return true;
       // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
-      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/comparador-sped' || item.href === '/consultor/dashboard2') return true;
+      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/comparador-sped' || item.href === '/consultor/dashboard2' || item.href === '/consultor/whatsapp') return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
@@ -550,6 +551,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       const items = section.items.filter(item => {
         if (item.href === '/consultor/dashboard') return !somenteFiscal;
         if (item.href === '/consultor/dashboard2') return true;
+        if (item.href === '/consultor/whatsapp') return true;
         if (item.href === '/consultor/comparador-sped') return operaFiscal || allowed.some(route => item.href.startsWith(route));
         const userOk = allowed.some(route => item.href.startsWith(route));
         const companyOk = filterByCompany(item);
