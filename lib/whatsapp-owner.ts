@@ -20,7 +20,9 @@ export function resolveWhatsAppOwnerId(req?: Request): string {
     }
 
     const baseOwner =
-      session.role === 'administrador' || session.whatsappScope === 'default'
+      session.role === 'administrador' ||
+      session.whatsappScope === 'default' ||
+      (session.role === 'consultor' && session.whatsappScope !== 'individual')
         ? 'default'
         : `user_${String(session.userId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 

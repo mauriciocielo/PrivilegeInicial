@@ -406,6 +406,11 @@ export async function startBaileysSocket(
       try {
         st.sock.ev.removeAllListeners('connection.update');
         st.sock.ev.removeAllListeners('messages.upsert');
+        st.sock.ev.removeAllListeners('messages.update');
+        st.sock.ev.removeAllListeners('contacts.upsert');
+        st.sock.ev.removeAllListeners('contacts.update');
+        st.sock.ev.removeAllListeners('messaging-history.set');
+        st.sock.ev.removeAllListeners('chats.upsert');
         st.sock.ev.removeAllListeners('creds.update');
         st.sock.end(undefined);
       } catch {}
@@ -701,6 +706,84 @@ export async function startBaileysSocket(
         if (!waId || status < 3) continue;
         const deliveryStatus = status >= 4 ? 'visualizado' : 'entregue';
         updateMessageDeliveryAndReadStatus(waId, deliveryStatus).catch(() => {});
+      }
+    });
+
+    // Sincroniza contatos da agenda do WhatsApp conectado para busca na caixa de entrada e campanhas
+    const syncContactsBatch = async (contactsList: any[]) => {
+      if (!Array.isArray(contactsList) || contactsList.length === 0) return;
+      const pool = getEmailDbPool();
+      if (!pool) return;
+      await ensureChatColumns(pool);
+
+      let synced = 0;
+      for (const c of contactsList) {
+        const rawId = String(c?.id || '');
+        if (!rawId || rawId.includes('@g.us') || rawId.includes('broadcast') || rawId.includes('status@')) {
+          continue;
+        }
+        const altPhone = (c as any)?.phoneNumber ? String((c as any).phoneNumber) : '';
+        const { phone: cleanPhone, sendJid } = resolvePhoneFromJid(
+          rawId,
+          altPhone ? { remoteJidAlt: `${altPhone.replace(/\D/g, '')}@s.whatsapp.net` } : undefined,
+          ownerId
+        );
+        if (!cleanPhone || cleanPhone.length < 10) continue;
+
+        const savedName = String(c?.name || c?.verifiedName || c?.notify || '').trim();
+        const displayName = savedName || cleanPhone;
+        const chatId = buildChatIdForOwner(cleanPhone, ownerId);
+
+        await pool
+          .query(
+            `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, unread_count, bot_enabled, crm_stage, ticket_status)
+             VALUES ($1, $2, $3, $4, $5, '', 0, TRUE, 'novo', 'encerrado')
+             ON CONFLICT (id) DO UPDATE SET
+               name = CASE
+                 WHEN $6 <> '' AND (whatsapp_chats.name IS NULL OR whatsapp_chats.name = '' OR whatsapp_chats.name ~ '^[0-9+()\\s-]+$')
+                   THEN $6
+                 ELSE whatsapp_chats.name
+               END,
+               remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid)`,
+            [chatId, ownerId, cleanPhone, displayName, sendJid, savedName]
+          )
+          .catch(() => {});
+        synced++;
+      }
+
+      if (synced > 0) {
+        notifySocketIoClients('sync', ownerId);
+      }
+    };
+
+    sock.ev.on('contacts.upsert', (contacts) => {
+      syncContactsBatch(contacts).catch(() => {});
+    });
+
+    sock.ev.on('contacts.update', (updates) => {
+      syncContactsBatch(updates).catch(() => {});
+    });
+
+    sock.ev.on('chats.upsert', (chatsList) => {
+      const mapped = (chatsList || []).map((ch: any) => ({
+        id: ch?.id,
+        name: ch?.name,
+        phoneNumber: ch?.pnJid,
+      }));
+      syncContactsBatch(mapped).catch(() => {});
+    });
+
+    sock.ev.on('messaging-history.set', ({ contacts, chats: histChats }) => {
+      if (Array.isArray(contacts) && contacts.length > 0) {
+        syncContactsBatch(contacts).catch(() => {});
+      }
+      if (Array.isArray(histChats) && histChats.length > 0) {
+        const mapped = histChats.map((ch: any) => ({
+          id: ch?.id,
+          name: ch?.name,
+          phoneNumber: ch?.pnJid,
+        }));
+        syncContactsBatch(mapped).catch(() => {});
       }
     });
   } catch (err) {

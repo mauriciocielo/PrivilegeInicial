@@ -34,12 +34,14 @@ export interface SessionPayload {
 }
 
 export function extractWhatsAppScopeFromRoutes(
-  allowedRoutes?: string[] | null
+  allowedRoutes?: string[] | null,
+  role?: string
 ): 'default' | 'individual' | undefined {
   const routes = allowedRoutes || [];
   if (routes.includes('wa-scope:default')) return 'default';
   if (routes.includes('wa-scope:individual')) return 'individual';
   if (routes.includes('somente-whatsapp')) return 'default';
+  if (role === 'consultor' || role === 'administrador') return 'default';
   return undefined;
 }
 

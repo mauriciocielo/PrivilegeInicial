@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       ? auth.session.carteiraNoBanco !== impressaoCarteira(user.empresaIds)
       : JSON.stringify([...user.empresaIds].sort()) !== JSON.stringify([...auth.session.empresaIds].sort());
     const roleMudou = user.role !== auth.session.role;
-    const novoScope = extractWhatsAppScopeFromRoutes(user.allowedRoutes);
+    const novoScope = extractWhatsAppScopeFromRoutes(user.allowedRoutes, user.role);
     const scopeMudou = novoScope !== auth.session.whatsappScope;
     const mudou = empresaIdsMudou || roleMudou || scopeMudou;
 

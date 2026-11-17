@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       email: finalUser.email,
       role: finalUser.role,
       empresaIds: finalUser.empresaIds,
-      whatsappScope: extractWhatsAppScopeFromRoutes(finalUser.allowedRoutes),
+      whatsappScope: extractWhatsAppScopeFromRoutes(finalUser.allowedRoutes, finalUser.role),
     });
 
     const { password: _password, twoFactorSecret: _tfs, twoFactorBackupCodes: _tfbc, ...userWithoutPassword } = finalUser;

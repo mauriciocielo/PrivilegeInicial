@@ -743,7 +743,7 @@ export async function listChats(
     }
 
     query += ` WHERE ` + whereClauses.join(' AND ');
-    query += ` ORDER BY last_message_time DESC NULLS LAST LIMIT 150`;
+    query += ` ORDER BY last_message_time DESC NULLS LAST, created_at DESC LIMIT ${search && search.trim() ? 500 : 300}`;
 
     const res = await pool.query(query, params);
     return res.rows.map(r => ({
