@@ -334,6 +334,7 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
     txt('nDPS', d.nDps),
     txt('dCompet', dataCompetenciaFiscal(d.dataCompetencia, agora)),
     txt('tpEmit', '1'),
+    nt009 && txt('finNFSe', '0'),
     txt('cLocEmi', apenasDigitos(cfg.codigoMunicipio)),
     // Com tpEmit=1 o Sefin puxa nome e endereço do cadastro: enviá-los dá E0128/E0121.
     tag('prest',

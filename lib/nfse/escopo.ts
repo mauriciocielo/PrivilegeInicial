@@ -32,32 +32,25 @@ const EMPRESA_DO_CERTIFICADO: Prisma.EmpresaWhereInput = {
 /** Lido do banco, e não da sessão, que não carrega as telas do usuário. */
 async function temTelaNfse(userId: string): Promise<boolean> {
   const usuario = await db.user.findUnique({ where: { id: userId }, select: { allowedRoutes: true } });
-  return !!usuario?.allowedRoutes?.some(rota => rota.includes('nfse') || rota.includes('nfe-destinadas') || ROTA_NFSE_CONSULTOR.startsWith(rota));
+  return !!usuario?.allowedRoutes?.some(rota => ROTA_NFSE_CONSULTOR.startsWith(rota));
 }
 
-/** Empresas do certificado que este usuário opera: todas se ele opera o módulo fiscal. */
+/** Empresas do certificado que este usuário opera: nenhuma, se ele não tem a tela de NFS-e. */
 export async function idsEmpresasDoCertificado(userId: string): Promise<string[]> {
   if (!(await temTelaNfse(userId))) return [];
-  const empresas = await db.empresa.findMany({ select: { id: true } });
+  const empresas = await db.empresa.findMany({ where: EMPRESA_DO_CERTIFICADO, select: { id: true } });
   return empresas.map(e => e.id);
 }
 
 export async function operaEmpresaDoCertificado(userId: string, empresaId: string): Promise<boolean> {
   if (!(await temTelaNfse(userId))) return false;
-  return true;
+  const empresa = await db.empresa.findFirst({ where: { id: empresaId, ...EMPRESA_DO_CERTIFICADO }, select: { id: true } });
+  return !!empresa;
 }
 
-/** Filtro das empresas listadas no módulo fiscal: todas as empresas para administradores e equipe fiscal/consultores. */
+/** Filtro das empresas listadas na emissão: as da carteira do usuário e as do certificado. */
 export async function filtroEmpresasNfse(session: SessionPayload): Promise<Prisma.EmpresaWhereInput> {
-  if (session.role === 'administrador' || session.role === 'consultor') return {};
-  
-  // Usuários do setor fiscal ou consultores com acesso aos módulos fiscais operam toda a carteira
-  const usuario = await db.user.findUnique({ where: { id: session.userId }, select: { allowedRoutes: true } });
-  const operaFiscal = usuario?.allowedRoutes?.some(r => r.includes('nfse') || r.includes('nfe-destinadas'));
-  if (operaFiscal) {
-    return {};
-  }
-
+  if (session.role === 'administrador') return {};
   const carteira: Prisma.EmpresaWhereInput = { id: { in: session.empresaIds } };
-  return (await temTelaNfse(session.userId)) ? {} : carteira;
+  return (await temTelaNfse(session.userId)) ? { OR: [carteira, EMPRESA_DO_CERTIFICADO] } : carteira;
 }

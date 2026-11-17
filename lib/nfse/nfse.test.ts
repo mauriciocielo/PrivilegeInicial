@@ -260,7 +260,7 @@ describe('certificado e assinatura', () => {
 });
 
 describe('cofre do certificado', () => {
-  it('cifra, decifra e recusa outra empresa ou chave ausente', () => {
+  it('cifra, decifra e recusa outra empresa ou chave inválida', () => {
     const anterior = process.env.NFSE_CERT_KEY;
     process.env.NFSE_CERT_KEY = Buffer.alloc(32, 7).toString('base64');
     try {
@@ -268,7 +268,12 @@ describe('cofre do certificado', () => {
       expect(cifrado).not.toContain('conteudo');
       expect(decifrar(cifrado, 'empresa-a').toString()).toBe('conteudo');
       expect(() => decifrar(cifrado, 'empresa-b')).toThrow();
+      // Sem NFSE_CERT_KEY o cofre usa a chave padrão do servidor (decisão de 17/11/2026),
+      // e o que foi cifrado com outra chave não abre.
       delete process.env.NFSE_CERT_KEY;
+      expect(decifrar(cifrar(Buffer.from('x'), 'empresa-a'), 'empresa-a').toString()).toBe('x');
+      expect(() => decifrar(cifrado, 'empresa-a')).toThrow();
+      process.env.NFSE_CERT_KEY = Buffer.alloc(16, 7).toString('base64');
       expect(() => cifrar(Buffer.from('x'), 'empresa-a')).toThrow(CofreNaoConfiguradoError);
     } finally {
       if (anterior === undefined) delete process.env.NFSE_CERT_KEY;

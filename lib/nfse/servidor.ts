@@ -22,9 +22,11 @@ export const ESCOPO_CERT_ESCRITORIO = 'escritorio';
  * escritório, se tiver a tela de NFS-e.
  */
 export async function acessoNegado(session: SessionPayload, empresaId: string): Promise<NextResponse | null> {
-  if (session.role === 'administrador' || session.role === 'consultor') return null;
-  if (session.empresaIds.includes(empresaId)) return null;
-  if (await operaEmpresaDoCertificado(session.userId, empresaId)) return null;
+  if (session.role === 'administrador') return null;
+  if (session.role !== 'cliente') {
+    if (session.empresaIds.includes(empresaId)) return null;
+    if (await operaEmpresaDoCertificado(session.userId, empresaId)) return null;
+  }
   return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
 }
 
