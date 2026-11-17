@@ -53,8 +53,32 @@ app.prepare().then(() => {
     console.log(`> Ready on http://localhost:${port}`);
     agendarRelatorioFiscalDiario(port);
     agendarMonitorNfeDestinadas(port);
+    agendarWhatsAppDaemon(port);
   });
 });
+
+// Mantém todas as sessões de WhatsApp (Baileys), follow-ups e campanhas rodando
+// automaticamente em 2º plano mesmo quando nenhum usuário está com a tela aberta.
+function agendarWhatsAppDaemon(port) {
+  if (process.env.WHATSAPP_DAEMON_DESATIVADO === '1') return;
+
+  const disparar = () => {
+    fetch(`http://127.0.0.1:${port}/api/whatsapp/daemon`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.startedOwners && d.startedOwners.length > 0 && !global.__waDaemonLoggedBoot) {
+          global.__waDaemonLoggedBoot = true;
+          console.log('[whatsapp-daemon] Sessões WhatsApp iniciadas em 2º plano:', d.startedOwners.join(', '));
+        }
+      })
+      .catch(() => {});
+  };
+
+  setTimeout(() => {
+    disparar();
+    setInterval(disparar, 45 * 1000);
+  }, 4 * 1000);
+}
 
 // Envio diário das NFS-e (emitidas e tomadas) ao setor fiscal. O servidor roda
 // continuamente (não é serverless), então o agendamento fica aqui mesmo.

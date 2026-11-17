@@ -220,18 +220,25 @@ async function ensureConfigColumns(pool: any) {
 }
 
 /**
- * Obtém as configurações do WhatsApp e do Bot
+ * Obtém as configurações do WhatsApp e do Bot para uma sessão/usuário específica
  */
-export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
+export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppConfig> {
   const pool = getEmailDbPool();
-  if (!pool) return DEFAULT_CONFIG;
+  const baseDefault: WhatsAppConfig = {
+    ...DEFAULT_CONFIG,
+    id: ownerId,
+    status: ownerId === 'default' ? DEFAULT_CONFIG.status : 'desconectado',
+    phone_number: ownerId === 'default' ? DEFAULT_CONFIG.phone_number : null,
+    qr_code: null,
+  };
+  if (!pool) return baseDefault;
 
   await ensureConfigColumns(pool);
 
   try {
-    const res = await pool.query(`SELECT * FROM whatsapp_config WHERE id = 'default'`);
+    const res = await pool.query(`SELECT * FROM whatsapp_config WHERE id = $1`, [ownerId]);
     if (res.rows.length === 0) {
-      return DEFAULT_CONFIG;
+      return baseDefault;
     }
     const r = res.rows[0];
     return {
@@ -276,21 +283,24 @@ export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
     };
   } catch (err) {
     console.error('[WhatsAppService] Erro ao carregar config:', err);
-    return DEFAULT_CONFIG;
+    return baseDefault;
   }
 }
 
 /**
- * Atualiza as configurações
+ * Atualiza as configurações da sessão do usuário
  */
-export async function updateWhatsAppConfig(partial: Partial<WhatsAppConfig>): Promise<WhatsAppConfig> {
+export async function updateWhatsAppConfig(
+  partial: Partial<WhatsAppConfig>,
+  ownerId = 'default'
+): Promise<WhatsAppConfig> {
   const pool = getEmailDbPool();
   if (!pool) throw new Error('Banco de dados PostgreSQL indisponível');
 
   await ensureConfigColumns(pool);
 
-  const current = await getWhatsAppConfig();
-  const merged: WhatsAppConfig = { ...current, ...partial };
+  const current = await getWhatsAppConfig(ownerId);
+  const merged: WhatsAppConfig = { ...current, ...partial, id: ownerId };
 
   const sql = `
     INSERT INTO whatsapp_config (
@@ -334,7 +344,7 @@ export async function updateWhatsAppConfig(partial: Partial<WhatsAppConfig>): Pr
   `;
 
   await pool.query(sql, [
-    'default',
+    ownerId,
     merged.provider,
     merged.api_url,
     merged.api_key,
@@ -370,8 +380,8 @@ export async function updateWhatsAppConfig(partial: Partial<WhatsAppConfig>): Pr
 /**
  * Gera um novo QR Code para conexão
  */
-export async function generateQRCode(forceNew: boolean = false): Promise<{ qr_code: string; pairing_code?: string; status: string }> {
-  const config = await getWhatsAppConfig();
+export async function generateQRCode(forceNew: boolean = false, ownerId = 'default'): Promise<{ qr_code: string; pairing_code?: string; status: string }> {
+  const config = await getWhatsAppConfig(ownerId);
 
   if (config.api_url && config.api_url.startsWith('http') && !config.api_url.includes('example')) {
     try {
@@ -388,7 +398,7 @@ export async function generateQRCode(forceNew: boolean = false): Promise<{ qr_co
         const data = await res.json();
         const base64 = data.base64 || (data.code ? await QRCode.toDataURL(data.code) : null);
         if (base64) {
-          await updateWhatsAppConfig({ qr_code: base64, status: 'qrcode' });
+          await updateWhatsAppConfig({ qr_code: base64, status: 'qrcode' }, ownerId);
           return { qr_code: base64, pairing_code: data.pairingCode, status: 'qrcode' };
         }
       }
@@ -408,7 +418,7 @@ export async function generateQRCode(forceNew: boolean = false): Promise<{ qr_co
   await updateWhatsAppConfig({
     qr_code: qrBase64,
     status: 'qrcode',
-  });
+  }, ownerId);
 
   return {
     qr_code: qrBase64,
@@ -420,20 +430,23 @@ export async function generateQRCode(forceNew: boolean = false): Promise<{ qr_co
 /**
  * Conecta ou simula a conexão com sucesso
  */
-export async function simulateConnectWhatsApp(): Promise<WhatsAppConfig> {
-  return await updateWhatsAppConfig({
-    status: 'conectado',
-    phone_number: '+55 46 99123-4567',
-    profile_name: 'Privilege Contabilidade & Consultoria',
-    qr_code: null,
-  });
+export async function simulateConnectWhatsApp(ownerId = 'default'): Promise<WhatsAppConfig> {
+  return await updateWhatsAppConfig(
+    {
+      status: 'conectado',
+      phone_number: '+55 46 99123-4567',
+      profile_name: 'Privilege Contabilidade & Consultoria',
+      qr_code: null,
+    },
+    ownerId
+  );
 }
 
 /**
  * Desconecta a sessão do WhatsApp
  */
-export async function disconnectWhatsApp(): Promise<WhatsAppConfig> {
-  const config = await getWhatsAppConfig();
+export async function disconnectWhatsApp(ownerId = 'default'): Promise<WhatsAppConfig> {
+  const config = await getWhatsAppConfig(ownerId);
 
   if (config.api_url && config.api_url.startsWith('http')) {
     try {
@@ -446,11 +459,14 @@ export async function disconnectWhatsApp(): Promise<WhatsAppConfig> {
     } catch { }
   }
 
-  return await updateWhatsAppConfig({
-    status: 'desconectado',
-    phone_number: null,
-    qr_code: null,
-  });
+  return await updateWhatsAppConfig(
+    {
+      status: 'desconectado',
+      phone_number: null,
+      qr_code: null,
+    },
+    ownerId
+  );
 }
 
 let __chatColumnsEnsured = false;
@@ -460,6 +476,7 @@ async function ensureChatColumns(pool: any) {
   try {
     await pool.query(`
       ALTER TABLE whatsapp_chats
+        ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT 'default',
         ADD COLUMN IF NOT EXISTS ticket_status TEXT DEFAULT 'aberto',
         ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS closed_reason TEXT,
@@ -467,7 +484,12 @@ async function ensureChatColumns(pool: any) {
         ADD COLUMN IF NOT EXISTS followup_message TEXT,
         ADD COLUMN IF NOT EXISTS followup_auto_send BOOLEAN DEFAULT FALSE;
     `);
+    await pool.query(`
+      ALTER TABLE whatsapp_messages
+        ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT 'default';
+    `).catch(() => {});
     await pool.query(`UPDATE whatsapp_chats SET ticket_status = 'aberto' WHERE ticket_status IS NULL`);
+    await pool.query(`UPDATE whatsapp_chats SET owner_id = 'default' WHERE owner_id IS NULL`);
     __chatColumnsEnsured = true;
   } catch (err) {
     console.warn('[WhatsAppService] Aviso ao verificar colunas de chamado/followup:', err);
@@ -476,18 +498,19 @@ async function ensureChatColumns(pool: any) {
 
 let __checkingFollowups = false;
 
-async function checkAndDispatchDueFollowups(pool: any) {
+export async function checkAndDispatchDueFollowups(pool: any) {
   if (__checkingFollowups) return;
   __checkingFollowups = true;
   try {
+    await ensureChatColumns(pool);
     const res = await pool.query(`
-      SELECT id, name, followup_note, followup_message
+      SELECT id, COALESCE(owner_id, 'default') AS owner_id, name, followup_note, followup_message
       FROM whatsapp_chats
       WHERE followup_auto_send = TRUE
         AND followup_status = 'pendente'
         AND followup_date IS NOT NULL
         AND followup_date <= NOW()
-      LIMIT 5
+      LIMIT 10
     `);
     for (const row of res.rows) {
       const msgText =
@@ -502,6 +525,7 @@ async function checkAndDispatchDueFollowups(pool: any) {
         text: msgText,
         sentBy: 'consultor',
         senderName: 'Follow-up Privilege',
+        ownerId: row.owner_id || 'default',
       }).catch(() => {});
     }
   } catch {
@@ -511,11 +535,24 @@ async function checkAndDispatchDueFollowups(pool: any) {
 }
 
 /**
- * Lista todas as conversas do WhatsApp com suporte a busca e dados de CRM
+ * Executa o ciclo de background (disparo de follow-ups vencidos) mesmo sem tela aberta
  */
-export async function listChats(search?: string, stage?: string): Promise<WhatsAppChat[]> {
+export async function runWhatsAppBackgroundTick(): Promise<void> {
+  const pool = getEmailDbPool();
+  if (!pool) return;
+  await checkAndDispatchDueFollowups(pool);
+}
+
+/**
+ * Lista todas as conversas do WhatsApp da sessão do usuário
+ */
+export async function listChats(
+  search?: string,
+  stage?: string,
+  ownerId = 'default'
+): Promise<WhatsAppChat[]> {
   // Garante que o socket do WhatsApp (Baileys) esteja conectado em background escutando novas mensagens
-  ensureBaileysConnected(false).catch(() => {});
+  ensureBaileysConnected(false, ownerId).catch(() => {});
 
   const pool = getEmailDbPool();
   if (!pool) return [];
@@ -525,8 +562,8 @@ export async function listChats(search?: string, stage?: string): Promise<WhatsA
 
   try {
     let query = `SELECT * FROM whatsapp_chats`;
-    const params: any[] = [];
-    const whereClauses: string[] = [];
+    const params: any[] = [ownerId || 'default'];
+    const whereClauses: string[] = [`COALESCE(owner_id, 'default') = $1`];
 
     if (search && search.trim()) {
       params.push(`%${search.trim()}%`);
@@ -538,10 +575,7 @@ export async function listChats(search?: string, stage?: string): Promise<WhatsA
       whereClauses.push(`crm_stage = $${params.length}`);
     }
 
-    if (whereClauses.length > 0) {
-      query += ` WHERE ` + whereClauses.join(' AND ');
-    }
-
+    query += ` WHERE ` + whereClauses.join(' AND ');
     query += ` ORDER BY last_message_time DESC NULLS LAST LIMIT 150`;
 
     const res = await pool.query(query, params);
@@ -718,9 +752,11 @@ export async function sendMessage(params: {
   mediaUrl?: string;
   fileName?: string;
   mimeType?: string;
+  ownerId?: string;
 }): Promise<WhatsAppMessage> {
   const pool = getEmailDbPool();
-  const config = await getWhatsAppConfig();
+  const ownerId = params.ownerId || 'default';
+  const config = await getWhatsAppConfig(ownerId);
   const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const mediaType = params.mediaType || 'text';
 
@@ -739,21 +775,26 @@ export async function sendMessage(params: {
     sent_by: params.sentBy,
   };
 
-  // 1. Envia via Baileys Multi-Device (WhatsApp Oficial ao vivo)
+  // 1. Envia via Baileys Multi-Device (WhatsApp Oficial ao vivo da instância do usuário)
   let waKey: any = null;
   try {
-    const bRes = await sendBaileysLiveMessage(params.chatId, params.text, {
-      mediaType,
-      mediaUrl: params.mediaUrl,
-      fileName: params.fileName,
-      mimeType: params.mimeType,
-    });
+    const bRes = await sendBaileysLiveMessage(
+      params.chatId,
+      params.text,
+      {
+        mediaType,
+        mediaUrl: params.mediaUrl,
+        fileName: params.fileName,
+        mimeType: params.mimeType,
+      },
+      ownerId
+    );
     if (bRes.waKey) {
       waKey = bRes.waKey;
       message.wa_key = waKey;
     }
   } catch (bErr) {
-    console.warn('[WhatsAppService] Falha no despacho via Baileys:', bErr);
+    console.warn(`[WhatsAppService:${ownerId}] Falha no despacho via Baileys:`, bErr);
   }
 
   // 2. Se tiver API externa configurada (Zappfy ou Evolution API), despacha também
@@ -800,11 +841,13 @@ export async function sendMessage(params: {
 
   // 3. Persiste no PostgreSQL
   if (pool) {
+    await ensureChatColumns(pool);
     await pool.query(
-      `INSERT INTO whatsapp_messages (id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, reactions, wa_key, status, timestamp, sent_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      `INSERT INTO whatsapp_messages (id, owner_id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, reactions, wa_key, status, timestamp, sent_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         message.id,
+        ownerId,
         message.chat_id,
         message.from_me,
         message.sender_name,
@@ -851,21 +894,24 @@ export async function reactToMessage(params: {
   messageId: string;
   chatId: string;
   emoji: string;
+  ownerId?: string;
 }): Promise<string[]> {
   const pool = getEmailDbPool();
   if (!pool) return [params.emoji];
 
   const res = await pool.query(
-    `SELECT reactions, wa_key FROM whatsapp_messages WHERE id = $1`,
+    `SELECT reactions, wa_key, COALESCE(owner_id, 'default') AS owner_id FROM whatsapp_messages WHERE id = $1`,
     [params.messageId]
   );
 
   let current: string[] = [];
   let waKey: any = null;
+  let ownerId = params.ownerId || 'default';
   if (res.rows.length > 0) {
     const r = res.rows[0];
     current = typeof r.reactions === 'string' ? JSON.parse(r.reactions) : (r.reactions || []);
     waKey = typeof r.wa_key === 'string' ? JSON.parse(r.wa_key) : r.wa_key;
+    if (r.owner_id) ownerId = r.owner_id;
   }
 
   if (current.includes(params.emoji)) {
@@ -881,7 +927,7 @@ export async function reactToMessage(params: {
 
   // Despacha reação para o WhatsApp real via Baileys
   if (waKey) {
-    sendBaileysReaction(params.chatId, params.emoji, waKey).catch(() => {});
+    sendBaileysReaction(params.chatId, params.emoji, waKey, ownerId).catch(() => {});
   }
 
   return current;
@@ -1384,8 +1430,10 @@ async function dispatchBotReply(params: {
   text: string;
   config: WhatsAppConfig;
   isIncomingAudio: boolean;
+  ownerId?: string;
 }) {
   const { chatId, text, config, isIncomingAudio } = params;
+  const ownerId = params.ownerId || config.id || 'default';
   const assistants =
     Array.isArray(config.assistants) && config.assistants.length > 0
       ? config.assistants
@@ -1426,6 +1474,7 @@ async function dispatchBotReply(params: {
         mediaType: 'audio',
         mediaUrl: voiceRes.audioDataUrl,
         mimeType: voiceRes.mimeType,
+        ownerId,
       });
       return;
     }
@@ -1436,6 +1485,7 @@ async function dispatchBotReply(params: {
     text,
     sentBy: 'bot',
     senderName,
+    ownerId,
   });
 }
 
@@ -1443,6 +1493,7 @@ async function dispatchBotReply(params: {
  * Processa uma mensagem recebida de um cliente (Webhook ou simulador)
  */
 export async function processIncomingMessage(params: {
+  ownerId?: string;
   chatId: string;
   phone: string;
   name?: string;
@@ -1455,7 +1506,8 @@ export async function processIncomingMessage(params: {
   remoteJid?: string;
 }): Promise<{ reply?: string; source: 'rule' | 'ai' | 'off_hours' | 'none'; ruleId?: string; paused?: boolean }> {
   const pool = getEmailDbPool();
-  const config = await getWhatsAppConfig();
+  const ownerId = params.ownerId || 'default';
+  const config = await getWhatsAppConfig(ownerId);
   const isIncomingAudio = params.mediaType === 'audio';
   let cleanText = (params.text || '').trim();
 
@@ -1496,9 +1548,10 @@ export async function processIncomingMessage(params: {
         : '🎤 Mensagem de áudio'
       : cleanText;
     await pool.query(
-      `INSERT INTO whatsapp_chats (id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), 1, TRUE, 'em_atendimento', 'aberto')
+      `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 1, TRUE, 'em_atendimento', 'aberto')
        ON CONFLICT (id) DO UPDATE SET
+         owner_id = EXCLUDED.owner_id,
          name = COALESCE(EXCLUDED.name, whatsapp_chats.name),
          profile_pic = COALESCE(EXCLUDED.profile_pic, whatsapp_chats.profile_pic),
          remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid),
@@ -1508,6 +1561,7 @@ export async function processIncomingMessage(params: {
          unread_count = whatsapp_chats.unread_count + 1`,
       [
         params.chatId,
+        ownerId,
         params.phone,
         params.name || params.phone,
         params.profilePic || null,
@@ -1518,10 +1572,11 @@ export async function processIncomingMessage(params: {
 
     const msgId = 'msg_in_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     await pool.query(
-      `INSERT INTO whatsapp_messages (id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, wa_key, reactions, status, timestamp, sent_by)
-       VALUES ($1, $2, FALSE, $3, $4, $5, $6, $7, $8, '[]'::jsonb, 'recebido', NOW(), 'cliente')`,
+      `INSERT INTO whatsapp_messages (id, owner_id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, wa_key, reactions, status, timestamp, sent_by)
+       VALUES ($1, $2, $3, FALSE, $4, $5, $6, $7, $8, $9, '[]'::jsonb, 'recebido', NOW(), 'cliente')`,
       [
         msgId,
+        ownerId,
         params.chatId,
         params.name || params.phone,
         cleanText,

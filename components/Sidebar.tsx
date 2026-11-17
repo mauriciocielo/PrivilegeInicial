@@ -500,6 +500,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           { label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText },
           { label: 'Comparador de SPED', href: '/cliente/comparador-sped', icon: FileSearch },
         ] : []),
+        { label: 'WhatsApp & Bot IA', href: '/cliente/whatsapp', icon: MessageSquare },
         { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
         { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
         { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
@@ -514,7 +515,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       return navClienteBase.map(section => {
         const items = section.items.filter(item => {
           if (item.href === '/cliente/dashboard') return !somenteFiscal;
-          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped') return true;
+          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped' || item.href === '/cliente/whatsapp') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
         return { ...section, items };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getChatMessages, sendMessage, reactToMessage } from '@/lib/whatsapp-service';
+import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ownerId = resolveWhatsAppOwnerId(req);
     const body = await req.json();
 
     if (body.action === 'react') {
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
       if (!messageId || !emoji) {
         return NextResponse.json({ success: false, error: 'messageId e emoji são obrigatórios' }, { status: 400 });
       }
-      const reactions = await reactToMessage({ messageId, chatId: chatId || '', emoji });
+      const reactions = await reactToMessage({ messageId, chatId: chatId || '', emoji, ownerId });
       return NextResponse.json({ success: true, reactions });
     }
 
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
       mediaUrl,
       fileName,
       mimeType,
+      ownerId,
     });
 
     return NextResponse.json({ success: true, message });

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
 import FloatingCopilot from '../../components/FloatingCopilot';
+import WhatsAppGlobalNotifier from '../../components/WhatsAppGlobalNotifier';
 import { useAcessoNfse } from '../../lib/nfse/use-acesso-nfse';
 
 const ROTA_NFSE = '/cliente/nfse';
@@ -36,10 +37,11 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
     const isDashboard2 = pathname.startsWith('/cliente/dashboard2');
     const isDashboard = pathname === '/cliente/dashboard';
     const isComparadorSped = pathname.startsWith('/cliente/comparador-sped');
+    const isWhatsApp = pathname.startsWith('/cliente/whatsapp');
 
-    // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto aos Dashboards e Comparador SPED
+    // Cliente com procuração para o escritório: permite acesso tanto à NFS-e quanto ao WhatsApp, Dashboards e Comparador SPED
     if (acessoNfse.liberado) {
-      if (pathname === ROTA_NFSE || isDashboard2 || isDashboard || isComparadorSped) {
+      if (pathname === ROTA_NFSE || isDashboard2 || isDashboard || isComparadorSped || isWhatsApp) {
         setAuthorized(true);
         return;
       }
@@ -55,7 +57,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       // Compatibility
       setAuthorized(true);
     } else {
-      const isOk = isDashboard || isDashboard2 || isComparadorSped || allowed.some(route => pathname.startsWith(route));
+      const isOk = isDashboard || isDashboard2 || isComparadorSped || isWhatsApp || allowed.some(route => pathname.startsWith(route));
       setAuthorized(isOk);
     }
   }, [router, pathname, acessoNfse.carregando, acessoNfse.liberado]);
@@ -163,6 +165,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         )}
       </main>
       {!acessoNfse.liberado && !acessoNfse.carregando && <FloatingCopilot />}
+      <WhatsAppGlobalNotifier whatsappHref="/cliente/whatsapp" />
     </div>
   );
 }

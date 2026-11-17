@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
 import FloatingCopilot from '../../components/FloatingCopilot';
+import WhatsAppGlobalNotifier from '../../components/WhatsAppGlobalNotifier';
 
 export default function ConsultorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -158,6 +159,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
         )}
       </main>
       <FloatingCopilot />
+      <WhatsAppGlobalNotifier whatsappHref="/consultor/whatsapp" />
     </div>
   );
 }

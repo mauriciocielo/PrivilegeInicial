@@ -27,7 +27,7 @@ import { Instrument_Serif } from 'next/font/google';
 import {
   Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles,
   ChevronDown, SlidersHorizontal, Settings, Plus, KeyRound, Users, Trash2,
-  CheckCircle2, AlertTriangle, ShieldCheck, Copy, UploadCloud
+  CheckCircle2, AlertTriangle, ShieldCheck, Copy, UploadCloud, MessageSquare
 } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
@@ -1562,6 +1562,27 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
           >
             <RefreshCw size={14} /> Buscar no ADN
           </button>
+
+          {/* Atalho direto para o WhatsApp da conta / usuário */}
+          <a
+            href={modoCliente ? '/cliente/whatsapp' : '/consultor/whatsapp'}
+            style={{
+              background: 'rgba(16,185,129,0.18)',
+              border: '1px solid rgba(16,185,129,0.45)',
+              color: '#a7f3d0',
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 13,
+              padding: '10px 16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              textDecoration: 'none',
+            }}
+            title="Abrir seu WhatsApp, Assistente Virtual e CRM"
+          >
+            <MessageSquare size={14} /> WhatsApp
+          </a>
 
           {/* Exportar Mês */}
           <button

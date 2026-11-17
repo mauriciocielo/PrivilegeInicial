@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listChats, updateChatCrm, sendMessage } from '@/lib/whatsapp-service';
-import { syncContactProfilePic } from '@/lib/baileys-manager';
+import { syncContactProfilePic, buildChatIdForOwner } from '@/lib/baileys-manager';
 import { getEmailDbPool } from '@/lib/email-db';
+import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    const ownerId = resolveWhatsAppOwnerId(req);
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || undefined;
     const stage = searchParams.get('stage') || undefined;
-    const chats = await listChats(search, stage);
-    return NextResponse.json({ success: true, chats });
+    const chats = await listChats(search, stage, ownerId);
+    return NextResponse.json({ success: true, chats, ownerId });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -19,6 +21,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ownerId = resolveWhatsAppOwnerId(req);
     const pool = getEmailDbPool();
     if (!pool) throw new Error('Banco de dados indisponível');
 
@@ -110,7 +113,9 @@ export async function POST(req: NextRequest) {
                closed_reason = 'Limpeza de fila em lote',
                unread_count = 0,
                bot_paused_until = NULL
-           WHERE COALESCE(ticket_status, 'aberto') = 'aberto'`
+           WHERE COALESCE(ticket_status, 'aberto') = 'aberto'
+             AND COALESCE(owner_id, 'default') = $1`,
+          [ownerId]
         );
       }
       return NextResponse.json({ success: true, message: 'Chamados encerrados com sucesso' });
@@ -128,6 +133,7 @@ export async function POST(req: NextRequest) {
         text: textToSend,
         sentBy: 'consultor',
         senderName: 'Consultor Privilege (Follow-up)',
+        ownerId,
       });
 
       await pool.query(
@@ -184,14 +190,14 @@ export async function POST(req: NextRequest) {
       if (digits.length === 10 || digits.length === 11) {
         digits = '55' + digits;
       }
-      const id = 'chat_' + digits;
+      const id = buildChatIdForOwner(digits, ownerId);
       await pool.query(
-        `INSERT INTO whatsapp_chats (id, phone, name, last_message, last_message_time, unread_count, bot_enabled, crm_stage, crm_value, assigned_to)
-         VALUES ($1, $2, $3, 'Conversa iniciada', NOW(), 0, TRUE, 'em_atendimento', 0, 'Maurício Cielo')
+        `INSERT INTO whatsapp_chats (id, owner_id, phone, name, last_message, last_message_time, unread_count, bot_enabled, crm_stage, crm_value, assigned_to)
+         VALUES ($1, $2, $3, $4, 'Conversa iniciada', NOW(), 0, TRUE, 'em_atendimento', 0, 'Maurício Cielo')
          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-        [id, phone, name]
+        [id, ownerId, phone, name]
       );
-      const picUrl = await syncContactProfilePic(id, `${digits}@s.whatsapp.net`).catch(() => null);
+      const picUrl = await syncContactProfilePic(id, `${digits}@s.whatsapp.net`, ownerId).catch(() => null);
       return NextResponse.json({
         success: true,
         chat: { id, phone, name, profile_pic: picUrl },

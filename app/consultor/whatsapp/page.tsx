@@ -349,7 +349,14 @@ export default function WhatsAppPage() {
         loadCampaigns();
       }
     }, 2500);
-    return () => clearInterval(interval);
+    const handleWaOpenChat = () => {
+      loadChats(false);
+    };
+    window.addEventListener('waOpenChat', handleWaOpenChat);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('waOpenChat', handleWaOpenChat);
+    };
   }, [selectedChat, activeTab]);
 
   // Rola apenas internamente na caixa de mensagens e somente quando mudar de conversa ou chegar nova mensagem
@@ -406,9 +413,9 @@ export default function WhatsAppPage() {
           audioCtxRef.current = new Ctx();
         }
         if (audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume().catch(() => {});
+          audioCtxRef.current.resume().catch(() => { });
         }
-      } catch {}
+      } catch { }
     }
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     window.addEventListener('keydown', unlockAudio, { once: true });
@@ -425,6 +432,10 @@ export default function WhatsAppPage() {
     lastSoundPlayedAtRef.current = now;
 
     try {
+      if (force && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
       if (!Ctx) return;
       if (!audioCtxRef.current) {
@@ -432,7 +443,7 @@ export default function WhatsAppPage() {
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
+        ctx.resume().catch(() => { });
       }
 
       const playTone = (freq: number, startOffset: number, duration: number) => {
@@ -452,7 +463,7 @@ export default function WhatsAppPage() {
       // Toque duplo estilo notificação WhatsApp (Mi5 -> Lá5)
       playTone(659.25, 0, 0.16);
       playTone(880.0, 0.14, 0.24);
-    } catch {}
+    } catch { }
   }
 
   async function loadChats(showLoading = true) {
@@ -490,6 +501,17 @@ export default function WhatsAppPage() {
         }
 
         setChats(incomingChats);
+        const pendingOpenId =
+          typeof window !== 'undefined' ? sessionStorage.getItem('wa_open_chat_id') : null;
+        if (pendingOpenId) {
+          const targetChat = incomingChats.find((c: WhatsAppChat) => c.id === pendingOpenId);
+          if (targetChat) {
+            sessionStorage.removeItem('wa_open_chat_id');
+            setActiveTab('inbox');
+            selectChat(targetChat);
+            return;
+          }
+        }
         const activeId = selectedChatIdRef.current;
         const currentFilter = chatFilterRef.current;
 
@@ -1443,27 +1465,27 @@ export default function WhatsAppPage() {
       config?.assistants && config.assistants.length > 0
         ? config.assistants
         : [
-            {
-              id: 'leo',
-              name: 'Léo',
-              role: 'Atendente Comercial & Triagem 360º',
-              gender: 'male',
-              voiceId: 'onyx',
-              avatarColor: '#600000',
-              replyAudioOnAudio: true,
-              alwaysReplyAudio: false,
-            },
-            {
-              id: 'clara',
-              name: 'Clara',
-              role: 'Assistente Executiva de Voz & Relacionamento',
-              gender: 'female',
-              voiceId: 'nova',
-              avatarColor: '#0f766e',
-              replyAudioOnAudio: true,
-              alwaysReplyAudio: false,
-            },
-          ];
+          {
+            id: 'leo',
+            name: 'Léo',
+            role: 'Atendente Comercial & Triagem 360º',
+            gender: 'male',
+            voiceId: 'onyx',
+            avatarColor: '#600000',
+            replyAudioOnAudio: true,
+            alwaysReplyAudio: false,
+          },
+          {
+            id: 'clara',
+            name: 'Clara',
+            role: 'Assistente Executiva de Voz & Relacionamento',
+            gender: 'female',
+            voiceId: 'nova',
+            avatarColor: '#0f766e',
+            replyAudioOnAudio: true,
+            alwaysReplyAudio: false,
+          },
+        ];
 
     const newItem: AssistantPersona = {
       id: 'ast_' + Date.now(),
@@ -2863,9 +2885,9 @@ export default function WhatsAppPage() {
                 {(config?.assistants && config.assistants.length > 0
                   ? config.assistants
                   : [
-                      { id: 'leo', name: 'Léo (Voz Masculina)' },
-                      { id: 'clara', name: 'Clara (Voz Feminina)' },
-                    ]
+                    { id: 'leo', name: 'Léo (Voz Masculina)' },
+                    { id: 'clara', name: 'Clara (Voz Feminina)' },
+                  ]
                 ).map(ast => (
                   <option key={ast.id} value={ast.id}>
                     🤖 {ast.name}
@@ -3632,27 +3654,27 @@ export default function WhatsAppPage() {
                       {(config?.assistants && config.assistants.length > 0
                         ? config.assistants
                         : [
-                            {
-                              id: 'leo',
-                              name: 'Léo',
-                              role: 'Atendente Comercial & Triagem 360º',
-                              gender: 'male' as const,
-                              voiceId: 'onyx',
-                              avatarColor: '#600000',
-                              replyAudioOnAudio: true,
-                              alwaysReplyAudio: false,
-                            },
-                            {
-                              id: 'clara',
-                              name: 'Clara',
-                              role: 'Assistente Executiva de Voz & Relacionamento',
-                              gender: 'female' as const,
-                              voiceId: 'nova',
-                              avatarColor: '#0f766e',
-                              replyAudioOnAudio: true,
-                              alwaysReplyAudio: false,
-                            },
-                          ]
+                          {
+                            id: 'leo',
+                            name: 'Léo',
+                            role: 'Atendente Comercial & Triagem 360º',
+                            gender: 'male' as const,
+                            voiceId: 'onyx',
+                            avatarColor: '#600000',
+                            replyAudioOnAudio: true,
+                            alwaysReplyAudio: false,
+                          },
+                          {
+                            id: 'clara',
+                            name: 'Clara',
+                            role: 'Assistente Executiva de Voz & Relacionamento',
+                            gender: 'female' as const,
+                            voiceId: 'nova',
+                            avatarColor: '#0f766e',
+                            replyAudioOnAudio: true,
+                            alwaysReplyAudio: false,
+                          },
+                        ]
                       ).map(ast => {
                         const isActive = (config?.active_assistant_id || 'leo') === ast.id;
                         return (

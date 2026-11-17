@@ -13,23 +13,59 @@ import QRCode from 'qrcode';
 import { getEmailDbPool } from './email-db';
 import { processIncomingMessage } from './whatsapp-service';
 
-const g = globalThis as unknown as {
-  __baileysSock?: WASocket | null;
-  __baileysStarting?: boolean;
-  __baileysQR?: string | null;
-  __baileysConnected?: boolean;
-  __baileysReconnectTimer?: any;
-  __sentWaIds?: Set<string>;
-};
-
-if (!g.__sentWaIds) {
-  g.__sentWaIds = new Set<string>();
+interface BaileysSessionState {
+  sock: WASocket | null;
+  starting: boolean;
+  qr: string | null;
+  connected: boolean;
+  reconnectTimer: any;
+  sentWaIds: Set<string>;
 }
 
-const AUTH_DIR = path.resolve(process.cwd(), '.baileys_auth');
+const g = globalThis as unknown as {
+  __baileysSessions?: Map<string, BaileysSessionState>;
+  __baileysBooted?: boolean;
+};
 
-function getSock(): WASocket | null {
-  return g.__baileysSock || null;
+if (!g.__baileysSessions) {
+  g.__baileysSessions = new Map<string, BaileysSessionState>();
+}
+
+function getSessionState(ownerId = 'default'): BaileysSessionState {
+  const key = ownerId || 'default';
+  let st = g.__baileysSessions!.get(key);
+  if (!st) {
+    st = {
+      sock: null,
+      starting: false,
+      qr: null,
+      connected: false,
+      reconnectTimer: null,
+      sentWaIds: new Set<string>(),
+    };
+    g.__baileysSessions!.set(key, st);
+  }
+  return st;
+}
+
+function getAuthDir(ownerId = 'default'): string {
+  const key = (ownerId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+  if (key === 'default') {
+    return path.resolve(process.cwd(), '.baileys_auth');
+  }
+  return path.resolve(process.cwd(), `.baileys_auth_${key}`);
+}
+
+export function buildChatIdForOwner(digits: string, ownerId = 'default'): string {
+  const clean = digits.replace(/[^0-9]/g, '');
+  if (!ownerId || ownerId === 'default') {
+    return `chat_${clean}`;
+  }
+  return `${ownerId}_chat_${clean}`;
+}
+
+function getSock(ownerId = 'default'): WASocket | null {
+  return getSessionState(ownerId).sock || null;
 }
 
 /**
@@ -64,7 +100,13 @@ function unwrapWhatsAppMessage(message: any): any {
 /**
  * Converte JIDs @lid (Linked Identity do WhatsApp) para o número de telefone real usando o mapeamento do Baileys
  */
-export function resolvePhoneFromJid(remoteJid: string, msgKey?: any): { phone: string; sendJid: string } {
+export function resolvePhoneFromJid(
+  remoteJid: string,
+  msgKey?: any,
+  ownerId = 'default'
+): { phone: string; sendJid: string } {
+  const authDir = getAuthDir(ownerId);
+
   // 1. Verifica se o Baileys v7 forneceu remoteJidAlt ou participantAlt com @s.whatsapp.net
   const altJid = msgKey?.remoteJidAlt || msgKey?.participantAlt || '';
   if (altJid && altJid.includes('@s.whatsapp.net')) {
@@ -77,7 +119,7 @@ export function resolvePhoneFromJid(remoteJid: string, msgKey?: any): { phone: s
   // 2. Se for @lid, consulta o arquivo lid-mapping-<lid>_reverse.json salvo pelo Baileys
   if (remoteJid.includes('@lid')) {
     const lidId = remoteJid.split('@')[0].split(':')[0];
-    const reverseFile = path.join(AUTH_DIR, `lid-mapping-${lidId}_reverse.json`);
+    const reverseFile = path.join(authDir, `lid-mapping-${lidId}_reverse.json`);
     if (fs.existsSync(reverseFile)) {
       try {
         const mappedPhone = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
@@ -99,16 +141,23 @@ export function resolvePhoneFromJid(remoteJid: string, msgKey?: any): { phone: s
 /**
  * Normaliza números brasileiros e resolve o JID real registrado no WhatsApp
  */
-export async function resolveWhatsAppJid(sock: WASocket, phoneOrChatId: string): Promise<string> {
+export async function resolveWhatsAppJid(
+  sock: WASocket,
+  phoneOrChatId: string,
+  ownerId = 'default'
+): Promise<string> {
   const pool = getEmailDbPool();
+  const authDir = getAuthDir(ownerId);
 
   if (pool) {
     try {
-      const cleanDigits = phoneOrChatId.replace(/[^0-9]/g, '');
-      const chatId = phoneOrChatId.startsWith('chat_') ? phoneOrChatId : `chat_${cleanDigits}`;
+      const cleanDigits = phoneOrChatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
+      const chatId = phoneOrChatId.includes('chat_')
+        ? phoneOrChatId
+        : buildChatIdForOwner(cleanDigits, ownerId);
       const res = await pool.query(
-        `SELECT remote_jid, phone FROM whatsapp_chats WHERE id = $1 OR phone ILIKE $2 LIMIT 1`,
-        [chatId, `%${cleanDigits.slice(-8)}%`]
+        `SELECT remote_jid, phone FROM whatsapp_chats WHERE id = $1 OR (COALESCE(owner_id, 'default') = $2 AND phone ILIKE $3) LIMIT 1`,
+        [chatId, ownerId, `%${cleanDigits.slice(-8)}%`]
       );
       if (res.rows[0]?.remote_jid && res.rows[0].remote_jid.includes('@')) {
         return res.rows[0].remote_jid;
@@ -120,14 +169,13 @@ export async function resolveWhatsAppJid(sock: WASocket, phoneOrChatId: string):
     return phoneOrChatId;
   }
 
-  let digits = phoneOrChatId.replace(/^chat_/, '').replace(/[^0-9]/g, '');
+  let digits = phoneOrChatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
 
   if (digits.length === 10 || digits.length === 11) {
     digits = '55' + digits;
   }
 
-  // Verifica se existe mapeamento LID reverso caso digits seja um LID
-  const reverseFile = path.join(AUTH_DIR, `lid-mapping-${digits}_reverse.json`);
+  const reverseFile = path.join(authDir, `lid-mapping-${digits}_reverse.json`);
   if (fs.existsSync(reverseFile)) {
     try {
       const mapped = JSON.parse(fs.readFileSync(reverseFile, 'utf8'));
@@ -148,7 +196,9 @@ export async function resolveWhatsAppJid(sock: WASocket, phoneOrChatId: string):
       const found = results?.[0];
       if (found && found.exists && found.jid) {
         if (pool) {
-          const cid = phoneOrChatId.startsWith('chat_') ? phoneOrChatId : `chat_${digits}`;
+          const cid = phoneOrChatId.includes('chat_')
+            ? phoneOrChatId
+            : buildChatIdForOwner(digits, ownerId);
           await pool
             .query(`UPDATE whatsapp_chats SET remote_jid = $1 WHERE id = $2`, [found.jid, cid])
             .catch(() => {});
@@ -157,7 +207,7 @@ export async function resolveWhatsAppJid(sock: WASocket, phoneOrChatId: string):
       }
     }
   } catch (e) {
-    console.warn('[Baileys] Aviso ao consultar onWhatsApp:', e);
+    console.warn(`[Baileys:${ownerId}] Aviso ao consultar onWhatsApp:`, e);
   }
 
   return `${digits}@s.whatsapp.net`;
@@ -166,8 +216,12 @@ export async function resolveWhatsAppJid(sock: WASocket, phoneOrChatId: string):
 /**
  * Busca a foto de perfil do contato no WhatsApp e salva no banco
  */
-export async function syncContactProfilePic(chatId: string, jid: string): Promise<string | null> {
-  const sock = getSock();
+export async function syncContactProfilePic(
+  chatId: string,
+  jid: string,
+  ownerId = 'default'
+): Promise<string | null> {
+  const sock = getSock(ownerId);
   if (!sock) return null;
 
   try {
@@ -183,116 +237,189 @@ export async function syncContactProfilePic(chatId: string, jid: string): Promis
   return null;
 }
 
-export async function getLiveBaileysQR(): Promise<{ qr_code: string | null; status: string }> {
-  const sock = getSock();
-  if (sock && g.__baileysConnected && sock.user) {
+export async function getLiveBaileysQR(
+  ownerId = 'default'
+): Promise<{ qr_code: string | null; status: string }> {
+  const st = getSessionState(ownerId);
+  if (st.sock && st.connected && st.sock.user) {
     return { qr_code: null, status: 'conectado' };
   }
 
-  if (g.__baileysQR) {
-    return { qr_code: g.__baileysQR, status: 'qrcode' };
+  if (st.qr) {
+    return { qr_code: st.qr, status: 'qrcode' };
   }
 
-  startBaileysSocket().catch(err => console.error('[Baileys] Erro ao iniciar socket:', err));
+  startBaileysSocket(false, ownerId).catch(err =>
+    console.error(`[Baileys:${ownerId}] Erro ao iniciar socket:`, err)
+  );
 
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 500));
-    if (g.__baileysQR) {
-      return { qr_code: g.__baileysQR, status: 'qrcode' };
+    if (st.qr) {
+      return { qr_code: st.qr, status: 'qrcode' };
     }
-    if (getSock()?.user && g.__baileysConnected) {
+    if (st.sock?.user && st.connected) {
       return { qr_code: null, status: 'conectado' };
     }
   }
 
-  return { qr_code: g.__baileysQR || null, status: g.__baileysQR ? 'qrcode' : 'conectando' };
+  return { qr_code: st.qr || null, status: st.qr ? 'qrcode' : 'conectando' };
 }
 
 /**
- * Garante que o socket Baileys está ativo caso já existam credenciais salvas em disco
+ * Garante que o socket Baileys da sessão do usuário está ativo caso já existam credenciais salvas em disco
  */
-export async function ensureBaileysConnected(waitForOpen = true): Promise<WASocket | null> {
-  if (g.__baileysSock && g.__baileysConnected) {
-    return g.__baileysSock;
+export async function ensureBaileysConnected(
+  waitForOpen = true,
+  ownerId = 'default'
+): Promise<WASocket | null> {
+  const st = getSessionState(ownerId);
+  if (st.sock && st.connected) {
+    return st.sock;
   }
 
-  // Se já existe um socket em processo de conexão, apenas aguarda ou retorna
-  if (g.__baileysSock || g.__baileysStarting) {
-    if (!waitForOpen) return g.__baileysSock || null;
+  if (st.sock || st.starting) {
+    if (!waitForOpen) return st.sock || null;
     for (let i = 0; i < 10; i++) {
-      if (g.__baileysSock && g.__baileysConnected) {
-        return g.__baileysSock;
+      if (st.sock && st.connected) {
+        return st.sock;
       }
       await new Promise(r => setTimeout(r, 500));
     }
-    return g.__baileysSock || null;
+    return st.sock || null;
   }
 
-  const credsFile = path.join(AUTH_DIR, 'creds.json');
+  const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
   if (fs.existsSync(credsFile)) {
     if (!waitForOpen) {
-      startBaileysSocket(false).catch(err => console.error('[Baileys] Auto-connect erro:', err));
-      return g.__baileysSock || null;
+      startBaileysSocket(false, ownerId).catch(err =>
+        console.error(`[Baileys:${ownerId}] Auto-connect erro:`, err)
+      );
+      return st.sock || null;
     }
 
-    await startBaileysSocket(false);
+    await startBaileysSocket(false, ownerId);
     for (let i = 0; i < 10; i++) {
-      if (g.__baileysSock && g.__baileysConnected) {
-        return g.__baileysSock;
+      if (st.sock && st.connected) {
+        return st.sock;
       }
       await new Promise(r => setTimeout(r, 500));
     }
   }
 
-  return g.__baileysSock || null;
+  return st.sock || null;
 }
 
-function notifySocketIoClients(chatId: string) {
+/**
+ * Inicializa automaticamente todas as sessões Baileys salvas em disco ou no banco
+ * para que o sistema funcione em 2º plano mesmo sem nenhuma tela aberta.
+ */
+export async function bootAllSavedBaileysSessions(): Promise<string[]> {
+  const owners = new Set<string>();
+
+  try {
+    const rootDir = process.cwd();
+    const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === '.baileys_auth') {
+        if (fs.existsSync(path.join(rootDir, entry.name, 'creds.json'))) {
+          owners.add('default');
+        }
+      } else if (entry.name.startsWith('.baileys_auth_')) {
+        if (fs.existsSync(path.join(rootDir, entry.name, 'creds.json'))) {
+          owners.add(entry.name.replace('.baileys_auth_', ''));
+        }
+      }
+    }
+  } catch {}
+
+  const pool = getEmailDbPool();
+  if (pool) {
+    try {
+      const res = await pool.query(
+        `SELECT id FROM whatsapp_config WHERE status = 'conectado'`
+      );
+      for (const r of res.rows) {
+        if (r.id) owners.add(r.id);
+      }
+    } catch {}
+  }
+
+  const started: string[] = [];
+  for (const ownerId of owners) {
+    const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
+    if (fs.existsSync(credsFile)) {
+      ensureBaileysConnected(false, ownerId).catch(() => {});
+      started.push(ownerId);
+    }
+  }
+
+  g.__baileysBooted = true;
+  return started;
+}
+
+function notifySocketIoClients(
+  chatId: string,
+  ownerId = 'default',
+  extra?: Record<string, any>
+) {
   try {
     const io = (globalThis as any).io;
     if (io) {
-      io.emit('whatsapp_update', { chatId, timestamp: Date.now() });
+      io.emit('whatsapp_update', {
+        chatId,
+        ownerId,
+        timestamp: Date.now(),
+        ...(extra || {}),
+      });
     }
   } catch {}
 }
 
-export async function startBaileysSocket(forceReset = false): Promise<void> {
-  if (!forceReset && (g.__baileysStarting || g.__baileysConnected || g.__baileysSock)) {
+export async function startBaileysSocket(
+  forceReset = false,
+  ownerId = 'default'
+): Promise<void> {
+  const st = getSessionState(ownerId);
+  const authDir = getAuthDir(ownerId);
+
+  if (!forceReset && (st.starting || st.connected || st.sock)) {
     return;
   }
-  g.__baileysStarting = true;
+  st.starting = true;
 
-  if (g.__baileysReconnectTimer) {
-    clearTimeout(g.__baileysReconnectTimer);
-    g.__baileysReconnectTimer = null;
+  if (st.reconnectTimer) {
+    clearTimeout(st.reconnectTimer);
+    st.reconnectTimer = null;
   }
 
   try {
-    if (g.__baileysSock) {
+    if (st.sock) {
       try {
-        g.__baileysSock.ev.removeAllListeners('connection.update');
-        g.__baileysSock.ev.removeAllListeners('messages.upsert');
-        g.__baileysSock.ev.removeAllListeners('creds.update');
-        g.__baileysSock.end(undefined);
+        st.sock.ev.removeAllListeners('connection.update');
+        st.sock.ev.removeAllListeners('messages.upsert');
+        st.sock.ev.removeAllListeners('creds.update');
+        st.sock.end(undefined);
       } catch {}
-      g.__baileysSock = null;
+      st.sock = null;
     }
 
     if (forceReset) {
-      g.__baileysQR = null;
-      g.__baileysConnected = false;
-      if (fs.existsSync(AUTH_DIR)) {
+      st.qr = null;
+      st.connected = false;
+      if (fs.existsSync(authDir)) {
         try {
-          fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+          fs.rmSync(authDir, { recursive: true, force: true });
         } catch {}
       }
     }
 
-    if (!fs.existsSync(AUTH_DIR)) {
-      fs.mkdirSync(AUTH_DIR, { recursive: true });
+    if (!fs.existsSync(authDir)) {
+      fs.mkdirSync(authDir, { recursive: true });
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const { version } = await fetchLatestBaileysVersion().catch(() => ({
       version: [2, 3000, 1015901307] as [number, number, number],
     }));
@@ -311,57 +438,64 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
       syncFullHistory: false,
     });
 
-    g.__baileysSock = sock;
+    st.sock = sock;
 
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', async update => {
-      if (g.__baileysSock !== sock) return;
+      if (st.sock !== sock) return;
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        console.log('[Baileys] Novo QR Code autêntico recebido do WhatsApp!');
+        console.log(`[Baileys:${ownerId}] Novo QR Code autêntico recebido do WhatsApp!`);
         try {
           const qrBase64 = await QRCode.toDataURL(qr, {
             width: 360,
             margin: 2,
             color: { dark: '#000000', light: '#ffffff' },
           });
-          g.__baileysQR = qrBase64;
-          g.__baileysConnected = false;
+          st.qr = qrBase64;
+          st.connected = false;
 
           const pool = getEmailDbPool();
           if (pool) {
             await pool.query(
-              `UPDATE whatsapp_config SET qr_code = $1, status = 'qrcode' WHERE id = 'default'`,
-              [qrBase64]
+              `INSERT INTO whatsapp_config (id, provider, status, qr_code, updated_at)
+               VALUES ($1, 'baileys', 'qrcode', $2, NOW())
+               ON CONFLICT (id) DO UPDATE SET qr_code = EXCLUDED.qr_code, status = 'qrcode', updated_at = NOW()`,
+              [ownerId, qrBase64]
             );
           }
         } catch (e) {
-          console.error('[Baileys] Erro ao converter QR para base64:', e);
+          console.error(`[Baileys:${ownerId}] Erro ao converter QR para base64:`, e);
         }
       }
 
       if (connection === 'open') {
-        console.log('[Baileys] WhatsApp conectado de forma estável e escutando mensagens ao vivo!');
-        g.__baileysQR = null;
-        g.__baileysConnected = true;
-        g.__baileysStarting = false;
+        console.log(`[Baileys:${ownerId}] WhatsApp conectado e escutando em segundo plano!`);
+        st.qr = null;
+        st.connected = true;
+        st.starting = false;
         const phone = sock.user?.id ? sock.user.id.split(':')[0] : 'Conectado';
         const name = sock.user?.name || 'Privilege Contabilidade';
 
         const pool = getEmailDbPool();
         if (pool) {
           await pool.query(
-            `UPDATE whatsapp_config SET status = 'conectado', phone_number = $1, profile_name = $2, qr_code = NULL WHERE id = 'default'`,
-            ['+' + phone, name]
+            `INSERT INTO whatsapp_config (id, provider, status, phone_number, profile_name, qr_code, updated_at)
+             VALUES ($1, 'baileys', 'conectado', $2, $3, NULL, NOW())
+             ON CONFLICT (id) DO UPDATE SET status = 'conectado', phone_number = EXCLUDED.phone_number, profile_name = EXCLUDED.profile_name, qr_code = NULL, updated_at = NOW()`,
+            [ownerId, '+' + phone, name]
           );
 
           try {
-            const chatsRes = await pool.query(`SELECT id, phone, remote_jid FROM whatsapp_chats LIMIT 30`);
+            const chatsRes = await pool.query(
+              `SELECT id, phone, remote_jid FROM whatsapp_chats WHERE COALESCE(owner_id, 'default') = $1 LIMIT 30`,
+              [ownerId]
+            );
             for (const row of chatsRes.rows) {
               const targetJid = row.remote_jid || `${row.phone.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
-              syncContactProfilePic(row.id, targetJid).catch(() => {});
+              syncContactProfilePic(row.id, targetJid, ownerId).catch(() => {});
             }
           } catch {}
         }
@@ -372,33 +506,34 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
         const isLoggedOut = statusCode === DisconnectReason.loggedOut;
         const isReplaced = statusCode === DisconnectReason.connectionReplaced;
 
-        g.__baileysConnected = false;
-        g.__baileysStarting = false;
-        if (g.__baileysSock === sock) {
-          g.__baileysSock = null;
+        st.connected = false;
+        st.starting = false;
+        if (st.sock === sock) {
+          st.sock = null;
         }
 
-        console.log(`[Baileys] Conexão fechada (code=${statusCode}).`);
+        console.log(`[Baileys:${ownerId}] Conexão fechada (code=${statusCode}).`);
 
         if (isLoggedOut) {
-          g.__baileysQR = null;
+          st.qr = null;
           const pool = getEmailDbPool();
           if (pool) {
             await pool.query(
-              `UPDATE whatsapp_config SET status = 'desconectado' WHERE id = 'default'`
+              `UPDATE whatsapp_config SET status = 'desconectado' WHERE id = $1`,
+              [ownerId]
             );
           }
         } else if (!isReplaced) {
-          if (g.__baileysReconnectTimer) clearTimeout(g.__baileysReconnectTimer);
-          g.__baileysReconnectTimer = setTimeout(() => {
-            g.__baileysReconnectTimer = null;
-            startBaileysSocket(false).catch(console.error);
+          if (st.reconnectTimer) clearTimeout(st.reconnectTimer);
+          st.reconnectTimer = setTimeout(() => {
+            st.reconnectTimer = null;
+            startBaileysSocket(false, ownerId).catch(console.error);
           }, 4000);
         }
       }
     });
 
-    // Recepção ao vivo de mensagens (notify = novas mensagens, append = enviadas pelo celular / sincronizadas)
+    // Recepção ao vivo de mensagens (funciona mesmo sem a tela aberta)
     sock.ev.on('messages.upsert', async ({ messages: msgs, type }) => {
       if (type !== 'notify' && type !== 'append') return;
 
@@ -409,18 +544,17 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
           continue;
         }
 
-        // Ignora mensagens que já foram disparadas pela própria plataforma para não duplicar
-        if (m.key.id && g.__sentWaIds?.has(m.key.id)) {
+        if (m.key.id && st.sentWaIds.has(m.key.id)) {
           continue;
         }
 
         const unwrapped = unwrapWhatsAppMessage(m.message);
         if (!unwrapped) continue;
 
-        const { phone: cleanPhone, sendJid } = resolvePhoneFromJid(rawJid, m.key);
+        const { phone: cleanPhone, sendJid } = resolvePhoneFromJid(rawJid, m.key, ownerId);
         if (!cleanPhone) continue;
 
-        const chatId = 'chat_' + cleanPhone.replace(/[^0-9]/g, '');
+        const chatId = buildChatIdForOwner(cleanPhone, ownerId);
         const senderName = m.pushName || cleanPhone;
         const pool = getEmailDbPool();
 
@@ -437,7 +571,7 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
                 [JSON.stringify([emoji]), chatId, targetWaId]
               )
               .catch(() => {});
-            notifySocketIoClients(chatId);
+            notifySocketIoClients(chatId, ownerId);
           }
           continue;
         }
@@ -476,41 +610,41 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
             if (!text) text = `📄 ${fileName}`;
           }
         } catch (mediaErr) {
-          console.warn('[Baileys] Aviso ao baixar mídia:', mediaErr);
+          console.warn(`[Baileys:${ownerId}] Aviso ao baixar mídia:`, mediaErr);
         }
 
         if (!text && !mediaUrl) continue;
 
         console.log(
-          `[Baileys Ao Vivo] Mensagem (${m.key.fromMe ? 'Enviada pelo Celular' : 'Recebida'}) de ${senderName} (${cleanPhone}): "${text.slice(0, 60)}"`
+          `[Baileys:${ownerId}] Mensagem (${m.key.fromMe ? 'Enviada pelo Celular' : 'Recebida'}) de ${senderName} (${cleanPhone}): "${text.slice(0, 60)}"`
         );
 
         const profilePic = await sock.profilePictureUrl(sendJid, 'image').catch(() => null);
 
-        // Se a mensagem foi enviada pelo próprio aparelho celular do consultor (fromMe = true)
         if (m.key.fromMe) {
           if (pool) {
             const msgId = 'msg_out_' + (m.key.id || Date.now());
             await pool
               .query(
-                `INSERT INTO whatsapp_chats (id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), 0, TRUE, 'em_atendimento')
+                `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 0, TRUE, 'em_atendimento')
                  ON CONFLICT (id) DO UPDATE SET
                    profile_pic = COALESCE(EXCLUDED.profile_pic, whatsapp_chats.profile_pic),
                    remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid),
                    last_message = EXCLUDED.last_message,
                    last_message_time = NOW()`,
-                [chatId, cleanPhone, cleanPhone, profilePic, sendJid, text]
+                [chatId, ownerId, cleanPhone, cleanPhone, profilePic, sendJid, text]
               )
               .catch(() => {});
 
             await pool
               .query(
-                `INSERT INTO whatsapp_messages (id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, wa_key, reactions, status, timestamp, sent_by)
-                 VALUES ($1, $2, TRUE, 'Consultor (Celular)', $3, $4, $5, $6, $7, '[]'::jsonb, 'enviado', NOW(), 'consultor')
+                `INSERT INTO whatsapp_messages (id, owner_id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, wa_key, reactions, status, timestamp, sent_by)
+                 VALUES ($1, $2, $3, TRUE, 'Consultor (Celular)', $4, $5, $6, $7, $8, '[]'::jsonb, 'enviado', NOW(), 'consultor')
                  ON CONFLICT (id) DO NOTHING`,
                 [
                   msgId,
+                  ownerId,
                   chatId,
                   text,
                   mediaType,
@@ -520,13 +654,13 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
                 ]
               )
               .catch(() => {});
-            notifySocketIoClients(chatId);
+            notifySocketIoClients(chatId, ownerId);
           }
           continue;
         }
 
-        // Mensagem recebida de um cliente!
         await processIncomingMessage({
+          ownerId,
           chatId,
           phone: cleanPhone,
           name: senderName,
@@ -539,35 +673,47 @@ export async function startBaileysSocket(forceReset = false): Promise<void> {
           remoteJid: sendJid,
         });
 
-        notifySocketIoClients(chatId);
+        notifySocketIoClients(chatId, ownerId, {
+          isNewMessage: true,
+          fromMe: false,
+          senderName,
+          phone: cleanPhone,
+          preview: text.slice(0, 140),
+          mediaType,
+          profilePic: profilePic || undefined,
+        });
       }
     });
   } catch (err) {
-    console.error('[Baileys] Falha geral no startBaileysSocket:', err);
+    console.error(`[Baileys:${ownerId}] Falha geral no startBaileysSocket:`, err);
   } finally {
-    g.__baileysStarting = false;
+    st.starting = false;
   }
 }
 
-export async function disconnectBaileysSocket(): Promise<void> {
-  if (g.__baileysSock) {
+export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void> {
+  const st = getSessionState(ownerId);
+  const authDir = getAuthDir(ownerId);
+
+  if (st.sock) {
     try {
-      await g.__baileysSock.logout();
+      await st.sock.logout();
     } catch {}
-    g.__baileysSock = null;
+    st.sock = null;
   }
-  g.__baileysQR = null;
-  g.__baileysConnected = false;
-  if (fs.existsSync(AUTH_DIR)) {
+  st.qr = null;
+  st.connected = false;
+  if (fs.existsSync(authDir)) {
     try {
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+      fs.rmSync(authDir, { recursive: true, force: true });
     } catch {}
   }
 
   const pool = getEmailDbPool();
   if (pool) {
     await pool.query(
-      `UPDATE whatsapp_config SET status = 'desconectado', phone_number = NULL, qr_code = NULL WHERE id = 'default'`
+      `UPDATE whatsapp_config SET status = 'desconectado', phone_number = NULL, qr_code = NULL WHERE id = $1`,
+      [ownerId]
     );
   }
 }
@@ -583,16 +729,18 @@ export async function sendBaileysLiveMessage(
     mediaUrl?: string;
     fileName?: string;
     mimeType?: string;
-  }
+  },
+  ownerId = 'default'
 ): Promise<{ sent: boolean; waKey?: any; profilePic?: string | null }> {
-  const sock = await ensureBaileysConnected(true);
+  const sock = await ensureBaileysConnected(true, ownerId);
+  const st = getSessionState(ownerId);
   if (!sock) {
-    console.warn('[Baileys] Socket não está conectado no momento do envio.');
+    console.warn(`[Baileys:${ownerId}] Socket não está conectado no momento do envio.`);
     return { sent: false };
   }
 
   try {
-    const jid = await resolveWhatsAppJid(sock, phoneOrChatId);
+    const jid = await resolveWhatsAppJid(sock, phoneOrChatId, ownerId);
     let sentMsg: any = null;
 
     if (options?.mediaUrl && options.mediaType && options.mediaType !== 'text') {
@@ -628,18 +776,20 @@ export async function sendBaileysLiveMessage(
     }
 
     if (sentMsg?.key?.id) {
-      g.__sentWaIds?.add(sentMsg.key.id);
+      st.sentWaIds.add(sentMsg.key.id);
     }
 
-    const cleanDigits = phoneOrChatId.replace(/[^0-9]/g, '');
-    const chatId = phoneOrChatId.startsWith('chat_') ? phoneOrChatId : `chat_${cleanDigits}`;
-    const profilePic = await syncContactProfilePic(chatId, jid).catch(() => null);
+    const cleanDigits = phoneOrChatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
+    const chatId = phoneOrChatId.includes('chat_')
+      ? phoneOrChatId
+      : buildChatIdForOwner(cleanDigits, ownerId);
+    const profilePic = await syncContactProfilePic(chatId, jid, ownerId).catch(() => null);
 
-    notifySocketIoClients(chatId);
+    notifySocketIoClients(chatId, ownerId);
 
     return { sent: true, waKey: sentMsg?.key, profilePic };
   } catch (err) {
-    console.error('[Baileys] Erro ao enviar mensagem ao vivo:', err);
+    console.error(`[Baileys:${ownerId}] Erro ao enviar mensagem ao vivo:`, err);
     return { sent: false };
   }
 }
@@ -650,13 +800,14 @@ export async function sendBaileysLiveMessage(
 export async function sendBaileysReaction(
   phoneOrChatId: string,
   emoji: string,
-  waKey?: any
+  waKey?: any,
+  ownerId = 'default'
 ): Promise<boolean> {
-  const sock = await ensureBaileysConnected(true);
+  const sock = await ensureBaileysConnected(true, ownerId);
   if (!sock) return false;
 
   try {
-    const jid = waKey?.remoteJid || (await resolveWhatsAppJid(sock, phoneOrChatId));
+    const jid = waKey?.remoteJid || (await resolveWhatsAppJid(sock, phoneOrChatId, ownerId));
     if (waKey && waKey.id) {
       await sock.sendMessage(jid, {
         react: {
@@ -667,7 +818,7 @@ export async function sendBaileysReaction(
       return true;
     }
   } catch (err) {
-    console.warn('[Baileys] Aviso ao enviar reação no WhatsApp:', err);
+    console.warn(`[Baileys:${ownerId}] Aviso ao enviar reação no WhatsApp:`, err);
   }
   return false;
 }
