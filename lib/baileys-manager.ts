@@ -48,12 +48,18 @@ function getSessionState(ownerId = 'default'): BaileysSessionState {
   return st;
 }
 
+// Pasta onde ficam as sessões pareadas. Em produção (Railway) aponte WHATSAPP_AUTH_DIR
+// para um volume persistente; sem ela, usa a raiz do projeto, como no ambiente de teste.
+function getAuthRoot(): string {
+  return path.resolve(process.env.WHATSAPP_AUTH_DIR || process.cwd());
+}
+
 function getAuthDir(ownerId = 'default'): string {
   const key = (ownerId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
   if (key === 'default') {
-    return path.resolve(process.cwd(), '.baileys_auth');
+    return path.join(getAuthRoot(), '.baileys_auth');
   }
-  return path.resolve(process.cwd(), `.baileys_auth_${key}`);
+  return path.join(getAuthRoot(), `.baileys_auth_${key}`);
 }
 
 export function buildChatIdForOwner(digits: string, ownerId = 'default'): string {
@@ -318,7 +324,7 @@ export async function bootAllSavedBaileysSessions(): Promise<string[]> {
   const owners = new Set<string>();
 
   try {
-    const rootDir = process.cwd();
+    const rootDir = getAuthRoot();
     const entries = fs.readdirSync(rootDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;

@@ -378,7 +378,9 @@ export default function WhatsAppPage() {
     loadCampaigns();
 
     // Escuta eventos WebSocket em tempo real disparados pelo Baileys no servidor
-    const socket = io();
+    // Em produção os eventos vêm do servidor contínuo do WhatsApp (NEXT_PUBLIC_WHATSAPP_SOCKET_URL).
+    const socketUrl = process.env.NEXT_PUBLIC_WHATSAPP_SOCKET_URL;
+    const socket = socketUrl ? io(socketUrl, { path: '/socket.io', transports: ['websocket', 'polling'] }) : io();
     socket.on('whatsapp_update', (payload?: { chatId?: string }) => {
       loadChats(false);
       const activeId = selectedChatIdRef.current;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 import { listChats, updateChatCrm, sendMessage } from '@/lib/whatsapp-service';
 import { syncContactProfilePic, buildChatIdForOwner } from '@/lib/baileys-manager';
 import { getEmailDbPool } from '@/lib/email-db';
@@ -7,6 +8,8 @@ import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const ownerId = resolveWhatsAppOwnerId(req);
     const { searchParams } = new URL(req.url);
@@ -20,6 +23,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const ownerId = resolveWhatsAppOwnerId(req);
     const pool = getEmailDbPool();

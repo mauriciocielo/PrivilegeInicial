@@ -18,6 +18,19 @@ const nextConfig = {
       },
     ];
   },
+  // O WhatsApp (Baileys) precisa de um processo sempre ligado, que a Vercel não oferece.
+  // Na Vercel, WHATSAPP_BACKEND_URL aponta para o servidor contínuo (Railway, rodando
+  // server.js) e todas as rotas /api/whatsapp/* são repassadas para lá, com os cookies.
+  // Não defina essa variável no próprio servidor contínuo, senão ele repassa para si mesmo.
+  async rewrites() {
+    const backend = (process.env.WHATSAPP_BACKEND_URL || '').replace(/\/+$/, '');
+    if (!backend) return [];
+    return {
+      beforeFiles: [
+        { source: '/api/whatsapp/:path*', destination: `${backend}/api/whatsapp/:path*` },
+      ],
+    };
+  },
   async headers() {
     return [
       {

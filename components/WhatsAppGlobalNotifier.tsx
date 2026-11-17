@@ -80,10 +80,10 @@ export default function WhatsAppGlobalNotifier({
       })
       .catch(() => {});
 
-    const socket: Socket = io({
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-    });
+    // Em produção os eventos vêm do servidor contínuo do WhatsApp (NEXT_PUBLIC_WHATSAPP_SOCKET_URL).
+    const socketUrl = process.env.NEXT_PUBLIC_WHATSAPP_SOCKET_URL;
+    const socketOpts = { path: '/socket.io', transports: ['websocket', 'polling'] };
+    const socket: Socket = socketUrl ? io(socketUrl, socketOpts) : io(socketOpts);
 
     socket.on(
       'whatsapp_update',

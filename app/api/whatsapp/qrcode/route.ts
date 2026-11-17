@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 import {
   getWhatsAppConfig,
   simulateConnectWhatsApp,
@@ -13,6 +14,8 @@ import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const ownerId = resolveWhatsAppOwnerId(req);
     const config = await getWhatsAppConfig(ownerId);
@@ -39,6 +42,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const ownerId = resolveWhatsAppOwnerId(req);
     const body = await req.json().catch(() => ({}));

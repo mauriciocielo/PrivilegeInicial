@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 import {
   getKnowledgeList,
   teachAssistant,
@@ -10,6 +11,8 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || undefined;
@@ -23,6 +26,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const body = await req.json();
     const action = body.action || 'teach';

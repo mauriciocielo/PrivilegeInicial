@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 import { createAgendaTaskFromDemand } from '@/lib/whatsapp-agenda';
 import { getSessionFromRequest } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth.error) return auth.error;
   try {
     const session = getSessionFromRequest(req);
     const body = await req.json();

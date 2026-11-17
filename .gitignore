@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 dev.log
+
+# sessões do WhatsApp (Baileys): são o login do número, nunca versionar
+.baileys_auth*/
