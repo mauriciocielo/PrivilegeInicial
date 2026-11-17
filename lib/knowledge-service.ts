@@ -260,3 +260,134 @@ export async function getTaughtLessonsContext(): Promise<string> {
     .map((l, i) => `[Lição Ensinada #${i + 1} - ${l.topic}]\nPergunta do Cliente: "${l.question}"\nResposta Oficial da Privilege: "${l.answer}"`)
     .join('\n\n');
 }
+
+/**
+ * Aprende automaticamente quando um consultor humano responde a uma dúvida real de um cliente
+ */
+export async function autoLearnFromConsultantReply(params: {
+  chatId: string;
+  consultantReply: string;
+}): Promise<void> {
+  const pool = getEmailDbPool();
+  if (!pool) return;
+  const answer = (params.consultantReply || '').trim();
+  if (answer.length < 22) return;
+  if (answer.includes('Protocolo de Atendimento Registrado') || answer.startsWith('🎫')) return;
+
+  await ensureKnowledgeTable(pool);
+
+  const lastClientRes = await pool
+    .query(
+      `SELECT text, timestamp FROM whatsapp_messages
+       WHERE chat_id = $1 AND from_me = FALSE AND media_type = 'text'
+       ORDER BY timestamp DESC LIMIT 1`,
+      [params.chatId]
+    )
+    .catch(() => null);
+
+  const question = (lastClientRes?.rows?.[0]?.text || '').trim();
+  if (question.length < 15) return;
+
+  const ignoreGreetings = /^(oi|olá|ola|bom dia|boa tarde|boa noite|ok|obrigad[oa]|valeu|certo|blz|sim|não|nao|show)[\s!?.]*$/i;
+  if (ignoreGreetings.test(question) || ignoreGreetings.test(answer)) return;
+
+  const normQ = normalizeText(question);
+  if (!normQ || normQ.length < 12) return;
+
+  // Evita duplicar lições já existentes com pergunta parecida
+  const existing = await getKnowledgeList();
+  const duplicate = existing.some(l => {
+    const lNorm = normalizeText(l.question);
+    return lNorm === normQ || (lNorm.length > 15 && normQ.includes(lNorm)) || (normQ.length > 15 && lNorm.includes(normQ));
+  });
+  if (duplicate) return;
+
+  await teachAssistant({
+    topic: 'Aprendizado Automático',
+    question: question.slice(0, 300),
+    answer: answer.slice(0, 1200),
+    learned_from: 'correcao_chat',
+  }).catch(() => {});
+}
+
+/**
+ * Processa TODAS as mensagens históricas do banco para extrair inteligência automaticamente
+ */
+export async function learnFromAllHistoricalMessages(): Promise<{
+  scannedMessages: number;
+  learnedCount: number;
+  totalLessons: number;
+}> {
+  const pool = getEmailDbPool();
+  if (!pool) return { scannedMessages: 0, learnedCount: 0, totalLessons: 0 };
+  await ensureKnowledgeTable(pool);
+
+  const msgsRes = await pool
+    .query(
+      `SELECT chat_id, from_me, sent_by, text, media_type, timestamp
+       FROM whatsapp_messages
+       WHERE media_type = 'text' AND text IS NOT NULL
+       ORDER BY chat_id ASC, timestamp ASC
+       LIMIT 3000`
+    )
+    .catch(() => null);
+
+  const rows = msgsRes?.rows || [];
+  if (rows.length === 0) {
+    const cur = await getKnowledgeList();
+    return { scannedMessages: 0, learnedCount: 0, totalLessons: cur.length };
+  }
+
+  const existing = await getKnowledgeList();
+  const knownNorms = new Set<string>(existing.map(l => normalizeText(l.question)).filter(Boolean));
+  const ignoreGreetings = /^(oi|olá|ola|bom dia|boa tarde|boa noite|ok|obrigad[oa]|valeu|certo|blz|sim|não|nao|show)[\s!?.]*$/i;
+
+  let learnedCount = 0;
+  let lastClientQuestionByChat: Record<string, string> = {};
+
+  for (const r of rows) {
+    const txt = String(r.text || '').trim();
+    if (!txt) continue;
+
+    if (!r.from_me) {
+      if (txt.length >= 15 && !ignoreGreetings.test(txt)) {
+        lastClientQuestionByChat[r.chat_id] = txt;
+      }
+      continue;
+    }
+
+    if (r.sent_by === 'consultor' && txt.length >= 22 && !ignoreGreetings.test(txt) && !txt.startsWith('🎫')) {
+      const q = lastClientQuestionByChat[r.chat_id];
+      if (!q) continue;
+      delete lastClientQuestionByChat[r.chat_id];
+
+      const normQ = normalizeText(q);
+      if (!normQ || normQ.length < 12) continue;
+
+      let isDup = false;
+      for (const k of knownNorms) {
+        if (k === normQ || (k.length > 15 && normQ.includes(k)) || (normQ.length > 15 && k.includes(normQ))) {
+          isDup = true;
+          break;
+        }
+      }
+      if (isDup) continue;
+
+      knownNorms.add(normQ);
+      await teachAssistant({
+        topic: 'Aprendizado Automático',
+        question: q.slice(0, 300),
+        answer: txt.slice(0, 1200),
+        learned_from: 'correcao_chat',
+      }).catch(() => {});
+      learnedCount++;
+    }
+  }
+
+  const finalList = await getKnowledgeList();
+  return {
+    scannedMessages: rows.length,
+    learnedCount,
+    totalLessons: finalList.length,
+  };
+}

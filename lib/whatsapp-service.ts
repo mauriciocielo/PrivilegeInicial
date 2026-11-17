@@ -1,6 +1,6 @@
 import { getEmailDbPool } from './email-db';
 import QRCode from 'qrcode';
-import { findTaughtAnswer, getTaughtLessonsContext } from './knowledge-service';
+import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
 import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected } from './baileys-manager';
 import { runTriageStep } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
@@ -66,6 +66,8 @@ export interface WhatsAppConfig {
   gemini_api_key?: string;
   claude_api_key?: string;
   openai_api_key?: string;
+  gemini_mcp_url?: string;
+  gemini_mcp_token?: string;
   reply_audio_on_audio?: boolean;
   always_reply_audio?: boolean;
   active_assistant_id?: string;
@@ -212,7 +214,9 @@ async function ensureConfigColumns(pool: any) {
         ADD COLUMN IF NOT EXISTS reply_audio_on_audio BOOLEAN DEFAULT TRUE,
         ADD COLUMN IF NOT EXISTS always_reply_audio BOOLEAN DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS active_assistant_id TEXT DEFAULT 'leo',
-        ADD COLUMN IF NOT EXISTS assistants JSONB;
+        ADD COLUMN IF NOT EXISTS assistants JSONB,
+        ADD COLUMN IF NOT EXISTS gemini_mcp_url TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS gemini_mcp_token TEXT DEFAULT '';
     `);
     __configColsEnsured = true;
   } catch (err) {
@@ -274,6 +278,8 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
       reply_audio_on_audio: r.reply_audio_on_audio !== false,
       always_reply_audio: !!r.always_reply_audio,
       active_assistant_id: r.active_assistant_id || 'leo',
+      gemini_mcp_url: r.gemini_mcp_url || '',
+      gemini_mcp_token: r.gemini_mcp_token || '',
       assistants:
         typeof r.assistants === 'string'
           ? JSON.parse(r.assistants)
@@ -310,8 +316,8 @@ export async function updateWhatsAppConfig(
       bot_enabled, bot_mode, bot_prompt, welcome_message, off_hours_message,
       business_hours, auto_reply_rules, quick_replies, human_takeover_minutes,
       ai_provider, ai_model, gemini_api_key, claude_api_key, openai_api_key,
-      reply_audio_on_audio, always_reply_audio, active_assistant_id, assistants, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, NOW())
+      reply_audio_on_audio, always_reply_audio, active_assistant_id, assistants, gemini_mcp_url, gemini_mcp_token, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, NOW())
     ON CONFLICT (id) DO UPDATE SET
       provider = EXCLUDED.provider,
       api_url = EXCLUDED.api_url,
@@ -340,6 +346,8 @@ export async function updateWhatsAppConfig(
       always_reply_audio = EXCLUDED.always_reply_audio,
       active_assistant_id = EXCLUDED.active_assistant_id,
       assistants = EXCLUDED.assistants,
+      gemini_mcp_url = EXCLUDED.gemini_mcp_url,
+      gemini_mcp_token = EXCLUDED.gemini_mcp_token,
       updated_at = NOW()
     RETURNING *;
   `;
@@ -373,6 +381,8 @@ export async function updateWhatsAppConfig(
     !!merged.always_reply_audio,
     merged.active_assistant_id || 'leo',
     JSON.stringify(merged.assistants || DEFAULT_ASSISTANTS),
+    merged.gemini_mcp_url || '',
+    merged.gemini_mcp_token || '',
   ]);
 
   return merged;
@@ -650,10 +660,16 @@ export async function checkAndDispatchDueFollowups(pool: any) {
 /**
  * Executa o ciclo de background (disparo de follow-ups vencidos) mesmo sem tela aberta
  */
+let __historyLearnedOnce = false;
+
 export async function runWhatsAppBackgroundTick(): Promise<void> {
   const pool = getEmailDbPool();
   if (!pool) return;
   await checkAndDispatchDueFollowups(pool);
+  if (!__historyLearnedOnce) {
+    __historyLearnedOnce = true;
+    learnFromAllHistoricalMessages().catch(() => {});
+  }
 }
 
 /**
@@ -1012,6 +1028,14 @@ export async function sendMessage(params: {
       `UPDATE whatsapp_chats SET last_message = $1, last_message_time = NOW(), unread_count = 0 ${pauseSql} WHERE id = $2`,
       pauseParams
     );
+
+    // Melhora a inteligência automaticamente aprendendo com respostas reais do consultor
+    if (params.sentBy === 'consultor' && mediaType === 'text') {
+      autoLearnFromConsultantReply({
+        chatId: params.chatId,
+        consultantReply: message.text,
+      }).catch(() => {});
+    }
   }
 
   return message;
@@ -1378,7 +1402,10 @@ ${prompt}
 CONHECIMENTO OFICIAL ENSINADO PELA EQUIPE DA PRIVILEGE CONTABILIDADE:
 ${taughtContext || 'Nenhuma lição específica cadastrada ainda.'}
 
-INSTRUÇÃO: Utilize estritamente as informações e regras acima para responder ao cliente com mensagens curtas e simpáticas.
+INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
+1. Utilize estritamente as informações e regras acima para responder ao cliente com mensagens curtas, naturais, humanas e simpáticas.
+2. NUNCA chame o cliente pelo nome completo — use sempre apenas o PRIMEIRO NOME (se souber).
+3. Nunca repita perguntas já respondidas anteriormente pelo cliente e conduza para o próximo passo com objetividade.
 `.trim();
 
   const preferred = config.ai_provider || 'gemini';

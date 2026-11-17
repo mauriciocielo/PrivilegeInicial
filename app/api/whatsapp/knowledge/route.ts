@@ -6,6 +6,7 @@ import {
   updateLesson,
   deleteLesson,
   findTaughtAnswer,
+  learnFromAllHistoricalMessages,
 } from '@/lib/knowledge-service';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const action = body.action || 'teach';
+
+    if (action === 'learn_from_history') {
+      const result = await learnFromAllHistoricalMessages();
+      return NextResponse.json({ success: true, ...result });
+    }
 
     if (action === 'teach') {
       const { topic, question, answer, keywords, learned_from } = body;

@@ -102,6 +102,8 @@ interface WhatsAppConfig {
   gemini_api_key?: string;
   claude_api_key?: string;
   openai_api_key?: string;
+  gemini_mcp_url?: string;
+  gemini_mcp_token?: string;
   reply_audio_on_audio?: boolean;
   always_reply_audio?: boolean;
   active_assistant_id?: string;
@@ -3473,6 +3475,56 @@ export default function WhatsAppPage() {
                       </span>
                     </form>
 
+                    {/* Aprendizado Automático com TODAS as mensagens históricas */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        padding: '10px 12px',
+                        borderRadius: 10,
+                        background: 'var(--bg-card2)',
+                        border: '1px solid var(--border)',
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div style={{ fontSize: 12 }}>
+                        <strong>🧠 Aprendizado Automático com Todas as Mensagens</strong>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          Analisa todas as conversas do histórico para aprender perguntas e respostas reais da equipe.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await waFetch('/api/whatsapp/knowledge', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'learn_from_history' }),
+                            });
+                            const d = await res.json();
+                            if (d.success) {
+                              toast.success(
+                                `Analisadas ${d.scannedMessages} mensagens! ${d.learnedCount} novas lições aprendidas (Total: ${d.totalLessons}).`
+                              );
+                              loadLessons();
+                            } else {
+                              toast.error(d.error || 'Erro ao processar histórico');
+                            }
+                          } catch {
+                            toast.error('Erro de conexão ao processar histórico');
+                          }
+                        }}
+                        className="leo-btn-green"
+                        style={{ fontSize: 12 }}
+                      >
+                        <Sparkles size={13} /> Aprender com Todas as Conversas
+                      </button>
+                    </div>
+
                     {/* Lista de Sites e Documentos Indexados */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {lessons
@@ -4333,6 +4385,69 @@ export default function WhatsAppPage() {
                       >
                         <Copy size={13} /> Copiar Comando CLI
                       </button>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 10,
+                        paddingTop: 10,
+                        borderTop: '1px dashed var(--border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}
+                    >
+                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Configurar Servidor MCP Externo da Gemini (opcional)
+                      </label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          placeholder="URL do Servidor MCP da Gemini (ex: https://seu-mcp-gemini/mcp)"
+                          value={config?.gemini_mcp_url || ''}
+                          onChange={e =>
+                            setConfig(prev => (prev ? { ...prev, gemini_mcp_url: e.target.value } : prev))
+                          }
+                          className="leo-input-dark"
+                          style={{ flex: '2 1 240px' }}
+                        />
+                        <input
+                          type="password"
+                          placeholder="Token / Chave MCP Gemini (opcional)"
+                          value={config?.gemini_mcp_token || ''}
+                          onChange={e =>
+                            setConfig(prev => (prev ? { ...prev, gemini_mcp_token: e.target.value } : prev))
+                          }
+                          className="leo-input-dark"
+                          style={{ flex: '1 1 180px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await waFetch('/api/whatsapp/config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  gemini_mcp_url: config?.gemini_mcp_url || '',
+                                  gemini_mcp_token: config?.gemini_mcp_token || '',
+                                }),
+                              });
+                              const d = await res.json();
+                              if (d.success) {
+                                toast.success('Configuração MCP da Gemini salva!');
+                              } else {
+                                toast.error(d.error || 'Erro ao salvar MCP da Gemini');
+                              }
+                            } catch {
+                              toast.error('Erro de conexão ao salvar MCP da Gemini');
+                            }
+                          }}
+                          className="leo-btn-green"
+                        >
+                          <Check size={13} /> Salvar MCP Gemini
+                        </button>
+                      </div>
                     </div>
                   </div>
 

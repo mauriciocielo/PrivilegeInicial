@@ -16,6 +16,17 @@ export function isValidContactName(name?: string): boolean {
   return clean.length >= 2 && clean.toLowerCase() !== 'cliente' && clean.toLowerCase() !== 'whatsapp';
 }
 
+export function getFirstName(name?: string): string {
+  if (!name) return '';
+  const cleaned = name
+    .replace(/^(oi,?\s*|ol[áa],?\s*)?(meu nome [ée]|sou o|sou a|me chamo|aqui [ée] o|aqui [ée] a)\s+/i, '')
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .trim();
+  const first = cleaned.split(/\s+/).find(w => w.length >= 2) || '';
+  if (!first) return '';
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 /**
  * Conduz a triagem do Léo (Privilege Contabilidade e Consultoria)
  * Regras estritas:
@@ -76,11 +87,12 @@ export async function runTriageStep(params: {
     lower.includes('inteligência artificial') ||
     lower.includes('é uma pessoa')
   ) {
+    const firstName = getFirstName(state.nomeCliente);
     const reply = `Sou o Léo, assistente virtual de Privilege Contabilidade e Consultoria. 😊 ${
-      !state.nomeCliente
+      !firstName
         ? 'Como posso te chamar e o que você procura hoje?'
         : !state.oQueProcura
-        ? `Como posso te ajudar hoje, ${state.nomeCliente}?`
+        ? `Como posso te ajudar hoje, ${firstName}?`
         : 'Vou chamar alguém da nossa equipe, que te responde por aqui mesmo.'
     }`;
     return { handled: true, reply, updatedState: state };
@@ -122,7 +134,8 @@ export async function runTriageStep(params: {
     if (!state.oQueProcura) {
       state.status = 'coletando_demanda';
       await saveTriageState(pool, params.chatId, state);
-      const reply = `O valor depende de uma avaliação, ${state.nomeCliente}. Para avançarmos para o próximo passo com a equipe, o que exatamente você procura hoje (Consultoria 360º, Financeiro, Comercial, Marketing ou Pessoas)?`;
+      const firstName = getFirstName(state.nomeCliente);
+      const reply = `O valor depende de uma avaliação${firstName ? `, ${firstName}` : ''}. Para avançarmos para o próximo passo com a equipe, o que exatamente você procura hoje (Consultoria 360º, Financeiro, Comercial, Marketing ou Pessoas)?`;
       return { handled: true, reply, updatedState: state };
     }
 
@@ -139,8 +152,11 @@ export async function runTriageStep(params: {
   const isSimpleGreeting = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa'].includes(lower);
 
   if (!isSimpleGreeting) {
-    if (!state.nomeCliente && state.status === 'coletando_nome' && text.split(/\s+/).length <= 4) {
-      state.nomeCliente = text.replace(/^(meu nome é|sou o|sou a|me chamo)\s+/i, '').trim();
+    if (!state.nomeCliente && state.status === 'coletando_nome' && text.split(/\s+/).length <= 5) {
+      const extracted = text
+        .replace(/^(oi,?\s*|ol[áa],?\s*)?(meu nome [ée]|sou o|sou a|me chamo|aqui [ée] o|aqui [ée] a)\s+/i, '')
+        .trim();
+      state.nomeCliente = getFirstName(extracted) || extracted;
     } else if (!state.oQueProcura && text.length > 3) {
       state.oQueProcura = text;
     }
@@ -158,7 +174,8 @@ export async function runTriageStep(params: {
   if (!state.oQueProcura) {
     state.status = 'coletando_demanda';
     await saveTriageState(pool, params.chatId, state);
-    const reply = `Prazer, ${state.nomeCliente}! Somos um escritório de Consultoria Empresarial 360º (Marketing, Pessoas, Financeiro e Comercial) e também atendemos as áreas separadamente. O que você procura para a sua empresa hoje?`;
+    const firstName = getFirstName(state.nomeCliente);
+    const reply = `Prazer${firstName ? `, ${firstName}` : ''}! Somos um escritório de Consultoria Empresarial 360º (Marketing, Pessoas, Financeiro e Comercial) e também atendemos as áreas separadamente. O que você procura para a sua empresa hoje?`;
     return { handled: true, reply, updatedState: state };
   }
 
@@ -211,9 +228,10 @@ async function transferToTeam(
     );
   }
 
+  const firstName = getFirstName(state.nomeCliente);
   const reply =
     customReply ||
-    `Perfeito, ${state.nomeCliente}! Passei para a nossa equipe confirmar sobre "${state.oQueProcura}". Vou chamar alguém da equipe, que te responde por aqui mesmo!`;
+    `Perfeito${firstName ? `, ${firstName}` : ''}! Passei para a nossa equipe confirmar sobre "${state.oQueProcura}". Vou chamar alguém da equipe, que te responde por aqui mesmo!`;
 
   return {
     handled: true,
