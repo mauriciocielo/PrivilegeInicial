@@ -32,7 +32,13 @@ export async function GET(request: Request) {
       : JSON.stringify([...user.empresaIds].sort()) !== JSON.stringify([...auth.session.empresaIds].sort());
     const roleMudou = user.role !== auth.session.role;
     const novoScope = extractWhatsAppScopeFromRoutes(user.allowedRoutes, user.role);
-    const scopeMudou = novoScope !== auth.session.whatsappScope;
+    const hasExplicitWaRoute = (user.allowedRoutes || []).some(
+      (r: string) => r === 'somente-whatsapp' || r.startsWith('wa-scope:')
+    );
+    const scopeMudou =
+      auth.session.whatsappScope !== undefined
+        ? novoScope !== auth.session.whatsappScope
+        : hasExplicitWaRoute;
     const mudou = empresaIdsMudou || roleMudou || scopeMudou;
 
     const response = NextResponse.json({ user: userSemSenha, changed: mudou });

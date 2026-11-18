@@ -53,7 +53,7 @@ export default function PublicQuizPlayerPage() {
       if (data.success && data.session) {
         setSession(data.session);
       }
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function PublicQuizPlayerPage() {
       if (data.success && data.session) {
         setSession(data.session);
       }
-    } catch {} finally {
+    } catch { } finally {
       setSubmitting(false);
     }
   }
@@ -559,10 +559,10 @@ export default function PublicQuizPlayerPage() {
               {myRank === 1
                 ? '🥇 1º Lugar — Campeão!'
                 : myRank === 2
-                ? '🥈 2º Lugar!'
-                : myRank === 3
-                ? '🥉 3º Lugar!'
-                : `${myRank}º Lugar`}
+                  ? '🥈 2º Lugar!'
+                  : myRank === 3
+                    ? '🥉 3º Lugar!'
+                    : `${myRank}º Lugar`}
             </div>
             <p style={{ fontSize: 16, margin: '0 0 20px', opacity: 0.9 }}>
               Pontuação final: <strong>{me?.score ?? 0} pontos</strong>

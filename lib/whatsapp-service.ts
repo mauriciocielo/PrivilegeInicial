@@ -61,11 +61,13 @@ export interface WhatsAppConfig {
   quick_replies: QuickReply[];
   human_takeover_minutes: number;
   mcp_enabled?: boolean;
-  ai_provider?: 'gemini' | 'claude' | 'openai';
+  ai_provider?: 'gemini' | 'claude' | 'openai' | 'ollama';
   ai_model?: string;
   gemini_api_key?: string;
   claude_api_key?: string;
   openai_api_key?: string;
+  ollama_base_url?: string;
+  ollama_model?: string;
   gemini_mcp_url?: string;
   gemini_mcp_token?: string;
   reply_audio_on_audio?: boolean;
@@ -227,6 +229,8 @@ Regras estritas:
   gemini_api_key: '',
   claude_api_key: '',
   openai_api_key: '',
+  ollama_base_url: '',
+  ollama_model: 'gemma4:latest',
   reply_audio_on_audio: true,
   always_reply_audio: false,
   active_assistant_id: 'leo',
@@ -250,7 +254,9 @@ async function ensureConfigColumns(pool: any) {
         ADD COLUMN IF NOT EXISTS active_assistant_id TEXT DEFAULT 'leo',
         ADD COLUMN IF NOT EXISTS assistants JSONB,
         ADD COLUMN IF NOT EXISTS gemini_mcp_url TEXT DEFAULT '',
-        ADD COLUMN IF NOT EXISTS gemini_mcp_token TEXT DEFAULT '';
+        ADD COLUMN IF NOT EXISTS gemini_mcp_token TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS ollama_base_url TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS ollama_model TEXT DEFAULT 'gemma4:latest';
     `);
     __configColsEnsured = true;
   } catch (err) {
@@ -317,6 +323,8 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
       active_assistant_id: r.active_assistant_id || 'leo',
       gemini_mcp_url: r.gemini_mcp_url || '',
       gemini_mcp_token: r.gemini_mcp_token || '',
+      ollama_base_url: r.ollama_base_url || '',
+      ollama_model: r.ollama_model || 'gemma4:latest',
       assistants:
         typeof r.assistants === 'string'
           ? JSON.parse(r.assistants)
@@ -353,8 +361,8 @@ export async function updateWhatsAppConfig(
       bot_enabled, bot_mode, bot_prompt, welcome_message, off_hours_message,
       business_hours, auto_reply_rules, quick_replies, human_takeover_minutes,
       ai_provider, ai_model, gemini_api_key, claude_api_key, openai_api_key,
-      reply_audio_on_audio, always_reply_audio, active_assistant_id, assistants, gemini_mcp_url, gemini_mcp_token, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, NOW())
+      reply_audio_on_audio, always_reply_audio, active_assistant_id, assistants, gemini_mcp_url, gemini_mcp_token, ollama_base_url, ollama_model, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, NOW())
     ON CONFLICT (id) DO UPDATE SET
       provider = EXCLUDED.provider,
       api_url = EXCLUDED.api_url,
@@ -385,6 +393,8 @@ export async function updateWhatsAppConfig(
       assistants = EXCLUDED.assistants,
       gemini_mcp_url = EXCLUDED.gemini_mcp_url,
       gemini_mcp_token = EXCLUDED.gemini_mcp_token,
+      ollama_base_url = EXCLUDED.ollama_base_url,
+      ollama_model = EXCLUDED.ollama_model,
       updated_at = NOW()
     RETURNING *;
   `;
@@ -420,6 +430,8 @@ export async function updateWhatsAppConfig(
     JSON.stringify(merged.assistants || DEFAULT_ASSISTANTS),
     merged.gemini_mcp_url || '',
     merged.gemini_mcp_token || '',
+    merged.ollama_base_url || '',
+    merged.ollama_model || 'gemma4:latest',
   ]);
 
   return merged;

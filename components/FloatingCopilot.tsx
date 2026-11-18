@@ -3,10 +3,23 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
-import { askClaude } from '../lib/claude-client';
+import { askClaudeDetailed } from '../lib/claude-client';
 
 // Telas fiscais: aqui o copilot troca o contexto financeiro pelo fiscal (notas, CND, certificados).
 const EH_TELA_FISCAL = (p: string) => /\/dashboard2|\/nfe-destinadas|\/nfse|\/cnd-federal/.test(p);
+const EH_TELA_COMERCIAL_MKT = (p: string) => /\/comercial|\/marketing|\/curva-abc/.test(p);
+const EH_TELA_SAAS = (p: string) => /\/saas/.test(p);
+
+function getVisibleScreenSnapshot(): string {
+  if (typeof document === 'undefined') return '';
+  try {
+    const mainEl = document.querySelector('main') || document.body;
+    const text = (mainEl as HTMLElement)?.innerText || '';
+    return text.replace(/\s+/g, ' ').trim().slice(0, 3200);
+  } catch {
+    return '';
+  }
+}
 
 interface Message {
   sender: 'ai' | 'user';
@@ -27,6 +40,7 @@ export default function FloatingCopilot() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [provider, setProvider] = useState<'auto' | 'gemini' | 'claude' | 'ollama'>('auto');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -43,15 +57,18 @@ export default function FloatingCopilot() {
     return () => window.removeEventListener('abrirCopilotoFiscal', abrir);
   }, []);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  const sendMessage = async (overrideText?: string) => {
+    const finalInput = (overrideText ?? input).trim();
+    if (!finalInput) return;
 
-    const userMsg: Message = { sender: 'user', text: input, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) };
+    const userMsg: Message = { sender: 'user', text: finalInput, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) };
     setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    if (!overrideText) setInput('');
     setLoading(true);
 
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
+    const visibleSnapshot = getVisibleScreenSnapshot();
+    const ehComercialMkt = EH_TELA_COMERCIAL_MKT(pathname);
+    const ehSaas = EH_TELA_SAAS(pathname);
 
     let contextStr = '';
     let systemInstruction = '';
@@ -91,7 +108,7 @@ Regras:
 4. Quando pertinente, lembre que a CND só tem validade se emitida no portal oficial (Receita/SEFAZ) e que o relatório SITFIS não é certidão.`;
     } else {
       // Puxa Contexto dinâmico ativo (financeiro)
-      const empresaId = sessionStorage.getItem('cf_empresa_sel') || store.getEmpresas()[0]?.id;
+      const empresaId = sessionStorage.getItem('cf_empresa_sel') || store.getSafeEmpresaId() || store.getEmpresas()[0]?.id;
       const empresa = store.getEmpresas().find(e => e.id === empresaId);
 
       contextStr = 'Nenhuma empresa selecionada.';
@@ -109,7 +126,32 @@ Regras:
         const docs = store.getInteligenciaDocs() || [];
         const dContext = docs.filter(d => d.type.startsWith('text/') || d.name.endsWith('.txt')).map(d => `- ${d.name}: ${d.content.substring(0,250)}`).join('\n');
 
+        let comercialMktStr = '';
+        if (ehComercialMkt) {
+          try {
+            const comRes = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empresaId)}`);
+            if (comRes.ok) {
+              const comJson = await comRes.json();
+              if (comJson?.data) {
+                comercialMktStr = `\nDADOS COMERCIAL & MARKETING DA EMPRESA:\n${JSON.stringify(comJson.data).slice(0, 2600)}`;
+              }
+            }
+          } catch {}
+        }
+
+        let saasStr = '';
+        if (ehSaas) {
+          try {
+            const saasRes = await fetch('/api/saas');
+            if (saasRes.ok) {
+              const saasJson = await saasRes.json();
+              saasStr = `\nDADOS BACKOFFICE SAAS:\nAssinantes: ${saasJson?.tenants?.length || 0}, Movimentações: ${saasJson?.movements?.length || 0}, Stats: ${JSON.stringify(saasJson?.platformStats || {})}`;
+            }
+          } catch {}
+        }
+
         contextStr = `
+ROTA ATUAL: ${pathname}
 CONTEXTO DA EMPRESA SESSÃO ATIVA:
 Empresa: ${empresa.razaoSocial}
 Saldo de Caixa Atual: ${fmt.currency(caixa)}
@@ -118,21 +160,26 @@ Total de registros processados: ${lancs.length}
 Políticas globais da empresa:
 - Cobrança: ${empresa.politicaCobrancaTexto || 'N/A'}
 - Pagamento: ${empresa.politicaPagamentosTexto || 'N/A'}
+${comercialMktStr}
+${saasStr}
+
+CONTEÚDO VISÍVEL NA TELA / RELATÓRIO ATUAL:
+${visibleSnapshot || 'N/A'}
 
 Diretrizes Base de Conhecimento:
 ${dContext}
       `;
       }
 
-      systemInstruction = `Você é o "Privilege Copilot", inteligência financeira assistente acoplada globalmente no sistema ERP web do escritório contabil "Privilege".
-Você age como um CFO e braço direito virtual hiper-responsivo.
-O usuário está visualizando e editando dados do sistema. Responda baseado no contexto injetado:
+      systemInstruction = `Você é o "Privilege Copilot 360º", inteligência analítica acoplada globalmente no sistema ERP/SaaS da Privilege Contabilidade e Consultoria.
+Você analisa dashboards, relatórios financeiros, comerciais, de marketing, fiscais e SaaS em tempo real.
+Responda baseado no contexto injetado da tela e da empresa:
 ${contextStr}
 
 Regras:
-1. Responda sempre em Markdown com formatação profissional, limpa e espaçada, mas seja muito conciso e rápido em suas observações. Use tabelas ou bullet points.
-2. Analise os fatos financeiros fornecidos da empresa selecionada e dê dicas precisas ou cruze informações. Não invente números fora do escopo, mas pode fazer deduções usando matemática comum de CF.
-3. Se perguntarem algo fora da contabilidade da empresa, você pode ajudar com excelência como um braço direito corporativo, utilizando todo seu raciocínio financeiro amplo do Gemini.`;
+1. Responda sempre em Markdown com formatação profissional, limpa e espaçada, mas seja conciso e prático. Use tabelas ou bullet points.
+2. Analise os números e tabelas visíveis na tela atual e dê recomendações acionáveis para gerar mais caixa, lucro, conversão ou segurança fiscal. Nunca invente números fora do contexto.
+3. Se perguntarem sobre qualquer área (Financeiro, Comercial, Marketing, Pessoas ou Administrativo), conecte os indicadores de forma estratégica.`;
     }
 
     const chatHist = [...messages, userMsg].slice(-8).map(m => ({
@@ -141,17 +188,27 @@ Regras:
     }));
 
     try {
-      const text = await askClaude({
+      const result = await askClaudeDetailed({
         messages: chatHist.map(m => ({
           role: m.role === 'user' ? 'user' : 'assistant',
           content: m.parts.map(p => p.text).join('\n'),
         })),
         systemInstruction,
-        maxTokens: 1400,
+        maxTokens: 1500,
+        preferredProvider: provider,
       });
 
-      if (text) {
-        setMessages(prev => [...prev, { sender: 'ai', text, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
+      if (result.text) {
+        setMessages(prev => [...prev, { sender: 'ai', text: result.text!, timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se a chave GEMINI_API_KEY ou ANTHROPIC_API_KEY está configurada.'}`,
+            timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
       }
     } catch(err) {
       console.error(err);
@@ -197,16 +254,38 @@ Regras:
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 22 }}>🧠</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{ehFiscal ? 'Privilege Copilot Fiscal' : 'Privilege Copilot'}</h3>
-                <span style={{ fontSize: 11, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'IA Assistente Global'}</span>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{ehFiscal ? 'Privilege Copilot Fiscal' : 'Privilege Copilot 360º'}</h3>
+                <span style={{ fontSize: 11, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'Analisa Dash, Relatórios & Site'}</span>
               </div>
             </div>
-            <button 
-              onClick={() => setOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', padding: 4 }}
-            >
-              ✕
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <select
+                value={provider}
+                onChange={e => setProvider(e.target.value as any)}
+                title="Motor de IA"
+                style={{
+                  background: 'rgba(255,255,255,0.16)',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.28)',
+                  borderRadius: 8,
+                  padding: '3px 6px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  outline: 'none',
+                }}
+              >
+                <option value="auto" style={{ color: '#111' }}>IA: Auto</option>
+                <option value="gemini" style={{ color: '#111' }}>Gemini</option>
+                <option value="claude" style={{ color: '#111' }}>Claude</option>
+                <option value="ollama" style={{ color: '#111' }}>Ollama</option>
+              </select>
+              <button
+                onClick={() => setOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', padding: 4 }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Messages Area */}
@@ -245,11 +324,39 @@ Regras:
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Quick Prompts (ai-chat-widget) */}
+          <div style={{ padding: '8px 12px', background: 'var(--bg-card2)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { label: '📊 Analisar esta tela', prompt: 'Analise os dados, KPIs e tabelas visíveis nesta tela atual e me dê os principais insights.' },
+              { label: '⚠️ Gargalos', prompt: 'Quais os principais gargalos ou riscos que você identifica nos números atuais?' },
+              { label: '🚀 Plano de Ação', prompt: 'Com base nesta tela e nos indicadores da empresa, sugira 3 ações práticas imediatas.' },
+            ].map(chip => (
+              <button
+                key={chip.label}
+                type="button"
+                disabled={loading}
+                onClick={() => sendMessage(chip.prompt)}
+                style={{
+                  fontSize: 11,
+                  padding: '4px 9px',
+                  borderRadius: 999,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
           {/* Input Area */}
           <div style={{ padding: 12, background: 'var(--bg-base)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 8 }}>
             <input 
               type="text"
-              placeholder={ehFiscal ? 'Pergunte sobre notas, CND, certificados...' : 'Pergunte sobre finanças...'}
+              placeholder={ehFiscal ? 'Pergunte sobre notas, CND, certificados...' : 'Pergunte sobre qualquer dash ou relatório...'}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
@@ -266,7 +373,7 @@ Regras:
               disabled={loading}
             />
             <button 
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={loading || !input.trim()}
               style={{
                 width: 38,

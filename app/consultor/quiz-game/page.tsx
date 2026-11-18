@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
@@ -362,36 +362,24 @@ export default function QuizGameHostPage() {
     : 0;
 
   return (
-    <div style={{ padding: '20px 24px', maxWidth: 1240, margin: '0 auto' }}>
-      {/* Cabeçalho padrão do sistema */}
-      <div
-        className="page-header"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
+    <>
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Gamepad2 size={24} color="var(--accent)" />
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Gamepad2 size={26} color="var(--accent)" />
             Privilege Quiz Arena (Estilo Kahoot)
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+          </div>
+          <div className="page-subtitle">
             Crie quizzes interativos com ranking ao vivo, PIN e QR Code para treinamentos, reuniões e dinâmicas de equipe.
-          </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="header-actions">
           {viewMode !== 'list' && (
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className="btn-secondary"
-              style={{ padding: '8px 14px', fontSize: 13 }}
+              className="btn btn-secondary"
             >
               ← Voltar aos Quizzes
             </button>
@@ -400,20 +388,14 @@ export default function QuizGameHostPage() {
             <button
               type="button"
               onClick={openNewQuiz}
-              className="btn-primary"
-              style={{
-                padding: '9px 16px',
-                fontSize: 13,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
+              className="btn btn-primary"
             >
               <Plus size={16} /> Novo Quiz
             </button>
           )}
         </div>
       </div>
+      <div className="page-body">
 
       {/* MODO 1: LISTA DE QUIZZES */}
       {viewMode === 'list' && (
@@ -467,7 +449,7 @@ export default function QuizGameHostPage() {
                   <button
                     type="button"
                     onClick={() => handleStartArena(q.id)}
-                    className="btn-primary"
+                    className="btn btn-primary"
                     style={{
                       flex: 1,
                       padding: '9px 12px',
@@ -483,7 +465,7 @@ export default function QuizGameHostPage() {
                   <button
                     type="button"
                     onClick={() => openEditQuiz(q)}
-                    className="btn-secondary"
+                    className="btn btn-secondary"
                     style={{ padding: '8px 10px' }}
                     title="Editar quiz"
                   >
@@ -492,7 +474,7 @@ export default function QuizGameHostPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteQuiz(q.id)}
-                    className="btn-secondary"
+                    className="btn btn-secondary"
                     style={{ padding: '8px 10px', color: '#dc2626' }}
                     title="Excluir quiz"
                   >
@@ -513,7 +495,7 @@ export default function QuizGameHostPage() {
               <label className="form-label">Título do Quiz</label>
               <input
                 type="text"
-                className="form-input"
+                className="form-control"
                 placeholder="Ex: Treinamento Fluxo de Caixa 2027"
                 value={quizTitle}
                 onChange={e => setQuizTitle(e.target.value)}
@@ -524,7 +506,7 @@ export default function QuizGameHostPage() {
               <label className="form-label">Descrição (opcional)</label>
               <input
                 type="text"
-                className="form-input"
+                className="form-control"
                 placeholder="Breve resumo do tema"
                 value={quizDesc}
                 onChange={e => setQuizDesc(e.target.value)}
@@ -551,7 +533,7 @@ export default function QuizGameHostPage() {
               </label>
               <input
                 type="text"
-                className="form-input"
+                className="form-control"
                 placeholder="Digite o tema (ex: Reforma Tributária, Atendimento ao Cliente, DRE)"
                 value={aiTopic}
                 onChange={e => setAiTopic(e.target.value)}
@@ -560,7 +542,7 @@ export default function QuizGameHostPage() {
             <div style={{ width: 110 }}>
               <label className="form-label">Qtd.</label>
               <select
-                className="form-input"
+                className="form-control"
                 value={aiCount}
                 onChange={e => setAiCount(Number(e.target.value))}
               >
@@ -574,7 +556,7 @@ export default function QuizGameHostPage() {
               type="button"
               disabled={generatingAi || !aiTopic.trim()}
               onClick={handleGenerateAi}
-              className="btn-primary"
+              className="btn btn-primary"
               style={{
                 padding: '10px 16px',
                 fontSize: 13,
@@ -592,7 +574,7 @@ export default function QuizGameHostPage() {
                   <strong style={{ fontSize: 14 }}>Pergunta {qIdx + 1}</strong>
                   <input
                     type="text"
-                    className="form-input"
+                    className="form-control"
                     style={{ width: 170, padding: '4px 8px', fontSize: 12 }}
                     placeholder="Categoria (opcional)"
                     value={q.category || ''}
@@ -613,7 +595,7 @@ export default function QuizGameHostPage() {
                         return next;
                       })
                     }
-                    className="btn-secondary"
+                    className="btn btn-secondary"
                     style={{ padding: '5px 8px' }}
                     title="Mover para cima"
                   >
@@ -629,14 +611,14 @@ export default function QuizGameHostPage() {
                         return next;
                       })
                     }
-                    className="btn-secondary"
+                    className="btn btn-secondary"
                     style={{ padding: '5px 8px' }}
                     title="Mover para baixo"
                   >
                     <ArrowDown size={14} />
                   </button>
                   <select
-                    className="form-input"
+                    className="form-control"
                     style={{ width: 130, padding: '5px 8px', fontSize: 12 }}
                     value={q.timeLimitSec}
                     onChange={e => {
@@ -656,7 +638,7 @@ export default function QuizGameHostPage() {
                     <button
                       type="button"
                       onClick={() => setQuestions(prev => prev.filter((_, i) => i !== qIdx))}
-                      className="btn-secondary"
+                      className="btn btn-secondary"
                       style={{ color: '#dc2626', padding: '6px 10px' }}
                     >
                       <Trash2 size={14} />
@@ -667,7 +649,7 @@ export default function QuizGameHostPage() {
 
               <input
                 type="text"
-                className="form-input"
+                className="form-control"
                 placeholder="Digite o enunciado da pergunta..."
                 value={q.prompt}
                 onChange={e => {
@@ -712,7 +694,7 @@ export default function QuizGameHostPage() {
                       </span>
                       <input
                         type="text"
-                        className="form-input"
+                        className="form-control"
                         style={{ flex: 1, fontSize: 13 }}
                         placeholder={`Opção ${st.name}`}
                         value={opt}
@@ -766,7 +748,7 @@ export default function QuizGameHostPage() {
                   },
                 ])
               }
-              className="btn-secondary"
+              className="btn btn-secondary"
               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Plus size={15} /> Adicionar Pergunta
@@ -775,7 +757,7 @@ export default function QuizGameHostPage() {
             <button
               type="submit"
               disabled={savingQuiz}
-              className="btn-primary"
+              className="btn btn-primary"
               style={{
                 padding: '10px 22px',
                 display: 'flex',
@@ -1571,6 +1553,7 @@ export default function QuizGameHostPage() {
           </div>
         );
       })()}
-    </div>
+      </div>
+    </>
   );
 }

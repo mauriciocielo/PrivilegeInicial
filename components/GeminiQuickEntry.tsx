@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { store, type PlanoConta, type Portador, type Lancamento, uid } from '../lib/store';
 import { fmt } from '../lib/reports';
 import { toast } from 'sonner';
+import { askClaude } from '../lib/claude-client';
 
 interface GeminiQuickEntryProps {
   empresaId: string;
@@ -162,23 +163,35 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
     }
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { responseMimeType: "application/json" }
-          }),
-        }
-      );
-      if (!response.ok) throw new Error('Falha ao conectar com o Gemini.');
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (rawText) {
+      if (!file) {
+        const promptText = parts.map(p => p.text || '').join('\n');
+        const rawText = await askClaude({
+          prompt: promptText,
+          jsonMode: true,
+          maxTokens: 1200,
+        });
+        if (!rawText) throw new Error('Falha ao conectar com a IA.');
         const parsed = JSON.parse(rawText.trim());
         setDetected(parsed);
+      } else {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { responseMimeType: "application/json" }
+            }),
+          }
+        );
+        if (!response.ok) throw new Error('Falha ao conectar com o Gemini.');
+        const data = await response.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const parsed = JSON.parse(rawText.trim());
+          setDetected(parsed);
+        }
       }
     } catch (err) {
       console.error(err);
