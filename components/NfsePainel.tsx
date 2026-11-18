@@ -1241,7 +1241,23 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   };
 
   const baixarExportacao = async (params: URLSearchParams, nomePadrao: string): Promise<number | null> => {
-    const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    let res: Response;
+    try {
+      res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`, {
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      clearTimeout(timer);
+      toast.error(
+        err?.name === 'AbortError'
+          ? 'A exportação demorou demais para este lote. Tente exportar em PDF único ou apenas XML.'
+          : 'Erro de conexão ao exportar as notas.'
+      );
+      return null;
+    }
+    clearTimeout(timer);
     if (!res.ok) {
       const erro = await res.json().catch(() => ({}));
       const msgPadrao = res.status === 502 || res.status === 504

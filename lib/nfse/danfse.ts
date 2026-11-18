@@ -451,7 +451,9 @@ export function desenharPaginaDanfse(pdf: jsPDF, d: DadosDanfse, opcoes: { logoP
 
   // Cabeçalho
   sombra(ESQ, 0.3, LARGURA, 1.16);
-  pdf.addImage(opcoes.logoPng, 'PNG', 0.49, 0.44, 4.0, 0.81);
+  if (opcoes.logoPng && opcoes.logoPng.length > 0) {
+    pdf.addImage(opcoes.logoPng, 'PNG', 0.49, 0.44, 4.0, 0.81, undefined, 'FAST');
+  }
   pdf.setTextColor(0);
   const centro = 5.41 + 10.19 / 2;
   texto('DANFSe v2.0', centro, d.semValidade ? 0.62 : 0.72, 9, 'bold', { align: 'center' });
@@ -483,7 +485,9 @@ export function desenharPaginaDanfse(pdf: jsPDF, d: DadosDanfse, opcoes: { logoP
   identificacao('EMITENTE DA NFS-E', d.emitente, X[0], 3.65);
   identificacao('SITUAÇÃO DA NFS-E', d.situacao, X[1], 3.65);
   identificacao('FINALIDADE', d.finalidade, X[2], 3.65);
-  pdf.addImage(opcoes.qrPng, 'PNG', 17.48, 1.55, 1.7, 1.7);
+  if (opcoes.qrPng && opcoes.qrPng.length > 0) {
+    pdf.addImage(opcoes.qrPng, 'PNG', 17.48, 1.55, 1.7, 1.7, undefined, 'FAST');
+  }
   ['A autenticidade desta NFS-e pode ser verificada', 'pela leitura deste código QR ou pela consulta da', 'chave de acesso no portal nacional da NFS-e']
     .forEach((l, i) => texto(l, 15.8, 3.5 + i * 0.25, 6));
   linhaH(4.34);
@@ -640,6 +644,11 @@ export function desenharPaginaDanfse(pdf: jsPDF, d: DadosDanfse, opcoes: { logoP
   texto('IDENTIFICAÇÃO E ASSINATURA', X[1] + 0.05, Y_CANHOTO + 0.26, 7, 'bold');
   texto('Nº NFS-e / CHAVE NFS-e', X[2] + 0.05, Y_CANHOTO + 0.26, 7, 'bold');
   texto(caber(`${d.numero} / ${d.chave}`, 10.1, 7), X[2] + 0.05, Y_CANHOTO + 0.56, 7);
+
+  // Rodapé institucional
+  pdf.setTextColor(80);
+  texto('NFS-e emitida por PRIVILEGE CONSULTORIA LTDA', (ESQ + DIR) / 2, Y_CANHOTO + ALTURA_CANHOTO + 0.42, 7.5, 'bold', { align: 'center' });
+  pdf.setTextColor(0);
 }
 
 export function gerarDanfsePdf(d: DadosDanfse, opcoes: { logoPng: Buffer; qrPng: Buffer; marcaDagua: MarcaDagua }): Buffer {

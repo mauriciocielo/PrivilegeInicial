@@ -108,7 +108,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           const dados = lerDadosDanfse(n.documento!.nfseXml);
           const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
           const qrPng: Buffer = qrText
-            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
+            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 140 }).catch(() => Buffer.alloc(0))
             : Buffer.alloc(0);
           return {
             dados,
@@ -152,7 +152,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           const dados = lerDadosDanfse(n.documento!.nfseXml);
           const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
           const qrPng: Buffer = qrText
-            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
+            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 140 }).catch(() => Buffer.alloc(0))
             : Buffer.alloc(0);
           return { dados, qrPng };
         })
