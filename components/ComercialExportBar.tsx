@@ -6,7 +6,17 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { store } from '@/lib/store';
 import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
-import { PDF_BRAND_NAME } from '@/lib/pdf-branding';
+import {
+  PDF_ACCENT,
+  PDF_BORDER,
+  PDF_BRAND_NAME,
+  PDF_DARK,
+  PDF_GRAY,
+  PDF_LIGHT,
+  drawPdfFooter,
+  drawPdfHeaderBand,
+  getOfficeLogoBase64,
+} from '@/lib/pdf-branding';
 
 export interface ExportColumn {
   header: string;
@@ -41,6 +51,7 @@ export default function ComercialExportBar({
       nome: emp?.nomeFantasia || emp?.razaoSocial || 'Empresa Selecionada',
       email: emp?.email || '',
       telefone: emp?.telefone || '',
+      logoData: emp?.logoData || null,
     };
   };
 
@@ -48,69 +59,117 @@ export default function ComercialExportBar({
     const { jsPDF } = await import('jspdf');
     const pdf = new jsPDF('p', 'mm', 'a4');
     const emp = getEmpresaInfo();
+    const officeLogoBase64 = await getOfficeLogoBase64();
     const pageW = pdf.internal.pageSize.getWidth();
-    let y = 14;
+    const pageH = pdf.internal.pageSize.getHeight();
+    const M = 12;
+    const headerH = 28;
+    const usableW = pageW - M * 2;
 
-    // Cabeçalho institucional Vinho
-    pdf.setFillColor(96, 0, 0);
-    pdf.rect(0, 0, pageW, 24, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(13);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(PDF_BRAND_NAME, 12, 10);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`${title} · ${emp.nome}`, 12, 17);
-    pdf.setFontSize(8.5);
-    pdf.text(new Date().toLocaleDateString('pt-BR'), pageW - 12, 17, { align: 'right' });
-
-    y = 32;
-    pdf.setTextColor(23, 23, 23);
-
-    // KPIs
-    if (kpis.length > 0) {
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Resumo Executivo:', 12, y);
-      y += 5;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
-      for (const k of kpis) {
-        pdf.text(`• ${k.label}: ${k.value}`, 14, y);
-        y += 5;
-      }
-      y += 3;
-    }
-
-    // Tabela
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    const usableW = pageW - 24;
-    const colW = usableW / Math.max(1, columns.length);
-
-    pdf.setFillColor(245, 245, 246);
-    pdf.rect(12, y - 4, usableW, 7, 'F');
-    columns.forEach((col, i) => {
-      pdf.text(String(col.header).slice(0, 18), 13 + i * colW, y);
+    const { textX } = drawPdfHeaderBand(pdf, {
+      pageWidth: pageW,
+      margin: M,
+      headerHeight: headerH,
+      officeLogoBase64,
+      empresaLogoData: emp.logoData,
     });
-    y += 6;
+
+    const maxTextW = emp.logoData ? pageW - M - 36 - textX : pageW - M - textX;
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12.5);
+    const titleLines = pdf.splitTextToSize(title, Math.max(60, maxTextW));
+    pdf.text(titleLines[0] || title, textX, 11.5);
 
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text(`${PDF_BRAND_NAME} · ${emp.nome}`, textX, 18.5);
     pdf.setFontSize(8);
-    for (const row of rows) {
-      if (y > 278) {
-        pdf.addPage();
-        y = 16;
-      }
-      columns.forEach((col, i) => {
-        const val = row[col.key] ?? '';
-        pdf.text(String(val).slice(0, 22), 13 + i * colW, y);
+    pdf.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')}`, textX, 23.5);
+
+    let y = headerH + 8;
+
+    // KPI Cards em grade
+    if (kpis.length > 0) {
+      const colsPerRow = Math.min(4, kpis.length);
+      const gap = 3;
+      const cardW = (usableW - gap * (colsPerRow - 1)) / colsPerRow;
+      const cardH = 16;
+
+      kpis.forEach((k, idx) => {
+        const colIdx = idx % colsPerRow;
+        const rowIdx = Math.floor(idx / colsPerRow);
+        const cx = M + colIdx * (cardW + gap);
+        const cy = y + rowIdx * (cardH + gap);
+
+        pdf.setFillColor(...PDF_LIGHT);
+        pdf.setDrawColor(...PDF_BORDER);
+        pdf.roundedRect(cx, cy, cardW, cardH, 2, 2, 'FD');
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(...PDF_GRAY);
+        pdf.text(String(k.label).toUpperCase().slice(0, 26), cx + 3, cy + 5.5);
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(...PDF_ACCENT);
+        pdf.text(String(k.value).slice(0, 26), cx + 3, cy + 12.2);
       });
-      pdf.setDrawColor(230, 230, 230);
-      pdf.line(12, y + 1.5, pageW - 12, y + 1.5);
-      y += 6;
+
+      const totalRows = Math.ceil(kpis.length / colsPerRow);
+      y += totalRows * (cardH + gap) + 4;
     }
 
+    // Tabela com quebra automática de texto e cabeçalho repetido
+    const colW = usableW / Math.max(1, columns.length);
+    const drawTableHeader = (startY: number) => {
+      pdf.setFillColor(...PDF_ACCENT);
+      pdf.rect(M, startY, usableW, 8, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      columns.forEach((col, i) => {
+        const hLines = pdf.splitTextToSize(String(col.header), colW - 3);
+        pdf.text(hLines[0] || '', M + i * colW + 1.5, startY + 5.4);
+      });
+      return startY + 9;
+    };
+
+    y = drawTableHeader(y);
+
+    rows.forEach((row, rIdx) => {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.8);
+      const cellLines = columns.map((col) =>
+        pdf.splitTextToSize(String(row[col.key] ?? ''), Math.max(12, colW - 3))
+      );
+      const maxLines = Math.max(1, ...cellLines.map((l) => l.length));
+      const rowH = Math.max(6.5, maxLines * 3.8 + 2.5);
+
+      if (y + rowH > pageH - 18) {
+        pdf.addPage();
+        y = 14;
+        y = drawTableHeader(y);
+      }
+
+      if (rIdx % 2 === 1) {
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(M, y - 0.5, usableW, rowH, 'F');
+      }
+
+      pdf.setTextColor(...PDF_DARK);
+      cellLines.forEach((lines, i) => {
+        pdf.text(lines, M + i * colW + 1.5, y + 3.5);
+      });
+
+      pdf.setDrawColor(...PDF_BORDER);
+      pdf.setLineWidth(0.15);
+      pdf.line(M, y + rowH - 0.5, pageW - M, y + rowH - 0.5);
+      y += rowH;
+    });
+
+    drawPdfFooter(pdf, { pageWidth: pageW, pageHeight: pageH, margin: M });
     return pdf;
   }
 
@@ -269,14 +328,19 @@ export default function ComercialExportBar({
           </style>
         </head>
         <body>
-          <div style="border-bottom:2px solid #600000;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;">
-            <div>
-              <div style="font-size:12px;font-weight:800;color:#600000;text-transform:uppercase;">${esc(PDF_BRAND_NAME)}</div>
-              <h1 style="margin:4px 0 0;font-size:20px;">${esc(title)}</h1>
+          <div style="background:#600000;color:#fff;padding:16px 20px;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="background:#fff;padding:6px 10px;border-radius:6px;display:flex;align-items:center;">
+                <img src="${window.location.origin}/logo.png" alt="Logo" style="height:34px;width:auto;object-fit:contain;" />
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;opacity:0.85;text-transform:uppercase;">${esc(PDF_BRAND_NAME)}</div>
+                <h1 style="margin:2px 0 0;font-size:18px;color:#fff;">${esc(title)}</h1>
+              </div>
             </div>
-            <div style="text-align:right;font-size:11.5px;color:#475569;">
+            <div style="text-align:right;font-size:11.5px;">
               <div><strong>${esc(emp.nome)}</strong></div>
-              <div>Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+              <div style="opacity:0.85;">Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
           </div>
           ${kpis.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">${kpiHtml}</div>` : ''}
