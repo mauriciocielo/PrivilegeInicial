@@ -403,14 +403,18 @@ export async function consultarCep(cep: string): Promise<EnderecoCep | null> {
 export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | null> {
   const doc = apenasDigitos(cnpj);
   const urls = [
+    `https://publica.cnpj.ws/cnpj/${doc}`,
     `https://brasilapi.com.br/api/cnpj/v1/${doc}`,
     `https://minhareceita.org/${doc}`,
-    `https://publica.cnpj.ws/cnpj/${doc}`,
+    `https://receitaws.com.br/v1/cnpj/${doc}`,
   ];
   let acumulado: CnpjPublico | null = null;
   for (const url of urls) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(8000),
+        headers: { 'User-Agent': 'PrivilegeContabilidade/1.0', Accept: 'application/json' },
+      });
       if (!res.ok) continue;
       const mapeado = mapearCnpjPublico(await res.json());
       if (!acumulado) {
@@ -431,7 +435,7 @@ export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | 
           cnaes: acumulado.cnaes.length > 0 ? acumulado.cnaes : mapeado.cnaes,
         };
       }
-      if (acumulado.razaoSocial && acumulado.codigoMunicipio && acumulado.logradouro) return acumulado;
+      if (acumulado.razaoSocial && acumulado.codigoMunicipio && acumulado.logradouro && acumulado.email) return acumulado;
     } catch {
       // Tenta o próximo provedor público
     }
