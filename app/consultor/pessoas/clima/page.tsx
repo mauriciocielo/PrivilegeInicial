@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Sidebar from '@/components/Sidebar';
 import ComercialExportBar from '@/components/ComercialExportBar';
-import { useAuth } from '@/contexts/AuthContext';
+import { store } from '@/lib/store';
 import {
   SmilePlus, BarChart3, ClipboardList, Table2, CheckCircle2, Plus, Trash2,
   TrendingUp, TrendingDown, Award, AlertTriangle, FileText
@@ -92,8 +91,7 @@ const buildDefaultResponses = (): ClimaResponse[] => {
 };
 
 export default function PessoasClimaPage() {
-  const { activeEmpresaId } = useAuth();
-  const empresaId = activeEmpresaId || 'default';
+  const [empresaId, setEmpresaId] = useState('default');
 
   const [tab, setTab] = useState<'analise' | 'aplicar' | 'tabulacao' | 'parecer'>('analise');
   const [questions, setQuestions] = useState<ClimaQuestion[]>(DEFAULT_QUESTIONS);
@@ -116,9 +114,9 @@ export default function PessoasClimaPage() {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (empId: string) => {
     try {
-      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empresaId)}`);
+      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`);
       const json = await res.json();
       if (json.success && json.data?.pessoas_clima) {
         const d = json.data.pessoas_clima;
@@ -131,10 +129,12 @@ export default function PessoasClimaPage() {
     } finally {
       setLoaded(true);
     }
-  }, [empresaId]);
+  }, []);
 
   useEffect(() => {
-    loadData();
+    const emp = store.getSafeEmpresaId() || 'default';
+    setEmpresaId(emp);
+    loadData(emp);
   }, [loadData]);
 
   const persist = useCallback(
@@ -231,9 +231,7 @@ export default function PessoasClimaPage() {
   };
 
   return (
-    <div className="app-layout">
-      <Sidebar />
-      <main className="main-content" style={{ padding: '24px 28px', maxWidth: '1400px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: '1400px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -265,15 +263,22 @@ export default function PessoasClimaPage() {
             { label: 'eNPS Interno', value: `${stats.enps}` },
             { label: 'Perguntas Ativas', value: String(questions.length) },
           ]}
-          columns={['Categoria', 'Média (0-10)', '% Pontuação Máxima', '% Promotores', '% Passivos', '% Detratores']}
-          rows={stats.porCategoria.map((c) => [
-            c.categoria,
-            c.media.toFixed(2),
-            `${c.pctMax.toFixed(1)}%`,
-            `${c.prom.toFixed(1)}%`,
-            `${c.pass.toFixed(1)}%`,
-            `${c.detr.toFixed(1)}%`,
-          ])}
+          columns={[
+            { header: 'Categoria', key: 'categoria' },
+            { header: 'Média (0-10)', key: 'media' },
+            { header: '% Pontuação Máxima', key: 'pctMax' },
+            { header: '% Promotores', key: 'prom' },
+            { header: '% Passivos', key: 'pass' },
+            { header: '% Detratores', key: 'detr' },
+          ]}
+          rows={stats.porCategoria.map((c) => ({
+            categoria: c.categoria,
+            media: c.media.toFixed(2),
+            pctMax: `${c.pctMax.toFixed(1)}%`,
+            prom: `${c.prom.toFixed(1)}%`,
+            pass: `${c.pass.toFixed(1)}%`,
+            detr: `${c.detr.toFixed(1)}%`,
+          }))}
         />
 
         {/* KPIs */}
@@ -537,7 +542,6 @@ export default function PessoasClimaPage() {
             />
           </div>
         )}
-      </main>
     </div>
   );
 }
