@@ -14,8 +14,7 @@ import { criarZipBuffer, type ArquivoZip } from '../../../../../../lib/nfse/zip'
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MAX_NOTAS_SELECIONADAS = 200;
-// A Vercel recusa respostas acima de cerca de 4,5 MB.
+// A Vercel/Netlify recusa respostas individuais acima de ~4,5 MB; lotes maiores usam ?meta=1 + ?json=1 por chunks.
 const LIMITE_RESPOSTA_BYTES = 4.2 * 1024 * 1024;
 
 function limparNomeArquivo(texto: string): string {
@@ -46,10 +45,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const url = new URL(request.url);
     const ids = (url.searchParams.get('ids') || '').split(',').map(i => i.trim()).filter(Boolean);
-    if (ids.length > MAX_NOTAS_SELECIONADAS) {
-      return NextResponse.json({ error: `Selecione no máximo ${MAX_NOTAS_SELECIONADAS} notas por vez.` }, { status: 400 });
-    }
     const porSelecao = ids.length > 0;
+    const modoMeta = url.searchParams.get('meta') === '1';
+    const modoJson = url.searchParams.get('json') === '1';
     const mes = porSelecao ? '' : (url.searchParams.get('mes') || '').trim();
     const papel = porSelecao ? 'todas' : url.searchParams.get('papel') || 'prestadas';
     const formato = url.searchParams.get('formato') || 'ambos';
@@ -101,6 +99,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       ? NextResponse.json({ error: 'O arquivo passou do limite de envio. Selecione menos notas, um período menor ou só os XMLs.' }, { status: 413 })
       : null;
     const nomeEmpresa = limparNomeArquivo(empresa.nomeFantasia || empresa.razaoSocial || cnpjEmpresa);
+
+    if (modoMeta) {
+      return NextResponse.json({
+        total: filtradas.length,
+        ids: filtradas.map(n => n.id),
+        fileName: formato === 'pdf_unico'
+          ? `DANFSe-${nomeEmpresa}-${sufixoPapel}-${sufixoMes}.pdf`
+          : `NFSe-${nomeEmpresa}-${sufixoPapel}-${sufixoMes}.zip`,
+      });
+    }
 
     if (formato === 'pdf_unico') {
       const paginas = await Promise.all(
@@ -187,6 +195,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           conteudo: pdf,
         });
       }
+    }
+
+    if (modoJson) {
+      return NextResponse.json({
+        total: filtradas.length,
+        arquivos: arquivos.map(a => ({
+          nome: a.nome,
+          base64: a.conteudo.toString('base64'),
+        })),
+      });
     }
 
     const zip = criarZipBuffer(arquivos);

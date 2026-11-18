@@ -13,6 +13,7 @@ import NfseAcessoClienteModal from './NfseAcessoClienteModal';
 import { formatarCnpj } from '../lib/nfse/emissor';
 import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse';
 import NfseCopiarModal from './NfseCopiarModal';
+import { base64ToUint8Array, criarZipBlobClient, type ArquivoZipClient } from '../lib/nfse/zip-client';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
@@ -1241,43 +1242,106 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   };
 
   const baixarExportacao = async (params: URLSearchParams, nomePadrao: string): Promise<number | null> => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 45_000);
-    let res: Response;
-    try {
-      res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`, {
-        signal: controller.signal,
-      });
-    } catch (err: any) {
-      clearTimeout(timer);
-      toast.error(
-        err?.name === 'AbortError'
-          ? 'A exportação demorou demais para este lote. Tente exportar em PDF único ou apenas XML.'
-          : 'Erro de conexão ao exportar as notas.'
-      );
+    const disparoDownload = (blob: Blob, nomeArquivo: string) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nomeArquivo;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    const metaParams = new URLSearchParams(params);
+    metaParams.set('meta', '1');
+    const metaRes = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${metaParams.toString()}`);
+    if (!metaRes.ok) {
+      const erro = await metaRes.json().catch(() => ({}));
+      toast.error(erro.error || `Não foi possível exportar as notas (HTTP ${metaRes.status}).`);
       return null;
     }
-    clearTimeout(timer);
-    if (!res.ok) {
-      const erro = await res.json().catch(() => ({}));
-      const msgPadrao = res.status === 502 || res.status === 504
-        ? 'Tempo limite excedido ao gerar o pacote. Tente exportar em PDF único ou apenas XML.'
-        : `Não foi possível exportar as notas (HTTP ${res.status}).`;
-      toast.error(erro.error || msgPadrao);
+    const meta = await metaRes.json();
+    const allIds: string[] = Array.isArray(meta.ids) ? meta.ids : [];
+    const fileNameFinal: string = meta.fileName || `${nomePadrao}.${params.get('formato') === 'pdf_unico' ? 'pdf' : 'zip'}`;
+    if (allIds.length === 0) {
+      toast.error('Nenhuma nota encontrada para exportação.');
       return null;
     }
-    const blob = await res.blob();
-    const nomeArquivo = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1]
-      || `${nomePadrao}.${params.get('formato') === 'pdf_unico' ? 'pdf' : 'zip'}`;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nomeArquivo;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    return Number(res.headers.get('X-Notas-Exportadas')) || 0;
+
+    const formato = params.get('formato') || 'ambos';
+    const chunkSize = formato === 'pdf_unico' ? 15 : 10;
+
+    // Lote pequeno: baixa direto em 1 requisição
+    if (allIds.length <= chunkSize) {
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}));
+        toast.error(erro.error || `Não foi possível exportar as notas (HTTP ${res.status}).`);
+        return null;
+      }
+      const blob = await res.blob();
+      const nomeArquivo = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || fileNameFinal;
+      disparoDownload(blob, nomeArquivo);
+      return Number(res.headers.get('X-Notas-Exportadas')) || allIds.length;
+    }
+
+    // Lote grande (sem limite!): divide em blocos de 10 e monta 1 ZIP completo no navegador
+    const chunks: string[][] = [];
+    for (let i = 0; i < allIds.length; i += chunkSize) {
+      chunks.push(allIds.slice(i, i + chunkSize));
+    }
+
+    if (formato === 'pdf_unico') {
+      for (let idx = 0; idx < chunks.length; idx++) {
+        toast.info(`Gerando PDF parte ${idx + 1} de ${chunks.length}...`);
+        const p = new URLSearchParams({ formato: 'pdf_unico', ids: chunks[idx].join(',') });
+        const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${p.toString()}`);
+        if (!res.ok) {
+          const erro = await res.json().catch(() => ({}));
+          toast.error(erro.error || `Erro na parte ${idx + 1} (HTTP ${res.status}).`);
+          return null;
+        }
+        const blob = await res.blob();
+        const parteNome = fileNameFinal.replace(/\.pdf$/i, `_Parte${idx + 1}de${chunks.length}.pdf`);
+        disparoDownload(blob, parteNome);
+      }
+      return allIds.length;
+    }
+
+    const todosArquivos: ArquivoZipClient[] = [];
+    const nomesUsados = new Set<string>();
+    for (let idx = 0; idx < chunks.length; idx++) {
+      toast.info(`Exportando lote ${idx + 1} de ${chunks.length} (${allIds.length} notas no total)...`);
+      const p = new URLSearchParams({ formato, ids: chunks[idx].join(','), json: '1' });
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${p.toString()}`);
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}));
+        toast.error(erro.error || `Erro no lote ${idx + 1} (HTTP ${res.status}).`);
+        return null;
+      }
+      const data = await res.json();
+      for (const arq of data.arquivos || []) {
+        let nome = String(arq.nome);
+        if (nomesUsados.has(nome)) {
+          const extIdx = nome.lastIndexOf('.');
+          const base = extIdx >= 0 ? nome.slice(0, extIdx) : nome;
+          const ext = extIdx >= 0 ? nome.slice(extIdx) : '';
+          let seq = 2;
+          while (nomesUsados.has(`${base}_${seq}${ext}`)) seq++;
+          nome = `${base}_${seq}${ext}`;
+        }
+        nomesUsados.add(nome);
+        todosArquivos.push({
+          nome,
+          conteudo: base64ToUint8Array(arq.base64),
+        });
+      }
+    }
+
+    const zipBlob = criarZipBlobClient(todosArquivos);
+    disparoDownload(zipBlob, fileNameFinal);
+    return allIds.length;
   };
 
   const handleExportarMes = async () => {
