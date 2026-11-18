@@ -138,7 +138,8 @@ export async function enviarEmailNfseEmitida(params: {
         `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
         `Segue em anexo a Nota Fiscal de Serviço Eletrônica (NFS-e) nº ${numLimpo}, emitida em ${params.dataEmissao} no valor líquido de ${valorFmt} por ${params.prestadorNome}.\n\n` +
         `Arquivos anexos: DANFSe (PDF) e XML oficial.\n\n` +
-        `NFS-e emitida por ${params.prestadorNome} · Sistema PRIVILEGE CONSULTORIA LTDA`,
+        `NFS-e emitida por ${params.prestadorNome} · Sistema PRIVILEGE CONSULTORIA LTDA\n` +
+        `Site: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 3035-1018 (https://wa.me/554630351018)`,
       html: `
         <!doctype html>
         <html>
@@ -242,8 +243,16 @@ export async function enviarEmailNfseEmitida(params: {
                   <div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
                     NFS-e emitida por ${params.prestadorNome}
                   </div>
-                  <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">
+                  <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
                     Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
+                  </div>
+                  <div style="margin-bottom:10px;">
+                    <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
+                      🌐 privilegecontabilidade.cnt.br
+                    </a>
+                    <a href="https://wa.me/554630351018" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
+                      💬 WhatsApp (46) 3035-1018
+                    </a>
                   </div>
                   <div style="font-size:11px;color:#9ca3af;">
                     E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
