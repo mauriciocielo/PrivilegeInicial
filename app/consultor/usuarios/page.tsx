@@ -35,6 +35,7 @@ const AVAILABLE_SCREENS = [
   { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
   { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
   { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: '🔀 Financeiro — Fluxograma (Presencial & Conectado)', route: '/consultor/financeiro/fluxograma' },
   { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
   { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
   { label: '💬 WhatsApp & Bot IA', route: '/consultor/whatsapp' },
@@ -66,6 +67,7 @@ const AVAILABLE_SCREENS = [
 const AVAILABLE_CLIENT_SCREENS = [
   { label: '📊 Dashboard', route: '/cliente/dashboard' },
   { label: '📅 Agenda', route: '/cliente/agenda' },
+  { label: '🔀 Financeiro — Fluxograma (Presencial & Conectado)', route: '/cliente/financeiro/fluxograma' },
   { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },
   { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
   { label: '📝 Lançamentos', route: '/cliente/lancamentos' },

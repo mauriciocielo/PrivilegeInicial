@@ -62,6 +62,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Financeiro',
     items: [
+      { label: 'Fluxograma Financeiro', href: '/consultor/financeiro/fluxograma', icon: GitBranch },
       { label: 'Dashboard Financeiro', href: '/consultor/dashboard', icon: LayoutDashboard },
       { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/consultor/dashboard2', icon: ShieldCheck },
       { label: 'Lançamentos', href: '/consultor/lancamentos', icon: NotebookPen },
@@ -130,6 +131,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Financeiro',
     items: [
+      { label: 'Fluxograma Financeiro', href: '/cliente/financeiro/fluxograma', icon: GitBranch },
       { label: 'Extrato', href: '/cliente/extrato', icon: ScrollText },
       { label: 'Lançamentos', href: '/cliente/lancamentos', icon: NotebookPen },
       { label: 'Importar OFX', href: '/cliente/importar-ofx', icon: FolderInput },
