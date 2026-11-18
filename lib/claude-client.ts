@@ -11,7 +11,7 @@ export interface AskClaudeParams {
   jsonMode?: boolean;
   maxTokens?: number;
   temperature?: number;
-  preferredProvider?: 'gemini' | 'claude' | 'ollama' | 'auto';
+  preferredProvider?: 'groq' | 'gemini' | 'claude' | 'ollama' | 'auto';
 }
 
 export async function askClaudeDetailed(

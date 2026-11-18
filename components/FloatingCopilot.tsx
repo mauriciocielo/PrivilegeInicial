@@ -40,7 +40,7 @@ export default function FloatingCopilot() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<'auto' | 'gemini' | 'claude' | 'ollama'>('auto');
+  const [provider, setProvider] = useState<'auto' | 'groq' | 'gemini' | 'claude' | 'ollama'>('auto');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -205,7 +205,7 @@ Regras:
           ...prev,
           {
             sender: 'ai',
-            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se o servidor Ollama (OLLAMA_BASE_URL) está acessível.'}`,
+            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se a variável GROQ_API_KEY está configurada no servidor.'}`,
             timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
@@ -274,7 +274,8 @@ Regras:
                   outline: 'none',
                 }}
               >
-                <option value="auto" style={{ color: '#111' }}>IA: Auto (Ollama)</option>
+                <option value="auto" style={{ color: '#111' }}>IA: Auto (Groq)</option>
+                <option value="groq" style={{ color: '#111' }}>Groq</option>
                 <option value="gemini" style={{ color: '#111' }}>Gemini</option>
                 <option value="claude" style={{ color: '#111' }}>Claude</option>
                 <option value="ollama" style={{ color: '#111' }}>Ollama</option>

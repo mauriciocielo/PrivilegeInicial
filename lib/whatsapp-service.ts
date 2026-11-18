@@ -62,7 +62,7 @@ export interface WhatsAppConfig {
   quick_replies: QuickReply[];
   human_takeover_minutes: number;
   mcp_enabled?: boolean;
-  ai_provider?: 'gemini' | 'claude' | 'openai' | 'ollama';
+  ai_provider?: 'groq' | 'gemini' | 'claude' | 'openai' | 'ollama';
   ai_model?: string;
   gemini_api_key?: string;
   claude_api_key?: string;
@@ -225,7 +225,7 @@ Regras estritas:
   ],
   human_takeover_minutes: 30,
   mcp_enabled: true,
-  ai_provider: 'ollama',
+  ai_provider: 'groq',
   ai_model: 'gemini-2.5-flash',
   gemini_api_key: '',
   claude_api_key: '',
@@ -311,7 +311,7 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
       quick_replies: typeof r.quick_replies === 'string' ? JSON.parse(r.quick_replies) : (r.quick_replies || DEFAULT_CONFIG.quick_replies),
       human_takeover_minutes: r.human_takeover_minutes ?? 30,
       mcp_enabled: true,
-      ai_provider: (r.ai_provider as any) || 'ollama',
+      ai_provider: (r.ai_provider as any) || 'groq',
       ai_model: r.ai_model || 'gemini-2.5-flash',
       gemini_api_key: r.gemini_api_key || (r.api_key && r.api_key.startsWith('AIza') ? r.api_key : '') || '',
       claude_api_key: r.claude_api_key || (r.api_key && r.api_key.startsWith('sk-ant-') ? r.api_key : '') || '',
@@ -420,7 +420,7 @@ export async function updateWhatsAppConfig(
     JSON.stringify(merged.auto_reply_rules),
     JSON.stringify(merged.quick_replies),
     merged.human_takeover_minutes,
-    merged.ai_provider || 'ollama',
+    merged.ai_provider || 'groq',
     merged.ai_model || 'gemini-2.5-flash',
     merged.gemini_api_key || '',
     merged.claude_api_key || '',

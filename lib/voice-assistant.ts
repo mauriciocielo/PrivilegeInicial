@@ -132,6 +132,37 @@ export async function transcribeWhatsAppAudio(params: {
     }
   }
 
+  // 3. Tenta transcrever via Groq Whisper (cota gratuita) se GROQ_API_KEY estiver configurada
+  const groqKey = (process.env.GROQ_API_KEY || '').trim();
+  if (groqKey) {
+    try {
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      const formData = new FormData();
+      const blob = new Blob([audioBuffer], { type: mimeType });
+      formData.append('file', blob, 'audio.ogg');
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', 'pt');
+
+      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groqKey}` },
+        body: formData,
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.text && json.text.trim()) {
+          return json.text.trim();
+        }
+      } else {
+        console.warn('[VoiceAssistant] Groq Whisper respondeu', res.status);
+      }
+    } catch (err) {
+      console.warn('[VoiceAssistant] Aviso na transcrição Groq Whisper:', err);
+    }
+  }
+
   return null;
 }
 

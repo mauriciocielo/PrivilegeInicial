@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       maxTokens?: number;
       temperature?: number;
       jsonMode?: boolean;
-      preferredProvider?: 'gemini' | 'claude' | 'ollama' | 'auto';
+      preferredProvider?: 'groq' | 'gemini' | 'claude' | 'ollama' | 'auto';
     };
 
     const ownerId = resolveWhatsAppOwnerId(req);

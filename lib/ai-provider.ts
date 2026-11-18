@@ -1,18 +1,22 @@
 /**
  * Cliente central de IA (somente servidor).
  *
- * O Ollama é o motor PADRÃO de todo o sistema. Gemini, Claude e OpenAI
- * ficam apenas como contingência, na ordem abaixo:
+ * A Groq (cota gratuita, GROQ_API_KEY) é o motor PADRÃO de todo o sistema.
+ * Ordem de tentativa:
  *   1. provedor pedido explicitamente na chamada (ex.: seletor do Copilot)
- *   2. Ollama
- *   3. provedor salvo na configuração (whatsapp_config.ai_provider)
- *   4. Gemini → Claude → OpenAI
+ *   2. Groq — passa para o próximo modelo quando um atinge o limite gratuito
+ *   3. Ollama, só se houver endereço configurado (OLLAMA_BASE_URL ou banco)
+ *   4. provedor salvo na configuração (whatsapp_config.ai_provider)
+ *   5. Gemini → Claude → OpenAI
+ *
+ * Modelos da Groq: GROQ_MODEL (se definido) → openai/gpt-oss-120b → qwen/qwen3.8-27b → openai/gpt-oss-20b.
  *
  * Onde o Ollama é procurado (primeiro que existir):
  *   1. variável OLLAMA_BASE_URL
  *   2. ollama_base_url salvo no banco (em produção, endereços localhost são ignorados,
  *      pois apontariam para o próprio servidor de hospedagem)
- *   3. padrão: http://127.0.0.1:11434 (dev) ou http://ollama.railway.internal:11434 (produção)
+ *   3. sem nenhum dos dois, o Ollama é pulado — exceto se pedido explicitamente,
+ *      quando usa http://127.0.0.1:11434 (dev) ou http://ollama.railway.internal:11434 (produção)
  *
  * Senha: se OLLAMA_API_KEY existir, vai como "Authorization: Bearer ..." (proxy público
  * do ollama-service). Na rede privada do Railway ela não é necessária.
@@ -21,7 +25,7 @@
  * no servidor Ollama, usa automaticamente o primeiro modelo instalado nele.
  */
 
-export type AiProviderName = 'ollama' | 'gemini' | 'claude' | 'openai';
+export type AiProviderName = 'groq' | 'ollama' | 'gemini' | 'claude' | 'openai';
 
 export interface AiConfigSource {
   ai_provider?: string | null;
@@ -64,7 +68,8 @@ export interface GenerateTextResult {
   error?: string;
 }
 
-const PROVIDERS: AiProviderName[] = ['ollama', 'gemini', 'claude', 'openai'];
+const PROVIDERS: AiProviderName[] = ['groq', 'ollama', 'gemini', 'claude', 'openai'];
+const GROQ_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
 const DEFAULT_OLLAMA_MODEL = 'gemma2:2b';
 
 function first(...values: Array<string | null | undefined>): string {
@@ -124,19 +129,19 @@ function isOllamaCloud(url: string): boolean {
 export function resolveOllamaTarget(configs: Array<AiConfigSource | null | undefined> = []): {
   url: string;
   model: string;
+  /** true quando o endereço veio de OLLAMA_BASE_URL ou do banco (não do padrão). */
+  explicit: boolean;
 } {
   const isProd = process.env.NODE_ENV === 'production';
   const fromDb = configs
     .map(c => cleanUrl(c?.ollama_base_url || ''))
     .filter(u => u && !(isProd && isLocalUrl(u)));
 
-  const url =
-    cleanUrl(process.env.OLLAMA_BASE_URL || '') ||
-    fromDb[0] ||
-    (isProd ? 'http://ollama.railway.internal:11434' : 'http://127.0.0.1:11434');
+  const configured = cleanUrl(process.env.OLLAMA_BASE_URL || '') || fromDb[0] || '';
+  const url = configured || (isProd ? 'http://ollama.railway.internal:11434' : 'http://127.0.0.1:11434');
 
   const model = first(process.env.OLLAMA_MODEL, ...configs.map(c => c?.ollama_model), DEFAULT_OLLAMA_MODEL);
-  return { url, model };
+  return { url, model, explicit: !!configured };
 }
 
 function resolveKeys(configs: Array<AiConfigSource | null | undefined>) {
@@ -159,6 +164,7 @@ function resolveKeys(configs: Array<AiConfigSource | null | undefined>) {
       ...apiKeys.map(k => (k.startsWith('sk-') && !k.startsWith('sk-ant-') ? k : '')),
       process.env.OPENAI_API_KEY
     ),
+    groq: first(process.env.GROQ_API_KEY, ...apiKeys.map(k => (k.startsWith('gsk_') ? k : ''))),
   };
 }
 
@@ -228,8 +234,44 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
   const errors: Partial<Record<AiProviderName, string>> = {};
   const finish = (raw: string) => (jsonMode ? extractJson(raw) : raw.trim());
 
+  async function callGroq(): Promise<GenerateTextResult | null> {
+    if (!keys.groq) return null;
+    const models = Array.from(new Set([(process.env.GROQ_MODEL || '').trim(), ...GROQ_MODELS].filter(Boolean)));
+    for (const model of models) {
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${keys.groq}` },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            temperature,
+            ...(model.startsWith('openai/') ? { reasoning_effort: 'low' } : {}),
+            ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+            messages: [...(sysText ? [{ role: 'system', content: sysText }] : []), ...messages],
+          }),
+          signal: AbortSignal.timeout(Math.min(timeoutMs, 25000)),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const text = finish(String(data?.choices?.[0]?.message?.content || ''));
+          if (text) return { text, provider: 'groq', model };
+          errors.groq = `${model}: resposta vazia`;
+        } else {
+          errors.groq = `${model} (${res.status}): ${data?.error?.message || 'erro'}`;
+          if (res.status === 401 || res.status === 403) break; // chave inválida
+          // 429 (limite gratuito), 413 (texto grande demais) ou 5xx: tenta o próximo modelo
+        }
+      } catch (err: any) {
+        errors.groq = `${model}: ${err?.message || 'timeout/rede'}`;
+      }
+    }
+    return null;
+  }
+
   async function callOllama(): Promise<GenerateTextResult | null> {
-    const { url, model: requestedModel } = resolveOllamaTarget(configs);
+    const { url, model: requestedModel, explicit } = resolveOllamaTarget(configs);
+    if (!explicit && preferred !== 'ollama') return null; // sem Ollama configurado: não espera por um servidor inexistente
     const send = (model: string) =>
       fetch(`${url}/api/chat`, {
         method: 'POST',
@@ -376,6 +418,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
   }
 
   const callers: Record<AiProviderName, () => Promise<GenerateTextResult | null>> = {
+    groq: callGroq,
     ollama: callOllama,
     gemini: callGemini,
     claude: callClaude,
@@ -389,6 +432,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
     new Set<AiProviderName>(
       [
         asProvider(preferred),
+        'groq',
         'ollama',
         ...configs.map(c => asProvider(c?.ai_provider)),
         'gemini',
@@ -403,7 +447,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
     if (out?.text) return out;
   }
 
-  const labels: Record<AiProviderName, string> = { ollama: 'Ollama', gemini: 'Gemini', claude: 'Claude', openai: 'OpenAI' };
+  const labels: Record<AiProviderName, string> = { groq: 'Groq', ollama: 'Ollama', gemini: 'Gemini', claude: 'Claude', openai: 'OpenAI' };
   const error =
     order
       .filter(p => errors[p])
