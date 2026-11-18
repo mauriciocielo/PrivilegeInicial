@@ -6,7 +6,7 @@ import logoNfse from './dados/logo-nfse.json';
 import { apenasDigitos } from './dps';
 import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } from './danfse';
 
-const DEFAULT_SMTP_HOST = 'mail.privilegecontabilidade.cnt.br';
+const DEFAULT_SMTP_HOST = 'email-ssl.com.br';
 const DEFAULT_SMTP_PORT = 465;
 const DEFAULT_SMTP_USER = 'consultoria@privilegecontabilidade.cnt.br';
 const DEFAULT_SMTP_PASS = '@Karen1702';
@@ -72,9 +72,7 @@ export async function enviarEmailNfseEmitida(params: {
 
     const smtpUser = DEFAULT_SMTP_USER;
     const smtpPass = DEFAULT_SMTP_PASS;
-    const smtpHost = process.env.SMTP_HOST?.includes('.cnt.br')
-      ? process.env.SMTP_HOST
-      : DEFAULT_SMTP_HOST;
+    const smtpHost = DEFAULT_SMTP_HOST;
     const smtpPort = Number(process.env.SMTP_PORT) || DEFAULT_SMTP_PORT;
 
     const transporter = nodemailer.createTransport({
