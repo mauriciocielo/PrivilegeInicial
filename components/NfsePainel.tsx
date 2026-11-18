@@ -136,8 +136,14 @@ function ehNotaTomada(n: NfsE, cnpjEmpresa: string): boolean {
   return cnpjPrest !== cnpjEmp;
 }
 
-/** Tela de NFS-e independente da empresa selecionada no restante do sistema. */
-export default function NfsePainel({ modoCliente = false }: { modoCliente?: boolean }) {
+/** Tela de NFS-e independente da empresa selecionada no restante do sistema (para consultor/admin). Para cliente, trava na empresa dele. */
+export default function NfsePainel({ modoCliente: modoClienteProp = false }: { modoCliente?: boolean }) {
+  const [ehClienteSessao, setEhClienteSessao] = useState(modoClienteProp);
+  useEffect(() => {
+    const u = store.getCurrentUser();
+    if (u?.role === 'cliente') setEhClienteSessao(true);
+  }, []);
+  const modoCliente = modoClienteProp || ehClienteSessao;
   const [empresaId, setEmpresaId] = useState('');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [empresasDisponiveis, setEmpresasDisponiveis] = useState<EmpresaEmissora[]>([]);
@@ -324,15 +330,40 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     selecionarEmissorProprio(escolhida);
   }, [selecionarEmissorProprio]);
 
-  // O cliente só escolhe entre as próprias empresas com procuração, não importa o que esteja salvo.
+  // O cliente só opera a própria empresa selecionada (ou suas empresas com procuração), nunca a lista geral.
   useEffect(() => {
-    if (!modoCliente || acessoCliente.empresas.length === 0) return;
-    const salva = lerEmissorProprio()?.id;
-    selecionarEmpresaCliente(acessoCliente.empresas.find(e => e.id === salva) || acessoCliente.empresas[0]);
+    if (!modoCliente) return;
+    const aplicarEmpresaCliente = () => {
+      const ativaId = store.getSafeEmpresaId();
+      if (acessoCliente.empresas.length > 0) {
+        const escolhida =
+          acessoCliente.empresas.find(e => e.id === ativaId) ||
+          acessoCliente.empresas.find(e => e.id === lerEmissorProprio()?.id) ||
+          acessoCliente.empresas[0];
+        selecionarEmpresaCliente(escolhida);
+        return;
+      }
+      if (!acessoCliente.carregando) {
+        const doStore = store.getEmpresas().find(e => e.id === ativaId) || store.getEmpresas()[0];
+        if (doStore) {
+          selecionarEmpresaCliente({
+            id: doStore.id,
+            razaoSocial: doStore.razaoSocial,
+            nomeFantasia: doStore.nomeFantasia || doStore.razaoSocial,
+            cnpj: doStore.cnpj || '',
+          });
+        }
+      }
+    };
+    aplicarEmpresaCliente();
     const aoMudarDados = () => { const atual = lerEmissorProprio()?.id; if (atual) load(atual); };
     window.addEventListener('cfDataChange', aoMudarDados);
-    return () => window.removeEventListener('cfDataChange', aoMudarDados);
-  }, [modoCliente, acessoCliente.empresas, selecionarEmpresaCliente, load]);
+    window.addEventListener('empresaChange', aplicarEmpresaCliente);
+    return () => {
+      window.removeEventListener('cfDataChange', aoMudarDados);
+      window.removeEventListener('empresaChange', aplicarEmpresaCliente);
+    };
+  }, [modoCliente, acessoCliente.carregando, acessoCliente.empresas, selecionarEmpresaCliente, load]);
 
   // No modo consultor/administrador, a tela de NFS-e usa apenas a seleção própria desta tela,
   // sem herdar nem reagir à empresa selecionada no restante do sistema.

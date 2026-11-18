@@ -107,7 +107,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         filtradas.map(async (n) => {
           const dados = lerDadosDanfse(n.documento!.nfseXml);
           const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
-          const qrPng = qrText
+          const qrPng: Buffer = qrText
             ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
             : Buffer.alloc(0);
           return {
@@ -148,15 +148,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const qrBuffers = (formato === 'pdf' || formato === 'ambos')
       ? await Promise.all(
-          filtradas.map(async (n) => {
-            const dados = lerDadosDanfse(n.documento!.nfseXml);
-            const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
-            const qrPng = qrText
-              ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
-              : Buffer.alloc(0);
-            return { dados, qrPng };
-          })
-        )
+        filtradas.map(async (n) => {
+          const dados = lerDadosDanfse(n.documento!.nfseXml);
+          const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
+          const qrPng: Buffer = qrText
+            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
+            : Buffer.alloc(0);
+          return { dados, qrPng };
+        })
+      )
       : [];
 
     for (let idx = 0; idx < filtradas.length; idx++) {
