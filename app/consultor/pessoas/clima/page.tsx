@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import ComercialExportBar from '@/components/ComercialExportBar';
 import { store } from '@/lib/store';
+import { toast } from 'sonner';
+import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import {
   SmilePlus, BarChart3, ClipboardList, Table2, CheckCircle2, Plus, Trash2,
-  TrendingUp, TrendingDown, Award, AlertTriangle, FileText
+  Award, AlertTriangle, FileText, Link2, Copy, ExternalLink, MessageSquare, Smartphone
 } from 'lucide-react';
 
 interface ClimaQuestion {
@@ -19,7 +22,7 @@ interface ClimaResponse {
   respondente: string;
   setor: string;
   data: string;
-  notas: Record<number, number>; // questionId -> 0..10
+  notas: Record<number, number>;
 }
 
 const CATEGORIAS = [
@@ -91,7 +94,9 @@ const buildDefaultResponses = (): ClimaResponse[] => {
 };
 
 export default function PessoasClimaPage() {
+  const router = useRouter();
   const [empresaId, setEmpresaId] = useState('default');
+  const [origin, setOrigin] = useState('');
 
   const [tab, setTab] = useState<'analise' | 'aplicar' | 'tabulacao' | 'parecer'>('analise');
   const [questions, setQuestions] = useState<ClimaQuestion[]>(DEFAULT_QUESTIONS);
@@ -100,7 +105,6 @@ export default function PessoasClimaPage() {
     'Parecer Executivo de Clima Organizacional:\n\n1. Pontos Fortes Identificados:\n- Relacionamento interpessoal entre equipes e clareza no propósito da empresa.\n\n2. Pontos de Atenção (Notas < 7):\n- Alinhamento de remuneração/benefícios e clareza nos critérios de promoção e reconhecimento.\n\n3. Plano de Ação 30/60/90 dias:\n- Implantar feedback estruturado mensal entre lideranças e equipe.\n- Revisar política de benefícios e plano de carreira.'
   );
 
-  // Form Aplicar Pesquisa
   const [formNome, setFormNome] = useState('Respondente Anônimo');
   const [formSetor, setFormSetor] = useState('Geral');
   const [formNotas, setFormNotas] = useState<Record<number, number>>(() => {
@@ -116,7 +120,7 @@ export default function PessoasClimaPage() {
 
   const loadData = useCallback(async (empId: string) => {
     try {
-      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`);
+      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.success && json.data?.pessoas_clima) {
         const d = json.data.pessoas_clima;
@@ -134,6 +138,7 @@ export default function PessoasClimaPage() {
   useEffect(() => {
     const emp = store.getSafeEmpresaId() || 'default';
     setEmpresaId(emp);
+    if (typeof window !== 'undefined') setOrigin(window.location.origin);
     loadData(emp);
   }, [loadData]);
 
@@ -162,7 +167,22 @@ export default function PessoasClimaPage() {
     [empresaId, loaded]
   );
 
-  // Analytics
+  const publicSurveyUrl = `${origin || ''}/clima?empresaId=${encodeURIComponent(empresaId)}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(publicSurveyUrl);
+      toast.success('Link da pesquisa copiado! Envie para os colaboradores responderem pelo celular ou computador.');
+    } catch {
+      toast.error('Não foi possível copiar automaticamente.');
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    const msg = `Olá! Convidamos você a responder nossa *Pesquisa de Clima Organizacional*.\n\nÉ rápido, seguro e pode ser respondido pelo celular ou computador:\n${publicSurveyUrl}`;
+    redirectToWhatsAppShare({ text: msg }, (url) => router.push(url));
+  };
+
   const stats = useMemo(() => {
     const allScores: number[] = [];
     responses.forEach((r) => {
@@ -221,6 +241,7 @@ export default function PessoasClimaPage() {
     setResponses(nextR);
     persist(questions, nextR, parecer);
     setFormNome(`Pessoa ${nextR.length + 1}`);
+    toast.success('Resposta registrada na tabulação!');
     setTab('analise');
   };
 
@@ -231,29 +252,31 @@ export default function PessoasClimaPage() {
   };
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1400px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-              <SmilePlus size={24} color="#7c3aed" />
-              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Pesquisa de Clima Organizacional
-              </h1>
-            </div>
-            <p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>
-              39 indicadores em 7 dimensões de clima, tabulação de respondentes, eNPS interno, Top 10 melhores/piores e parecer executivo.
-            </p>
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SmilePlus size={26} color="var(--accent)" />
+            Pesquisa de Clima Organizacional
           </div>
-          <div>
-            {saving && <span style={{ fontSize: '12px', color: '#64748b' }}>Salvando...</span>}
-            {!saving && lastSaved && (
-              <span style={{ fontSize: '12px', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={14} /> Salvo às {lastSaved}
-              </span>
-            )}
+          <div className="page-subtitle">
+            39 indicadores em 7 dimensões, link público para colaboradores (celular/computador), eNPS interno, Top 10 e parecer executivo.
           </div>
         </div>
+        <div className="header-actions">
+          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {!saving && lastSaved && (
+            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle2 size={14} /> Salvo às {lastSaved}
+            </span>
+          )}
+          <button type="button" onClick={handleCopyLink} className="btn btn-primary">
+            <Link2 size={15} /> Copiar Link dos Colaboradores
+          </button>
+        </div>
+      </div>
 
+      <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <ComercialExportBar
           title="Relatório de Pesquisa de Clima Organizacional"
           fileNameBase="pesquisa-clima-organizacional"
@@ -281,74 +304,116 @@ export default function PessoasClimaPage() {
           }))}
         />
 
-        {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px', margin: '18px 0' }}>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Respondentes Tabulados</div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{responses.length}</div>
-          </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Média Geral de Clima</div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#2563eb', marginTop: '4px' }}>
-              {stats.mediaGeral.toFixed(2)} <span style={{ fontSize: '14px', color: '#64748b' }}>/ 10</span>
+        {/* Card Link Público para Celular / Computador */}
+        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--accent)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
+                <Smartphone size={17} color="var(--accent)" />
+                Link Público da Pesquisa (Celular ou Computador)
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+                Compartilhe este link com os colaboradores — não precisa de login e as respostas caem automaticamente nesta tabulação.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" onClick={handleCopyLink} className="btn btn-secondary">
+                <Copy size={14} /> Copiar Link
+              </button>
+              <button
+                type="button"
+                onClick={() => window.open(publicSurveyUrl, '_blank', 'noopener,noreferrer')}
+                className="btn btn-secondary"
+              >
+                <ExternalLink size={14} /> Abrir Formulário
+              </button>
+              <button type="button" onClick={handleShareWhatsApp} className="btn btn-primary">
+                <MessageSquare size={14} /> Enviar no WhatsApp
+              </button>
             </div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>eNPS Interno (Promotores - Detratores)</div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: stats.enps >= 20 ? '#16a34a' : stats.enps >= 0 ? '#eab308' : '#dc2626', marginTop: '4px' }}>
+          <div style={{ marginTop: 10 }}>
+            <input
+              readOnly
+              value={publicSurveyUrl}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              className="form-input"
+              style={{ fontSize: 12.5, fontFamily: 'monospace' }}
+            />
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <div className="kpi-label">Respondentes Tabulados</div>
+            <div className="kpi-value">{responses.length}</div>
+          </div>
+          <div className="kpi-card">
+            <div className="kpi-label">Média Geral de Clima</div>
+            <div className="kpi-value" style={{ color: 'var(--accent)' }}>
+              {stats.mediaGeral.toFixed(2)} <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/ 10</span>
+            </div>
+          </div>
+          <div className="kpi-card">
+            <div className="kpi-label">eNPS Interno</div>
+            <div className="kpi-value" style={{ color: stats.enps >= 20 ? '#16a34a' : stats.enps >= 0 ? '#eab308' : '#dc2626' }}>
               {stats.enps}
             </div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Distribuição Geral</div>
-            <div style={{ fontSize: '12.5px', fontWeight: 700, marginTop: '8px', display: 'flex', gap: '10px' }}>
+          <div className="kpi-card">
+            <div className="kpi-label">Distribuição Geral</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, display: 'flex', gap: 10 }}>
               <span style={{ color: '#16a34a' }}>Prom: {stats.totalRespostas ? Math.round((stats.promotores / stats.totalRespostas) * 100) : 0}%</span>
-              <span style={{ color: '#ca8a04' }}>Pass: {stats.totalRespostas ? Math.round((stats.passivos / stats.totalRespostas) * 100) : 0}%</span>
+              <span style={{ color: '#eab308' }}>Pass: {stats.totalRespostas ? Math.round((stats.passivos / stats.totalRespostas) * 100) : 0}%</span>
               <span style={{ color: '#dc2626' }}>Detr: {stats.totalRespostas ? Math.round((stats.detratores / stats.totalRespostas) * 100) : 0}%</span>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-          <button onClick={() => setTab('analise')} className={tab === 'analise' ? 'btn btn-primary' : 'btn btn-secondary'} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <BarChart3 size={16} /> Análise & Rankings
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setTab('analise')} className={tab === 'analise' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <BarChart3 size={15} /> Análise & Rankings
           </button>
-          <button onClick={() => setTab('aplicar')} className={tab === 'aplicar' ? 'btn btn-primary' : 'btn btn-secondary'} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <ClipboardList size={16} /> Aplicar Pesquisa (39 Perguntas)
+          <button onClick={() => setTab('aplicar')} className={tab === 'aplicar' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <ClipboardList size={15} /> Aplicar Pesquisa (Interno)
           </button>
-          <button onClick={() => setTab('tabulacao')} className={tab === 'tabulacao' ? 'btn btn-primary' : 'btn btn-secondary'} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Table2 size={16} /> Tabulação de Dados ({responses.length})
+          <button onClick={() => setTab('tabulacao')} className={tab === 'tabulacao' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <Table2 size={15} /> Tabulação de Dados ({responses.length})
           </button>
-          <button onClick={() => setTab('parecer')} className={tab === 'parecer' ? 'btn btn-primary' : 'btn btn-secondary'} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileText size={16} /> Parecer & Plano de Ação
+          <button onClick={() => setTab('parecer')} className={tab === 'parecer' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <FileText size={15} /> Parecer & Plano de Ação
           </button>
         </div>
 
         {tab === 'analise' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* Pontuação por Categoria */}
-            <div className="card" style={{ padding: '20px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 14px' }}>% Pontuação Máxima por Categoria</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div className="card" style={{ padding: 20 }}>
+              <div className="card-header" style={{ padding: 0, marginBottom: 14, border: 'none' }}>
+                <div className="card-title">% Pontuação Máxima por Categoria</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {stats.porCategoria.map((c) => (
                   <div key={c.categoria}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                      <strong>{c.categoria} <span style={{ fontWeight: 400, color: '#64748b' }}>({c.count} perguntas)</span></strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+                      <strong>
+                        {c.categoria} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({c.count} perguntas)</span>
+                      </strong>
                       <span>
                         <strong>{c.pctMax.toFixed(1)}%</strong> (Média {c.media.toFixed(2)}) ·{' '}
                         <span style={{ color: '#16a34a' }}>P:{c.prom.toFixed(0)}%</span> /{' '}
-                        <span style={{ color: '#ca8a04' }}>N:{c.pass.toFixed(0)}%</span> /{' '}
+                        <span style={{ color: '#eab308' }}>N:{c.pass.toFixed(0)}%</span> /{' '}
                         <span style={{ color: '#dc2626' }}>D:{c.detr.toFixed(0)}%</span>
                       </span>
                     </div>
-                    <div style={{ height: '10px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{ height: 10, background: 'var(--bg-secondary)', borderRadius: 999, overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${Math.min(100, c.pctMax)}%`,
                           height: '100%',
                           background: c.pctMax >= 80 ? '#16a34a' : c.pctMax >= 65 ? '#2563eb' : '#dc2626',
-                          borderRadius: '999px',
+                          borderRadius: 999,
                         }}
                       />
                     </div>
@@ -357,29 +422,52 @@ export default function PessoasClimaPage() {
               </div>
             </div>
 
-            {/* TOP 10 Melhores & TOP 10 Piores */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '18px' }}>
-              <div className="card" style={{ padding: '18px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 18 }}>
+              <div className="card" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px' }}>
                   <Award size={18} /> TOP 10 Melhores Avaliações
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {stats.top10Melhores.map((q, idx) => (
-                    <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#f0fdf4', borderRadius: '8px', fontSize: '12.5px' }}>
+                    <div
+                      key={q.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '8px 10px',
+                        background: 'rgba(22, 163, 74, 0.08)',
+                        border: '1px solid rgba(22, 163, 74, 0.25)',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                      }}
+                    >
                       <span><strong>#{idx + 1}</strong> ({q.categoria}) — {q.texto}</span>
-                      <strong style={{ color: '#15803d', whiteSpace: 'nowrap' }}>{q.media.toFixed(1)}</strong>
+                      <strong style={{ color: '#16a34a', whiteSpace: 'nowrap' }}>{q.media.toFixed(1)}</strong>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="card" style={{ padding: '18px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px' }}>
+              <div className="card" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px' }}>
                   <AlertTriangle size={18} /> TOP 10 Piores Avaliações (Prioridade)
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {stats.top10Piores.map((q, idx) => (
-                    <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#fef2f2', borderRadius: '8px', fontSize: '12.5px' }}>
+                    <div
+                      key={q.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '8px 10px',
+                        background: 'rgba(220, 38, 38, 0.08)',
+                        border: '1px solid rgba(220, 38, 38, 0.25)',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                      }}
+                    >
                       <span><strong>#{idx + 1}</strong> ({q.categoria}) — {q.texto}</span>
                       <strong style={{ color: '#dc2626', whiteSpace: 'nowrap' }}>{q.media.toFixed(1)}</strong>
                     </div>
@@ -391,8 +479,8 @@ export default function PessoasClimaPage() {
         )}
 
         {tab === 'aplicar' && (
-          <form onSubmit={handleSubmitSurvey} className="card" style={{ padding: '22px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px', padding: '14px', background: '#f8fafc', borderRadius: '10px' }}>
+          <form onSubmit={handleSubmitSurvey} className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 18, padding: 14, background: 'var(--bg-secondary)', borderRadius: 10 }}>
               <div>
                 <label className="form-label">Identificação do Respondente (ou Anônimo)</label>
                 <input className="form-input" value={formNome} onChange={(e) => setFormNome(e.target.value)} />
@@ -404,29 +492,29 @@ export default function PessoasClimaPage() {
             </div>
 
             {CATEGORIAS.map((cat) => (
-              <div key={cat} style={{ marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b', background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', marginBottom: '10px' }}>
+              <div key={cat} style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 8, marginBottom: 10 }}>
                   {cat}
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {questions
                     .filter((q) => q.categoria === cat)
                     .map((q) => (
-                      <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ fontSize: '13.5px', color: '#334155', flex: '1 1 360px' }}>
+                      <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 13.5, flex: '1 1 360px' }}>
                           <strong>{q.id}ª.</strong> {q.texto}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <button
                               key={n}
                               type="button"
                               onClick={() => setFormNotas({ ...formNotas, [q.id]: n })}
                               style={{
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '6px',
-                                border: formNotas[q.id] === n ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                width: 28,
+                                height: 28,
+                                borderRadius: 6,
+                                border: formNotas[q.id] === n ? '2px solid #fff' : '1px solid var(--border)',
                                 background:
                                   formNotas[q.id] === n
                                     ? n >= 9
@@ -434,10 +522,10 @@ export default function PessoasClimaPage() {
                                       : n >= 7
                                       ? '#eab308'
                                       : '#dc2626'
-                                    : '#fff',
-                                color: formNotas[q.id] === n ? '#fff' : '#334155',
+                                    : 'var(--bg-secondary)',
+                                color: formNotas[q.id] === n ? '#fff' : 'var(--text-primary)',
                                 fontWeight: 700,
-                                fontSize: '12px',
+                                fontSize: 12,
                                 cursor: 'pointer',
                               }}
                             >
@@ -451,8 +539,8 @@ export default function PessoasClimaPage() {
               </div>
             ))}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-              <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button type="submit" className="btn btn-primary">
                 <Plus size={16} /> Registrar Resposta na Tabulação
               </button>
             </div>
@@ -460,10 +548,10 @@ export default function PessoasClimaPage() {
         )}
 
         {tab === 'tabulacao' && (
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>Matriz de Tabulação (Reg)</h2>
-              <button onClick={() => setTab('aplicar')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+              <div className="card-title">Matriz de Tabulação (Reg)</div>
+              <button onClick={() => setTab('aplicar')} className="btn btn-primary">
                 <Plus size={15} /> Nova Resposta
               </button>
             </div>
@@ -475,13 +563,13 @@ export default function PessoasClimaPage() {
                     <th>Categoria</th>
                     <th>Pergunta</th>
                     {responses.map((r) => (
-                      <th key={r.id} style={{ textAlign: 'center', minWidth: '110px' }}>
+                      <th key={r.id} style={{ textAlign: 'center', minWidth: 110 }}>
                         <div>{r.respondente}</div>
-                        <div style={{ fontSize: '10px', fontWeight: 400, color: '#64748b' }}>{r.setor}</div>
+                        <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>{r.setor}</div>
                         <button
                           onClick={() => handleDeleteResponse(r.id)}
                           title="Remover respondente"
-                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '11px', marginTop: '2px' }}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, marginTop: 2 }}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -497,8 +585,8 @@ export default function PessoasClimaPage() {
                     return (
                       <tr key={q.id}>
                         <td>{q.id}ª</td>
-                        <td style={{ fontSize: '11.5px', color: '#475569' }}>{q.categoria}</td>
-                        <td style={{ fontSize: '12.5px' }}>{q.texto}</td>
+                        <td style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{q.categoria}</td>
+                        <td style={{ fontSize: 12.5 }}>{q.texto}</td>
                         {responses.map((r) => {
                           const v = r.notas[q.id];
                           return (
@@ -507,7 +595,7 @@ export default function PessoasClimaPage() {
                               style={{
                                 textAlign: 'center',
                                 fontWeight: 700,
-                                color: v >= 9 ? '#15803d' : v >= 7 ? '#a16207' : '#dc2626',
+                                color: v >= 9 ? '#16a34a' : v >= 7 ? '#eab308' : '#dc2626',
                               }}
                             >
                               {v ?? '—'}
@@ -525,9 +613,9 @@ export default function PessoasClimaPage() {
         )}
 
         {tab === 'parecer' && (
-          <div className="card" style={{ padding: '22px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 6px' }}>Parecer da Pesquisa de Clima & Plano de Ação</h2>
-            <p style={{ fontSize: '12.5px', color: '#64748b', margin: '0 0 12px' }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div className="card-title" style={{ marginBottom: 4 }}>Parecer da Pesquisa de Clima & Plano de Ação</div>
+            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
               Registre a análise qualitativa do consultor, pontos críticos e ações corretivas para apresentação à diretoria.
             </p>
             <textarea
@@ -538,10 +626,11 @@ export default function PessoasClimaPage() {
                 setParecer(e.target.value);
                 persist(questions, responses, e.target.value);
               }}
-              style={{ lineHeight: 1.6, fontSize: '13.5px' }}
+              style={{ lineHeight: 1.6, fontSize: 13.5 }}
             />
           </div>
         )}
-    </div>
+      </div>
+    </>
   );
 }

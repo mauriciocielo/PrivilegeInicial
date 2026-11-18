@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import ComercialExportBar from '@/components/ComercialExportBar';
 import { store } from '@/lib/store';
 import {
-  DollarSign, Calculator, Plus, Edit3, Trash2, CheckCircle2, X, Users, Building2, Scale
+  DollarSign, Calculator, Plus, Edit3, Trash2, CheckCircle2, X, Users
 } from 'lucide-react';
 
 interface CargoSalarioItem {
@@ -34,7 +34,6 @@ const fmtPct = (v: number) => `${(v * 100).toFixed(2)}%`;
 
 export default function PessoasCargosSalariosPage() {
   const [empresaId, setEmpresaId] = useState('default');
-
   const [tab, setTab] = useState<'lista' | 'comparativo'>('lista');
   const [lista, setLista] = useState<CargoSalarioItem[]>(DEFAULT_LISTA);
   const [filtroSetor, setFiltroSetor] = useState<string>('Todos');
@@ -49,7 +48,7 @@ export default function PessoasCargosSalariosPage() {
 
   const loadData = useCallback(async (empId: string) => {
     try {
-      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`);
+      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.success && json.data?.pessoas_cargos_salarios) {
         const d = json.data.pessoas_cargos_salarios;
@@ -121,7 +120,6 @@ export default function PessoasCargosSalariosPage() {
     return { fixa, extra, variavel, total };
   }, [listaFiltrada]);
 
-  // Cálculo Comparativo CLT x PJ x RPA (baseado na planilha 2. Comparativo de Salários)
   const comp = useMemo(() => {
     const base = Math.max(0, salarioSimulacao || 0);
     const regimes = [
@@ -131,7 +129,7 @@ export default function PessoasCargosSalariosPage() {
         fgts: 0.08,
         decimoTerceiro: 0.1133,
         ferias: 0.1507,
-        multaFgts: 0.03333333, // 40% sobre 8% + encargos = ~3.33% mensal (166.67 em 5000)
+        multaFgts: 0.03333333,
         impostoPj: 0,
         simplesContratado: 0,
         issContratado: 0,
@@ -224,29 +222,31 @@ export default function PessoasCargosSalariosPage() {
   };
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1400px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-              <DollarSign size={24} color="#16a34a" />
-              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Cargos, Salários & Comparativo CLT x PJ
-              </h1>
-            </div>
-            <p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>
-              Levantamento de remuneração fixa, variável e extra por setor + simulador de custos CLT (LP/LR e Simples), RPA e PJ.
-            </p>
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <DollarSign size={26} color="var(--accent)" />
+            Cargos, Salários & Comparativo CLT x PJ
           </div>
-          <div>
-            {saving && <span style={{ fontSize: '12px', color: '#64748b' }}>Salvando...</span>}
-            {!saving && lastSaved && (
-              <span style={{ fontSize: '12px', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={14} /> Salvo às {lastSaved}
-              </span>
-            )}
+          <div className="page-subtitle">
+            Levantamento de remuneração fixa, variável e extra por setor + simulador de custos CLT (LP/LR e Simples), RPA e PJ.
           </div>
         </div>
+        <div className="header-actions">
+          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {!saving && lastSaved && (
+            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle2 size={14} /> Salvo às {lastSaved}
+            </span>
+          )}
+          <button onClick={openNew} className="btn btn-primary">
+            <Plus size={15} /> Adicionar Cargo / Salário
+          </button>
+        </div>
+      </div>
 
+      <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <ComercialExportBar
           title={tab === 'lista' ? 'Relatório de Cargos e Salários' : 'Comparativo de Regimes de Contratação (CLT x RPA x PJ)'}
           fileNameBase={tab === 'lista' ? 'cargos-e-salarios' : 'comparativo-clt-pj'}
@@ -302,66 +302,45 @@ export default function PessoasCargosSalariosPage() {
           }
         />
 
-        {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px', margin: '18px 0' }}>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Users size={15} color="#2563eb" /> Posições Listadas
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{listaFiltrada.length}</div>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <div className="kpi-label">Posições Listadas</div>
+            <div className="kpi-value">{listaFiltrada.length}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <DollarSign size={15} color="#16a34a" /> Remuneração Fixa
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{fmtBRL(totais.fixa)}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Remuneração Fixa</div>
+            <div className="kpi-value">{fmtBRL(totais.fixa)}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Building2 size={15} color="#eab308" /> Variável + Extra
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{fmtBRL(totais.variavel + totais.extra)}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Variável + Extra</div>
+            <div className="kpi-value">{fmtBRL(totais.variavel + totais.extra)}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Scale size={15} color="#7c3aed" /> Total Geral Mensal
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{fmtBRL(totais.total)}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Total Geral Mensal</div>
+            <div className="kpi-value" style={{ color: 'var(--accent)' }}>{fmtBRL(totais.total)}</div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-          <button
-            onClick={() => setTab('lista')}
-            className={tab === 'lista' ? 'btn btn-primary' : 'btn btn-secondary'}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Users size={16} /> Lista de Cargos e Salários
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setTab('lista')} className={tab === 'lista' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <Users size={15} /> Lista de Cargos e Salários
           </button>
-          <button
-            onClick={() => setTab('comparativo')}
-            className={tab === 'comparativo' ? 'btn btn-primary' : 'btn btn-secondary'}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Calculator size={16} /> Simulador CLT x RPA x PJ
+          <button onClick={() => setTab('comparativo')} className={tab === 'comparativo' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <Calculator size={15} /> Simulador CLT x RPA x PJ
           </button>
         </div>
 
         {tab === 'lista' ? (
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>Filtrar Setor:</span>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar Setor:</span>
                 <select className="form-input" style={{ width: 'auto' }} value={filtroSetor} onChange={(e) => setFiltroSetor(e.target.value)}>
                   {setores.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
-              <button onClick={openNew} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} /> Adicionar Cargo / Salário
-              </button>
             </div>
 
             <div className="table-wrap">
@@ -389,19 +368,15 @@ export default function PessoasCargosSalariosPage() {
                         <td>{item.funcao}</td>
                         <td>{item.setor}</td>
                         <td>{item.unidade}</td>
-                        <td>
-                          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: '#f1f5f9', color: '#334155' }}>
-                            {item.regime}
-                          </span>
-                        </td>
+                        <td><span className="badge badge-info">{item.regime}</span></td>
                         <td style={{ textAlign: 'right' }}>{fmtBRL(item.remuneracaoFixa)}</td>
                         <td style={{ textAlign: 'right' }}>
                           {item.variavelPctVendas > 0 ? `${item.variavelPctVendas}% (${fmtBRL(varVal)})` : '—'}
                         </td>
                         <td style={{ textAlign: 'right' }}>{fmtBRL(item.remuneracaoExtra)}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{fmtBRL(calcTotalItem(item))}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 800 }}>{fmtBRL(calcTotalItem(item))}</td>
                         <td style={{ textAlign: 'center' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
                             <button
                               onClick={() => {
                                 setEditing({ ...item });
@@ -415,7 +390,7 @@ export default function PessoasCargosSalariosPage() {
                             <button
                               onClick={() => handleDeleteItem(item.id)}
                               className="btn btn-secondary"
-                              style={{ padding: '4px 8px', color: '#dc2626', borderColor: '#fecaca' }}
+                              style={{ padding: '4px 8px', color: '#dc2626' }}
                             >
                               <Trash2 size={13} />
                             </button>
@@ -429,24 +404,22 @@ export default function PessoasCargosSalariosPage() {
             </div>
           </div>
         ) : (
-          <div className="card" style={{ padding: '22px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 18, padding: 16, background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)' }}>
               <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                  Levantamento dos Custos de Contratação
-                </h2>
-                <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0' }}>
+                <div className="card-title">Levantamento dos Custos de Contratação</div>
+                <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
                   Informe o salário / remuneração base para comparar o custo total da empresa e o líquido recebido pelo profissional.
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <label style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b' }}>SALÁRIO FIXO (R$):</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <label style={{ fontWeight: 700, fontSize: 13 }}>SALÁRIO FIXO (R$):</label>
                 <input
                   type="number"
                   min={0}
                   step={100}
                   className="form-input"
-                  style={{ width: '160px', fontWeight: 800, fontSize: '16px' }}
+                  style={{ width: 160, fontWeight: 800, fontSize: 16 }}
                   value={salarioSimulacao}
                   onChange={(e) => {
                     const val = Number(e.target.value) || 0;
@@ -496,16 +469,16 @@ export default function PessoasCargosSalariosPage() {
                     <td>Imposto PJ / MEI (Contratante)</td>
                     {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.impostoPj)} · {fmtBRL(c.base * c.impostoPj)}</td>)}
                   </tr>
-                  <tr style={{ background: '#eff6ff', fontWeight: 800 }}>
-                    <td style={{ color: '#1d4ed8' }}>CUSTO TOTAL DO CONTRATANTE</td>
+                  <tr style={{ background: 'rgba(59, 130, 246, 0.12)', fontWeight: 800 }}>
+                    <td style={{ color: '#60a5fa' }}>CUSTO TOTAL DO CONTRATANTE</td>
                     {comp.map((c) => (
-                      <td key={c.nome} style={{ textAlign: 'right', color: '#1d4ed8' }}>
-                        {fmtBRL(c.custoTotal)} <span style={{ fontSize: '11px', fontWeight: 600 }}>(+{fmtPct(c.encargoPct)})</span>
+                      <td key={c.nome} style={{ textAlign: 'right', color: '#60a5fa' }}>
+                        {fmtBRL(c.custoTotal)} <span style={{ fontSize: 11, fontWeight: 600 }}>(+{fmtPct(c.encargoPct)})</span>
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td colSpan={5} style={{ background: '#f8fafc', fontWeight: 800, fontSize: '12px', textTransform: 'uppercase', color: '#475569' }}>
+                    <td colSpan={5} style={{ background: 'var(--bg-secondary)', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                       Provisão de Recebimento do Contratado
                     </td>
                   </tr>
@@ -525,11 +498,11 @@ export default function PessoasCargosSalariosPage() {
                     <td>IRPF Descontado do Contratado</td>
                     {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.irpfDesc)} · {fmtBRL(c.base * c.irpfDesc)}</td>)}
                   </tr>
-                  <tr style={{ background: '#f0fdf4', fontWeight: 800 }}>
-                    <td style={{ color: '#15803d' }}>RECEBIMENTO LÍQUIDO DO CONTRATADO</td>
+                  <tr style={{ background: 'rgba(22, 163, 74, 0.12)', fontWeight: 800 }}>
+                    <td style={{ color: '#4ade80' }}>RECEBIMENTO LÍQUIDO DO CONTRATADO</td>
                     {comp.map((c) => (
-                      <td key={c.nome} style={{ textAlign: 'right', color: '#15803d' }}>
-                        {fmtBRL(c.liquidoContratado)} <span style={{ fontSize: '11px', fontWeight: 600 }}>(-{fmtPct(c.descPct)})</span>
+                      <td key={c.nome} style={{ textAlign: 'right', color: '#4ade80' }}>
+                        {fmtBRL(c.liquidoContratado)} <span style={{ fontSize: 11, fontWeight: 600 }}>(-{fmtPct(c.descPct)})</span>
                       </td>
                     ))}
                   </tr>
@@ -538,67 +511,67 @@ export default function PessoasCargosSalariosPage() {
             </div>
           </div>
         )}
+      </div>
 
-        {/* Modal Cargo/Salário */}
-        {showModal && editing && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '520px', padding: '22px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Cargo e Remuneração</h3>
-                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <X size={18} />
-                </button>
+      {showModal && editing && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 520 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Cargo e Remuneração</h3>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label className="form-label">Funcionário</label>
+                <input className="form-input" value={editing.funcionario} onChange={(e) => setEditing({ ...editing, funcionario: e.target.value })} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label className="form-label">Funcionário</label>
-                  <input className="form-input" value={editing.funcionario} onChange={(e) => setEditing({ ...editing, funcionario: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Função *</label>
-                  <input className="form-input" value={editing.funcao} onChange={(e) => setEditing({ ...editing, funcao: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Setor</label>
-                  <input className="form-input" value={editing.setor} onChange={(e) => setEditing({ ...editing, setor: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Unidade</label>
-                  <input className="form-input" value={editing.unidade} onChange={(e) => setEditing({ ...editing, unidade: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Regime de Contratação</label>
-                  <select className="form-input" value={editing.regime} onChange={(e) => setEditing({ ...editing, regime: e.target.value as CargoSalarioItem['regime'] })}>
-                    <option value="CLT LP/LR">CLT LP / LR</option>
-                    <option value="CLT Simples">CLT Simples Nacional</option>
-                    <option value="RPA">Autônomo RPA</option>
-                    <option value="PJ">Contrato PJ</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Remuneração Fixa (R$)</label>
-                  <input type="number" className="form-input" value={editing.remuneracaoFixa} onChange={(e) => setEditing({ ...editing, remuneracaoFixa: Number(e.target.value) || 0 })} />
-                </div>
-                <div>
-                  <label className="form-label">Variável (% s/ vendas)</label>
-                  <input type="number" step="0.1" className="form-input" value={editing.variavelPctVendas} onChange={(e) => setEditing({ ...editing, variavelPctVendas: Number(e.target.value) || 0 })} />
-                </div>
-                <div>
-                  <label className="form-label">Base Vendas Mensal (R$)</label>
-                  <input type="number" className="form-input" value={editing.baseVendasMensal} onChange={(e) => setEditing({ ...editing, baseVendasMensal: Number(e.target.value) || 0 })} />
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label className="form-label">Remuneração Extra / Benefícios (R$)</label>
-                  <input type="number" className="form-input" value={editing.remuneracaoExtra} onChange={(e) => setEditing({ ...editing, remuneracaoExtra: Number(e.target.value) || 0 })} />
-                </div>
+              <div>
+                <label className="form-label">Função *</label>
+                <input className="form-input" value={editing.funcao} onChange={(e) => setEditing({ ...editing, funcao: e.target.value })} />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
-                <button onClick={() => setShowModal(false)} className="btn btn-secondary">Cancelar</button>
-                <button onClick={handleSaveItem} className="btn btn-primary">Salvar</button>
+              <div>
+                <label className="form-label">Setor</label>
+                <input className="form-input" value={editing.setor} onChange={(e) => setEditing({ ...editing, setor: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Unidade</label>
+                <input className="form-input" value={editing.unidade} onChange={(e) => setEditing({ ...editing, unidade: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Regime de Contratação</label>
+                <select className="form-input" value={editing.regime} onChange={(e) => setEditing({ ...editing, regime: e.target.value as CargoSalarioItem['regime'] })}>
+                  <option value="CLT LP/LR">CLT LP / LR</option>
+                  <option value="CLT Simples">CLT Simples Nacional</option>
+                  <option value="RPA">Autônomo RPA</option>
+                  <option value="PJ">Contrato PJ</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Remuneração Fixa (R$)</label>
+                <input type="number" className="form-input" value={editing.remuneracaoFixa} onChange={(e) => setEditing({ ...editing, remuneracaoFixa: Number(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <label className="form-label">Variável (% s/ vendas)</label>
+                <input type="number" step="0.1" className="form-input" value={editing.variavelPctVendas} onChange={(e) => setEditing({ ...editing, variavelPctVendas: Number(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <label className="form-label">Base Vendas Mensal (R$)</label>
+                <input type="number" className="form-input" value={editing.baseVendasMensal} onChange={(e) => setEditing({ ...editing, baseVendasMensal: Number(e.target.value) || 0 })} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Remuneração Extra / Benefícios (R$)</label>
+                <input type="number" className="form-input" value={editing.remuneracaoExtra} onChange={(e) => setEditing({ ...editing, remuneracaoExtra: Number(e.target.value) || 0 })} />
               </div>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+              <button onClick={() => setShowModal(false)} className="btn btn-secondary">Cancelar</button>
+              <button onClick={handleSaveItem} className="btn btn-primary">Salvar</button>
+            </div>
           </div>
-        )}
-    </div>
+        </div>
+      )}
+    </>
   );
 }

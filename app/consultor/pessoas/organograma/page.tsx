@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import ComercialExportBar from '@/components/ComercialExportBar';
 import { store } from '@/lib/store';
 import {
-  Network, FileText, Plus, Edit3, Trash2, Printer, Users, Building2,
-  ChevronRight, CheckCircle2, X, Briefcase, UserCheck, ShieldCheck
+  Network, FileText, Plus, Edit3, Trash2, Printer,
+  ChevronRight, CheckCircle2, X, UserCheck, ShieldCheck
 } from 'lucide-react';
 
 interface OrgNode {
@@ -95,15 +95,14 @@ const DEFAULT_DESCRITIVOS: DescritivoFuncao[] = [
 ];
 
 const NIVEL_COLORS: Record<OrgNode['nivel'], { bg: string; border: string; badge: string }> = {
-  Diretoria: { bg: '#eff6ff', border: '#3b82f6', badge: '#1d4ed8' },
-  Gerencia: { bg: '#f0fdf4', border: '#22c55e', badge: '#15803d' },
-  Supervisao: { bg: '#fefce8', border: '#eab308', badge: '#a16207' },
-  Operacional: { bg: '#f8fafc', border: '#94a3b8', badge: '#475569' },
+  Diretoria: { bg: 'rgba(59, 130, 246, 0.10)', border: '#3b82f6', badge: '#2563eb' },
+  Gerencia: { bg: 'rgba(34, 197, 94, 0.10)', border: '#22c55e', badge: '#16a34a' },
+  Supervisao: { bg: 'rgba(234, 179, 8, 0.10)', border: '#eab308', badge: '#ca8a04' },
+  Operacional: { bg: 'var(--bg-secondary)', border: 'var(--border)', badge: '#64748b' },
 };
 
 export default function PessoasOrganogramaPage() {
   const [empresaId, setEmpresaId] = useState('default');
-
   const [tab, setTab] = useState<'organograma' | 'descritivo'>('organograma');
   const [nodes, setNodes] = useState<OrgNode[]>(DEFAULT_ORG_NODES);
   const [descritivos, setDescritivos] = useState<DescritivoFuncao[]>(DEFAULT_DESCRITIVOS);
@@ -112,11 +111,9 @@ export default function PessoasOrganogramaPage() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
 
-  // Modal Node
   const [editingNode, setEditingNode] = useState<OrgNode | null>(null);
   const [showNodeModal, setShowNodeModal] = useState(false);
 
-  // Modal Descritivo
   const [editingDesc, setEditingDesc] = useState<DescritivoFuncao | null>(null);
   const [showDescModal, setShowDescModal] = useState(false);
   const [reqInput, setReqInput] = useState('');
@@ -126,7 +123,7 @@ export default function PessoasOrganogramaPage() {
 
   const loadData = useCallback(async (empId: string) => {
     try {
-      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`);
+      const res = await fetch(`/api/comercial?empresaId=${encodeURIComponent(empId)}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.success && json.data?.pessoas_organograma) {
         const d = json.data.pessoas_organograma;
@@ -137,7 +134,7 @@ export default function PessoasOrganogramaPage() {
         }
       }
     } catch {
-      // fallback default
+      // fallback
     } finally {
       setLoaded(true);
     }
@@ -268,10 +265,10 @@ export default function PessoasOrganogramaPage() {
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'center',
-          gap: '16px',
-          marginTop: depth === 0 ? 0 : '18px',
-          paddingTop: depth === 0 ? 0 : '14px',
-          borderTop: depth === 0 ? 'none' : '2px dashed #cbd5e1',
+          gap: 16,
+          marginTop: depth === 0 ? 0 : 18,
+          paddingTop: depth === 0 ? 0 : 14,
+          borderTop: depth === 0 ? 'none' : '2px dashed var(--border)',
           width: '100%',
         }}
       >
@@ -285,8 +282,8 @@ export default function PessoasOrganogramaPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                minWidth: '230px',
-                maxWidth: hasChildren ? '100%' : '280px',
+                minWidth: 230,
+                maxWidth: hasChildren ? '100%' : 280,
                 flex: hasChildren ? '1 1 280px' : '0 1 260px',
               }}
             >
@@ -295,30 +292,30 @@ export default function PessoasOrganogramaPage() {
                   width: '100%',
                   background: style.bg,
                   border: `1.5px solid ${style.border}`,
-                  borderRadius: '12px',
+                  borderRadius: 12,
                   padding: '12px 14px',
-                  boxShadow: '0 2px 6px rgba(15, 23, 42, 0.05)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: 10,
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       color: '#fff',
                       background: style.badge,
                       padding: '2px 8px',
-                      borderRadius: '999px',
+                      borderRadius: 999,
                     }}
                   >
                     {node.nivel} · {node.headcount} {node.headcount === 1 ? 'vaga' : 'vagas'}
                   </span>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
                     <button
                       onClick={() => openNewNode(node.id)}
                       title="Adicionar subordinado"
-                      style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 5px', cursor: 'pointer' }}
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 5px', minHeight: 'auto' }}
                     >
                       <Plus size={12} />
                     </button>
@@ -328,22 +325,24 @@ export default function PessoasOrganogramaPage() {
                         setShowNodeModal(true);
                       }}
                       title="Editar"
-                      style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 5px', cursor: 'pointer' }}
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 5px', minHeight: 'auto' }}
                     >
                       <Edit3 size={12} />
                     </button>
                     <button
                       onClick={() => handleDeleteNode(node.id)}
                       title="Remover"
-                      style={{ background: '#fff', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '6px', padding: '3px 5px', cursor: 'pointer' }}
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 5px', minHeight: 'auto', color: '#dc2626' }}
                     >
                       <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{node.cargo}</div>
-                <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{node.setor}</div>
-                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{node.cargo}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{node.setor}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-primary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
                   <UserCheck size={13} color={style.badge} />
                   {node.colaborador || 'A definir'}
                 </div>
@@ -379,29 +378,31 @@ export default function PessoasOrganogramaPage() {
   );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1400px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-              <Network size={24} color="#2563eb" />
-              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Organograma & Descritivo de Funções
-              </h1>
-            </div>
-            <p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>
-              Arquitetura de cargos, hierarquia organizacional e fichas assináveis de perfil de função (CBO, requisitos e atividades).
-            </p>
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Network size={26} color="var(--accent)" />
+            Organograma & Descritivo de Funções
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {saving && <span style={{ fontSize: '12px', color: '#64748b' }}>Salvando...</span>}
-            {!saving && lastSaved && (
-              <span style={{ fontSize: '12px', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={14} /> Salvo às {lastSaved}
-              </span>
-            )}
+          <div className="page-subtitle">
+            Arquitetura de cargos, hierarquia organizacional e fichas assináveis de perfil de função (CBO, requisitos e atividades).
           </div>
         </div>
+        <div className="header-actions">
+          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {!saving && lastSaved && (
+            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle2 size={14} /> Salvo às {lastSaved}
+            </span>
+          )}
+          <button onClick={() => openNewNode(null)} className="btn btn-primary">
+            <Plus size={15} /> Novo Cargo Diretoria
+          </button>
+        </div>
+      </div>
 
+      <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <ComercialExportBar
           title={tab === 'organograma' ? 'Organograma & Arquitetura de Cargos' : 'Descritivos de Perfil de Função'}
           fileNameBase={tab === 'organograma' ? 'organograma-cargos' : 'descritivo-funcoes'}
@@ -433,78 +434,56 @@ export default function PessoasOrganogramaPage() {
           rows={exportRows}
         />
 
-        {/* KPI Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px', margin: '18px 0' }}>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Briefcase size={15} color="#2563eb" /> Cargos Estruturados
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{nodes.length}</div>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <div className="kpi-label">Cargos Estruturados</div>
+            <div className="kpi-value">{nodes.length}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Users size={15} color="#16a34a" /> Quadro Total (Vagas)
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{totalHeadcount}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Quadro Total (Vagas)</div>
+            <div className="kpi-value">{totalHeadcount}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Building2 size={15} color="#eab308" /> Setores / Áreas
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{setoresUnicos}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Setores / Áreas</div>
+            <div className="kpi-value">{setoresUnicos}</div>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FileText size={15} color="#7c3aed" /> Descritivos de Função
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>{descritivos.length}</div>
+          <div className="kpi-card">
+            <div className="kpi-label">Descritivos de Função</div>
+            <div className="kpi-value">{descritivos.length}</div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
-          <button
-            onClick={() => setTab('organograma')}
-            className={tab === 'organograma' ? 'btn btn-primary' : 'btn btn-secondary'}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Network size={16} /> Organograma Visual
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setTab('organograma')} className={tab === 'organograma' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <Network size={15} /> Organograma Visual
           </button>
-          <button
-            onClick={() => setTab('descritivo')}
-            className={tab === 'descritivo' ? 'btn btn-primary' : 'btn btn-secondary'}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FileText size={16} /> Descritivo de Perfil de Função
+          <button onClick={() => setTab('descritivo')} className={tab === 'descritivo' ? 'btn btn-primary' : 'btn btn-secondary'}>
+            <FileText size={15} /> Descritivo de Perfil de Função
           </button>
         </div>
 
         {tab === 'organograma' ? (
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Estrutura Hierárquica</h2>
-                <p style={{ fontSize: '12.5px', color: '#64748b', margin: '2px 0 0' }}>
+                <div className="card-title">Estrutura Hierárquica</div>
+                <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
                   Clique em <strong>+</strong> dentro de qualquer cargo para adicionar um subordinado direto.
                 </p>
               </div>
-              <button onClick={() => openNewNode(null)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} /> Novo Cargo Raiz / Diretoria
-              </button>
             </div>
-            <div style={{ overflowX: 'auto', paddingBottom: '12px' }}>{renderTree(null)}</div>
+            <div style={{ overflowX: 'auto', paddingBottom: 12 }}>{renderTree(null)}</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '18px', alignItems: 'start' }}>
-            {/* Sidebar de Descritivos */}
-            <div className="card" style={{ padding: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <strong style={{ fontSize: '14px' }}>Funções ({descritivos.length})</strong>
-                <button onClick={openNewDesc} className="btn btn-primary" style={{ padding: '6px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 18, alignItems: 'start' }}>
+            <div className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <strong style={{ fontSize: 14 }}>Funções ({descritivos.length})</strong>
+                <button onClick={openNewDesc} className="btn btn-primary" style={{ padding: '6px 10px', fontSize: 12 }}>
                   <Plus size={14} /> Nova
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {descritivos.map((d) => (
                   <button
                     key={d.id}
@@ -512,41 +491,37 @@ export default function PessoasOrganogramaPage() {
                     style={{
                       textAlign: 'left',
                       padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: selectedDesc?.id === d.id ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                      background: selectedDesc?.id === d.id ? '#eff6ff' : '#fff',
+                      borderRadius: 10,
+                      border: selectedDesc?.id === d.id ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+                      background: selectedDesc?.id === d.id ? 'var(--bg-secondary)' : 'transparent',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>{d.funcao}</div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{d.funcao}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
                         {d.setor} · CBO {d.cbo || '—'}
                       </div>
                     </div>
-                    <ChevronRight size={15} color="#94a3b8" />
+                    <ChevronRight size={15} color="var(--text-muted)" />
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Ficha Oficial Descritivo de Função */}
             {selectedDesc && (
-              <div className="card" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }} className="no-print">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <ShieldCheck size={20} color="#2563eb" />
-                    <strong style={{ fontSize: '16px' }}>Ficha Oficial — Descrição de Perfil de Função</strong>
+              <div className="card" style={{ padding: 22, gridColumn: 'span 2' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ShieldCheck size={20} color="var(--accent)" />
+                    <strong style={{ fontSize: 16 }}>Ficha Oficial — Descrição de Perfil de Função</strong>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => window.print()}
-                      className="btn btn-secondary"
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => window.print()} className="btn btn-secondary">
                       <Printer size={15} /> Imprimir / Assinar
                     </button>
                     <button
@@ -557,7 +532,6 @@ export default function PessoasOrganogramaPage() {
                         setShowDescModal(true);
                       }}
                       className="btn btn-primary"
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Edit3 size={15} /> Editar Ficha
                     </button>
@@ -565,7 +539,7 @@ export default function PessoasOrganogramaPage() {
                       <button
                         onClick={() => handleDeleteDesc(selectedDesc.id)}
                         className="btn btn-secondary"
-                        style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                        style={{ color: '#dc2626' }}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -573,88 +547,75 @@ export default function PessoasOrganogramaPage() {
                   </div>
                 </div>
 
-                {/* Cabeçalho da Ficha */}
-                <div style={{ border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden' }}>
-                  <div style={{ background: '#0f172a', color: '#fff', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ background: 'var(--bg-secondary)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, borderBottom: '1px solid var(--border)' }}>
                     <div>
-                      <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.75 }}>
+                      <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
                         Descrição de Perfil de Função
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: 800 }}>{selectedDesc.funcao}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{selectedDesc.funcao}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
                       <div><strong>CBO:</strong> {selectedDesc.cbo || '—'}</div>
                       <div><strong>Revisão:</strong> {selectedDesc.revisao || '01'}</div>
                       <div><strong>Data:</strong> {selectedDesc.data || '—'}</div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', padding: '16px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Setor a que se aplica</div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{selectedDesc.setor}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Setor</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.setor}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Nome do Funcionário</div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{selectedDesc.nomeFuncionario || 'A definir'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Funcionário</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.nomeFuncionario || 'A definir'}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Gestor Responsável</div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>{selectedDesc.gestorResponsavel || '—'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Gestor Responsável</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.gestorResponsavel || '—'}</div>
                     </div>
                   </div>
 
-                  <div style={{ padding: '16px 18px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 6 }}>
                       Objetivo da Função
                     </div>
-                    <p style={{ margin: 0, fontSize: '13.5px', color: '#334155', lineHeight: 1.55 }}>{selectedDesc.objetivo}</p>
+                    <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{selectedDesc.objetivo}</p>
                   </div>
 
-                  <div style={{ padding: '16px 18px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Perfil / Requisitos Comportamentais e Técnicos
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Perfil / Requisitos
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {selectedDesc.requisitos.map((req, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            background: '#eff6ff',
-                            color: '#1d4ed8',
-                            border: '1px solid #bfdbfe',
-                            padding: '5px 12px',
-                            borderRadius: '999px',
-                            fontSize: '12.5px',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span key={i} className="badge badge-info" style={{ fontSize: 12, padding: '4px 10px' }}>
                           {req}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ padding: '16px 18px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
                       Função — Descrição das Atividades Exercidas
                     </div>
-                    <ol style={{ margin: 0, paddingLeft: '20px', color: '#334155', fontSize: '13.5px', lineHeight: 1.7 }}>
+                    <ol style={{ margin: 0, paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.7 }}>
                       {selectedDesc.atividades.map((at, i) => (
                         <li key={i}>{at}</li>
                       ))}
                     </ol>
                   </div>
 
-                  {/* Assinaturas */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', padding: '32px 24px 20px', background: '#fff' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, padding: '32px 24px 20px' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ borderTop: '1px solid #475569', paddingTop: '8px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Assinatura do Colaborador
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ borderTop: '1px solid #475569', paddingTop: '8px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Assinatura do Supervisor / Gestor
                       </div>
                     </div>
@@ -664,225 +625,182 @@ export default function PessoasOrganogramaPage() {
             )}
           </div>
         )}
+      </div>
 
-        {/* Modal Node */}
-        {showNodeModal && editingNode && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '480px', padding: '22px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Cargo no Organograma</h3>
-                <button onClick={() => setShowNodeModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <X size={18} />
-                </button>
+      {/* Modal Node */}
+      {showNodeModal && editingNode && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 480 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Cargo no Organograma</h3>
+              <button onClick={() => setShowNodeModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label className="form-label">Nome do Cargo *</label>
+                <input className="form-input" value={editingNode.cargo} onChange={(e) => setEditingNode({ ...editingNode, cargo: e.target.value })} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="form-label">Nome do Cargo *</label>
-                  <input className="form-input" value={editingNode.cargo} onChange={(e) => setEditingNode({ ...editingNode, cargo: e.target.value })} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label className="form-label">Setor</label>
-                    <input className="form-input" value={editingNode.setor} onChange={(e) => setEditingNode({ ...editingNode, setor: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="form-label">Nível Hierárquico</label>
-                    <select
-                      className="form-input"
-                      value={editingNode.nivel}
-                      onChange={(e) => setEditingNode({ ...editingNode, nivel: e.target.value as OrgNode['nivel'] })}
-                    >
-                      <option value="Diretoria">Diretoria</option>
-                      <option value="Gerencia">Gerência</option>
-                      <option value="Supervisao">Supervisão / Coordenação</option>
-                      <option value="Operacional">Operacional</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label className="form-label">Colaborador / Ocupante</label>
-                    <input className="form-input" value={editingNode.colaborador} onChange={(e) => setEditingNode({ ...editingNode, colaborador: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="form-label">Nº de Vagas</label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="form-input"
-                      value={editingNode.headcount}
-                      onChange={(e) => setEditingNode({ ...editingNode, headcount: Math.max(1, Number(e.target.value) || 1) })}
-                    />
-                  </div>
+                  <label className="form-label">Setor</label>
+                  <input className="form-input" value={editingNode.setor} onChange={(e) => setEditingNode({ ...editingNode, setor: e.target.value })} />
                 </div>
                 <div>
-                  <label className="form-label">Reporta para (Superior Imediato)</label>
-                  <select
-                    className="form-input"
-                    value={editingNode.parentId || ''}
-                    onChange={(e) => setEditingNode({ ...editingNode, parentId: e.target.value || null })}
-                  >
-                    <option value="">Topo da Estrutura (Diretoria)</option>
-                    {nodes
-                      .filter((n) => n.id !== editingNode.id)
-                      .map((n) => (
-                        <option key={n.id} value={n.id}>
-                          {n.cargo} ({n.setor})
-                        </option>
-                      ))}
+                  <label className="form-label">Nível Hierárquico</label>
+                  <select className="form-input" value={editingNode.nivel} onChange={(e) => setEditingNode({ ...editingNode, nivel: e.target.value as OrgNode['nivel'] })}>
+                    <option value="Diretoria">Diretoria</option>
+                    <option value="Gerencia">Gerência</option>
+                    <option value="Supervisao">Supervisão / Coordenação</option>
+                    <option value="Operacional">Operacional</option>
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
-                <button onClick={() => setShowNodeModal(false)} className="btn btn-secondary">Cancelar</button>
-                <button onClick={handleSaveNode} className="btn btn-primary">Salvar Cargo</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Descritivo */}
-        {showDescModal && editingDesc && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '22px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700 }}>Editar Descritivo de Função</h3>
-                <button onClick={() => setShowDescModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <X size={18} />
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="form-label">Função *</label>
-                  <input className="form-input" value={editingDesc.funcao} onChange={(e) => setEditingDesc({ ...editingDesc, funcao: e.target.value })} />
+                  <label className="form-label">Colaborador / Ocupante</label>
+                  <input className="form-input" value={editingNode.colaborador} onChange={(e) => setEditingNode({ ...editingNode, colaborador: e.target.value })} />
                 </div>
                 <div>
-                  <label className="form-label">CBO</label>
-                  <input className="form-input" value={editingDesc.cbo} onChange={(e) => setEditingDesc({ ...editingDesc, cbo: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Revisão</label>
-                  <input className="form-input" value={editingDesc.revisao} onChange={(e) => setEditingDesc({ ...editingDesc, revisao: e.target.value })} />
+                  <label className="form-label">Nº de Vagas</label>
+                  <input type="number" min={1} className="form-input" value={editingNode.headcount} onChange={(e) => setEditingNode({ ...editingNode, headcount: Math.max(1, Number(e.target.value) || 1) })} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                <div>
-                  <label className="form-label">Setor</label>
-                  <input className="form-input" value={editingDesc.setor} onChange={(e) => setEditingDesc({ ...editingDesc, setor: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Funcionário</label>
-                  <input className="form-input" value={editingDesc.nomeFuncionario} onChange={(e) => setEditingDesc({ ...editingDesc, nomeFuncionario: e.target.value })} />
-                </div>
-                <div>
-                  <label className="form-label">Gestor Responsável</label>
-                  <input className="form-input" value={editingDesc.gestorResponsavel} onChange={(e) => setEditingDesc({ ...editingDesc, gestorResponsavel: e.target.value })} />
-                </div>
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label className="form-label">Objetivo da Função</label>
-                <textarea className="form-input" rows={2} value={editingDesc.objetivo} onChange={(e) => setEditingDesc({ ...editingDesc, objetivo: e.target.value })} />
-              </div>
-
-              {/* Requisitos */}
-              <div style={{ marginBottom: '12px' }}>
-                <label className="form-label">Perfil / Requisitos</label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                  <input
-                    className="form-input"
-                    placeholder="Ex: Ser organizado(a)"
-                    value={reqInput}
-                    onChange={(e) => setReqInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && reqInput.trim()) {
-                        e.preventDefault();
-                        setEditingDesc({ ...editingDesc, requisitos: [...editingDesc.requisitos, reqInput.trim()] });
-                        setReqInput('');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      if (reqInput.trim()) {
-                        setEditingDesc({ ...editingDesc, requisitos: [...editingDesc.requisitos, reqInput.trim()] });
-                        setReqInput('');
-                      }
-                    }}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {editingDesc.requisitos.map((r, idx) => (
-                    <span key={idx} style={{ background: '#eff6ff', padding: '4px 10px', borderRadius: '999px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {r}
-                      <button
-                        type="button"
-                        onClick={() => setEditingDesc({ ...editingDesc, requisitos: editingDesc.requisitos.filter((_, i) => i !== idx) })}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 0 }}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Atividades */}
               <div>
-                <label className="form-label">Atividades Exercidas</label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                  <input
-                    className="form-input"
-                    placeholder="Descreva uma atividade da função..."
-                    value={ativInput}
-                    onChange={(e) => setAtivInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && ativInput.trim()) {
-                        e.preventDefault();
-                        setEditingDesc({ ...editingDesc, atividades: [...editingDesc.atividades, ativInput.trim()] });
-                        setAtivInput('');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      if (ativInput.trim()) {
-                        setEditingDesc({ ...editingDesc, atividades: [...editingDesc.atividades, ativInput.trim()] });
-                        setAtivInput('');
-                      }
-                    }}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px' }}>
-                  {editingDesc.atividades.map((a, idx) => (
-                    <li key={idx} style={{ marginBottom: '4px' }}>
-                      {a}{' '}
-                      <button
-                        type="button"
-                        onClick={() => setEditingDesc({ ...editingDesc, atividades: editingDesc.atividades.filter((_, i) => i !== idx) })}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '12px' }}
-                      >
-                        [remover]
-                      </button>
-                    </li>
+                <label className="form-label">Reporta para (Superior Imediato)</label>
+                <select className="form-input" value={editingNode.parentId || ''} onChange={(e) => setEditingNode({ ...editingNode, parentId: e.target.value || null })}>
+                  <option value="">Topo da Estrutura (Diretoria)</option>
+                  {nodes.filter((n) => n.id !== editingNode.id).map((n) => (
+                    <option key={n.id} value={n.id}>{n.cargo} ({n.setor})</option>
                   ))}
-                </ul>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
-                <button onClick={() => setShowDescModal(false)} className="btn btn-secondary">Cancelar</button>
-                <button onClick={handleSaveDesc} className="btn btn-primary">Salvar Descritivo</button>
+                </select>
               </div>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+              <button onClick={() => setShowNodeModal(false)} className="btn btn-secondary">Cancelar</button>
+              <button onClick={handleSaveNode} className="btn btn-primary">Salvar Cargo</button>
+            </div>
           </div>
-        )}
-    </div>
+        </div>
+      )}
+
+      {/* Modal Descritivo */}
+      {showDescModal && editingDesc && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 680, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Editar Descritivo de Função</h3>
+              <button onClick={() => setShowDescModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <label className="form-label">Função *</label>
+                <input className="form-input" value={editingDesc.funcao} onChange={(e) => setEditingDesc({ ...editingDesc, funcao: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">CBO</label>
+                <input className="form-input" value={editingDesc.cbo} onChange={(e) => setEditingDesc({ ...editingDesc, cbo: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Revisão</label>
+                <input className="form-input" value={editingDesc.revisao} onChange={(e) => setEditingDesc({ ...editingDesc, revisao: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <label className="form-label">Setor</label>
+                <input className="form-input" value={editingDesc.setor} onChange={(e) => setEditingDesc({ ...editingDesc, setor: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Funcionário</label>
+                <input className="form-input" value={editingDesc.nomeFuncionario} onChange={(e) => setEditingDesc({ ...editingDesc, nomeFuncionario: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Gestor Responsável</label>
+                <input className="form-input" value={editingDesc.gestorResponsavel} onChange={(e) => setEditingDesc({ ...editingDesc, gestorResponsavel: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label className="form-label">Objetivo da Função</label>
+              <textarea className="form-input" rows={2} value={editingDesc.objetivo} onChange={(e) => setEditingDesc({ ...editingDesc, objetivo: e.target.value })} />
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label className="form-label">Perfil / Requisitos</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                <input
+                  className="form-input"
+                  placeholder="Ex: Ser organizado(a)"
+                  value={reqInput}
+                  onChange={(e) => setReqInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && reqInput.trim()) {
+                      e.preventDefault();
+                      setEditingDesc({ ...editingDesc, requisitos: [...editingDesc.requisitos, reqInput.trim()] });
+                      setReqInput('');
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn-secondary" onClick={() => {
+                  if (reqInput.trim()) {
+                    setEditingDesc({ ...editingDesc, requisitos: [...editingDesc.requisitos, reqInput.trim()] });
+                    setReqInput('');
+                  }
+                }}>Adicionar</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {editingDesc.requisitos.map((r, idx) => (
+                  <span key={idx} className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {r}
+                    <button type="button" onClick={() => setEditingDesc({ ...editingDesc, requisitos: editingDesc.requisitos.filter((_, i) => i !== idx) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label">Atividades Exercidas</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                <input
+                  className="form-input"
+                  placeholder="Descreva uma atividade da função..."
+                  value={ativInput}
+                  onChange={(e) => setAtivInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && ativInput.trim()) {
+                      e.preventDefault();
+                      setEditingDesc({ ...editingDesc, atividades: [...editingDesc.atividades, ativInput.trim()] });
+                      setAtivInput('');
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn-secondary" onClick={() => {
+                  if (ativInput.trim()) {
+                    setEditingDesc({ ...editingDesc, atividades: [...editingDesc.atividades, ativInput.trim()] });
+                    setAtivInput('');
+                  }
+                }}>Adicionar</button>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5 }}>
+                {editingDesc.atividades.map((a, idx) => (
+                  <li key={idx} style={{ marginBottom: 4 }}>
+                    {a}{' '}
+                    <button type="button" onClick={() => setEditingDesc({ ...editingDesc, atividades: editingDesc.atividades.filter((_, i) => i !== idx) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12 }}>[remover]</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+              <button onClick={() => setShowDescModal(false)} className="btn btn-secondary">Cancelar</button>
+              <button onClick={handleSaveDesc} className="btn btn-primary">Salvar Descritivo</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
