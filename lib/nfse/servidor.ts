@@ -16,32 +16,37 @@ export const ID_CERT_ESCRITORIO = 'padrao';
 /** Dado autenticado da cifra do certificado do escritório (nas empresas, é o empresaId). */
 export const ESCOPO_CERT_ESCRITORIO = 'escritorio';
 
+async function usuarioPossuiEmpresa(session: SessionPayload, empresaId: string): Promise<boolean> {
+  if (session.empresaIds.includes(empresaId)) return true;
+  if (!session.userId) return false;
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { empresaIds: true },
+  });
+  return Array.isArray(user?.empresaIds) && user.empresaIds.includes(empresaId);
+}
+
 /**
- * A emissão fica na área do consultor: o perfil cliente não opera certificado nem
- * nota fiscal. O consultor opera a própria carteira e as empresas do certificado do
- * escritório, se tiver a tela de NFS-e.
+ * Verifica se o usuário tem acesso à empresa (administrador, consultor com carteira/procuração,
+ * ou cliente vinculado à empresa no módulo Usuários).
  */
 export async function acessoNegado(session: SessionPayload, empresaId: string): Promise<NextResponse | null> {
   if (session.role === 'administrador') return null;
+  if (await usuarioPossuiEmpresa(session, empresaId)) return null;
   if (session.role !== 'cliente') {
-    if (session.empresaIds.includes(empresaId)) return null;
     if (await operaEmpresaDoCertificado(session.userId, empresaId)) return null;
   }
   return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
 }
 
 /**
- * Para as rotas de uso da nota (emitir, cancelar, baixar, buscar). Aqui o cliente
- * entra, mas só na própria empresa e com procuração confirmada para o escritório.
- * Certificado, configuração e verificação seguem em acessoNegado.
+ * Para as rotas de uso da nota (emitir, cancelar, baixar, buscar).
+ * O cliente entra apenas nas empresas vinculadas a ele no módulo Usuários.
  */
 export async function acessoEmissaoNegado(session: SessionPayload, empresaId: string): Promise<NextResponse | null> {
   if (session.role !== 'cliente') return acessoNegado(session, empresaId);
-  if (session.empresaIds.includes(empresaId)) {
-    const config = await db.nfseConfig.findUnique({ where: { empresaId }, select: { usarProcuracao: true, procuracaoStatus: true } });
-    if (config?.usarProcuracao && config.procuracaoStatus === 'ativa') return null;
-  }
-  return NextResponse.json({ error: 'Esta empresa não tem procuração ativa para emitir por aqui. Fale com o escritório.' }, { status: 403 });
+  if (await usuarioPossuiEmpresa(session, empresaId)) return null;
+  return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
 }
 
 export function configFiscal(config: NfseConfig, cnpj: string): ConfigFiscalNfse {

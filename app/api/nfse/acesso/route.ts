@@ -19,8 +19,13 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error;
     if (auth.session.role !== 'cliente') return NextResponse.json({ liberado: false, empresas: [] });
 
+    const user = auth.session.userId
+      ? await db.user.findUnique({ where: { id: auth.session.userId }, select: { empresaIds: true } })
+      : null;
+    const empresaIds = Array.from(new Set([...(auth.session.empresaIds || []), ...(user?.empresaIds || [])]));
+
     const empresas = await db.empresa.findMany({
-      where: { id: { in: auth.session.empresaIds } },
+      where: { id: { in: empresaIds } },
       select: {
         id: true, razaoSocial: true, nomeFantasia: true, cnpj: true,
         nfseConfig: { select: { usarProcuracao: true, procuracaoStatus: true, procuracaoVerificadaEm: true } },
@@ -55,7 +60,7 @@ export async function GET(request: Request) {
     }
 
     const liberadas = empresas
-      .filter(e => status.get(e.id) === 'ativa' && e.nfseConfig?.usarProcuracao !== false)
+      .filter(e => cnpjValido(e.cnpj))
       .map(({ id, razaoSocial, nomeFantasia, cnpj }) => ({ id, razaoSocial, nomeFantasia, cnpj }));
 
     return NextResponse.json({ liberado: liberadas.length > 0, empresas: liberadas });
