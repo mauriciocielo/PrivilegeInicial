@@ -80,7 +80,13 @@ function isLocalUrl(url: string): boolean {
 }
 
 function cleanUrl(url: string): string {
-  return url.trim().replace(/\/+$/, '');
+  let u = url.trim().replace(/\/+$/, '');
+  if (u && !/^https?:\/\//i.test(u)) {
+    // Endereço digitado sem protocolo: rede privada/local usa http, domínio público usa https.
+    const local = /^(localhost|127\.|0\.0\.0\.0|\[::1\])|\.railway\.internal(:|$)/i.test(u);
+    u = `${local ? 'http' : 'https'}://${u}`;
+  }
+  return u;
 }
 
 export function stripJsonFences(raw: string): string {
