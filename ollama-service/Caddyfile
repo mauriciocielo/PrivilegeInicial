@@ -1,0 +1,22 @@
+# Porta pública do serviço (Railway → Networking → domínio apontando para esta porta).
+# Só repassa ao Ollama quem enviar "Authorization: Bearer <OLLAMA_API_KEY>".
+# A rede privada do Railway continua acessando o Ollama direto na porta 11434.
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	@autorizado header Authorization "Bearer {$OLLAMA_API_KEY}"
+
+	handle @autorizado {
+		reverse_proxy 127.0.0.1:11434 {
+			header_up Host 127.0.0.1:11434
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond "Nao autorizado" 401
+	}
+}

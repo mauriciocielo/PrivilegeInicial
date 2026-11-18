@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getComercialData, saveComercialSection } from '@/lib/comercial-store';
+import { generateText } from '@/lib/ai-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,18 +49,6 @@ export async function POST(req: NextRequest) {
     const empresaId = body.empresaId || 'default';
     const empresaNome = body.empresaNome || 'Empresa';
     const links = body.links || {};
-
-    const geminiKey =
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      '';
-
-    if (!geminiKey || geminiKey.length < 20) {
-      return NextResponse.json(
-        { success: false, error: 'GEMINI_API_KEY não configurada no servidor.' },
-        { status: 400 }
-      );
-    }
 
     const [siteSnippet, ecomSnippet] = await Promise.all([
       fetchPublicPageSnippet(links.site),
@@ -111,35 +100,21 @@ Retorne APENAS um JSON válido (sem markdown \`\`\`json) com este formato exato:
   ]
 }`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
-
-    const callGemini = async (withSearch: boolean) => {
-      return fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          ...(withSearch ? { tools: [{ google_search: {} }] } : {}),
-          generationConfig: { temperature: 0.5, maxOutputTokens: 2048 },
-        }),
-        signal: AbortSignal.timeout(25000),
-      });
-    };
-
-    let res = await callGemini(true);
-    if (!res.ok) {
-      res = await callGemini(false);
-    }
-    if (!res.ok) {
-      const errTxt = await res.text().catch(() => '');
+    const ai = await generateText({
+      prompt,
+      jsonMode: true,
+      maxTokens: 2048,
+      temperature: 0.5,
+      timeoutMs: 25000,
+    });
+    if (!ai.text) {
       return NextResponse.json(
-        { success: false, error: `Erro na API Gemini (${res.status}): ${errTxt.slice(0, 160)}` },
+        { success: false, error: `Erro ao consultar a IA: ${ai.error || 'sem resposta'}` },
         { status: 500 }
       );
     }
 
-    const json = await res.json();
-    const rawText = String(json?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    const rawText = ai.text.trim();
     const cleaned = rawText
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')

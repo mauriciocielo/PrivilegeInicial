@@ -1,5 +1,6 @@
 import { getEmailDbPool } from './email-db';
 import { sendMessage, getWhatsAppConfig } from './whatsapp-service';
+import { generateText } from './ai-provider';
 import {
   getBaileysSocketForOwner,
   buildChatIdForOwner,
@@ -166,58 +167,20 @@ async function rewriteColdMessageWithAI(
 ): Promise<string> {
   try {
     const cfg = await getWhatsAppConfig(ownerId);
-    const geminiKey =
-      cfg.gemini_api_key ||
-      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30 ? process.env.GEMINI_API_KEY : '') ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      '';
-    const claudeKey = cfg.claude_api_key || process.env.ANTHROPIC_API_KEY || '';
     const firstName = (recipientName || '').trim().split(/\s+/)[0] || '';
 
     const instruction = `Reescreva a mensagem de prospecção abaixo para o WhatsApp mantendo EXATAMENTE a mesma ideia, tom próximo e executivo, no máximo 2 parágrafos curtos (até 3 linhas), SEM links, chamando o contato apenas pelo primeiro nome (${firstName || 'não cite nome'}), variando saudação, sinônimos e ordem das frases para ser 100% única (anti-spam). Retorne APENAS o texto final da mensagem, sem aspas nem explicações.\n\nMensagem base:\n${baseMessage}`;
 
-    if (geminiKey && geminiKey.length >= 25) {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: instruction }] }],
-            generationConfig: { temperature: 0.85, maxOutputTokens: 260 },
-          }),
-          signal: AbortSignal.timeout(6000),
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (txt && txt.length >= 25) return txt;
-      }
-    }
-
-    if (claudeKey && claudeKey.length >= 20) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': claudeKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-latest',
-          max_tokens: 260,
-          temperature: 0.85,
-          messages: [{ role: 'user', content: instruction }],
-        }),
-        signal: AbortSignal.timeout(6000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const txt = data?.content?.[0]?.text?.trim();
-        if (txt && txt.length >= 25) return txt;
-      }
-    }
+    const ai = await generateText({
+      prompt: instruction,
+      maxTokens: 260,
+      temperature: 0.85,
+      configs: [cfg],
+      timeoutMs: 6000,
+      ollamaTimeoutMs: 30000,
+    });
+    const txt = ai.text?.trim();
+    if (txt && txt.length >= 25) return txt;
   } catch {}
   return baseMessage;
 }

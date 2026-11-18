@@ -1,4 +1,5 @@
 import { getEmailDbPool } from './email-db';
+import { generateText } from './ai-provider';
 
 export interface QuizQuestion {
   id: string;
@@ -544,48 +545,38 @@ export async function submitPlayerAnswer(params: {
 }
 
 export async function generateQuizQuestionsWithAI(topic: string, count = 5): Promise<QuizQuestion[]> {
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-  if (!geminiKey || geminiKey.length < 20) {
-    throw new Error('GEMINI_API_KEY não configurada no servidor para gerar perguntas com IA.');
-  }
-
   const safeCount = Math.min(10, Math.max(2, Number(count) || 5));
   const prompt = `Crie exatamente ${safeCount} perguntas estilo Kahoot em português do Brasil sobre o tema: "${topic}".
-Retorne APENAS um JSON válido (array de objetos, sem markdown \`\`\`json) com este formato exato:
-[
-  {
-    "prompt": "Texto claro da pergunta (máximo 140 caracteres)",
-    "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
-    "correctIndex": 0,
-    "timeLimitSec": 20
-  }
-]
+Retorne APENAS um JSON válido (sem markdown \`\`\`json) com este formato exato:
+{
+  "perguntas": [
+    {
+      "prompt": "Texto claro da pergunta (máximo 140 caracteres)",
+      "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
+      "correctIndex": 0,
+      "timeLimitSec": 20
+    }
+  ]
+}
 Regras:
 - Cada pergunta deve ter exatamente 4 opções curtas e objetivas.
 - correctIndex deve ser 0, 1, 2 ou 3.
 - Varie a posição de correctIndex entre as perguntas.`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-      }),
-      signal: AbortSignal.timeout(20000),
-    }
-  );
+  const ai = await generateText({
+    prompt,
+    jsonMode: true,
+    maxTokens: 2048,
+    temperature: 0.7,
+    timeoutMs: 20000,
+  });
 
-  if (!res.ok) {
-    throw new Error('Falha ao consultar a IA para gerar perguntas.');
+  if (!ai.text) {
+    throw new Error(`Falha ao consultar a IA para gerar perguntas. ${ai.error || ''}`.trim());
   }
 
-  const data = await res.json();
-  const rawText = String(data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-  const cleaned = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
-  const parsed = JSON.parse(cleaned);
+  const json = JSON.parse(ai.text);
+  const parsed = Array.isArray(json) ? json : json?.perguntas || json?.questions;
   if (!Array.isArray(parsed)) throw new Error('Resposta inválida da IA.');
 
   return parsed.slice(0, safeCount).map((q: any, i: number) => ({

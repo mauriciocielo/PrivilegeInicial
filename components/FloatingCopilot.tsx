@@ -205,7 +205,7 @@ Regras:
           ...prev,
           {
             sender: 'ai',
-            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se a chave GEMINI_API_KEY ou ANTHROPIC_API_KEY está configurada.'}`,
+            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se o servidor Ollama (OLLAMA_BASE_URL) está acessível.'}`,
             timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
@@ -274,7 +274,7 @@ Regras:
                   outline: 'none',
                 }}
               >
-                <option value="auto" style={{ color: '#111' }}>IA: Auto</option>
+                <option value="auto" style={{ color: '#111' }}>IA: Auto (Ollama)</option>
                 <option value="gemini" style={{ color: '#111' }}>Gemini</option>
                 <option value="claude" style={{ color: '#111' }}>Claude</option>
                 <option value="ollama" style={{ color: '#111' }}>Ollama</option>

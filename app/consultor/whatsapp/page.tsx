@@ -97,7 +97,7 @@ interface WhatsAppConfig {
   quick_replies: QuickReply[];
   human_takeover_minutes: number;
   mcp_enabled?: boolean;
-  ai_provider?: 'gemini' | 'claude' | 'openai';
+  ai_provider?: 'gemini' | 'claude' | 'openai' | 'ollama';
   ai_model?: string;
   gemini_api_key?: string;
   claude_api_key?: string;
@@ -4499,6 +4499,16 @@ export default function WhatsAppPage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
                       <div
+                        onClick={() => handleSaveConfig({ ai_provider: 'ollama' })}
+                        className={`leo-mode-card ${(!config?.ai_provider || config?.ai_provider === 'ollama') ? 'selected' : ''}`}
+                      >
+                        <div className="leo-mode-card-title">🦙 Ollama (padrão)</div>
+                        <div className="leo-mode-card-desc">
+                          IA própria hospedada pela Privilege. É sempre tentada primeiro; os demais motores entram só como contingência.
+                        </div>
+                      </div>
+
+                      <div
                         onClick={() =>
                           handleSaveConfig({
                             ai_provider: 'claude',
@@ -4535,7 +4545,7 @@ export default function WhatsAppPage() {
                             ai_model: 'gemini-2.5-flash',
                           })
                         }
-                        className={`leo-mode-card ${(!config?.ai_provider || config?.ai_provider === 'gemini') ? 'selected' : ''}`}
+                        className={`leo-mode-card ${config?.ai_provider === 'gemini' ? 'selected' : ''}`}
                       >
                         <div className="leo-mode-card-title">🔵 Google Gemini</div>
                         <div className="leo-mode-card-desc">
@@ -4732,7 +4742,7 @@ export default function WhatsAppPage() {
                       <Zap size={14} color="var(--yellow)" />{' '}
                       {testingAiProvider
                         ? 'Testando conexão com a IA...'
-                        : `Testar Resposta da IA Ativa (${(config?.ai_provider || 'gemini').toUpperCase()})`}
+                        : `Testar Resposta da IA Ativa (${(config?.ai_provider || 'ollama').toUpperCase()})`}
                     </button>
 
                     {aiTestResult && (

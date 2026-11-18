@@ -4,6 +4,7 @@ import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply
 import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected } from './baileys-manager';
 import { runTriageStep } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
+import { generateText } from './ai-provider';
 import {
   AssistantPersona,
   DEFAULT_ASSISTANTS,
@@ -224,13 +225,13 @@ Regras estritas:
   ],
   human_takeover_minutes: 30,
   mcp_enabled: true,
-  ai_provider: 'gemini',
+  ai_provider: 'ollama',
   ai_model: 'gemini-2.5-flash',
   gemini_api_key: '',
   claude_api_key: '',
   openai_api_key: '',
   ollama_base_url: '',
-  ollama_model: 'gemma4:latest',
+  ollama_model: '',
   reply_audio_on_audio: true,
   always_reply_audio: false,
   active_assistant_id: 'leo',
@@ -310,7 +311,7 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
       quick_replies: typeof r.quick_replies === 'string' ? JSON.parse(r.quick_replies) : (r.quick_replies || DEFAULT_CONFIG.quick_replies),
       human_takeover_minutes: r.human_takeover_minutes ?? 30,
       mcp_enabled: true,
-      ai_provider: (r.ai_provider as any) || 'gemini',
+      ai_provider: (r.ai_provider as any) || 'ollama',
       ai_model: r.ai_model || 'gemini-2.5-flash',
       gemini_api_key: r.gemini_api_key || (r.api_key && r.api_key.startsWith('AIza') ? r.api_key : '') || '',
       claude_api_key: r.claude_api_key || (r.api_key && r.api_key.startsWith('sk-ant-') ? r.api_key : '') || '',
@@ -324,7 +325,7 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
       gemini_mcp_url: r.gemini_mcp_url || '',
       gemini_mcp_token: r.gemini_mcp_token || '',
       ollama_base_url: r.ollama_base_url || '',
-      ollama_model: r.ollama_model || 'gemma4:latest',
+      ollama_model: r.ollama_model || '',
       assistants:
         typeof r.assistants === 'string'
           ? JSON.parse(r.assistants)
@@ -419,7 +420,7 @@ export async function updateWhatsAppConfig(
     JSON.stringify(merged.auto_reply_rules),
     JSON.stringify(merged.quick_replies),
     merged.human_takeover_minutes,
-    merged.ai_provider || 'gemini',
+    merged.ai_provider || 'ollama',
     merged.ai_model || 'gemini-2.5-flash',
     merged.gemini_api_key || '',
     merged.claude_api_key || '',
@@ -431,7 +432,7 @@ export async function updateWhatsAppConfig(
     merged.gemini_mcp_url || '',
     merged.gemini_mcp_token || '',
     merged.ollama_base_url || '',
-    merged.ollama_model || 'gemma4:latest',
+    merged.ollama_model || '',
   ]);
 
   return merged;
@@ -1427,27 +1428,6 @@ export async function generateGeminiBotReply(
 ): Promise<string> {
   const config = await getWhatsAppConfig(ownerId).catch(() => DEFAULT_CONFIG);
 
-  const geminiKey =
-    config.gemini_api_key ||
-    (config.api_key && config.api_key.startsWith('AIza') ? config.api_key : '') ||
-    (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30 ? process.env.GEMINI_API_KEY : '') ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-    '';
-
-  const claudeKey =
-    config.claude_api_key ||
-    (config.api_key && config.api_key.startsWith('sk-ant-') ? config.api_key : '') ||
-    process.env.ANTHROPIC_API_KEY ||
-    '';
-
-  const openaiKey =
-    config.openai_api_key ||
-    (config.api_key && config.api_key.startsWith('sk-') && !config.api_key.startsWith('sk-ant-')
-      ? config.api_key
-      : '') ||
-    process.env.OPENAI_API_KEY ||
-    '';
-
   const prompt = customPrompt || config.bot_prompt || DEFAULT_CONFIG.bot_prompt;
   const taughtContext = await getTaughtLessonsContext().catch(() => '');
 
@@ -1485,130 +1465,17 @@ INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
 3. Nunca repita perguntas já respondidas anteriormente pelo cliente e conduza para o próximo passo com objetividade.
 `.trim();
 
-  const preferred = config.ai_provider || 'gemini';
-
-  // Helper: chamada real para Claude (Anthropic Messages API)
-  async function tryClaude(): Promise<string | null> {
-    if (!claudeKey || claudeKey.length < 20) return null;
-    try {
-      const model =
-        config.ai_model && config.ai_model.startsWith('claude-')
-          ? config.ai_model
-          : 'claude-3-5-sonnet-latest';
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': claudeKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 450,
-          system: enrichedPrompt,
-          messages: [{ role: 'user', content: userMessage }],
-        }),
-        signal: AbortSignal.timeout(8500),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const text = json.content?.[0]?.text;
-        if (text && text.trim()) return text.trim();
-      }
-    } catch (err) {
-      console.warn('[WhatsAppService] Falha na chamada da API do Claude:', err);
-    }
-    return null;
-  }
-
-  // Helper: chamada real para ChatGPT (OpenAI Chat Completions API)
-  async function tryOpenAI(): Promise<string | null> {
-    if (!openaiKey || openaiKey.length < 20) return null;
-    try {
-      const model =
-        config.ai_model && config.ai_model.startsWith('gpt-')
-          ? config.ai_model
-          : 'gpt-4o-mini';
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 450,
-          temperature: 0.4,
-          messages: [
-            { role: 'system', content: enrichedPrompt },
-            { role: 'user', content: userMessage },
-          ],
-        }),
-        signal: AbortSignal.timeout(8500),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const text = json.choices?.[0]?.message?.content;
-        if (text && text.trim()) return text.trim();
-      }
-    } catch (err) {
-      console.warn('[WhatsAppService] Falha na chamada da API da OpenAI (ChatGPT):', err);
-    }
-    return null;
-  }
-
-  // Helper: chamada real para Google Gemini API
-  async function tryGemini(): Promise<string | null> {
-    if (!geminiKey || geminiKey.length < 25) return null;
-    try {
-      const model =
-        config.ai_model && config.ai_model.startsWith('gemini-')
-          ? config.ai_model
-          : 'gemini-2.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: `INSTRUÇÃO DO SISTEMA:\n${enrichedPrompt}\n\nMENSAGEM RECEBIDA DO CLIENTE NO WHATSAPP:\n"${userMessage}"\n\nResponda diretamente ao cliente de forma curta, simpática e seguindo todas as regras.`,
-                },
-              ],
-            },
-          ],
-        }),
-        signal: AbortSignal.timeout(7500),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        const candidate = json.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidate && candidate.trim()) {
-          return candidate.trim();
-        }
-      }
-    } catch (err) {
-      console.warn('[WhatsAppService] Falha na chamada da Gemini API:', err);
-    }
-    return null;
-  }
-
-  // Executa na ordem de preferência configurada pelo usuário com fallback automático
-  const order =
-    preferred === 'claude'
-      ? [tryClaude, tryOpenAI, tryGemini]
-      : preferred === 'openai'
-      ? [tryOpenAI, tryClaude, tryGemini]
-      : [tryGemini, tryClaude, tryOpenAI];
-
-  for (const fn of order) {
-    const out = await fn();
-    if (out) return out;
-  }
+  // Ollama primeiro; o provedor salvo na configuração e os demais ficam como contingência.
+  const ai = await generateText({
+    system: enrichedPrompt,
+    prompt: `MENSAGEM RECEBIDA DO CLIENTE NO WHATSAPP:\n"${userMessage}"\n\nResponda diretamente ao cliente de forma curta, simpática e seguindo todas as regras.`,
+    maxTokens: 450,
+    temperature: 0.4,
+    configs: [config],
+    timeoutMs: 8500,
+    ollamaTimeoutMs: 45000,
+  });
+  if (ai.text) return ai.text.trim();
 
   const lower = userMessage.toLowerCase();
 

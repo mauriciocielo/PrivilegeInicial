@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWhatsAppConfig } from '@/lib/whatsapp-service';
+import { generateText } from '@/lib/ai-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +24,6 @@ export async function POST(req: NextRequest) {
     }
 
     const cfg = await getWhatsAppConfig('default').catch(() => null);
-    const geminiKey = cfg?.gemini_api_key || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-    const claudeKey = cfg?.claude_api_key || process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || '';
 
     const systemInstruction = `Você é o "Privilege AI Assistant", assistente inteligente incorporado ao site e plataforma da Privilege Contabilidade e Consultoria 360º (Francisco Beltrão - PR e atendimento online em todo o Brasil).
 Atuamos nos 6 pilares: Planejamento Estratégico 2027, Contábil/Tributário, Financeiro/BPO, Comercial, Marketing e Gestão de Pessoas/Treinamentos.
@@ -33,70 +32,28 @@ ${pageContext ? `Conteúdo visível na página:\n${String(pageContext).slice(0, 
 
 Responda de forma executiva, clara, objetiva e consultiva em português do Brasil (Markdown curto).`;
 
-    const contents = [
-      ...history.slice(-8).map((h: any) => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: String(h.text || h.content || '') }],
-      })),
-      { role: 'user', parts: [{ text: String(message) }] },
-    ];
+    const ai = await generateText({
+      system: systemInstruction,
+      messages: [
+        ...history.slice(-8).map((h: any) => ({
+          role: (h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: String(h.text || h.content || ''),
+        })),
+        { role: 'user' as const, content: String(message) },
+      ],
+      maxTokens: 1200,
+      temperature: 0.4,
+      preferred: provider,
+      configs: [cfg],
+      timeoutMs: 20000,
+    });
 
-    if ((provider === 'gemini' || provider === 'auto') && geminiKey) {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
-          }),
-          signal: AbortSignal.timeout(20000),
-        }
-      );
-      if (res.ok) {
-        const d = await res.json();
-        const text = d?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return NextResponse.json({ success: true, reply: text, provider: 'gemini' }, { headers: CORS_HEADERS });
-        }
-      }
-    }
-
-    if (claudeKey) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': claudeKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-latest',
-          max_tokens: 1200,
-          system: systemInstruction,
-          messages: [
-            ...history.slice(-8).map((h: any) => ({
-              role: h.role === 'user' ? 'user' : 'assistant',
-              content: String(h.text || h.content || ''),
-            })),
-            { role: 'user', content: String(message) },
-          ],
-        }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        const text = d?.content?.[0]?.text;
-        if (text) {
-          return NextResponse.json({ success: true, reply: text, provider: 'claude' }, { headers: CORS_HEADERS });
-        }
-      }
+    if (ai.text) {
+      return NextResponse.json({ success: true, reply: ai.text, provider: ai.provider }, { headers: CORS_HEADERS });
     }
 
     return NextResponse.json(
-      { success: false, error: 'Nenhum provedor de IA disponível no momento.' },
+      { success: false, error: ai.error || 'Nenhum provedor de IA disponível no momento.' },
       { status: 503, headers: CORS_HEADERS }
     );
   } catch (err: any) {
