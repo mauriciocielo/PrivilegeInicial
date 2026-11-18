@@ -84,7 +84,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
     } catch (err: any) {
       setError('Erro de conexão ao tentar entrar.');
       setLoading(false);
@@ -125,7 +125,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
     } catch (err) {
       setError('Erro de conexão ao verificar o código.');
       setLoading(false);
@@ -182,7 +182,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
     } catch (err) {
       setError('Falha ao processar o Login com o Google.');
       setLoading(false);
@@ -233,7 +233,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
     } catch (err) {
       setError('Falha ao processar vinculação.');
       setLoading(false);
@@ -373,7 +373,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => {
                     store.setCurrentUser(lockedUser);
-                    router.replace(lockedUser.role === 'consultor' || lockedUser.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard');
+                    router.replace(lockedUser.role === 'consultor' || lockedUser.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
                   }}
                   style={{
                     width: '100%', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'center',

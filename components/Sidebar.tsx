@@ -645,7 +645,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             ? (role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp')
             : somenteFiscal
             ? (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard2')
-            : (role === 'cliente' ? '/cliente/dashboard' : '/consultor/dashboard')
+            : (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard')
         )}
       >
         <BrandLogo size={42} />

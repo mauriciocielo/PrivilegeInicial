@@ -49,7 +49,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
       return;
     }
     if (user.role !== 'consultor' && user.role !== 'administrador') {
-      router.replace('/cliente/dashboard');
+      router.replace('/cliente/dashboard2');
       return;
     }
     setCurrentUser(user);
