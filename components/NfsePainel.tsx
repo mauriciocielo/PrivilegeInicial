@@ -13,6 +13,7 @@ import NfseAcessoClienteModal from './NfseAcessoClienteModal';
 import { formatarCnpj } from '../lib/nfse/emissor';
 import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse';
 import NfseCopiarModal from './NfseCopiarModal';
+import ComercialExportBar from './ComercialExportBar';
 import { base64ToUint8Array, criarZipBlobClient, type ArquivoZipClient } from '../lib/nfse/zip-client';
 import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
@@ -2271,6 +2272,34 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             </button>
           </div>
         )}
+
+        <ComercialExportBar
+          title={papelFiltro === 'tomadas' ? 'Relatório de NFS-e Tomadas (Serviços Contratados)' : 'Relatório de NFS-e Emitidas (Serviços Prestados)'}
+          fileNameBase={papelFiltro === 'tomadas' ? 'relatorio_nfse_tomadas' : 'relatorio_nfse_emitidas'}
+          kpis={[
+            { label: 'Notas no Filtro', value: String(filtered.length) },
+            { label: 'Valor Serviços', value: fmt.currency(filtered.reduce((a, n) => a + (n.valorServicos || 0), 0)) },
+            { label: 'Valor Líquido', value: fmt.currency(filtered.reduce((a, n) => a + (n.valorLiquido || 0), 0)) },
+          ]}
+          columns={[
+            { header: 'Número', key: 'numero' },
+            { header: 'Emissão', key: 'emissao' },
+            { header: papelFiltro === 'tomadas' ? 'Prestador' : 'Tomador', key: 'contraparte' },
+            { header: 'CNPJ/CPF', key: 'doc' },
+            { header: 'Status', key: 'status' },
+            { header: 'Serviços', key: 'valorServicos' },
+            { header: 'Líquido', key: 'valorLiquido' },
+          ]}
+          rows={filtered.map(n => ({
+            numero: n.numero || 'Rascunho',
+            emissao: n.dataEmissao || '—',
+            contraparte: papelFiltro === 'tomadas' ? (n.prestadorRazaoSocial || '—') : (n.tomadorRazaoSocial || '—'),
+            doc: papelFiltro === 'tomadas' ? (n.prestadorCnpj || '—') : (n.tomadorCnpjCpf || '—'),
+            status: n.status,
+            valorServicos: fmt.currency(n.valorServicos || 0),
+            valorLiquido: fmt.currency(n.valorLiquido || 0),
+          }))}
+        />
 
         {/* Tabela Principal */}
         <div

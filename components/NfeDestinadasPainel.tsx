@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
+import ComercialExportBar from './ComercialExportBar';
 import NfeCertificadoModal from './NfeCertificadoModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
 import NfeDifalModal from './NfeDifalModal';
@@ -1571,6 +1572,43 @@ export default function NfeDestinadasPainel() {
                 </div>
               </div>
             )}
+
+            <ComercialExportBar
+              title={
+                abaPrincipal === 'emitidas'
+                  ? 'Relatório de NF-e Emitidas (Vendas)'
+                  : abaPrincipal === 'todas'
+                  ? 'Relatório Geral de Notas Fiscais Destinadas (NF-e / CT-e)'
+                  : 'Relatório de NF-e Recebidas (Compras)'
+              }
+              fileNameBase={`relatorio_nfe_${abaPrincipal}`}
+              kpis={[
+                { label: 'Documentos', value: String(notasFiltradas.length) },
+                { label: 'Com XML Completo', value: String(notasFiltradas.filter(n => n.possuiXml).length) },
+                { label: 'Valor Total', value: fmt.currency(notasFiltradas.reduce((a, n) => a + (n.valorNf || 0), 0)) },
+              ]}
+              columns={[
+                { header: 'Número', key: 'numero' },
+                { header: 'Emissão', key: 'emissao' },
+                { header: 'Emitente / Destinatário', key: 'contraparte' },
+                { header: 'CNPJ', key: 'cnpj' },
+                { header: 'Tipo', key: 'tipo' },
+                { header: 'Situação', key: 'situacao' },
+                { header: 'Valor NF', key: 'valor' },
+              ]}
+              rows={notasFiltradas.map(n => {
+                const ehEmitida = n.papel === 'emitida';
+                return {
+                  numero: `${n.numero || '—'}${n.serie ? ` (S.${n.serie})` : ''}`,
+                  emissao: formatData(n.dataEmissao),
+                  contraparte: ehEmitida ? (n.destinatarioNome || '—') : (n.emitenteNome || '—'),
+                  cnpj: formatCnpj((ehEmitida ? n.destinatarioCnpj : n.emitenteCnpj) || ''),
+                  tipo: n.chaveAcesso?.slice(20, 22) === '57' ? 'CT-e' : ehEmitida ? 'Emitida (Venda)' : 'Recebida (Compra)',
+                  situacao: n.situacao || '—',
+                  valor: fmt.currency(n.valorNf || 0),
+                };
+              })}
+            />
 
             {/* Tabela Principal de Notas */}
             <div
