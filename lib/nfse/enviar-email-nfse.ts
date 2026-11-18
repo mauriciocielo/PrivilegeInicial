@@ -16,12 +16,17 @@ async function buscarEmailReceitaCnpj(cnpjLimpo: string): Promise<string | null>
 
   const tentar = async (url: string): Promise<string | null> => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const timer = setTimeout(() => controller.abort(), 4500);
     try {
-      const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+      const res = await fetch(url, {
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'User-Agent': 'PrivilegeContabilidade/1.0', Accept: 'application/json' },
+      });
       if (!res.ok) return null;
       const data = await res.json().catch(() => null);
-      const email = typeof data?.email === 'string' ? data.email.trim().toLowerCase() : '';
+      const raw = data?.estabelecimento?.email || data?.email || '';
+      const email = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
       return email && email.includes('@') ? email : null;
     } catch {
       return null;
@@ -31,6 +36,8 @@ async function buscarEmailReceitaCnpj(cnpjLimpo: string): Promise<string | null>
   };
 
   return (
+    (await tentar(`https://publica.cnpj.ws/cnpj/${cnpjLimpo}`)) ||
+    (await tentar(`https://receitaws.com.br/v1/cnpj/${cnpjLimpo}`)) ||
     (await tentar(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`)) ||
     (await tentar(`https://minhareceita.org/${cnpjLimpo}`))
   );
