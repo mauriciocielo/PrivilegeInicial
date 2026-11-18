@@ -19,6 +19,23 @@ const nextConfig = {
         tls: false,
         dns: false,
         child_process: false,
+        stream: false,
+        zlib: false,
+        http: false,
+        https: false,
+        url: false,
+        buffer: false,
+        util: false,
+        events: false,
+        querystring: false,
+        assert: false,
+      };
+    }
+    if (nextRuntime === 'edge') {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        nodemailer: false,
+        dotenv: false,
       };
     }
     return config;
