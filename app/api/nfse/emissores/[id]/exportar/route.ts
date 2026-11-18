@@ -11,6 +11,9 @@ import {
 } from '../../../../../../lib/nfse/danfse';
 import { criarZipBuffer, type ArquivoZip } from '../../../../../../lib/nfse/zip';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 const MAX_NOTAS_SELECIONADAS = 200;
 // A Vercel recusa respostas acima de cerca de 4,5 MB.
 const LIMITE_RESPOSTA_BYTES = 4.2 * 1024 * 1024;
@@ -100,19 +103,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const nomeEmpresa = limparNomeArquivo(empresa.nomeFantasia || empresa.razaoSocial || cnpjEmpresa);
 
     if (formato === 'pdf_unico') {
-      const paginas = [];
-      for (const n of filtradas) {
-        const dados = lerDadosDanfse(n.documento!.nfseXml);
-        const qrPng = await QRCode.toBuffer(urlConsultaPublica(dados.chave), { errorCorrectionLevel: 'M', margin: 0, width: 300 });
-        paginas.push({
-          dados,
-          opcoes: {
-            logoPng,
-            qrPng,
-            marcaDagua: marcaDaguaDaNota(n.status, n.documento!.eventoXml),
-          },
-        });
-      }
+      const paginas = await Promise.all(
+        filtradas.map(async (n) => {
+          const dados = lerDadosDanfse(n.documento!.nfseXml);
+          const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
+          const qrPng = qrText
+            ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
+            : Buffer.alloc(0);
+          return {
+            dados,
+            opcoes: {
+              logoPng,
+              qrPng,
+              marcaDagua: marcaDaguaDaNota(n.status, n.documento!.eventoXml),
+            },
+          };
+        })
+      );
       const pdfUnico = gerarDanfsePdfUnico(paginas);
       const excessoPdf = grandeDemais(pdfUnico.length);
       if (excessoPdf) return excessoPdf;
@@ -139,7 +146,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return candidato;
     };
 
-    for (const n of filtradas) {
+    const qrBuffers = (formato === 'pdf' || formato === 'ambos')
+      ? await Promise.all(
+          filtradas.map(async (n) => {
+            const dados = lerDadosDanfse(n.documento!.nfseXml);
+            const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
+            const qrPng = qrText
+              ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 300 }).catch(() => Buffer.alloc(0))
+              : Buffer.alloc(0);
+            return { dados, qrPng };
+          })
+        )
+      : [];
+
+    for (let idx = 0; idx < filtradas.length; idx++) {
+      const n = filtradas[idx];
       const prestDoc = apenasDigitos(n.prestadorCnpj || '');
       const ehTomada = prestDoc !== '' && prestDoc !== cnpjEmpresa;
       const contraparte = limparNomeArquivo(ehTomada ? n.prestadorRazaoSocial : n.tomadorRazaoSocial);
@@ -155,8 +176,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       }
 
       if (formato === 'pdf' || formato === 'ambos') {
-        const dados = lerDadosDanfse(n.documento!.nfseXml);
-        const qrPng = await QRCode.toBuffer(urlConsultaPublica(dados.chave), { errorCorrectionLevel: 'M', margin: 0, width: 300 });
+        const { dados, qrPng } = qrBuffers[idx];
         const pdf = gerarDanfsePdf(dados, {
           logoPng,
           qrPng,

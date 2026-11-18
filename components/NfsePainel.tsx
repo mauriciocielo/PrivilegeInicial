@@ -1213,7 +1213,10 @@ export default function NfsePainel({ modoCliente = false }: { modoCliente?: bool
     const res = await fetch(`/api/nfse/emissores/${empresaId}/exportar?${params.toString()}`);
     if (!res.ok) {
       const erro = await res.json().catch(() => ({}));
-      toast.error(erro.error || 'Não foi possível exportar as notas.');
+      const msgPadrao = res.status === 502 || res.status === 504
+        ? 'Tempo limite excedido ao gerar o pacote. Tente exportar em PDF único ou apenas XML.'
+        : `Não foi possível exportar as notas (HTTP ${res.status}).`;
+      toast.error(erro.error || msgPadrao);
       return null;
     }
     const blob = await res.blob();
