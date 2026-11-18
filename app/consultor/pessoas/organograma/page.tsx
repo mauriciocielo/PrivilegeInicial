@@ -514,8 +514,8 @@ export default function PessoasOrganogramaPage() {
             </div>
 
             {selectedDesc && (
-              <div className="card" style={{ padding: 22, gridColumn: 'span 2' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+              <div className="card print-report-only" style={{ padding: 22, gridColumn: 'span 2' }}>
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <ShieldCheck size={20} color="var(--accent)" />
                     <strong style={{ fontSize: 16 }}>Ficha Oficial — Descrição de Perfil de Função</strong>

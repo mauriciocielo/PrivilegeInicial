@@ -777,7 +777,7 @@ export default function RelatoriosPage() {
         />
 
         {/* Config */}
-        <div className="card card-sm" style={{ marginBottom: 20 }}>
+        <div className="card card-sm no-print" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Tipo de Relatório</label>
@@ -829,7 +829,7 @@ export default function RelatoriosPage() {
         )}
 
         {/* Preview Table */}
-        <div className="card">
+        <div className="card print-report-only">
           <div className="card-header">
             <div>
               <div className="card-title">{getTitle()}</div>

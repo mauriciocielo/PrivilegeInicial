@@ -2048,8 +2048,11 @@ tbody td {
    PRINT
    ============================================================ */
 @media print {
-  .sidebar, .page-header, .btn, .header-actions, .mobile-menu-toggle { display: none !important; }
-  .main-content { margin-left: 0; }
-  .card { border: 1px solid #ccc; box-shadow: none; }
-  body { background: #fff; color: #000; }
+  .sidebar, .page-header, .btn, .header-actions, .mobile-menu-toggle, .no-print, .floating-copilot, [data-sonner-toaster] { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: 0 !important; }
+  .page-body { padding: 0 !important; }
+  body:has(.print-report-only) .page-body > *:not(.print-report-only):not(:has(.print-report-only)) { display: none !important; }
+  body:has(.print-report-only) .print-report-only { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+  .card { border: 1px solid #ccc; box-shadow: none; background: #fff !important; color: #000 !important; }
+  body { background: #fff !important; color: #000 !important; }
 }

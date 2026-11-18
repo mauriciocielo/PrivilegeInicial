@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { FileText, FileSpreadsheet, Printer, MessageSquare, Mail } from 'lucide-react';
@@ -228,6 +228,72 @@ export default function ComercialExportBar({
     }
   }
 
+  function handlePrintReport() {
+    const emp = getEmpresaInfo();
+    const esc = (s: any) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const win = window.open('', '_blank', 'width=1024,height=768');
+    if (!win) {
+      window.print();
+      return;
+    }
+    const kpiHtml = kpis
+      .map(
+        (k) =>
+          `<div style="flex:1 1 160px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;background:#f8fafc;">
+            <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;">${esc(k.label)}</div>
+            <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:4px;">${esc(k.value)}</div>
+          </div>`
+      )
+      .join('');
+    const thHtml = columns.map((c) => `<th style="text-align:left;padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;background:#f1f5f9;">${esc(c.header)}</th>`).join('');
+    const trHtml = rows
+      .map(
+        (r) =>
+          `<tr>${columns
+            .map((c) => `<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;vertical-align:top;">${esc(r[c.key] ?? '')}</td>`)
+            .join('')}</tr>`
+      )
+      .join('');
+    win.document.write(`<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${esc(title)}</title>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 24px; }
+            @media print { body { margin: 12mm; } }
+          </style>
+        </head>
+        <body>
+          <div style="border-bottom:2px solid #600000;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#600000;text-transform:uppercase;">${esc(PDF_BRAND_NAME)}</div>
+              <h1 style="margin:4px 0 0;font-size:20px;">${esc(title)}</h1>
+            </div>
+            <div style="text-align:right;font-size:11.5px;color:#475569;">
+              <div><strong>${esc(emp.nome)}</strong></div>
+              <div>Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+          </div>
+          ${kpis.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">${kpiHtml}</div>` : ''}
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr>${thHtml}</tr></thead>
+            <tbody>${trHtml}</tbody>
+          </table>
+        </body>
+      </html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 250);
+  }
+
   return (
     <>
       <div
@@ -253,7 +319,7 @@ export default function ComercialExportBar({
         <button type="button" disabled={busy} onClick={handleExportExcel} className="btn btn-secondary" style={{ padding: '6px 11px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <FileSpreadsheet size={14} color="#15803d" /> Excel
         </button>
-        <button type="button" onClick={() => window.print()} className="btn btn-secondary" style={{ padding: '6px 11px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <button type="button" onClick={handlePrintReport} className="btn btn-secondary" style={{ padding: '6px 11px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <Printer size={14} /> Imprimir
         </button>
         <button type="button" disabled={busy} onClick={handleSendWhatsApp} className="btn btn-secondary" style={{ padding: '6px 11px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, color: '#15803d' }}>
