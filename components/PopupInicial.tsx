@@ -1,10 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { plusJakartaSans as fonte } from '../app/fonts';
 import { X } from 'lucide-react';
-
-const fonte = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '700', '800'] });
 
 const WHATSAPP = 'https://wa.me/554630351018';
 

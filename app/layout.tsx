@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { plusJakartaSans as fontMain } from './fonts';
 import Script from 'next/script';
 import './globals.css';
 import { Toaster } from 'sonner';
@@ -7,11 +7,6 @@ import TransitionProvider from '../components/TransitionProvider';
 import ConfirmProvider from '../components/ConfirmProvider';
 import PwaAutoUpdate from '../components/PwaAutoUpdate';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-
-const fontMain = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-});
 
 const SITE_TITLE = 'Privilege Contabilidade e Consultoria — Francisco Beltrão, PR';
 // Meta description enxuta (~151 caracteres) alinhada aos serviços buscados localmente

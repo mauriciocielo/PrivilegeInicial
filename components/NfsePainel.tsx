@@ -26,7 +26,7 @@ import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import NfseBuscarNotasModal from './NfseBuscarNotasModal';
 import CertidaoFederalModal from './CertidaoFederalModal';
 import NfseInsights from './NfseInsights';
-import { Instrument_Serif } from 'next/font/google';
+import { instrumentSerif as serif } from '../app/fonts';
 import {
   Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles,
   ChevronDown, SlidersHorizontal, Settings, Plus, KeyRound, Users, Trash2,
@@ -35,8 +35,6 @@ import {
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 type ModalMode = 'novo' | 'ver' | null;
 type PapelFiltro = 'prestadas' | 'tomadas';

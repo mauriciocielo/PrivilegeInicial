@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Instrument_Serif } from 'next/font/google';
+import { instrumentSerif as serif } from '../app/fonts';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
@@ -23,8 +23,6 @@ import NfeGraficoMensalArquivos, { type GraficoMensalDados } from './NfeGraficoM
 import NfeMonitorLogsPainel from './NfeMonitorLogsPainel';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 interface EmpresaMonitor {
   id: string;

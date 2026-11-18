@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Instrument_Serif } from 'next/font/google';
+import { instrumentSerif as serif } from '../app/fonts';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, AlertCircle, Copy, Check,
   Download, RefreshCw, Search, ArrowLeftRight, Sparkles, Filter, ChevronRight,
@@ -15,8 +15,6 @@ import type {
   ItemComparacaoSped,
   TipoDivergencia,
 } from '../lib/sped/comparador';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 interface EmpresaOpcao {
   id: string;

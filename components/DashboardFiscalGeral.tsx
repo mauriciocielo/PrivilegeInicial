@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Instrument_Serif } from 'next/font/google';
+import { instrumentSerif as serif } from '../app/fonts';
 import {
   ShieldCheck, FileText, Activity, Building2, Play, RefreshCw,
   Plus, CheckCircle2, AlertTriangle, XCircle, Truck, Inbox,
@@ -14,8 +14,6 @@ import NfeDestinadasPainel from './NfeDestinadasPainel';
 import PainelSituacaoFiscal from './PainelSituacaoFiscal';
 import NfeMonitorLogsPainel from './NfeMonitorLogsPainel';
 import CadastrarCnpjModal from './CadastrarCnpjModal';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 interface ResumoFiscal {
   totalEmpresas: number;

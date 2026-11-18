@@ -10,9 +10,7 @@ import {
   Building2, ReceiptText, Coins, ShieldCheck, FileWarning, RefreshCw,
   ChevronDown, ChevronUp, ArrowRight, BrainCircuit, Lightbulb, type LucideIcon
 } from 'lucide-react';
-import { Instrument_Serif } from 'next/font/google';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
+import { instrumentSerif as serif } from '../app/fonts';
 
 export interface NfseInsightItem {
   id: string;

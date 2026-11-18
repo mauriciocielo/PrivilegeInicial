@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Instrument_Serif } from 'next/font/google';
+import { instrumentSerif as serif } from '../app/fonts';
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell
@@ -11,8 +11,6 @@ import {
   Clock, ArrowUpRight, ArrowDownLeft, ChevronRight, Layers, Sparkles
 } from 'lucide-react';
 import { fmt } from '../lib/reports';
-
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'] });
 
 export interface MesMetrica {
   mes: string;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Inter, Instrument_Serif } from 'next/font/google';
+import { inter as sans, instrumentSerif as serif } from './fonts';
 import {
   CheckCircle2,
   ChevronDown,
@@ -18,9 +18,6 @@ import {
 import { consultoriaServices, contabilidadeServices, faqs, cnds } from './pageData';
 import PopupInicial from '../components/PopupInicial';
 import StoreLocator from '../components/StoreLocator';
-
-const sans = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] });
 
 const GOOGLE_MAPS_URL =
   'https://www.google.com/maps/place/?q=place_id:ChIJmbblyQdz8JQReoz1xenqkKA';

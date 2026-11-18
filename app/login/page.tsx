@@ -7,10 +7,7 @@ import Image from 'next/image';
 import BrandLogo from '../../components/BrandLogo';
 import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
-import { Inter, Instrument_Serif } from 'next/font/google';
-
-const sans = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
-const serif = Instrument_Serif({ subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] });
+import { inter as sans, instrumentSerif as serif } from '../fonts';
 
 export default function LoginPage() {
   const router = useRouter();
