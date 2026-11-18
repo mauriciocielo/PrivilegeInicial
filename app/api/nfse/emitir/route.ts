@@ -13,6 +13,7 @@ import { criarTransporteMtls, emitirNfse, SefinIndisponivelError } from '../../.
 import { totalRetidoFederal } from '../../../../lib/nfse/retencao';
 import { estimarValoresNota } from '../../../../lib/nfse/lote';
 import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
+import { enviarEmailNfseEmitida } from '../../../../lib/nfse/enviar-email-nfse';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const textoOuNull = (v: unknown) => texto(v) || null;
@@ -287,10 +288,23 @@ export async function POST(request: Request) {
       }
     }
 
+    const emailEnviado = await enviarEmailNfseEmitida({
+      numero: autorizada.numero || '',
+      dataEmissao: autorizada.dataEmissao,
+      prestadorNome: autorizada.prestadorRazaoSocial,
+      tomadorNome: dados.tomadorNome,
+      tomadorDocumento: dados.tomadorDocumento,
+      tomadorEmail: dados.tomadorEmail,
+      valorLiquido: autorizada.valorLiquido,
+      nfseXml: resultado.nfseXml,
+      ambiente,
+    });
+
     return NextResponse.json({
       recuperada: resultado.recuperada,
       alertas: [...alertasEmissao(cfg, dados), ...resultado.alertas],
       aliquotaNaDps: exigeAliquotaNaDps(cfg, issRetido),
+      emailEnviado,
       nota: {
         status: autorizada.status,
         numero: autorizada.numero,
