@@ -6,7 +6,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  serverExternalPackages: ['@whiskeysockets/baileys', 'pino', 'thread-stream'],
+  serverExternalPackages: ['@whiskeysockets/baileys', 'pino', 'thread-stream', 'nodemailer', 'dotenv'],
   webpack(config, { isServer, nextRuntime }) {
     if (!isServer || nextRuntime === 'edge') {
       config.resolve.fallback = {
