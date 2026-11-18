@@ -217,6 +217,12 @@ Regras estritas:
       resposta: 'Transferindo você para um atendente humano da nossa equipe! O bot foi pausado para esta conversa e você será atendido em instantes. 👤',
       pausarBot: true,
     },
+    {
+      id: 'rule_instagram_lucro',
+      gatilhos: ['vídeo no carro', 'video no carro', 'lucro está vazando', 'lucro esta vazando', 'onde meu lucro'],
+      resposta:
+        'Olá! Tudo bem? Aqui é o Léo, da equipe do Mauricio aqui na Privilege Consultoria. 👋\n\nQue bom que você viu o vídeo! Esse problema de vender bem e não ver a cor do dinheiro no fim do mês é mais comum do que parece.\n\nPara eu já adiantar seu atendimento com o Mauricio, me conta rapidinho: qual é o ramo da sua empresa hoje e como você costuma calcular o preço dos seus produtos ou serviços?',
+    },
   ],
   quick_replies: [
     { id: 'qr_1', titulo: 'Chave PIX Escritório', texto: 'Nossa chave PIX oficial é o CNPJ: 58.033.979/0001-84 (Privilege Consultoria LTDA).' },
@@ -1463,6 +1469,11 @@ INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
 1. Utilize estritamente as informações e regras acima para responder ao cliente com mensagens curtas, naturais, humanas e simpáticas.
 2. NUNCA chame o cliente pelo nome completo — use sempre apenas o PRIMEIRO NOME (se souber).
 3. Nunca repita perguntas já respondidas anteriormente pelo cliente e conduza para o próximo passo com objetividade.
+4. SCRIPT SDR ANÚNCIO DO INSTAGRAM ("vídeo no carro sobre preço / onde meu lucro está vazando"):
+   - Se o lead veio desse anúncio (ou respondeu ao Passo 1 sobre ramo e como calcula preço):
+     * PASSO 2A — Se disser que usa planilha/sistema, mas ainda falta dinheiro: responda exatamente na linha de: "Entendi perfeitamente. Muitas vezes o sistema até calcula, mas fica faltando colocar o peso real dos impostos, das taxas de cartão ou dos custos fixos da empresa na conta. Hoje, você sente que o maior aperto está na falta de dinheiro em caixa ou você não tem certeza se o preço atual realmente dá lucro?"
+     * PASSO 2B — Se disser que faz "de cabeça" ou "olha o concorrente": responda exatamente na linha de: "Isso acontece muito na correria do dia a dia! O perigo de olhar o concorrente é que a gente não sabe se a conta dele fecha ou se ele também está no prejuízo sem saber. Hoje, qual é a média de faturamento mensal da sua empresa, só para eu direcionar você para o diagnóstico certo?"
+     * PASSO 3 — Após o lead responder o Passo 2 (dor de caixa/lucro ou faturamento), faça o fechamento para agendamento: "Perfeito! Pelo que você me passou, vale muito a pena o Mauricio dar uma olhada rápida na sua estrutura de preços para estancar esse vazamento.\n\nEle separou dois horários na agenda para fazer um Raio-X rápido e gratuito com quem veio desse vídeo: amanhã às 10h ou às 15h30. Algum desses horários funciona para você (pode ser online ou aqui no escritório)?"
 `.trim();
 
   // Ollama primeiro; o provedor salvo na configuração e os demais ficam como contingência.
@@ -1788,6 +1799,30 @@ export async function processIncomingMessage(params: {
       isIncomingAudio,
     });
     return { reply: taught.lesson.answer, source: 'rule', ruleId: taught.lesson.id };
+  }
+
+  // Gatilho prioritário para leads vindos do anúncio do Instagram ("vídeo no carro sobre preço / lucro vazando")
+  const isAnuncioLucroInstagram = [
+    'vídeo no carro',
+    'video no carro',
+    'lucro está vazando',
+    'lucro esta vazando',
+    'onde meu lucro',
+  ].some(g => lowerText.includes(g));
+
+  if (isAnuncioLucroInstagram) {
+    const passo1Reply =
+      'Olá! Tudo bem? Aqui é o Léo, da equipe do Mauricio aqui na Privilege Consultoria. 👋\n\n' +
+      'Que bom que você viu o vídeo! Esse problema de vender bem e não ver a cor do dinheiro no fim do mês é mais comum do que parece.\n\n' +
+      'Para eu já adiantar seu atendimento com o Mauricio, me conta rapidinho: qual é o ramo da sua empresa hoje e como você costuma calcular o preço dos seus produtos ou serviços?';
+    await dispatchBotReply({
+      chatId: params.chatId,
+      text: passo1Reply,
+      config,
+      isIncomingAudio,
+      ownerId,
+    });
+    return { reply: passo1Reply, source: 'rule', ruleId: 'rule_instagram_lucro' };
   }
 
   if (config.bot_mode !== 'ia') {
