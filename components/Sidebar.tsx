@@ -11,7 +11,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -106,6 +106,10 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Pessoas',
     items: [
+      { label: 'Fluxograma RH & Cargos', href: '/consultor/pessoas/fluxograma', icon: GitBranch },
+      { label: 'Organograma & Descritivo', href: '/consultor/pessoas/organograma', icon: Network },
+      { label: 'Cargos, Salários & CLT x PJ', href: '/consultor/pessoas/cargos-salarios', icon: DollarSign },
+      { label: 'Pesquisa de Clima', href: '/consultor/pessoas/clima', icon: SmilePlus },
       { label: 'Perfil Comportamental', href: '/consultor/perfil-disc', icon: UserSearch },
       { label: 'Quiz Arena (Kahoot)', href: '/consultor/quiz-game', icon: Gamepad2 },
     ],
@@ -159,6 +163,15 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Fluxograma & Diagnóstico MKT', href: '/cliente/marketing/fluxograma', icon: GitBranch },
       { label: 'Plano de Ação Tático (5W2H)', href: '/cliente/marketing/plano-acao', icon: ClipboardList },
       { label: 'Orçamento, Calendário & ROI', href: '/cliente/marketing/orcamento-calendario', icon: CalendarDays },
+    ],
+  },
+  {
+    section: 'Pessoas',
+    items: [
+      { label: 'Fluxograma RH & Cargos', href: '/cliente/pessoas/fluxograma', icon: GitBranch },
+      { label: 'Organograma & Descritivo', href: '/cliente/pessoas/organograma', icon: Network },
+      { label: 'Cargos, Salários & CLT x PJ', href: '/cliente/pessoas/cargos-salarios', icon: DollarSign },
+      { label: 'Pesquisa de Clima', href: '/cliente/pessoas/clima', icon: SmilePlus },
     ],
   },
 ];
