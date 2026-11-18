@@ -609,9 +609,6 @@ export async function startBaileysSocket(
           const meta = await sock.groupMetadata(rawJid).catch(() => null);
           const subj = meta?.subject ? String(meta.subject).trim() : 'Grupo WhatsApp';
           chatDisplayName = subj.startsWith('👥') ? subj : `👥 ${subj}`;
-          if (!m.key.fromMe && text) {
-            text = `[${senderName}]: ${text}`;
-          }
         }
         const pool = getEmailDbPool();
 
@@ -671,6 +668,10 @@ export async function startBaileysSocket(
         }
 
         if (!text && !mediaUrl) continue;
+
+        if (isGroup && !m.key.fromMe && text) {
+          text = `[${senderName}]: ${text}`;
+        }
 
         console.log(
           `[Baileys:${ownerId}] Mensagem (${m.key.fromMe ? 'Enviada pelo Celular' : 'Recebida'}) de ${senderName} (${cleanPhone}): "${text.slice(0, 60)}"`
