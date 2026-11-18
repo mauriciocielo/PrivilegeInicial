@@ -1747,6 +1747,7 @@ export async function processIncomingMessage(params: {
   fileName?: string;
   waKey?: any;
   remoteJid?: string;
+  isGroup?: boolean;
 }): Promise<{ reply?: string; source: 'rule' | 'ai' | 'off_hours' | 'none'; ruleId?: string; paused?: boolean }> {
   const pool = getEmailDbPool();
   const ownerId = params.ownerId || 'default';
@@ -1800,7 +1801,7 @@ export async function processIncomingMessage(params: {
       : cleanText;
     await pool.query(
       `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status, protocol_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 1, TRUE, 'em_atendimento', 'aberto', $8)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 1, $9, 'em_atendimento', 'aberto', $8)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = EXCLUDED.owner_id,
          name = COALESCE(EXCLUDED.name, whatsapp_chats.name),
@@ -1823,6 +1824,7 @@ export async function processIncomingMessage(params: {
         params.remoteJid || null,
         snippetForChat,
         generateProtocolNumber(),
+        !params.isGroup,
       ]
     );
 

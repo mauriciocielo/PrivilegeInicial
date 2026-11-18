@@ -112,6 +112,11 @@ export function resolvePhoneFromJid(
   msgKey?: any,
   ownerId = 'default'
 ): { phone: string; sendJid: string } {
+  if (remoteJid.includes('@g.us')) {
+    const groupId = remoteJid.split('@')[0].replace(/[^0-9-]/g, '');
+    return { phone: groupId, sendJid: remoteJid };
+  }
+
   const authDir = getAuthDir(ownerId);
 
   // 1. Verifica se o Baileys v7 forneceu remoteJidAlt ou participantAlt com @s.whatsapp.net
@@ -172,7 +177,7 @@ export async function resolveWhatsAppJid(
     } catch {}
   }
 
-  if (phoneOrChatId.includes('@s.whatsapp.net') || phoneOrChatId.includes('@lid')) {
+  if (phoneOrChatId.includes('@s.whatsapp.net') || phoneOrChatId.includes('@lid') || phoneOrChatId.includes('@g.us')) {
     return phoneOrChatId;
   }
 
@@ -510,6 +515,36 @@ export async function startBaileysSocket(
               syncContactProfilePic(row.id, targetJid, ownerId).catch(() => {});
             }
           } catch {}
+
+          // Sincroniza grupos participantes do WhatsApp conectado
+          sock
+            .groupFetchAllParticipating()
+            .then(async (groupsMap: Record<string, any>) => {
+              const entries = Object.values(groupsMap || {});
+              if (entries.length === 0) return;
+              await ensureChatColumns(pool);
+              for (const g of entries) {
+                const gid = String(g?.id || '');
+                if (!gid.endsWith('@g.us')) continue;
+                const cleanGroupPhone = gid.split('@')[0].replace(/[^0-9-]/g, '');
+                const chatId = buildChatIdForOwner(cleanGroupPhone, ownerId);
+                const subject = String(g?.subject || 'Grupo WhatsApp').trim();
+                const displayName = subject.startsWith('👥') ? subject : `👥 ${subject}`;
+                await pool
+                  .query(
+                    `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, unread_count, bot_enabled, crm_stage, ticket_status)
+                     VALUES ($1, $2, $3, $4, $5, '', 0, FALSE, 'em_atendimento', 'encerrado')
+                     ON CONFLICT (id) DO UPDATE SET
+                       name = EXCLUDED.name,
+                       remote_jid = EXCLUDED.remote_jid`,
+                    [chatId, ownerId, cleanGroupPhone, displayName, gid]
+                  )
+                  .catch(() => {});
+                syncContactProfilePic(chatId, gid, ownerId).catch(() => {});
+              }
+              notifySocketIoClients('sync', ownerId);
+            })
+            .catch(() => {});
         }
       }
 
@@ -552,9 +587,10 @@ export async function startBaileysSocket(
       for (const m of msgs) {
         if (!m.message) continue;
         const rawJid = m.key.remoteJid || '';
-        if (!rawJid || rawJid.includes('@g.us') || rawJid.includes('broadcast') || rawJid.includes('status@')) {
+        if (!rawJid || rawJid.includes('broadcast') || rawJid.includes('status@')) {
           continue;
         }
+        const isGroup = rawJid.endsWith('@g.us');
 
         if (m.key.id && st.sentWaIds.has(m.key.id)) {
           continue;
@@ -568,6 +604,15 @@ export async function startBaileysSocket(
 
         const chatId = buildChatIdForOwner(cleanPhone, ownerId);
         const senderName = m.pushName || cleanPhone;
+        let chatDisplayName = senderName;
+        if (isGroup) {
+          const meta = await sock.groupMetadata(rawJid).catch(() => null);
+          const subj = meta?.subject ? String(meta.subject).trim() : 'Grupo WhatsApp';
+          chatDisplayName = subj.startsWith('👥') ? subj : `👥 ${subj}`;
+          if (!m.key.fromMe && text) {
+            text = `[${senderName}]: ${text}`;
+          }
+        }
         const pool = getEmailDbPool();
 
         // Trata reação recebida
@@ -676,7 +721,7 @@ export async function startBaileysSocket(
           ownerId,
           chatId,
           phone: cleanPhone,
-          name: senderName,
+          name: chatDisplayName,
           text,
           profilePic: profilePic || undefined,
           mediaType,
@@ -684,6 +729,7 @@ export async function startBaileysSocket(
           fileName: fileName || undefined,
           waKey: m.key,
           remoteJid: sendJid,
+          isGroup,
         });
 
         notifySocketIoClients(chatId, ownerId, {
@@ -719,9 +765,10 @@ export async function startBaileysSocket(
       let synced = 0;
       for (const c of contactsList) {
         const rawId = String(c?.id || '');
-        if (!rawId || rawId.includes('@g.us') || rawId.includes('broadcast') || rawId.includes('status@')) {
+        if (!rawId || rawId.includes('broadcast') || rawId.includes('status@')) {
           continue;
         }
+        const isGroupItem = rawId.endsWith('@g.us');
         const altPhone = (c as any)?.phoneNumber ? String((c as any).phoneNumber) : '';
         const { phone: cleanPhone, sendJid } = resolvePhoneFromJid(
           rawId,
@@ -731,21 +778,27 @@ export async function startBaileysSocket(
         if (!cleanPhone || cleanPhone.length < 10) continue;
 
         const savedName = String(c?.name || c?.verifiedName || c?.notify || '').trim();
-        const displayName = savedName || cleanPhone;
+        const displayName = isGroupItem
+          ? savedName
+            ? savedName.startsWith('👥')
+              ? savedName
+              : `👥 ${savedName}`
+            : '👥 Grupo WhatsApp'
+          : savedName || cleanPhone;
         const chatId = buildChatIdForOwner(cleanPhone, ownerId);
 
         await pool
           .query(
             `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, unread_count, bot_enabled, crm_stage, ticket_status)
-             VALUES ($1, $2, $3, $4, $5, '', 0, TRUE, 'novo', 'encerrado')
+             VALUES ($1, $2, $3, $4, $5, '', 0, $7, 'novo', 'encerrado')
              ON CONFLICT (id) DO UPDATE SET
                name = CASE
                  WHEN $6 <> '' AND (whatsapp_chats.name IS NULL OR whatsapp_chats.name = '' OR whatsapp_chats.name ~ '^[0-9+()\\s-]+$')
-                   THEN $6
+                   THEN $4
                  ELSE whatsapp_chats.name
                END,
                remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid)`,
-            [chatId, ownerId, cleanPhone, displayName, sendJid, savedName]
+            [chatId, ownerId, cleanPhone, displayName, sendJid, savedName, !isGroupItem]
           )
           .catch(() => {});
         synced++;
