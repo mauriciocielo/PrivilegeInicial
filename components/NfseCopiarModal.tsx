@@ -21,6 +21,7 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
   const [mesOrigem, setMesOrigem] = useState(mesAnterior(mesAtual));
   const [competencia, setCompetencia] = useState(mesAtual);
   const [atualizarDescricao, setAtualizarDescricao] = useState(true);
+  const [descricaoLote, setDescricaoLote] = useState('');
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [financeiro, setFinanceiro] = useState<FinanceiroNota>({ gerarContaReceber: false, portadorId: '', planoContaId: '', vencimento: hojeBrasilia() });
 
@@ -46,13 +47,30 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
 
   const total = candidatas.filter(n => selecionadas.has(n.id)).reduce((soma, n) => soma + n.valorServicos, 0);
 
+  const resolverDescricao = (n: NfsE): string => {
+    const [ano, mes] = competencia.split('-');
+    const mesFormatado = ano && mes ? `${mes}/${ano}` : competencia;
+    if (descricaoLote.trim()) {
+      return descricaoLote
+        .replace(/\{mes\}/gi, mesFormatado)
+        .replace(/\{tomador\}/gi, n.tomadorRazaoSocial || '');
+    }
+    return copiarParaCompetencia(n, competencia, atualizarDescricao).discriminacao;
+  };
+
   const copiar = () => {
     const invalido = financeiroInvalido(financeiro);
     if (invalido) { toast.error(invalido); return; }
     if (competencia > mesAtual) { toast.error('A competência não pode ser posterior ao mês atual.'); return; }
     const itens = candidatas
       .filter(n => selecionadas.has(n.id))
-      .map(n => copiarParaCompetencia(n, competencia, atualizarDescricao));
+      .map(n => {
+        const base = copiarParaCompetencia(n, competencia, atualizarDescricao);
+        if (descricaoLote.trim()) {
+          return { ...base, discriminacao: resolverDescricao(n) };
+        }
+        return base;
+      });
     onCriar(itens, financeiro);
   };
 
@@ -74,10 +92,35 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
             <input type="month" className="form-control" max={mesAtual} value={competencia} onChange={e => setCompetencia(e.target.value)} />
           </div>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 12 }}>
           <input type="checkbox" checked={atualizarDescricao} onChange={e => setAtualizarDescricao(e.target.checked)} />
           Atualizar o mês citado na descrição (ex.: &quot;referente a 10/2026&quot; passa para a nova competência)
         </label>
+
+        <div className="form-group" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <label className="form-label" style={{ margin: 0 }}>
+              Alterar descrição para todas automaticamente (opcional)
+            </label>
+            {candidatas.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '3px 9px', fontSize: 11.5 }}
+                onClick={() => setDescricaoLote(copiarParaCompetencia(candidatas[0], competencia, atualizarDescricao).discriminacao)}
+              >
+                Usar 1ª nota como modelo
+              </button>
+            )}
+          </div>
+          <textarea
+            className="form-control"
+            rows={2}
+            placeholder="Deixe vazio para manter a descrição original de cada nota (com o mês atualizado), ou digite aqui para aplicar automaticamente em todas. Dica: use {mes} para inserir MM/AAAA."
+            value={descricaoLote}
+            onChange={e => setDescricaoLote(e.target.value)}
+          />
+        </div>
 
         {candidatas.length === 0 ? (
           <div className="empty-state">
@@ -90,9 +133,18 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 32 }}></th>
+                  <th style={{ width: 32 }}>
+                    <input
+                      type="checkbox"
+                      checked={candidatas.length > 0 && selecionadas.size === candidatas.length}
+                      onChange={() => {
+                        if (selecionadas.size === candidatas.length) setSelecionadas(new Set());
+                        else setSelecionadas(new Set(candidatas.map(c => c.id)));
+                      }}
+                    />
+                  </th>
                   <th>Tomador</th>
-                  <th>Descrição</th>
+                  <th>Descrição (Prévia)</th>
                   <th style={{ textAlign: 'right' }}>Valor</th>
                 </tr>
               </thead>
@@ -104,7 +156,9 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
                       <div style={{ fontWeight: 500 }}>{n.tomadorRazaoSocial}</div>
                       {jaExiste(n) && <div style={{ fontSize: 11, color: '#f59e0b' }}>Já existe nota igual nesta competência</div>}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {resolverDescricao(n)}
+                    </td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(n.valorServicos)}</td>
                   </tr>
                 ))}
