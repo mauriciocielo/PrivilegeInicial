@@ -49,7 +49,7 @@ export default function ConfirmProvider() {
   if (!state) return null;
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handle(false)}>
+    <div className="modal-overlay" style={{ zIndex: 20000 }} onClick={e => e.target === e.currentTarget && handle(false)}>
       <div className="modal" style={{ maxWidth: 420 }}>
         <div className="modal-header">
           <h2>{state.options.title || 'Confirmar ação'}</h2>
