@@ -13,7 +13,7 @@ export const maxDuration = 60;
 /**
  * Converte marcações de texto e markdown em HTML seguro e estilizado para e-mails
  */
-export function formatarMensagemParaEmail(texto: string): string {
+function formatarMensagemParaEmail(texto: string): string {
   if (!texto) return '';
 
   let html = texto;

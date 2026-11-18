@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { lerLogs, salvarLog, atualizarStatusLog, EmailLogEntry } from '../../../../lib/email-log-service';
-
-export { lerLogs, salvarLog, atualizarStatusLog };
-export type { EmailLogEntry };
+import { lerLogs } from '../../../../lib/email-log-service';
 
 export const dynamic = 'force-dynamic';
 
