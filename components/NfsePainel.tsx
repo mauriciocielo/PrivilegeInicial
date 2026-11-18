@@ -2276,6 +2276,8 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         <ComercialExportBar
           title={papelFiltro === 'tomadas' ? 'Relatório de NFS-e Tomadas (Serviços Contratados)' : 'Relatório de NFS-e Emitidas (Serviços Prestados)'}
           fileNameBase={papelFiltro === 'tomadas' ? 'relatorio_nfse_tomadas' : 'relatorio_nfse_emitidas'}
+          empresaNome={empresa?.razaoSocial || empresa?.nomeFantasia || undefined}
+          empresaLogoData={empresa?.logoData ?? null}
           kpis={[
             { label: 'Notas no Filtro', value: String(filtered.length) },
             { label: 'Valor Serviços', value: fmt.currency(filtered.reduce((a, n) => a + (n.valorServicos || 0), 0)) },

@@ -29,6 +29,8 @@ export interface ComercialExportBarProps {
   kpis: Array<{ label: string; value: string }>;
   columns: ExportColumn[];
   rows: Array<Record<string, any>>;
+  empresaNome?: string;
+  empresaLogoData?: string | null;
 }
 
 export default function ComercialExportBar({
@@ -37,6 +39,8 @@ export default function ComercialExportBar({
   kpis,
   columns,
   rows,
+  empresaNome,
+  empresaLogoData,
 }: ComercialExportBarProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -48,10 +52,10 @@ export default function ComercialExportBar({
     const empId = store.getSafeEmpresaId();
     const emp = store.getEmpresas().find(e => e.id === empId);
     return {
-      nome: emp?.nomeFantasia || emp?.razaoSocial || 'Empresa Selecionada',
+      nome: empresaNome?.trim() || emp?.nomeFantasia || emp?.razaoSocial || 'Empresa Selecionada',
       email: emp?.email || '',
       telefone: emp?.telefone || '',
-      logoData: emp?.logoData || null,
+      logoData: empresaLogoData !== undefined ? empresaLogoData : (emp?.logoData || null),
     };
   };
 

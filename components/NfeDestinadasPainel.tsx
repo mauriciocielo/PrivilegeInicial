@@ -1582,6 +1582,7 @@ export default function NfeDestinadasPainel() {
                   : 'Relatório de NF-e Recebidas (Compras)'
               }
               fileNameBase={`relatorio_nfe_${abaPrincipal}`}
+              empresaNome={empresaAtual?.razaoSocial || empresaAtual?.nomeFantasia || undefined}
               kpis={[
                 { label: 'Documentos', value: String(notasFiltradas.length) },
                 { label: 'Com XML Completo', value: String(notasFiltradas.filter(n => n.possuiXml).length) },
