@@ -647,7 +647,14 @@ export function desenharPaginaDanfse(pdf: jsPDF, d: DadosDanfse, opcoes: { logoP
 
   // Rodapé institucional
   pdf.setTextColor(80);
-  texto('NFS-e emitida por PRIVILEGE CONSULTORIA LTDA', (ESQ + DIR) / 2, Y_CANHOTO + ALTURA_CANHOTO + 0.42, 7.5, 'bold', { align: 'center' });
+  texto(
+    caber(`NFS-e emitida por ${d.prestador.nome} · Sistema PRIVILEGE CONSULTORIA LTDA`, LARGURA - 0.2, 7, 'bold'),
+    (ESQ + DIR) / 2,
+    Y_CANHOTO + ALTURA_CANHOTO + 0.42,
+    7,
+    'bold',
+    { align: 'center' }
+  );
   pdf.setTextColor(0);
 }
 

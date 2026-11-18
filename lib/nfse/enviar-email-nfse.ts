@@ -140,7 +140,7 @@ export async function enviarEmailNfseEmitida(params: {
         `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
         `Segue em anexo a Nota Fiscal de Serviço Eletrônica (NFS-e) nº ${numLimpo}, emitida em ${params.dataEmissao} no valor líquido de ${valorFmt} por ${params.prestadorNome}.\n\n` +
         `Arquivos anexos: DANFSe (PDF) e XML oficial.\n\n` +
-        `NFS-e emitida por PRIVILEGE CONSULTORIA LTDA`,
+        `NFS-e emitida por ${params.prestadorNome} · Sistema PRIVILEGE CONSULTORIA LTDA`,
       html: `
         <!doctype html>
         <html>
@@ -242,7 +242,10 @@ export async function enviarEmailNfseEmitida(params: {
               <tr>
                 <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center;">
                   <div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
-                    NFS-e emitida por PRIVILEGE CONSULTORIA LTDA
+                    NFS-e emitida por ${params.prestadorNome}
+                  </div>
+                  <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">
+                    Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
                   </div>
                   <div style="font-size:11px;color:#9ca3af;">
                     E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
