@@ -95,6 +95,32 @@ export function stripJsonFences(raw: string): string {
   return match ? match[1].trim() : trimmed;
 }
 
+/** Recorta o JSON de uma resposta que veio com texto antes ou depois (modelos sem modo JSON). */
+function extractJson(raw: string): string {
+  const text = stripJsonFences(raw);
+  try {
+    JSON.parse(text);
+    return text;
+  } catch {}
+  const start = text.search(/[{[]/);
+  if (start < 0) return text;
+  const close = text[start] === '{' ? '}' : ']';
+  const end = text.lastIndexOf(close);
+  if (end <= start) return text;
+  const candidate = text.slice(start, end + 1);
+  try {
+    JSON.parse(candidate);
+    return candidate;
+  } catch {
+    return text;
+  }
+}
+
+/** O Ollama Cloud (ollama.com) não aceita a opção "format". */
+function isOllamaCloud(url: string): boolean {
+  return /^https?:\/\/(www\.)?ollama\.com(\/|:|$)/i.test(url);
+}
+
 export function resolveOllamaTarget(configs: Array<AiConfigSource | null | undefined> = []): {
   url: string;
   model: string;
@@ -200,7 +226,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
 
   const keys = resolveKeys(configs);
   const errors: Partial<Record<AiProviderName, string>> = {};
-  const finish = (raw: string) => (jsonMode ? stripJsonFences(raw) : raw.trim());
+  const finish = (raw: string) => (jsonMode ? extractJson(raw) : raw.trim());
 
   async function callOllama(): Promise<GenerateTextResult | null> {
     const { url, model: requestedModel } = resolveOllamaTarget(configs);
@@ -211,7 +237,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
         body: JSON.stringify({
           model,
           stream: false,
-          ...(jsonMode ? { format: 'json' } : {}),
+          ...(jsonMode && !isOllamaCloud(url) ? { format: 'json' } : {}),
           options: { temperature, num_predict: maxTokens },
           messages: [...(sysText ? [{ role: 'system', content: sysText }] : []), ...messages],
         }),
