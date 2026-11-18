@@ -66,6 +66,8 @@ const AVAILABLE_SCREENS = [
 
 const AVAILABLE_CLIENT_SCREENS = [
   { label: '📊 Dashboard', route: '/cliente/dashboard' },
+  { label: '🛡️ Dashboard 2 (Fiscal & CNDs)', route: '/cliente/dashboard2' },
+  { label: '🧾 NFS-e / Emissão', route: '/cliente/nfse' },
   { label: '📅 Agenda', route: '/cliente/agenda' },
   { label: '🔀 Financeiro — Fluxograma (Presencial & Conectado)', route: '/cliente/financeiro/fluxograma' },
   { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },

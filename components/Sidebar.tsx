@@ -537,12 +537,12 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     }
 
     if (role === 'cliente') {
-      if (acessoNfse.carregando) return [];
       const allowedClient = user?.allowedRoutes || [];
+      const temNfseNoUsuario = allowedClient.length === 0 || allowedClient.some(r => r.includes('nfse'));
       const itensVisaoGeral: NavItem[] = [
         { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/cliente/dashboard2', icon: ShieldCheck },
         { label: 'Dashboard Financeiro', href: '/cliente/dashboard', icon: LayoutDashboard },
-        ...(acessoNfse.liberado ? [
+        ...(acessoNfse.liberado || temNfseNoUsuario ? [
           { label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText },
           { label: 'Comparador de SPED', href: '/cliente/comparador-sped', icon: FileSearch },
         ] : []),
