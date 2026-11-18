@@ -133,6 +133,7 @@ export async function enviarEmailNfseEmitida(params: {
     await transporter.sendMail({
       from: `"Privilege Consultoria" <${smtpUser}>`,
       to: destinatarios.join(', '),
+      cc: smtpUser,
       subject: `NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
       text:
         `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
