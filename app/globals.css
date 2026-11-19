@@ -171,9 +171,7 @@ body {
    ============================================================ */
 .sidebar {
   width: 100%;
-  background: rgba(253, 253, 253, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-sidebar);
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -181,7 +179,7 @@ body {
   top: 0;
   height: 64px;
   z-index: 2000;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-sidebar);
   box-shadow: none;
   overflow: visible;
   padding: 0 28px;
@@ -292,9 +290,9 @@ body {
 .nav-section-label {
   font-size: 13px !important;
   font-weight: 500;
-  color: #525252;
+  color: var(--text-sidebar);
   padding: 6px 12px;
-  border-radius: 99px;
+  border-radius: 8px;
   transition: color 0.15s ease, background 0.15s ease;
   cursor: pointer;
   text-transform: none;
@@ -308,31 +306,31 @@ body {
 .sidebar-nav > div:hover .nav-section-label,
 .sidebar-nav > div.open .nav-section-label,
 .sidebar-nav > div.expanded .nav-section-label {
-  background: #f4f4f5;
-  color: #000000;
+  background: var(--bg-sidebar-hover);
+  color: var(--text-sidebar-title);
 }
 
 .dropdown-menu-wrapper {
   display: flex;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(6px);
+  transform: translateY(4px);
   position: absolute;
   top: 100%;
   left: 50%;
-  margin-left: -115px;
-  background: #ffffff;
+  margin-left: -120px;
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 16px 36px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.03);
-  padding: 8px;
-  min-width: 230px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  min-width: 240px;
   max-height: 75vh;
   overflow-y: auto;
   z-index: 1000;
   flex-direction: column;
   gap: 2px;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity 0.16s var(--ease-out), transform 0.16s var(--ease-out);
   margin-top: 6px;
 }
 
@@ -358,10 +356,10 @@ body {
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: #525252;
+  color: var(--text-sidebar);
   transition: background 0.15s ease, color 0.15s ease;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   margin: 0;
@@ -370,13 +368,13 @@ body {
 }
 
 .nav-item:hover {
-  background: #f4f4f5;
-  color: #000000;
+  background: var(--bg-sidebar-hover);
+  color: var(--text-sidebar-title);
   transform: none;
 }
 
 .nav-item.active {
-  background: rgba(96, 0, 0, 0.06);
+  background: var(--accent-glow);
   color: var(--accent);
   font-weight: 600;
 }
@@ -421,7 +419,7 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,12 +427,12 @@ body {
   font-size: 12px;
   color: #fff;
   flex-shrink: 0;
-  border: 2px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.16);
   transition: transform var(--dur-base) var(--ease-out);
 }
 
 .user-card:hover .user-avatar {
-  transform: scale(1.08) rotate(-3deg);
+  transform: scale(1.04);
 }
 
 .user-info .user-name {
@@ -476,9 +474,8 @@ body {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  position: relative;
+  z-index: 20;
   transition: background var(--dur-base);
 }
 
@@ -641,9 +638,43 @@ body {
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
   border-color: var(--border-dark) !important;
-  box-shadow: var(--shadow-md) !important;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  transition: border-color var(--dur-base);
+}
+
+.kpi-card:hover {
+  border-color: var(--border-dark);
+}
+
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-top: 6px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
 .stat-card::before,
