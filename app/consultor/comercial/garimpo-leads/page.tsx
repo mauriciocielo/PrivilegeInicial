@@ -76,6 +76,7 @@ export default function GarimpoLeadsPage() {
   const [qualificandoId, setQualificandoId] = useState<string | null>(null);
   const [enriquecendoId, setEnriquecendoId] = useState<string | null>(null);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [enviandoWhatsId, setEnviandoWhatsId] = useState<string | null>(null);
   const [emailMarketingConfig, setEmailMarketingConfig] = useState<any>(null);
 
   // Configurações (Google Places API + Gosom + Oferta IA)
@@ -445,6 +446,72 @@ export default function GarimpoLeadsPage() {
       toast.error(`Erro ao enviar e-mail: ${err.message}`);
     } finally {
       setEnviandoEmail(false);
+    }
+  };
+
+  // Envio direto pelo WhatsApp interno do sistema (sem abrir nova tela)
+  const enviarWhatsappInterno = async (lead: LeadGarimpado, textoCustom?: string) => {
+    const telefoneAlvo = (lead.whatsapp || lead.telefone || '').replace(/\D/g, '');
+    if (telefoneAlvo.length < 10) {
+      toast.error('Este lead não possui número de WhatsApp/telefone válido.');
+      return;
+    }
+
+    const textoFinal =
+      (textoCustom ?? lead.iaScriptWhatsapp ?? '').trim() ||
+      `Olá, pessoal da ${lead.nome}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nAcompanhamos empresas do segmento de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Raio-X rápido e gratuito de precificação, margem e impostos. Faz sentido conversarmos 15 minutinhos?`;
+
+    setEnviandoWhatsId(lead.id);
+    try {
+      // 1. Garante o chat no WhatsApp interno
+      const chatRes = await fetch('/api/whatsapp/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_chat',
+          phone: telefoneAlvo,
+          name: lead.nome,
+        }),
+      });
+      const chatJson = await chatRes.json();
+      if (!chatRes.ok || !chatJson.success || !chatJson.chat?.id) {
+        toast.error(chatJson.error || 'Não foi possível criar conversa no WhatsApp interno.');
+        return;
+      }
+
+      // 2. Dispara a mensagem pelo WhatsApp interno (Baileys)
+      const msgRes = await fetch('/api/whatsapp/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: chatJson.chat.id,
+          text: textoFinal,
+          sentBy: 'consultor',
+        }),
+      });
+      const msgJson = await msgRes.json();
+      if (!msgRes.ok || !msgJson.success) {
+        toast.error(msgJson.error || 'Falha ao enviar pelo WhatsApp interno. Verifique se o QR Code está conectado.');
+        return;
+      }
+
+      toast.success(`WhatsApp enviado para ${lead.nome} pelo sistema interno!`);
+
+      // Atualiza status para "Em Contato" na base
+      const proximoStatus: LeadGarimpado['status'] =
+        lead.status === 'novo' || lead.status === 'qualificado' ? 'contato' : lead.status;
+      const atualizado: LeadGarimpado = { ...lead, status: proximoStatus, iaScriptWhatsapp: textoFinal };
+      if (leadModal?.id === lead.id) {
+        setLeadModal(atualizado);
+      }
+      if (baseLeads.some(l => l.id === lead.id)) {
+        const novaLista = baseLeads.map(l => (l.id === lead.id ? atualizado : l));
+        await persistirBase(novaLista);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao enviar WhatsApp: ${err.message}`);
+    } finally {
+      setEnviandoWhatsId(null);
     }
   };
 
@@ -885,14 +952,24 @@ export default function GarimpoLeadsPage() {
                           </td>
                           <td>
                             {lead.whatsapp ? (
-                              <a
-                                href={`https://wa.me/${lead.whatsapp}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ color: 'var(--green)', fontWeight: 600, fontSize: 12.5, textDecoration: 'none' }}
+                              <button
+                                type="button"
+                                disabled={enviandoWhatsId === lead.id}
+                                onClick={() => enviarWhatsappInterno(lead)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  color: 'var(--green)',
+                                  fontWeight: 600,
+                                  fontSize: 12.5,
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                }}
+                                title="Clique para enviar mensagem diretamente pelo WhatsApp interno"
                               >
-                                {lead.telefone || lead.whatsapp}
-                              </a>
+                                {enviandoWhatsId === lead.id ? 'Enviando...' : lead.telefone || lead.whatsapp}
+                              </button>
                             ) : (
                               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
                             )}
@@ -1184,14 +1261,26 @@ export default function GarimpoLeadsPage() {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12.5 }}>
                             {lead.whatsapp && (
-                              <a
-                                href={`https://wa.me/${lead.whatsapp}${lead.iaScriptWhatsapp ? `?text=${encodeURIComponent(lead.iaScriptWhatsapp)}` : ''}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ color: 'var(--green)', fontWeight: 600, textDecoration: 'none' }}
+                              <button
+                                type="button"
+                                disabled={enviandoWhatsId === lead.id}
+                                onClick={() => enviarWhatsappInterno(lead)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  color: 'var(--green)',
+                                  fontWeight: 600,
+                                  fontSize: 12.5,
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                }}
+                                title="Clique para disparar diretamente pelo WhatsApp interno"
                               >
-                                WhatsApp: {lead.telefone || lead.whatsapp}
-                              </a>
+                                {enviandoWhatsId === lead.id
+                                  ? 'Enviando WhatsApp...'
+                                  : `WhatsApp: ${lead.telefone || lead.whatsapp}`}
+                              </button>
                             )}
                             {lead.email && <span>{lead.email}</span>}
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -1225,6 +1314,17 @@ export default function GarimpoLeadsPage() {
                             >
                               <Send size={13} /> E-mail
                             </button>
+                            {lead.whatsapp && (
+                              <button
+                                className="btn btn-success btn-sm"
+                                disabled={enviandoWhatsId === lead.id}
+                                onClick={() => enviarWhatsappInterno(lead)}
+                                title="Disparar mensagem diretamente pelo WhatsApp interno (sem abrir nova tela)"
+                              >
+                                <MessageSquare size={13} />
+                                {enviandoWhatsId === lead.id ? 'Enviando...' : 'WhatsApp'}
+                              </button>
+                            )}
                             <button
                               className="btn btn-secondary btn-sm"
                               disabled={enriquecendoId === lead.id}
@@ -1390,14 +1490,15 @@ export default function GarimpoLeadsPage() {
                       <Copy size={13} /> Copiar
                     </button>
                     {leadModal.whatsapp && (
-                      <a
-                        href={`https://wa.me/${leadModal.whatsapp}?text=${encodeURIComponent(leadModal.iaScriptWhatsapp || '')}`}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        disabled={enviandoWhatsId === leadModal.id}
+                        onClick={() => enviarWhatsappInterno(leadModal, leadModal.iaScriptWhatsapp)}
                         className="btn btn-primary btn-sm"
                       >
-                        <MessageSquare size={13} /> Enviar no WhatsApp
-                      </a>
+                        <MessageSquare size={13} />
+                        {enviandoWhatsId === leadModal.id ? 'Enviando...' : 'Enviar no WhatsApp'}
+                      </button>
                     )}
                   </div>
                 </div>
