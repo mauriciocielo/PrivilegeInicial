@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { listChats, updateChatCrm, sendMessage } from '@/lib/whatsapp-service';
-import { syncContactProfilePic, buildChatIdForOwner } from '@/lib/baileys-manager';
+import { syncContactProfilePic, buildChatIdForOwner, verificarNumeroNoWhatsApp } from '@/lib/baileys-manager';
 import { getEmailDbPool } from '@/lib/email-db';
 import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
@@ -196,17 +196,50 @@ export async function POST(req: NextRequest) {
       if (digits.length === 10 || digits.length === 11) {
         digits = '55' + digits;
       }
-      const id = buildChatIdForOwner(digits, ownerId);
+
+      // 1. Consulta o JID oficial no WhatsApp (resolve divergência de 9º dígito 12 vs 13 dígitos no Brasil)
+      const check = await verificarNumeroNoWhatsApp(digits, ownerId).catch(() => ({ conectado: false, existe: false, jid: undefined as string | undefined }));
+      const remoteJid = check.jid || `${digits}@s.whatsapp.net`;
+      const jidDigits = check.jid ? check.jid.split('@')[0].replace(/[^0-9]/g, '') : digits;
+      const canonicalDigits = jidDigits.length >= 10 ? jidDigits : digits;
+
+      // 2. Evita duplicar chat se já existir conversa com os mesmos DDD + 8 últimos dígitos
+      let id = buildChatIdForOwner(canonicalDigits, ownerId);
+      const last8 = canonicalDigits.slice(-8);
+      const ddd = canonicalDigits.startsWith('55') && canonicalDigits.length >= 12 ? canonicalDigits.slice(2, 4) : '';
+      if (last8.length === 8) {
+        const existing = await pool.query(
+          `SELECT id, remote_jid FROM whatsapp_chats
+           WHERE COALESCE(owner_id, 'default') = $1
+             AND (
+               id = $2
+               OR remote_jid = $3
+               OR (
+                 RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 8) = $4
+                 AND ($5 = '' OR regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') LIKE $6)
+               )
+             )
+           ORDER BY last_message_time DESC NULLS LAST
+           LIMIT 1`,
+          [ownerId, id, remoteJid, last8, ddd, `%${ddd}%${last8}`]
+        );
+        if (existing.rows[0]?.id) {
+          id = existing.rows[0].id;
+        }
+      }
+
       await pool.query(
-        `INSERT INTO whatsapp_chats (id, owner_id, phone, name, last_message, last_message_time, unread_count, bot_enabled, crm_stage, crm_value, assigned_to)
-         VALUES ($1, $2, $3, $4, 'Conversa iniciada', NOW(), 0, TRUE, 'em_atendimento', 0, 'Maurício Cielo')
-         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-        [id, ownerId, phone, name]
+        `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, crm_value, assigned_to)
+         VALUES ($1, $2, $3, $4, $5, 'Conversa iniciada', NOW(), 0, TRUE, 'em_atendimento', 0, 'Maurício Cielo')
+         ON CONFLICT (id) DO UPDATE SET
+           name = COALESCE(NULLIF(whatsapp_chats.name, ''), EXCLUDED.name),
+           remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid)`,
+        [id, ownerId, canonicalDigits, name, remoteJid]
       );
-      const picUrl = await syncContactProfilePic(id, `${digits}@s.whatsapp.net`, ownerId).catch(() => null);
+      const picUrl = await syncContactProfilePic(id, remoteJid, ownerId).catch(() => null);
       return NextResponse.json({
         success: true,
-        chat: { id, phone, name, profile_pic: picUrl },
+        chat: { id, phone: canonicalDigits, name, profile_pic: picUrl },
       });
     }
 

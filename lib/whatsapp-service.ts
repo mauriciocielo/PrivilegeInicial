@@ -1746,6 +1746,39 @@ export async function processIncomingMessage(params: {
 
   if (pool) {
     await ensureChatColumns(pool);
+
+    // Deduplicação automática de 9º dígito (Brasil 12 vs 13 dígitos) e remote_jid:
+    // se já existir um chat para o mesmo contato (mesmo DDD + 8 últimos dígitos ou mesmo remote_jid),
+    // reaproveita o chatId existente para nunca duplicar a conversa na lista!
+    if (!params.isGroup) {
+      try {
+        const phoneDigits = (params.phone || params.chatId || '').replace(/[^0-9]/g, '');
+        const last8 = phoneDigits.slice(-8);
+        const ddd = phoneDigits.startsWith('55') && phoneDigits.length >= 12 ? phoneDigits.slice(2, 4) : '';
+        if (last8.length === 8 || params.remoteJid) {
+          const dupRes = await pool.query(
+            `SELECT id FROM whatsapp_chats
+             WHERE COALESCE(owner_id, 'default') = $1
+               AND (
+                 id = $2
+                 OR ($3::text IS NOT NULL AND remote_jid = $3)
+                 OR (
+                   $4 <> ''
+                   AND RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 8) = $4
+                   AND ($5 = '' OR regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') LIKE $6)
+                 )
+               )
+             ORDER BY CASE WHEN id = $2 THEN 0 ELSE 1 END, last_message_time DESC NULLS LAST
+             LIMIT 1`,
+            [ownerId, params.chatId, params.remoteJid || null, last8, ddd, `%${ddd}%${last8}`]
+          );
+          if (dupRes.rows[0]?.id && dupRes.rows[0].id !== params.chatId) {
+            params.chatId = dupRes.rows[0].id;
+          }
+        }
+      } catch {}
+    }
+
     const snippetForChat = isIncomingAudio
       ? cleanText && cleanText !== '🎤 Mensagem de áudio'
         ? `🎤 ${cleanText}`
