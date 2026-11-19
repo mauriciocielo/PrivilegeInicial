@@ -216,9 +216,14 @@ function extrairTextoPdf(pdfBuf: Buffer): string[] {
     }
   }
 
-  const matches = allText.match(/\((.*?)\)Tj/g);
-  if (!matches) return [];
-  return matches.map(m => m.slice(1, -3));
+  const out: string[] = [];
+  const tjRegex = /\(([^()]*)\)\s*Tj/g;
+  let m: RegExpExecArray | null;
+  while ((m = tjRegex.exec(allText)) !== null) {
+    const t = m[1].replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\').trim();
+    if (t) out.push(t);
+  }
+  return out;
 }
 
 export interface AliquotaSimplesResult {
@@ -256,28 +261,36 @@ function estimarAliquotaIssAnexoIII(aliquotaEfetiva: number, rbt12: number): num
   return Math.min(5, Math.max(2, calc));
 }
 
-function extrairIssDoTextoPdf(textoUnido: string, rpa: number, aliquotaEfetiva: number, rbt12: number): {
+function parseNumeroBr(valor: string): number {
+  const limpo = (valor || '').replace(/[^\d.,]/g, '');
+  if (!limpo) return 0;
+  return parseFloat(limpo.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function extrairIssDoTextoPdf(textoPipe: string, rpa: number, aliquotaEfetiva: number, rbt12: number): {
   aliquotaIss?: number;
   valorIss?: number;
 } {
-  // 1) Tenta ler diretamente a linha "Alíquota:" da partilha quando contém os valores exatos do PGDAS-D (IRPJ..ISS)
-  const partilhaMatch = textoUnido.match(
-    /ISS[\s\S]{0,120}?Alíquota[:\s\|]+(?:[0-9]{1,2},[0-9]{2,9}\s+){4,5}([0-9]{1,2},[0-9]{2,9})/i
-  );
-  if (partilhaMatch) {
-    const aliq = Number(parseFloat(partilhaMatch[1].replace(',', '.')).toFixed(4));
-    if (aliq >= 1.5 && aliq <= 5.5) {
-      return { aliquotaIss: Math.min(5, Math.max(2, aliq)) };
+  // 1) Seção do DAS Gerado (formato oficial PGDAS-D): "... | IPI | 0,00 | ISS | 668,17 | Principal | 2.088,00"
+  const dasIssMatch = textoPipe.match(
+    /IPI\s*\|\s*[0-9\.\,]+\s*\|\s*ISS\s*\|\s*([0-9\.\,]+)\s*\|\s*Principal/i
+  ) || textoPipe.match(/\|\s*ISS\s*\|\s*([0-9\.\,]+)\s*\|\s*Principal/i);
+  if (dasIssMatch && rpa > 0) {
+    const valorIss = parseNumeroBr(dasIssMatch[1]);
+    if (valorIss > 0) {
+      const aliq = Number(((valorIss / rpa) * 100).toFixed(4));
+      if (aliq >= 1.5 && aliq <= 5.5) {
+        return { aliquotaIss: Math.min(5, Math.max(2, aliq)), valorIss };
+      }
     }
   }
 
-  // 2) Tenta ler a linha completa da tabela "Total do Débito Exigível":
-  // Colunas oficiais do extrato PGDAS-D: IRPJ | CSLL | COFINS | PIS/Pasep | INSS/CPP | ICMS | IPI | ISS | Total
-  const tabelaMatch = textoUnido.match(
-    /Total do Débito Exigível[\s\S]*?Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){7}([0-9\.\,]+)\s*\|\s*[0-9\.\,]+/i
+  // 2) Linha da tabela de tributos do PGDAS-D: IRPJ | CSLL | COFINS | PIS/Pasep | INSS/CPP | ICMS | IPI | ISS | Total
+  const tabelaMatch = textoPipe.match(
+    /IRPJ\s*\|\s*CSLL\s*\|\s*COFINS\s*\|\s*PIS\/Pasep\s*\|\s*INSS\/CPP\s*\|\s*ICMS\s*\|\s*IPI\s*\|\s*ISS\s*\|\s*Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){7}([0-9\.\,]+)\s*\|\s*([0-9\.\,]+)/i
   );
   if (tabelaMatch && rpa > 0) {
-    const valorIss = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
+    const valorIss = parseNumeroBr(tabelaMatch[1]);
     if (valorIss > 0) {
       const aliq = Number(((valorIss / rpa) * 100).toFixed(4));
       if (aliq >= 1.5 && aliq <= 5.5) {
@@ -367,59 +380,55 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
         const pdfB64 = resExtrato.dados.extrato.pdf;
         const pdfBuf = Buffer.from(pdfB64, 'base64');
         const linhas = extrairTextoPdf(pdfBuf);
-        const textoUnido = linhas.join(' ');
+        const textoPipe = linhas.join(' | ');
 
-        // Busca RPA (Receita Bruta do PA):
+        // 1. Busca RPA (Receita Bruta do PA):
+        // Formato real do extrato PGDAS-D:
+        // "Mercado Interno | Mercado Externo | Total | 26.816,50 | 0,00 | 26.816,50"
+        // ou "Receita Bruta Informada: R$ 26.816,50"
         let rpa = 0;
-        const rpaMatch = textoUnido.match(/Receita Bruta do PA\s*\\?\(RPA\\?\)[^\d]*([\d\.\,]+)/i)
-          || textoUnido.match(/Receita Bruta do PA.*?([0-9\.\,]+)/i);
-        if (rpaMatch) {
-          rpa = parseFloat(rpaMatch[1].replace(/\./g, '').replace(',', '.'));
-        }
+        const rpaDiscMatch = textoPipe.match(
+          /Mercado Interno\s*\|\s*Mercado Externo\s*\|\s*Total\s*\|\s*[0-9\.\,]+\s*\|\s*[0-9\.\,]+\s*\|\s*([0-9\.\,]+)/i
+        );
+        const rpaInfMatch = textoPipe.match(/Receita Bruta Informada:\s*R?\$?\s*([0-9\.\,]+)/i);
+        const rpaAntigoMatch = textoPipe.match(/Receita Bruta do PA[^0-9]*([0-9\.\,]+)/i);
+        if (rpaDiscMatch) rpa = parseNumeroBr(rpaDiscMatch[1]);
+        else if (rpaInfMatch) rpa = parseNumeroBr(rpaInfMatch[1]);
+        else if (rpaAntigoMatch) rpa = parseNumeroBr(rpaAntigoMatch[1]);
 
-        // Busca RBT12: "RBT12" seguido de valor
+        // 2. Busca RBT12 (Receita bruta acumulada nos doze meses anteriores ao PA):
+        // Formato real: "Receita bruta acumulada nos doze meses anteriores ao PA | 274.206,50 | 0,00 | 274.206,50"
         let rbt12 = 0;
-        const rbt12Match = textoUnido.match(/RBT12\s*\\?\)?\s*\|\s*([0-9\.\,]+)/i)
-          || textoUnido.match(/RBT12[^\d]*([0-9\.\,]+)/i);
-        if (rbt12Match) {
-          rbt12 = parseFloat(rbt12Match[1].replace(/\./g, '').replace(',', '.'));
-        }
+        const rbt12DiscMatch = textoPipe.match(
+          /doze meses anteriores ao PA[^\|]*\|\s*[0-9\.\,]+\s*\|\s*[0-9\.\,]+\s*\|\s*([0-9\.\,]+)/i
+        );
+        const rbt12AntigoMatch = textoPipe.match(/RBT12[^0-9]*([0-9\.\,]+)/i);
+        if (rbt12DiscMatch) rbt12 = parseNumeroBr(rbt12DiscMatch[1]);
+        else if (rbt12AntigoMatch) rbt12 = parseNumeroBr(rbt12AntigoMatch[1]);
 
-        // Busca Valor Total do Imposto (Débito do Simples Nacional)
+        // 3. Busca Valor Total do Imposto (Principal do DAS Gerado ou coluna Total da tabela de tributos)
         let valorDevido = 0;
-        const dasTotalMatch = textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Principal\s*\|\s*([0-9\.\,]+)/i)
-          || textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Total\s*\|\s*([0-9\.\,]+)/i);
-        if (dasTotalMatch) {
-          valorDevido = parseFloat(dasTotalMatch[1].replace(/\./g, '').replace(',', '.'));
-        } else {
-          const tabelaMatch = textoUnido.match(/Total do Débito Exigível[\s\S]*?Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){8}([0-9\.\,]+)/i);
-          if (tabelaMatch) {
-            valorDevido = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
-          } else {
-            const debitoMatch = textoUnido.match(/Total do Débito Exigível.*?Total\s*\|\s*([0-9\.\,]+)/i);
-            if (debitoMatch) {
-              valorDevido = parseFloat(debitoMatch[1].replace(/\./g, '').replace(',', '.'));
-            }
-          }
-        }
+        const principalMatch = textoPipe.match(/\|\s*Principal\s*\|\s*([0-9\.\,]+)/i);
+        const tabelaTotalMatch = textoPipe.match(
+          /IRPJ\s*\|\s*CSLL\s*\|\s*COFINS\s*\|\s*PIS\/Pasep\s*\|\s*INSS\/CPP\s*\|\s*ICMS\s*\|\s*IPI\s*\|\s*ISS\s*\|\s*Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){8}([0-9\.\,]+)/i
+        );
+        if (principalMatch) valorDevido = parseNumeroBr(principalMatch[1]);
+        else if (tabelaTotalMatch) valorDevido = parseNumeroBr(tabelaTotalMatch[1]);
 
-        // Alíquota do Simples Nacional exata (preserva até 4 casas decimais)
+        // 4. Alíquota efetiva exata do Simples Nacional (preserva 4 casas decimais)
         let aliquotaEfetiva = 0;
-        const aliqDiretaMatch = textoUnido.match(/Receita Tributada Total[^\d]*[0-9\.\,]+\s*Alíquota[:\s]*([0-9]{1,2},[0-9]{2,10})/i);
-        if (aliqDiretaMatch) {
-          aliquotaEfetiva = Number(parseFloat(aliqDiretaMatch[1].replace(',', '.')).toFixed(4));
-        } else if (rpa > 0 && valorDevido > 0) {
+        if (rpa > 0 && valorDevido > 0) {
           aliquotaEfetiva = Number(((valorDevido / rpa) * 100).toFixed(4));
         }
 
         // Se este período não teve faturamento/imposto, continua tentando a competência anterior
         if (!(aliquotaEfetiva > 0)) continue;
 
-        const { aliquotaIss, valorIss } = extrairIssDoTextoPdf(textoUnido, rpa, aliquotaEfetiva, rbt12);
+        const { aliquotaIss, valorIss } = extrairIssDoTextoPdf(textoPipe, rpa, aliquotaEfetiva, rbt12);
 
-        // Período de apuração (ex: 09/2026)
-        const paMatch = textoUnido.match(/Período de Apuração.*?([0-9]{2}\/[0-9]{4})/i);
-        const periodoApuracao = paMatch ? paMatch[1] : String(ultimoPeriodoEncontrado.periodoApuracao);
+        // Período de apuração formatado (MM/AAAA)
+        const paRaw = String(ultimoPeriodoEncontrado.periodoApuracao || '');
+        const periodoApuracao = /^\d{6}$/.test(paRaw) ? `${paRaw.slice(4, 6)}/${paRaw.slice(0, 4)}` : paRaw;
 
         return {
           sucesso: true,
