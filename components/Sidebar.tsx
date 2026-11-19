@@ -90,6 +90,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Curva ABC (Produtos & Clientes)', href: '/consultor/curva-abc', icon: BarChart2 },
       { label: 'Concorrência & Estoque', href: '/consultor/comercial/concorrencia-estoque', icon: Swords },
       { label: 'Pós-Venda & Customer Success', href: '/consultor/comercial/pos-venda', icon: HeartHandshake },
+      { label: 'Garimpador de Leads B2B', href: '/consultor/comercial/garimpo-leads', icon: Search },
       { label: 'WhatsApp & Bot IA', href: '/consultor/whatsapp', icon: MessageSquare },
       { label: 'Clientes / Fornecedores', href: '/consultor/clientes', icon: Users },
       { label: 'Diagnóstico 360º', href: '/consultor/diagnostico-360', icon: Radar },
