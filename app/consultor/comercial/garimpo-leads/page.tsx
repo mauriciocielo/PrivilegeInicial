@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Search, MapPin, Building2, Globe, Mail, MessageSquare, Sparkles,
   Download, Upload, Trash2, CheckCircle2, ExternalLink, Settings,
-  Save, RefreshCw, Copy, Plus, Filter, Star, FileSpreadsheet, X, Radar
+  Save, RefreshCw, Copy, Plus, Filter, Star, FileSpreadsheet, X, Radar, Send
 } from 'lucide-react';
 import type { LeadGarimpado } from '../../../api/garimpo-leads/route';
 
@@ -71,10 +71,12 @@ export default function GarimpoLeadsPage() {
   const [apenasEmail, setApenasEmail] = useState(false);
   const [lapidandoLote, setLapidandoLote] = useState<{ ativo: boolean; atual: number; total: number } | null>(null);
 
-  // Modal de Qualificação IA
+  // Modal de Qualificação IA & Envio Direto de E-mail
   const [leadModal, setLeadModal] = useState<LeadGarimpado | null>(null);
   const [qualificandoId, setQualificandoId] = useState<string | null>(null);
   const [enriquecendoId, setEnriquecendoId] = useState<string | null>(null);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [emailMarketingConfig, setEmailMarketingConfig] = useState<any>(null);
 
   // Configurações (Google Places API + Gosom + Oferta IA)
   const [googlePlacesApiKey, setGooglePlacesApiKey] = useState('');
@@ -105,6 +107,9 @@ export default function GarimpoLeadsPage() {
             if (c.contextoOferta) setContextoOferta(c.contextoOferta);
             if (c.cidadePadrao) setCidade(c.cidadePadrao);
             if (c.estadoPadrao) setEstado(c.estadoPadrao);
+          }
+          if (data.email_marketing_config && typeof data.email_marketing_config === 'object') {
+            setEmailMarketingConfig(data.email_marketing_config);
           }
         }
       } catch {}
@@ -385,6 +390,62 @@ export default function GarimpoLeadsPage() {
   const excluirLead = async (id: string) => {
     const novaLista = baseLeads.filter(l => l.id !== id);
     await persistirBase(novaLista, 'Lead removido da base.');
+  };
+
+  // Envio direto de Cold Email para o lead usando a configuração de E-mail Marketing
+  const enviarEmailDiretoLead = async (lead: LeadGarimpado) => {
+    const destino = (lead.email || '').trim();
+    if (!destino || !destino.includes('@')) {
+      toast.error('Informe um endereço de e-mail válido para este lead antes de enviar.');
+      return;
+    }
+    const assunto = (lead.iaAssuntoEmail || '').trim() || `Diagnóstico Financeiro & Tributário — ${lead.nome}`;
+    const mensagem = (lead.iaCorpoEmail || '').trim();
+    if (!mensagem) {
+      toast.error('Preencha o corpo do e-mail ou clique em "Regenerar com IA" antes de enviar.');
+      return;
+    }
+
+    setEnviandoEmail(true);
+    try {
+      const cfg = emailMarketingConfig || {};
+      const res = await fetch('/api/email-servicos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'newsletter',
+          somenteImagem: false,
+          assunto,
+          mensagem,
+          destinatariosLista: [destino],
+          smtpHostCustom: cfg.smtpHost || undefined,
+          smtpPortCustom: cfg.smtpPort ? Number(cfg.smtpPort) : undefined,
+          smtpUserCustom: cfg.smtpUser || undefined,
+          smtpPassCustom: cfg.smtpPass || undefined,
+          senderNameCustom: cfg.senderName || undefined,
+          replyToCustom: cfg.replyTo || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.enviados > 0) {
+        toast.success(`E-mail enviado com sucesso para ${destino}!`);
+        const proximoStatus: LeadGarimpado['status'] =
+          lead.status === 'novo' || lead.status === 'qualificado' ? 'contato' : lead.status;
+        const atualizado: LeadGarimpado = { ...lead, email: destino, status: proximoStatus };
+        setLeadModal(atualizado);
+        if (baseLeads.some(l => l.id === lead.id)) {
+          const novaLista = baseLeads.map(l => (l.id === lead.id ? atualizado : l));
+          await persistirBase(novaLista);
+        }
+      } else {
+        const erroMsg = json?.logs?.[0]?.erro || json?.error || 'Falha ao disparar e-mail. Verifique as credenciais em E-mail Marketing.';
+        toast.error(erroMsg);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao enviar e-mail: ${err.message}`);
+    } finally {
+      setEnviandoEmail(false);
+    }
   };
 
   // Importar CSV/JSON do gosom/google-maps-scraper ou Excel
@@ -1157,6 +1218,14 @@ export default function GarimpoLeadsPage() {
                               {qualificandoId === lead.id ? '...' : lead.iaScriptWhatsapp ? 'Ver Script' : 'IA Script'}
                             </button>
                             <button
+                              className="btn btn-primary btn-sm"
+                              disabled={qualificandoId === lead.id}
+                              onClick={() => (lead.iaCorpoEmail ? setLeadModal(lead) : qualificarLeadIA(lead))}
+                              title={lead.email ? `Enviar e-mail direto para ${lead.email}` : 'Abrir envio de e-mail para este lead'}
+                            >
+                              <Send size={13} /> E-mail
+                            </button>
+                            <button
                               className="btn btn-secondary btn-sm"
                               disabled={enriquecendoId === lead.id}
                               onClick={() => lapidarLeadProfundo(lead)}
@@ -1341,24 +1410,43 @@ export default function GarimpoLeadsPage() {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
                   <span className="form-label" style={{ margin: 0 }}>Cold Email Personalizado</span>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`Assunto: ${leadModal.iaAssuntoEmail}\n\n${leadModal.iaCorpoEmail}`);
-                      toast.success('Cold Email copiado!');
-                    }}
-                  >
-                    <Copy size={13} /> Copiar E-mail
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`Assunto: ${leadModal.iaAssuntoEmail}\n\n${leadModal.iaCorpoEmail}`);
+                        toast.success('Cold Email copiado!');
+                      }}
+                    >
+                      <Copy size={13} /> Copiar E-mail
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={enviandoEmail}
+                      onClick={() => enviarEmailDiretoLead(leadModal)}
+                    >
+                      <Send size={13} /> {enviandoEmail ? 'Enviando...' : 'Enviar E-mail Agora'}
+                    </button>
+                  </div>
                 </div>
-                <input
-                  className="form-control"
-                  style={{ marginBottom: 8, fontWeight: 600 }}
-                  value={leadModal.iaAssuntoEmail || ''}
-                  onChange={e => setLeadModal({ ...leadModal, iaAssuntoEmail: e.target.value })}
-                />
+                <div className="form-row" style={{ marginBottom: 8 }}>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={leadModal.email || ''}
+                    onChange={e => setLeadModal({ ...leadModal, email: e.target.value })}
+                    placeholder="E-mail do destinatário (ex: contato@empresa.com.br)"
+                  />
+                  <input
+                    className="form-control"
+                    style={{ fontWeight: 600 }}
+                    value={leadModal.iaAssuntoEmail || ''}
+                    onChange={e => setLeadModal({ ...leadModal, iaAssuntoEmail: e.target.value })}
+                    placeholder="Assunto do e-mail"
+                  />
+                </div>
                 <textarea
                   className="form-control"
                   rows={6}
