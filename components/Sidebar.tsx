@@ -158,6 +158,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Equipe Comercial & Metas', href: '/cliente/comercial/equipe', icon: Users },
       { label: 'Concorrência & Estoque', href: '/cliente/comercial/concorrencia-estoque', icon: Swords },
       { label: 'Pós-Venda & CS', href: '/cliente/comercial/pos-venda', icon: HeartHandshake },
+      { label: 'Garimpador de Leads B2B', href: '/cliente/comercial/garimpo-leads', icon: Search },
     ],
   },
   {
