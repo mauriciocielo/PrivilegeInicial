@@ -94,6 +94,7 @@ export async function POST(request: Request) {
     const serie = mesmoAmbiente ? existente!.serie : config.serie;
 
     const valorServicos = Math.round(Number(n.valorServicos) * 100) / 100;
+    const valorDeducoes = Math.max(0, Math.round((Number(n.valorDeducoes) || 0) * 100) / 100);
     const aliquotaIss = Number(n.aliquotaIss) || 0;
     const issRetido = n.issRetido === true;
     const retido = (v: unknown) => Math.max(0, Math.round((Number(v) || 0) * 100) / 100);
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
       dataCompetencia: texto(n.dataCompetencia),
       descricao: texto(n.discriminacao),
       valorServicos,
+      valorDeducoes,
       cTribNac,
       cTribMun,
       cNbs: textoOuNull(n.cNbs),
@@ -180,7 +182,7 @@ export async function POST(request: Request) {
     const nDpsInicial = mesmoAmbiente ? existente!.nDps! : await reservarNDps(empresaId, ambiente, empresa.cnpj);
 
     // Prestador vem do cadastro, nunca do navegador. Os valores são estimativa até o retorno do Sefin.
-    const estimado = estimarValoresNota(valorServicos, aliquotaIss, issRetido, totalRetidoFederal(retencao));
+    const estimado = estimarValoresNota(valorServicos, aliquotaIss, issRetido, totalRetidoFederal(retencao), valorDeducoes);
     const camposNota = {
       numero: texto(n.numero) || nDpsInicial,
       serie,
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
       discriminacao: dados.descricao,
       municipioPrestacao: dados.municipioPrestacao,
       valorServicos,
-      valorDeducoes: 0,
+      valorDeducoes,
       valorPis: retencao.pis,
       valorCofins: retencao.cofins,
       valorInss: retencao.cp,
@@ -217,7 +219,7 @@ export async function POST(request: Request) {
       issRetido,
       valorIss: estimado.valorIss,
       aliquotaIss,
-      valorBaseCalculo: valorServicos,
+      valorBaseCalculo: estimado.valorBaseCalculo,
       valorLiquido: estimado.valorLiquido,
       ambiente,
       nDps: nDpsInicial,
@@ -275,7 +277,7 @@ export async function POST(request: Request) {
         chaveAcesso: resultado.chaveAcesso,
         valorIss: v.valorIss ?? camposNota.valorIss,
         aliquotaIss: v.aliquotaIss ?? aliquotaIss,
-        valorBaseCalculo: v.valorBaseCalculo ?? valorServicos,
+        valorBaseCalculo: v.valorBaseCalculo ?? estimado.valorBaseCalculo,
         valorLiquido: v.valorLiquido ?? camposNota.valorLiquido,
         ultimoErro: null,
         documento: {

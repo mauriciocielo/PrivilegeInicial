@@ -479,10 +479,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const emProducao = parametros?.ambiente === 'producao';
 
   const valorForm = Number(form.valorServicos) || 0;
+  const deducoesForm = Math.max(0, Math.round((Number(form.valorDeducoes) || 0) * 100) / 100);
   const aliquotaForm = Number(form.aliquotaIss) || 0;
   const issRetidoForm = !!form.issRetido;
   const retidosForm = calcularRetidos(valorForm, percentuaisRetencao);
-  const estimativa = estimarValoresNota(valorForm, aliquotaForm, issRetidoForm, totalRetidoFederal(retidosForm));
+  const estimativa = estimarValoresNota(valorForm, aliquotaForm, issRetidoForm, totalRetidoFederal(retidosForm), deducoesForm);
   const financeiroForm: FinanceiroNota = {
     gerarContaReceber: !!form.gerarContaReceber,
     emitirBoletoSicoob: !!form.emitirBoletoSicoob,
@@ -658,6 +659,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       prestadorRazaoSocial: empresa?.razaoSocial || '',
       prestadorInscricaoMunicipal: parametros?.inscricaoMunicipal || '',
       valorServicos: 0,
+      valorDeducoes: 0,
       aliquotaIss: 0,
       issRetido: false,
       codigoServico: parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac || '',
@@ -685,7 +687,8 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       const retidos = regra ? calcularRetidos(dados.valorServicos, regra.percentuais) : carregado;
       const issRetido = regra ? regra.issRetido : !!dados.issRetido;
       const aliquotaIss = regra?.issRetido && regra.aliquotaIss !== null ? regra.aliquotaIss : dados.aliquotaIss || 0;
-      const estimados = estimarValoresNota(dados.valorServicos, aliquotaIss, issRetido, totalRetidoFederal(retidos));
+      const valorDeducoes = Math.max(0, Math.round((Number(dados.valorDeducoes) || 0) * 100) / 100);
+      const estimados = estimarValoresNota(dados.valorServicos, aliquotaIss, issRetido, totalRetidoFederal(retidos), valorDeducoes);
       store.saveNfsE({
         ...dados,
         id,
@@ -696,7 +699,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         prestadorCnpj: empresa?.cnpj || '',
         prestadorRazaoSocial: empresa?.razaoSocial || '',
         dataEmissao: hojeBrasilia(),
-        valorDeducoes: 0,
+        valorDeducoes,
         valorPis: retidos.pis,
         valorCofins: retidos.cofins,
         valorInss: retidos.cp,
@@ -705,7 +708,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         issRetido,
         aliquotaIss,
         ...estimados,
-        valorBaseCalculo: dados.valorServicos,
+        valorBaseCalculo: estimados.valorBaseCalculo,
         gerarContaReceber: financeiro.gerarContaReceber,
         portadorId: financeiro.gerarContaReceber ? financeiro.portadorId : undefined,
         planoContaId: financeiro.gerarContaReceber ? financeiro.planoContaId : undefined,
@@ -844,7 +847,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       dataCompetencia: form.dataCompetencia || hojeBrasilia().slice(0, 7),
       codigoServico: (form.codigoServico || '').replace(/\D/g, ''),
       valorServicos,
-      valorDeducoes: 0,
+      valorDeducoes: deducoesForm,
       valorPis: retidosForm.pis,
       valorCofins: retidosForm.cofins,
       valorInss: retidosForm.cp,
@@ -853,7 +856,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       issRetido: issRetidoForm,
       aliquotaIss: aliquotaForm,
       valorIss: estimativa.valorIss,
-      valorBaseCalculo: valorServicos,
+      valorBaseCalculo: estimativa.valorBaseCalculo,
       valorLiquido: estimativa.valorLiquido,
       createdAt: form.createdAt || new Date().toISOString(),
     };
@@ -3151,6 +3154,21 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <input type="number" step="0.01" min="0" className="form-control" value={form.valorServicos ?? ''} onChange={e => setForm(f => ({ ...f, valorServicos: Number(e.target.value) }))} />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Dedução do valor do serviço (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-control"
+                    placeholder="0,00"
+                    value={form.valorDeducoes ?? ''}
+                    onChange={e => setForm(f => ({ ...f, valorDeducoes: Number(e.target.value) || 0 }))}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Opcional (ex.: materiais na construção civil). Reduz a base de cálculo do ISSQN quando permitido pelo município.
+                  </div>
+                </div>
+                <div className="form-group">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Alíquota ISS (%){aliquotaObrigatoria ? ' *' : ''}</label>
                     {!ehSimples && (
@@ -3261,11 +3279,18 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 </div>
               )}
 
-              <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Valor Bruto</div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(valorForm)}</div>
                 </div>
+                {deducoesForm > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Base de Cálculo ISS</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(estimativa.valorBaseCalculo)}</div>
+                    <div style={{ fontSize: 10, color: '#b45309' }}>Dedução: -{fmt.currency(deducoesForm)}</div>
+                  </div>
+                )}
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>ISS estimado ({aliquotaForm}%)</div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(estimativa.valorIss)}</div>

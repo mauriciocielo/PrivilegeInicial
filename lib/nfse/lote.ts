@@ -15,11 +15,13 @@ export function mesAnterior(competencia: string): string {
 
 const mesAnoBr = (competencia: string) => `${competencia.slice(5, 7)}/${competencia.slice(0, 4)}`;
 
-/** vLiq = vServ - (vRetCP + vRetIRRF + vRetCSLL + ISS, se retido), como o Sefin calcula. */
-export function estimarValoresNota(valorServicos: number, aliquotaIss: number, issRetido: boolean, retidoFederal = 0) {
-  const valorIss = Math.round(valorServicos * aliquotaIss) / 100;
+/** vLiq = vServ - (vRetCP + vRetIRRF + vRetCSLL + ISS, se retido), com ISS sobre (vServ - deduções), como o Sefin calcula. */
+export function estimarValoresNota(valorServicos: number, aliquotaIss: number, issRetido: boolean, retidoFederal = 0, valorDeducoes = 0) {
+  const deducoes = Math.max(0, Math.min(valorServicos, Math.round((Number(valorDeducoes) || 0) * 100) / 100));
+  const valorBaseCalculo = Math.max(0, Math.round((valorServicos - deducoes) * 100) / 100);
+  const valorIss = Math.round(valorBaseCalculo * aliquotaIss) / 100;
   const liquido = valorServicos - (issRetido ? valorIss : 0) - retidoFederal;
-  return { valorIss, valorLiquido: Math.max(0, Math.round(liquido * 100) / 100) };
+  return { valorIss, valorBaseCalculo, valorLiquido: Math.max(0, Math.round(liquido * 100) / 100) };
 }
 
 /** Já existe nota viva para o mesmo tomador, valor e competência? Evita cobrar o cliente duas vezes. */
@@ -69,6 +71,7 @@ export function copiarParaCompetencia(original: NfsE, competencia: string, atual
     discriminacao,
     municipioPrestacao: original.municipioPrestacao,
     valorServicos: original.valorServicos,
+    valorDeducoes: original.valorDeducoes || 0,
     issRetido: original.issRetido,
     aliquotaIss: original.aliquotaIss,
     valorIr: original.valorIr,

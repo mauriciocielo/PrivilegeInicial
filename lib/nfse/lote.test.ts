@@ -75,8 +75,13 @@ describe('nota igual', () => {
 
 describe('estimativa de valores', () => {
   it('só desconta o ISS do líquido quando retido', () => {
-    expect(estimarValoresNota(1000, 3, true)).toEqual({ valorIss: 30, valorLiquido: 970 });
-    expect(estimarValoresNota(1000, 3, false)).toEqual({ valorIss: 30, valorLiquido: 1000 });
+    expect(estimarValoresNota(1000, 3, true)).toEqual({ valorIss: 30, valorBaseCalculo: 1000, valorLiquido: 970 });
+    expect(estimarValoresNota(1000, 3, false)).toEqual({ valorIss: 30, valorBaseCalculo: 1000, valorLiquido: 1000 });
+  });
+
+  it('reduz a base de cálculo do ISS quando há dedução', () => {
+    expect(estimarValoresNota(1000, 5, true, 0, 400)).toEqual({ valorIss: 30, valorBaseCalculo: 600, valorLiquido: 970 });
+    expect(estimarValoresNota(1000, 5, false, 0, 400)).toEqual({ valorIss: 30, valorBaseCalculo: 600, valorLiquido: 1000 });
   });
 });
 

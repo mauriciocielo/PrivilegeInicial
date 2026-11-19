@@ -67,6 +67,8 @@ export interface DadosDps {
   dataCompetencia: string; // AAAA-MM
   descricao: string;
   valorServicos: number;
+  /** Dedução/redução da base de cálculo do ISSQN, em reais (ex: materiais na construção civil). */
+  valorDeducoes?: number | null;
   cTribNac: string;
   cTribMun?: string | null;
   cNbs?: string | null;
@@ -225,6 +227,9 @@ export function validarEmissao(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date =
   if (d.cNbs && !/^\d{9}$/.test(apenasDigitos(d.cNbs))) problemas.push('Código NBS deve ter 9 dígitos.');
   if (!d.descricao.trim()) problemas.push('Informe a descrição do serviço.');
   if (!(d.valorServicos > 0)) problemas.push('O valor do serviço deve ser maior que zero.');
+  const deducoes = Number(d.valorDeducoes) || 0;
+  if (deducoes < 0) problemas.push('O valor de dedução não pode ser negativo.');
+  if (deducoes > 0 && deducoes >= d.valorServicos) problemas.push('O valor de dedução deve ser menor que o valor do serviço.');
   if (!/^\d{1,5}$/.test(d.serie)) problemas.push('A série da DPS deve ter de 1 a 5 dígitos.');
   if (!d.tomadorNome.trim()) problemas.push('Informe o nome do tomador.');
   if (doc.length === 14 ? !cnpjValido(doc) : !cpfValido(doc)) problemas.push('CPF/CNPJ do tomador inválido.');
@@ -248,7 +253,8 @@ export function validarEmissao(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date =
   const retido = totalRetidoFederal(d.retencao || SEM_RETENCAO);
   if (retido > 0) {
     if (cfg.opSimpNac === 2) problemas.push('MEI não pode informar tributos federais na nota (E0676).');
-    const issRetido = d.issRetido ? d.valorServicos * (Number(d.aliquotaIss) || 0) / 100 : 0;
+    const baseIss = Math.max(0, d.valorServicos - Math.max(0, deducoes));
+    const issRetido = d.issRetido ? baseIss * (Number(d.aliquotaIss) || 0) / 100 : 0;
     if (retido + issRetido >= d.valorServicos) problemas.push('As retenções não podem alcançar o valor do serviço (E0428).');
   }
 
@@ -405,6 +411,12 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
   // Sem retenção, a configuração só pode declarar códigos de "não retido": os demais exigem vRetCSLL (E0724).
   const tipoSemRetencao = cfg.tpRetPisCofins === '0' || cfg.tpRetPisCofins === '2' ? cfg.tpRetPisCofins : null;
   const somaContribuicoes = retencao.pis + retencao.cofins + retencao.csll;
+  const valorDeducoes = Math.max(0, Math.round((Number(d.valorDeducoes) || 0) * 100) / 100);
+  const blocoDeducoes = valorDeducoes > 0
+    ? (nt009
+      ? tag('vAjusteBC', txt('vAjusteBCISSQN', dec2(valorDeducoes)))
+      : tag('vDedRed', txt('vDR', dec2(valorDeducoes))))
+    : '';
 
   const infDps = [
     txt('tpAmb', d.ambiente === 'producao' ? '1' : '2'),
@@ -447,6 +459,7 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
     ),
     tag('valores',
       tag('vServPrest', txt('vServ', dec2(d.valorServicos))),
+      blocoDeducoes,
       tag('trib',
         tag('tribMun',
           txt('tribISSQN', '1'),
