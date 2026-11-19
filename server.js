@@ -54,11 +54,12 @@ app.prepare().then(() => {
     agendarRelatorioFiscalDiario(port);
     agendarMonitorNfeDestinadas(port);
     agendarWhatsAppDaemon(port);
+    agendarFilaEmails(port);
   });
 });
 
-// Mantém todas as sessões de WhatsApp (Baileys), follow-ups e campanhas rodando
-// automaticamente em 2º plano mesmo quando nenhum usuário está com a tela aberta.
+// Mantém todas as sessões de WhatsApp (Baileys), follow-ups e campanhas em lote rodando
+// automaticamente 24h em 2º plano mesmo quando nenhum usuário está com o navegador aberto.
 function agendarWhatsAppDaemon(port) {
   if (process.env.WHATSAPP_DAEMON_DESATIVADO === '1') return;
 
@@ -76,8 +77,30 @@ function agendarWhatsAppDaemon(port) {
 
   setTimeout(() => {
     disparar();
-    setInterval(disparar, 45 * 1000);
+    setInterval(disparar, 30 * 1000);
   }, 4 * 1000);
+}
+
+// Mantém a fila de lotes de E-mail Marketing / Newsletter rodando 24h no servidor,
+// mesmo com o navegador fechado. Verifica a cada 2 minutos se há lote pronto para disparo.
+function agendarFilaEmails(port) {
+  if (process.env.EMAIL_QUEUE_DESATIVADO === '1') return;
+
+  const disparar = () => {
+    fetch(`http://127.0.0.1:${port}/api/email-servicos/queue/cron`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.resultado?.enviados > 0) {
+          console.log('[email-queue]', d.mensagem);
+        }
+      })
+      .catch(() => {});
+  };
+
+  setTimeout(() => {
+    disparar();
+    setInterval(disparar, 2 * 60 * 1000);
+  }, 12 * 1000);
 }
 
 // Envio diário das NFS-e (emitidas e tomadas) ao setor fiscal. O servidor roda

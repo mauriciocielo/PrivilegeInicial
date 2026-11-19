@@ -549,55 +549,80 @@ export default function GarimpoLeadsPage() {
     }
   };
 
-  // Cadência Automática em Lote no WhatsApp Interno (intervalo aleatório 45s-90s anti-bloqueio)
+  // Cadência Automática em Lote no Servidor (roda 24h em 2º plano mesmo fechando o navegador!)
   const iniciarCadenciaWhatsappLote = async () => {
     const marcados = leadsFiltrados.filter(l => selecionadosBase[l.id] && (l.whatsapp || l.telefone));
     if (marcados.length === 0) {
       toast.info('Selecione ao menos um lead com WhatsApp/telefone na lista para iniciar a cadência.');
       return;
     }
-    cancelarCadenciaRef.current = false;
-    let enviados = 0;
 
-    for (let i = 0; i < marcados.length; i++) {
-      if (cancelarCadenciaRef.current) break;
-      const lead = marcados[i];
-      setCadenciaWhats({
-        ativo: true,
-        atual: i + 1,
-        total: marcados.length,
-        enviados,
-        aguardandoSeg: 0,
-        leadAtual: lead.nome,
+    setCadenciaWhats({
+      ativo: true,
+      atual: 0,
+      total: marcados.length,
+      enviados: 0,
+      aguardandoSeg: 0,
+      leadAtual: 'Enfileirando lote no servidor 24h...',
+    });
+
+    try {
+      const mensagemPadrao =
+        `Olá, equipe da {{nome}}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\n` +
+        `Trabalhamos com *Consultoria Empresarial 360º voltada ao Financeiro* — olhamos o caixa, a margem e a precificação real da empresa, integrando todas as áreas que impactam o resultado: *Financeiro, Comercial, Marketing, Processos e Pessoas*.\n\n` +
+        `O Mauricio separou dois horários esta semana para um Diagnóstico 360º rápido e gratuito.\n\n` +
+        `Para conhecer nosso trabalho:\n🌐 Site: https://privilegecontabilidade.cnt.br\n📸 Instagram: https://instagram.com/privilegeconsultoria.fb\n\n` +
+        `Faz sentido conversarmos 15 minutinhos esta semana?`;
+
+      const recipients = marcados.map(l => {
+        let digits = (l.whatsapp || l.telefone || '').replace(/\D/g, '');
+        if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
+        return {
+          name: l.nome,
+          phone: digits,
+        };
       });
 
-      await enviarWhatsappInterno(lead);
-      enviados++;
+      const res = await fetch('/api/whatsapp/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          name: `Garimpador B2B (${marcados.length} leads) — ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+          message_template: mensagemPadrao,
+          media_type: 'text',
+          anti_ban_config: {
+            minDelaySec: 45,
+            maxDelaySec: 85,
+            batchSize: 15,
+            batchCooldownSec: 180,
+            simulateTyping: true,
+            personalizeGreeting: false,
+            closeTicketAfterSend: false,
+          },
+          recipients,
+          startImmediately: true,
+          skipAlreadySent: true,
+        }),
+      });
 
-      // Pausa segura anti-bloqueio entre mensagens (45 a 85 segundos) exceto após o último
-      if (i < marcados.length - 1 && !cancelarCadenciaRef.current) {
-        const pausaSeg = 45 + Math.floor(Math.random() * 41);
-        for (let s = pausaSeg; s > 0; s--) {
-          if (cancelarCadenciaRef.current) break;
-          setCadenciaWhats({
-            ativo: true,
-            atual: i + 1,
-            total: marcados.length,
-            enviados,
-            aguardandoSeg: s,
-            leadAtual: lead.nome,
-          });
-          await new Promise(r => setTimeout(r, 1000));
-        }
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Não foi possível iniciar o lote no servidor.');
+        return;
       }
-    }
 
-    setCadenciaWhats(null);
-    toast.success(
-      cancelarCadenciaRef.current
-        ? `Cadência interrompida. ${enviados} mensagem(ns) enviada(s).`
-        : `Cadência concluída! ${enviados} mensagem(ns) disparada(s) com segurança.`
-    );
+      const pulados = data.skipped_duplicates_count || 0;
+      toast.success(
+        `Lote iniciado no servidor 24h para ${recipients.length - pulados} lead(s)! Você pode fechar o navegador que o servidor continua enviando com proteção anti-bloqueio.`,
+        { duration: 9000 }
+      );
+      setSelecionadosBase({});
+    } catch (err: any) {
+      toast.error(`Erro ao iniciar lote no servidor: ${err.message}`);
+    } finally {
+      setCadenciaWhats(null);
+    }
   };
 
   const salvarDetalhesLeadModal = async (atualizado: LeadGarimpado) => {
