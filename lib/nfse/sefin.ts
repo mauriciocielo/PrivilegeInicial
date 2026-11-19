@@ -98,6 +98,115 @@ function lerJson(corpo: string): Record<string, unknown> | null {
   }
 }
 
+export interface ResultadoAliquotaMunicipio {
+  aliquota: number | null;
+  fonte: 'adn' | null;
+  detalhe?: string;
+}
+
+function formatarServicoComPontos(cTribNac: string): string {
+  const d = cTribNac.replace(/\D/g, '').padStart(6, '0').slice(0, 6);
+  return `${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4, 6)}`;
+}
+
+function extrairAliquotaDeObjetoJson(obj: unknown, cTribNacLimpo: string): number | null {
+  if (!obj || typeof obj !== 'object') return null;
+  const rec = obj as Record<string, unknown>;
+
+  // Caso 1: Objeto com campo direto de alíquota
+  for (const chave of ['aliquota', 'aliq', 'pAliq', 'aliquotaIss', 'valorAliquota']) {
+    const val = rec[chave];
+    if (typeof val === 'number' && val > 0 && val <= 10) return val;
+    if (typeof val === 'string') {
+      const n = parseFloat(val.replace(',', '.'));
+      if (!isNaN(n) && n > 0 && n <= 10) return n;
+    }
+  }
+
+  // Caso 2: Mapa por código de serviço (ex: { aliquotas: { "07.02.02": [{ aliq: 4, dtIni: ... }] } })
+  const aliquotasMap = rec.aliquotas;
+  if (aliquotasMap && typeof aliquotasMap === 'object' && !Array.isArray(aliquotasMap)) {
+    const mapRec = aliquotasMap as Record<string, unknown>;
+    const comPontos = formatarServicoComPontos(cTribNacLimpo);
+    const entrada = mapRec[comPontos] || mapRec[cTribNacLimpo] || Object.values(mapRec)[0];
+    if (entrada) {
+      const r = extrairAliquotaDeObjetoJson(entrada, cTribNacLimpo);
+      if (r !== null) return r;
+    }
+  }
+
+  // Caso 3: Array de histórico de alíquotas (pega o registro vigente mais recente)
+  if (Array.isArray(obj)) {
+    const ordenados = [...obj].sort((a: any, b: any) =>
+      String(b?.dtIni || b?.dataInicio || '').localeCompare(String(a?.dtIni || a?.dataInicio || ''))
+    );
+    for (const item of ordenados) {
+      const r = extrairAliquotaDeObjetoJson(item, cTribNacLimpo);
+      if (r !== null) return r;
+    }
+  }
+
+  // Caso 4: Busca recursiva em sub-chaves comuns (mensagem, dados, historico, itens)
+  for (const sub of ['dados', 'historico', 'aliquotas', 'itens', 'parametros']) {
+    if (rec[sub]) {
+      const r = extrairAliquotaDeObjetoJson(rec[sub], cTribNacLimpo);
+      if (r !== null) return r;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Consulta a alíquota oficial de ISS do município no Ambiente de Dados Nacional (ADN — Parâmetros Municipais)
+ * para empresas fora do Simples Nacional (Lucro Presumido / Real).
+ */
+export async function consultarAliquotaMunicipio(
+  transporteAdn: Transporte,
+  codigoMunicipio: string,
+  cTribNac: string,
+  competencia?: string
+): Promise<ResultadoAliquotaMunicipio> {
+  const mun = codigoMunicipio.replace(/\D/g, '').slice(0, 7);
+  const servLimpo = cTribNac.replace(/\D/g, '').slice(0, 6);
+  if (mun.length !== 7 || servLimpo.length !== 6) {
+    return { aliquota: null, fonte: null };
+  }
+
+  const servPontos = formatarServicoComPontos(servLimpo);
+  const compParam = competencia && /^\d{4}-\d{2}/.test(competencia)
+    ? `${competencia.slice(0, 7)}-01`
+    : new Date().toISOString().slice(0, 10);
+
+  const caminhos = [
+    `parametrizacao/parametros_municipais/${mun}/${servPontos}/${compParam}/aliquota`,
+    `parametrizacao/parametros_municipais/${mun}/${servPontos}/aliquota`,
+    `parametrizacao/parametros_municipais/${mun}/${servLimpo}/aliquota`,
+    `parametros_municipais/${mun}/${servPontos}/aliquota`,
+  ];
+
+  for (const caminho of caminhos) {
+    try {
+      const res = await transporteAdn('GET', caminho);
+      if (res.status >= 200 && res.status < 300 && res.corpo) {
+        const json = lerJson(res.corpo);
+        const aliq = extrairAliquotaDeObjetoJson(json, servLimpo);
+        if (aliq !== null) {
+          return {
+            aliquota: aliq,
+            fonte: 'adn',
+            detalhe: `Parâmetro oficial ADN (${mun} / ${servPontos}): ${aliq}%`,
+          };
+        }
+      }
+    } catch {
+      /* tenta próximo caminho */
+    }
+  }
+
+  return { aliquota: null, fonte: null };
+}
+
 /** O Sefin alterna `erros`/`erro`, lista/objeto e maiúsculas/minúsculas nos subcampos. */
 export function lerErros(dados: Record<string, unknown>): ErroSefin[] {
   const brutos = dados.erros ?? dados.erro ?? dados.Erros ?? dados.Erro ?? [];

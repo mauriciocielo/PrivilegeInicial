@@ -523,6 +523,51 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     });
   }, [modalMode, retencaoManual, regrasDaEmpresa, form.codigoServico, form.tomadorCnpjCpf, form.valorServicos]);
 
+  const [buscandoAliquotaMun, setBuscandoAliquotaMun] = useState(false);
+  const [infoAliquotaMun, setInfoAliquotaMun] = useState<string | null>(null);
+
+  const buscarAliquotaMunicipio = useCallback(async (silencioso = false) => {
+    const codMun = apenasDigitos(form.municipioPrestacao || parametros?.codigoMunicipio || '');
+    const codServ = apenasDigitos(form.codigoServico || '');
+    if (!empresaId || codMun.length !== 7 || codServ.length !== 6) {
+      if (!silencioso) toast.error('Preencha o Código de Tributação Nacional (6 dígitos) e o Município IBGE (7 dígitos).');
+      return;
+    }
+    setBuscandoAliquotaMun(true);
+    try {
+      const qs = new URLSearchParams({
+        empresaId,
+        codigoMunicipio: codMun,
+        codigoServico: codServ,
+        ...(form.dataCompetencia ? { competencia: form.dataCompetencia } : {}),
+      });
+      const res = await fetch(`/api/nfse/aliquota-municipio?${qs.toString()}`);
+      const data = await res.json();
+      if (res.ok && data.sucesso && Number(data.aliquota) > 0) {
+        setForm(f => ({ ...f, aliquotaIss: Number(data.aliquota) }));
+        setInfoAliquotaMun(data.detalhe || `Município (${codMun}): ${data.aliquota}%`);
+        if (!silencioso) toast.success(`Alíquota ISS do município carregada: ${data.aliquota}%`);
+      } else if (!silencioso) {
+        toast.error(data.error || 'Alíquota não encontrada no ADN para este município/serviço.');
+      }
+    } catch {
+      if (!silencioso) toast.error('Erro ao consultar alíquota do município.');
+    } finally {
+      setBuscandoAliquotaMun(false);
+    }
+  }, [empresaId, form.municipioPrestacao, form.codigoServico, form.dataCompetencia, parametros?.codigoMunicipio]);
+
+  // Para empresas fora do Simples Nacional (Regime Normal), busca automaticamente a alíquota do município
+  // quando o usuário seleciona/digita o código de serviço (6 dígitos) + município IBGE (7 dígitos).
+  useEffect(() => {
+    if (modalMode !== 'novo' || ehSimples) return;
+    const codMun = apenasDigitos(form.municipioPrestacao || parametros?.codigoMunicipio || '');
+    const codServ = apenasDigitos(form.codigoServico || '');
+    if (codMun.length === 7 && codServ.length === 6) {
+      buscarAliquotaMunicipio(true);
+    }
+  }, [modalMode, ehSimples, form.codigoServico, form.municipioPrestacao, parametros?.codigoMunicipio, buscarAliquotaMunicipio]);
+
   const buscarAliquotaIntegraContador = async () => {
     if (!empresaId) return;
     setBuscandoAliquotaSerpro(true);
@@ -3099,8 +3144,35 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <input type="number" step="0.01" min="0" className="form-control" value={form.valorServicos ?? ''} onChange={e => setForm(f => ({ ...f, valorServicos: Number(e.target.value) }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Alíquota ISS (%){aliquotaObrigatoria ? ' *' : ''}</label>
-                  <input type="number" step="any" min="0" className="form-control" value={form.aliquotaIss ?? ''} onChange={e => setForm(f => ({ ...f, aliquotaIss: Number(e.target.value) }))} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Alíquota ISS (%){aliquotaObrigatoria ? ' *' : ''}</label>
+                    {!ehSimples && (
+                      <button
+                        type="button"
+                        onClick={() => buscarAliquotaMunicipio(false)}
+                        disabled={buscandoAliquotaMun}
+                        style={{
+                          background: '#600000',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: buscandoAliquotaMun ? 'not-allowed' : 'pointer',
+                        }}
+                        title="Consulta a alíquota oficial de ISS cadastrada pelo município no ADN"
+                      >
+                        {buscandoAliquotaMun ? 'Consultando...' : '⚡ Buscar do Município'}
+                      </button>
+                    )}
+                  </div>
+                  <input type="number" step="any" min="0" className="form-control" value={form.aliquotaIss ?? ''} onChange={e => { setForm(f => ({ ...f, aliquotaIss: Number(e.target.value) })); setInfoAliquotaMun(null); }} />
+                  {infoAliquotaMun && !ehSimples && (
+                    <div style={{ fontSize: 11, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
+                      ✓ {infoAliquotaMun}
+                    </div>
+                  )}
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                     {aliquotaObrigatoria ? 'Enviada na nota: obrigatória neste regime.' : 'Só para estimativa: quem define é a parametrização do município.'}
                   </div>
