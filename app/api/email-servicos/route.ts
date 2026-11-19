@@ -219,6 +219,142 @@ export async function POST(req: Request) {
     const hasLogoOficial = fs.existsSync(logoOficialPath);
 
     // -------------------------------------------------------------
+    // CASO 0B: E-MAIL EXECUTIVO DE PROSPECÇÃO B2B (GARIMPADOR DE LEADS)
+    // -------------------------------------------------------------
+    if (tipo === 'prospeccao_lead') {
+      const emailAlvo = (destinatarioEmail || (Array.isArray(destinatariosLista) ? destinatariosLista[0] : '') || '').trim();
+      if (!emailAlvo || !emailAlvo.includes('@')) {
+        return NextResponse.json({ error: 'E-mail do destinatário inválido ou não informado.' }, { status: 400 });
+      }
+
+      const logId = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const tituloAssunto = (assunto || 'Diagnóstico Financeiro & Gestão 360º — Privilege Consultoria').trim();
+      const corpoHtml = formatarMensagemParaEmail(mensagem || '');
+      const pixelUrl = `${baseUrl}/api/email-servicos/pixel?id=${logId}`;
+
+      const attachmentsLead: any[] = [];
+      if (hasLogoOficial) {
+        attachmentsLead.push({
+          filename: 'privilege-logo-email.png',
+          path: logoOficialPath,
+          cid: 'privilege-logo',
+        });
+      }
+
+      const htmlProspeccao = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>${tituloAssunto}</title>
+        </head>
+        <body style="margin:0;padding:28px 14px;background-color:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;-webkit-font-smoothing:antialiased;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #e4e2dd;border-radius:14px;overflow:hidden;">
+            <!-- Cabeçalho Editorial -->
+            <tr>
+              <td style="padding:26px 32px 20px;text-align:center;border-bottom:2px solid #600000;background-color:#ffffff;">
+                <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="text-decoration:none;display:inline-block;">
+                  ${
+                    hasLogoOficial
+                      ? `<img src="cid:privilege-logo" alt="Privilege Contabilidade & Consultoria" width="210" style="display:block;margin:0 auto;max-width:210px;height:auto;" />`
+                      : `<div style="font-size:20px;font-weight:800;color:#600000;letter-spacing:0.5px;">PRIVILEGE CONSULTORIA</div>`
+                  }
+                </a>
+                <div style="margin-top:10px;font-size:10.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#600000;">
+                  Consultoria Empresarial 360º · Foco Financeiro
+                </div>
+              </td>
+            </tr>
+
+            <!-- Corpo da Mensagem (sem saudação duplicada) -->
+            <tr>
+              <td style="padding:30px 34px 18px;font-size:15px;line-height:1.7;color:#27272a;">
+                ${corpoHtml}
+              </td>
+            </tr>
+
+            <!-- Bloco de Ações / Canais Oficiais -->
+            <tr>
+              <td style="padding:6px 34px 28px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#faf9f7;border:1px solid #e4e2dd;border-radius:10px;">
+                  <tr>
+                    <td style="padding:18px 20px;text-align:center;">
+                      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#52525b;margin-bottom:12px;">
+                        Fale com nossa equipe ou conheça nosso trabalho
+                      </div>
+                      <div>
+                        <a href="https://wa.me/5546999800010?text=Ol%C3%A1!%20Recebi%20o%20e-mail%20sobre%20a%20Consultoria%20360%C2%BA%20e%20gostaria%20de%20conversar." target="_blank" style="display:inline-block;margin:4px;padding:11px 20px;background-color:#600000;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13.5px;font-weight:600;">
+                          Agendar Diagnóstico no WhatsApp
+                        </a>
+                      </div>
+                      <div style="margin-top:10px;">
+                        <a href="https://privilegecontabilidade.cnt.br" target="_blank" style="display:inline-block;margin:4px 6px;padding:8px 14px;background-color:#ffffff;border:1px solid #d4d4d8;color:#18181b;text-decoration:none;border-radius:7px;font-size:12.5px;font-weight:600;">
+                          Site Oficial
+                        </a>
+                        <a href="https://instagram.com/privilegeconsultoria.fb" target="_blank" style="display:inline-block;margin:4px 6px;padding:8px 14px;background-color:#ffffff;border:1px solid #d4d4d8;color:#18181b;text-decoration:none;border-radius:7px;font-size:12.5px;font-weight:600;">
+                          Instagram @privilegeconsultoria.fb
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Assinatura Executiva Minimalista -->
+            <tr>
+              <td style="padding:18px 34px 22px;background-color:#faf9f7;border-top:1px solid #e4e2dd;text-align:center;">
+                <div style="font-size:13px;font-weight:700;color:#600000;letter-spacing:0.02em;">
+                  Privilege Contabilidade &amp; Consultoria
+                </div>
+                <div style="font-size:12px;color:#52525b;margin-top:3px;">
+                  Financeiro · Comercial · Marketing · Processos · Pessoas
+                </div>
+                <div style="font-size:11.5px;color:#71717a;margin-top:8px;line-height:1.5;">
+                  Rua Pará, 127, Sala 103, Centro — Francisco Beltrão / PR<br />
+                  WhatsApp: (46) 99980-0010 · <a href="mailto:${smtpFrom}" style="color:#600000;text-decoration:none;font-weight:600;">${smtpFrom}</a>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <img src="${pixelUrl}" width="1" height="1" border="0" style="width:1px;height:1px;border:none;margin:0;padding:0;" alt="" />
+        </body>
+        </html>
+      `;
+
+      await transporter.sendMail({
+        from: `"${nomeRemetenteFinal}" <${smtpFrom}>`,
+        to: emailAlvo,
+        bcc: smtpFrom,
+        replyTo: replyToFinal,
+        subject: tituloAssunto,
+        html: htmlProspeccao,
+        attachments: attachmentsLead,
+      });
+
+      salvarLog({
+        id: logId,
+        empresaId,
+        tipo: 'newsletter',
+        assunto: tituloAssunto,
+        destinatarioEmail: emailAlvo,
+        destinatarioNome: destinatarioNome || emailAlvo,
+        status: 'entregue',
+        enviadoEm: new Date().toISOString(),
+        html: htmlProspeccao,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        enviados: 1,
+        falhas: 0,
+        totalDestinatarios: 1,
+        logs: [{ email: emailAlvo, status: 'ok' }],
+      });
+    }
+
+    // -------------------------------------------------------------
     // CASO 1: ENVIO DE BOLETO / COBRANÇA / NFS-E
     // -------------------------------------------------------------
     if (tipo === 'cobranca_boleto' || (!tipo && (linhaDigitavel || brcodePix || nfseNumero))) {

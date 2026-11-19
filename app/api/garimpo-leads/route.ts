@@ -876,33 +876,88 @@ async function consultarCnpjUnitario(cnpjRaw: string): Promise<LeadGarimpado | n
   return null;
 }
 
+const TRADUCAO_CATEGORIAS_OSM: Record<string, string> = {
+  'metal construction': 'metalurgia e estruturas metálicas',
+  'car repair': 'oficina mecânica e serviços automotivos',
+  'car parts': 'autopeças e serviços automotivos',
+  'construction company': 'construção civil e engenharia',
+  'building materials': 'materiais de construção',
+  'estate agent': 'mercado imobiliário',
+  'fitness centre': 'academia e bem-estar',
+  'sports centre': 'esportes e bem-estar',
+  'fast food': 'alimentação e gastronomia',
+  'food court': 'alimentação e gastronomia',
+  'department store': 'varejo e comércio',
+  'moving company': 'transporte e logística',
+  'restaurant': 'gastronomia e restaurantes',
+  'bakery': 'panificação e alimentação',
+  'butcher': 'açougue e alimentos',
+  'supermarket': 'supermercados e varejo',
+  'convenience': 'comércio e conveniência',
+  'pharmacy': 'farmácia e saúde',
+  'clinic': 'clínicas e saúde',
+  'dentist': 'odontologia e saúde',
+  'doctors': 'clínicas médicas e saúde',
+  'hospital': 'saúde hospitalar',
+  'veterinary': 'medicina veterinária e pet',
+  'clothes': 'moda e vestuário',
+  'shoes': 'calçados e varejo',
+  'furniture': 'móveis e decoração',
+  'electronics': 'eletrônicos e tecnologia',
+  'hardware': 'ferragens e construção',
+  'doityourself': 'materiais de construção',
+  'works': 'indústria e manufatura',
+  'industrial': 'indústria',
+  'carpenter': 'marcenaria e móveis',
+  'welder': 'serralheria e metalurgia',
+  'print': 'indústria gráfica',
+  'hotel': 'hotelaria e turismo',
+  'lawyer': 'serviços jurídicos',
+  'accountant': 'serviços empresariais',
+  'consulting': 'consultoria e serviços',
+  'insurance': 'seguros',
+  'logistics': 'logística e transportes',
+  'transport': 'transportes e logística',
+  'hairdresser': 'beleza e estética',
+  'beauty': 'beleza e estética',
+  'school': 'educação',
+};
+
+function traduzirCategoriaPt(cat?: string): string {
+  const raw = (cat || '').replace(/_/g, ' ').trim();
+  if (!raw) return 'seu segmento';
+  const key = raw.toLowerCase();
+  return TRADUCAO_CATEGORIAS_OSM[key] || raw;
+}
+
 async function qualificarLeadComIA(lead: LeadGarimpado, contextoOferta: string) {
+  const categoriaPt = traduzirCategoriaPt(lead.categoria);
   const oferta =
     contextoOferta?.trim() ||
     'Privilege Consultoria — Consultoria Empresarial 360º voltada ao Financeiro (DRE gerencial, fluxo de caixa, precificação real, margem de lucro e BPO) integrando todas as áreas da empresa: Financeiro, Comercial, Marketing, Processos e Pessoas/RH. Site: https://privilegecontabilidade.cnt.br | Instagram da Consultoria: https://instagram.com/privilegeconsultoria.fb (@privilegeconsultoria.fb)';
 
   const prompt = `Você é um especialista sênior em prospecção B2B consultiva.
 Oferta da nossa empresa: ${oferta}
-Canais oficiais que DEVEM aparecer de forma natural na mensagem de WhatsApp e no e-mail:
+Canais oficiais:
 - Site: https://privilegecontabilidade.cnt.br
 - Instagram da Consultoria: https://instagram.com/privilegeconsultoria.fb
 
 Dados do lead:
 - Empresa: ${lead.nome}
-- Segmento/Categoria: ${lead.categoria}
+- Segmento/Categoria: ${categoriaPt}
 - Cidade/UF: ${lead.cidade}/${lead.estado}
 - Porte: ${lead.porte || 'Não informado'}
 - Sócios: ${lead.socios || 'Não informado'}
 - Website: ${lead.website || 'Não informado'}
 - Nota Google: ${lead.nota ? `${lead.nota} (${lead.avaliacoes || 0} avaliações)` : 'Não informado'}
 
-Responda APENAS em JSON válido com as chaves:
+Responda APENAS em JSON válido em português impecável (NUNCA use termos em inglês para o segmento) com as chaves:
 {
   "score": <numero de 0 a 100>,
   "diagnostico": "<2 frases curtas sobre como a falta de integração 360º (Financeiro, Comercial, Marketing e Pessoas) costuma corroer o lucro e o caixa desse tipo de empresa>",
   "scriptWhatsapp": "<mensagem natural, executiva e consultiva de primeira abordagem no WhatsApp falando da Consultoria 360º com foco central no Financeiro (conectando Comercial, Marketing, Processos e Pessoas), convidando para um Diagnóstico 360º rápido e incluindo o site https://privilegecontabilidade.cnt.br e o Instagram https://instagram.com/privilegeconsultoria.fb>",
-  "assuntoEmail": "<assunto curto e persuasivo sobre Consultoria Financeira & Gestão 360º>",
-  "corpoEmail": "<corpo de e-mail B2B objetivo com 3 parágrafos curtos sobre Consultoria Empresarial 360º voltada ao Financeiro integrando todas as áreas da empresa, incluindo o site https://privilegecontabilidade.cnt.br e o Instagram @privilegeconsultoria.fb (https://instagram.com/privilegeconsultoria.fb)>"
+  "assuntoEmail": "<assunto curto, executivo e persuasivo sobre Consultoria Financeira & Gestão 360º>",
+  "corpoEmail": "<corpo de e-mail B2B executivo em 3 parágrafos curtos e diretos (NÃO coloque URLs soltas entre parênteses pois o template já inclui botões oficiais para o Site, Instagram e WhatsApp)>"
 }`;
 
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -938,15 +993,15 @@ Responda APENAS em JSON válido com as chaves:
 
   // Motor consultivo local inteligente (fallback imediato sem dependência de chave externa)
   const primeiroSocio = lead.socios ? lead.socios.split(',')[0].split(' ')[0] : '';
-  const saudacao = primeiroSocio ? `Olá, ${primeiroSocio}` : `Olá, pessoal da ${lead.nome}`;
+  const saudacao = primeiroSocio ? `Olá, ${primeiroSocio}` : `Olá, equipe da ${lead.nome}`;
   const scoreFinal = Math.min(100, Math.max(lead.score, 65));
 
   return {
     score: scoreFinal,
-    diagnostico: `Empresas do segmento de ${lead.categoria || 'serviços/comércio'} em ${lead.cidade || 'sua região'} frequentemente faturam bem, mas perdem lucratividade porque o Financeiro (caixa, DRE e precificação) não conversa com Comercial, Marketing, Processos e Pessoas. Uma visão 360º ancorada nos números resolve os gargalos na raiz.`,
-    scriptWhatsapp: `${saudacao}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nTrabalhamos com *Consultoria Empresarial 360º voltada ao Financeiro* — olhamos o caixa, a margem e a precificação real da empresa, conectando todas as áreas que impactam o resultado: *Financeiro, Comercial, Marketing, Processos e Pessoas*.\n\nAcompanhamos empresas do ramo de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Diagnóstico 360º rápido e gratuito.\n\nPara conhecer um pouco do nosso trabalho:\n🌐 Site: https://privilegecontabilidade.cnt.br\n📸 Instagram: https://instagram.com/privilegeconsultoria.fb\n\nFaz sentido conversarmos 15 minutinhos esta semana?`,
-    assuntoEmail: `Consultoria Financeira & Gestão 360º para a ${lead.nome}`,
-    corpoEmail: `${saudacao},\n\nNa Privilege Consultoria atuamos com Consultoria Empresarial 360º com foco central no Financeiro. Mais do que organizar o fluxo de caixa, a DRE e a precificação, conectamos os números a todas as áreas que determinam o lucro real da empresa: Comercial, Marketing, Processos e Pessoas/RH.\n\nEm empresas do segmento de ${lead.categoria || 'gestão empresarial'} em ${lead.cidade || 'sua região'}, é muito comum o faturamento crescer enquanto o lucro fica preso em gargalos operacionais, comerciais ou de margem. Nossa proposta é fazer um Diagnóstico 360º objetivo e sem compromisso da estrutura atual da ${lead.nome}.\n\nVocê pode conhecer mais sobre nossa metodologia no nosso site (https://privilegecontabilidade.cnt.br) e acompanhar nossos conteúdos no Instagram da Consultoria (@privilegeconsultoria.fb — https://instagram.com/privilegeconsultoria.fb).\n\nPodemos agendar uma conversa rápida de 15 minutos esta semana? Responda este e-mail ou fale conosco no WhatsApp (46) 99980-0010.`,
+    diagnostico: `Empresas do segmento de ${categoriaPt} em ${lead.cidade || 'sua região'} frequentemente faturam bem, mas perdem lucratividade porque o Financeiro (caixa, DRE e precificação) não conversa com Comercial, Marketing, Processos e Pessoas. Uma visão 360º ancorada nos números resolve os gargalos na raiz.`,
+    scriptWhatsapp: `${saudacao}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nTrabalhamos com *Consultoria Empresarial 360º voltada ao Financeiro* — olhamos o caixa, a margem e a precificação real da empresa, conectando todas as áreas que impactam o resultado: *Financeiro, Comercial, Marketing, Processos e Pessoas*.\n\nAcompanhamos empresas do segmento de ${categoriaPt} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Diagnóstico 360º rápido e gratuito.\n\nPara conhecer um pouco do nosso trabalho:\n🌐 Site: https://privilegecontabilidade.cnt.br\n📸 Instagram: https://instagram.com/privilegeconsultoria.fb\n\nFaz sentido conversarmos 15 minutinhos esta semana?`,
+    assuntoEmail: `Diagnóstico Financeiro & Gestão 360º — ${lead.nome}`,
+    corpoEmail: `${saudacao},\n\nNa **Privilege Consultoria**, atuamos com **Consultoria Empresarial 360º voltada ao Financeiro**. Mais do que organizar fluxo de caixa, DRE e precificação, conectamos os números a todas as áreas que determinam o lucro real do negócio: Comercial, Marketing, Processos e Pessoas.\n\nNo segmento de ${categoriaPt}${lead.cidade ? ` em ${lead.cidade}` : ''}, é comum o faturamento crescer enquanto a margem fica pressionada por custos ocultos ou gargalos entre áreas. Nossa proposta é realizar um **Diagnóstico 360º objetivo e gratuito** para mapear oportunidades práticas de ganho de caixa e rentabilidade na **${lead.nome}**.\n\nPodemos agendar uma conversa rápida de 15 minutos esta semana? Basta responder este e-mail ou clicar no botão do WhatsApp abaixo.`,
   };
 }
 
