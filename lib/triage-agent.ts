@@ -203,6 +203,24 @@ export async function runTriageStep(params: {
   return await transferToTeam(pool, params.chatId, params.phone, state);
 }
 
+/**
+ * Usado quando a IA decide que precisa da equipe: marca a conversa como transferida,
+ * gera o resumo da triagem e pausa o bot. Não gera mensagem (a IA já respondeu).
+ */
+export async function handoverToTeam(params: { chatId: string; phone: string; state: TriageState }) {
+  const pool = getEmailDbPool();
+  return transferToTeam(pool, params.chatId, params.phone, params.state, '');
+}
+
+/** Guarda o que o cliente procura sem encerrar a triagem (a IA continua a conversa). */
+export async function saveDemandForAi(params: { chatId: string; state: TriageState; text: string }) {
+  const pool = getEmailDbPool();
+  const state: TriageState = { ...params.state };
+  if (!state.oQueProcura && params.text.trim().length > 3) state.oQueProcura = params.text.trim();
+  await saveTriageState(pool, params.chatId, state);
+  return state;
+}
+
 async function saveTriageState(pool: any, chatId: string, state: TriageState) {
   if (!pool || chatId === 'sim_test') return;
   if (state.nomeCliente) {

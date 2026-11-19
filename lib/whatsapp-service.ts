@@ -2,7 +2,7 @@ import { getEmailDbPool } from './email-db';
 import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
 import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected } from './baileys-manager';
-import { runTriageStep } from './triage-agent';
+import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import { generateText } from './ai-provider';
 import {
@@ -1432,6 +1432,39 @@ export async function generateGeminiBotReply(
   ownerId = 'default',
   chatId?: string
 ): Promise<string> {
+  return (await generateLeoReply(userMessage, customPrompt, ownerId, chatId)).text;
+}
+
+/** Marca que a IA coloca no fim da resposta quando a conversa precisa ir para a equipe. */
+const HANDOVER_MARKER = /\[\s*CHAMAR[_\s]EQUIPE\s*\]/gi;
+
+/** Existe algum provedor de IA utilizável (mesma lista que o generateText tenta)? */
+function isAiAvailable(config: WhatsAppConfig): boolean {
+  return Boolean(
+    config.gemini_api_key ||
+      config.claude_api_key ||
+      config.openai_api_key ||
+      (config.api_key && config.api_key.length > 20) ||
+      process.env.GROQ_API_KEY ||
+      process.env.OLLAMA_BASE_URL ||
+      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30) ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.CLAUDE_API_KEY ||
+      process.env.OPENAI_API_KEY
+  );
+}
+
+/**
+ * Gera a resposta do Léo pela IA. `handover` indica que a IA pediu para chamar a equipe
+ * (marca [CHAMAR_EQUIPE], removida do texto). Sem nenhum provedor, usa as respostas fixas.
+ */
+async function generateLeoReply(
+  userMessage: string,
+  customPrompt?: string,
+  ownerId = 'default',
+  chatId?: string
+): Promise<{ text: string; handover: boolean }> {
   const config = await getWhatsAppConfig(ownerId).catch(() => DEFAULT_CONFIG);
 
   const prompt = customPrompt || config.bot_prompt || DEFAULT_CONFIG.bot_prompt;
@@ -1474,6 +1507,9 @@ INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
      * PASSO 2A — Se disser que usa planilha/sistema, mas ainda falta dinheiro: responda exatamente na linha de: "Entendi perfeitamente. Muitas vezes o sistema até calcula, mas fica faltando colocar o peso real dos impostos, das taxas de cartão ou dos custos fixos da empresa na conta. Hoje, você sente que o maior aperto está na falta de dinheiro em caixa ou você não tem certeza se o preço atual realmente dá lucro?"
      * PASSO 2B — Se disser que faz "de cabeça" ou "olha o concorrente": responda exatamente na linha de: "Isso acontece muito na correria do dia a dia! O perigo de olhar o concorrente é que a gente não sabe se a conta dele fecha ou se ele também está no prejuízo sem saber. Hoje, qual é a média de faturamento mensal da sua empresa, só para eu direcionar você para o diagnóstico certo?"
      * PASSO 3 — Após o lead responder o Passo 2 (dor de caixa/lucro ou faturamento), faça o fechamento para agendamento: "Perfeito! Pelo que você me passou, vale muito a pena o Mauricio dar uma olhada rápida na sua estrutura de preços para estancar esse vazamento.\n\nEle separou dois horários na agenda para fazer um Raio-X rápido e gratuito com quem veio desse vídeo: amanhã às 10h ou às 15h30. Algum desses horários funciona para você (pode ser online ou aqui no escritório)?"
+5. QUANDO NÃO SOUBER A RESPOSTA EXATA: não transfira a conversa de imediato. Responda você mesmo com o que sabe sobre a Privilege e sobre gestão de empresas, mostrando conhecimento prático sobre o ramo do cliente (ex.: se disser "loja de roupas", comente desafios típicos do varejo de moda, como estoque parado, margem por coleção, sazonalidade e taxas de cartão, e diga como a Privilege ajuda nisso). Depois faça UMA pergunta para entender melhor o desafio dele.
+   - Nunca invente preços, prazos, horários disponíveis, dados de clientes ou informações que não estejam acima. Se a dúvida exigir isso, diga com naturalidade que a equipe confirma esse ponto.
+6. CHAMAR A EQUIPE: só quando (a) o cliente pedir para falar com uma pessoa, (b) ele já tiver escolhido formato/turno para a Sessão de Diagnóstico, (c) for assunto da empresa dele que exige consultar o sistema/documentos (boletos, guias, notas, prazos do contador), ou (d) você realmente não conseguir ajudar. Nesses casos, diga que vai chamar alguém da equipe, que responde por aqui mesmo, e termine a mensagem com a marca [CHAMAR_EQUIPE] (ela é removida antes do envio; nunca use em outros casos).
 `.trim();
 
   // Ollama primeiro; o provedor salvo na configuração e os demais ficam como contingência.
@@ -1486,8 +1522,18 @@ INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
     timeoutMs: 8500,
     ollamaTimeoutMs: 45000,
   });
-  if (ai.text) return ai.text.trim();
+  if (ai.text) {
+    const handover = HANDOVER_MARKER.test(ai.text);
+    HANDOVER_MARKER.lastIndex = 0;
+    const text = ai.text.replace(HANDOVER_MARKER, '').trim();
+    if (text) return { text, handover };
+  }
 
+  return { text: fallbackLeoReply(userMessage), handover: false };
+}
+
+/** Respostas fixas usadas só quando nenhum provedor de IA respondeu. */
+function fallbackLeoReply(userMessage: string): string {
   const lower = userMessage.toLowerCase();
 
   // Regras literais do assistente Léo
@@ -1763,9 +1809,15 @@ export async function processIncomingMessage(params: {
     }
   }
 
+  // Com IA disponível (modo IA/Híbrido), quem conduz a conversa é a IA; a triagem fixa só entra sem IA.
+  const aiActive = (config.bot_mode === 'ia' || config.bot_mode === 'hibrido') && isAiAvailable(config);
+
   // Se já coletamos o nome e estamos aguardando o que o cliente procura (e não é pergunta sobre áreas separadas), conclui a triagem e passa para a equipe
   const isSpecificQuestion = lowerText.includes('?') || lowerText.includes('queria saber') || lowerText.includes('somente') || lowerText.includes('separad');
-  if (currentTriage?.nomeCliente && currentTriage?.status === 'coletando_demanda' && !isSpecificQuestion) {
+  if (aiActive && currentTriage?.nomeCliente && currentTriage?.status === 'coletando_demanda' && !currentTriage?.oQueProcura) {
+    // Guarda a demanda para o resumo da equipe, mas deixa a IA responder
+    currentTriage = await saveDemandForAi({ chatId: params.chatId, state: currentTriage, text: cleanText }).catch(() => currentTriage);
+  } else if (!aiActive && currentTriage?.nomeCliente && currentTriage?.status === 'coletando_demanda' && !isSpecificQuestion) {
     const triageRes = await runTriageStep({
       chatId: params.chatId,
       phone: params.phone,
@@ -1865,17 +1917,6 @@ export async function processIncomingMessage(params: {
     return { reply: config.welcome_message, source: 'rule' };
   }
 
-  const hasAiKey = Boolean(
-    config.gemini_api_key ||
-      config.claude_api_key ||
-      config.openai_api_key ||
-      (config.api_key && config.api_key.length > 20) ||
-      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30) ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.OPENAI_API_KEY
-  );
-
   const isRealQuestionOrConversation =
     cleanText.includes('?') ||
     cleanText.split(/\s+/).length >= 4 ||
@@ -1883,7 +1924,7 @@ export async function processIncomingMessage(params: {
 
   // Quando estiver em modo IA ou Híbrido com chave configurada e o cliente já tiver nome/dúvida real,
   // usa o Gemini/Claude com todo o histórico e base aprendida antes de cair nas respostas fixas de triagem.
-  if ((config.bot_mode === 'ia' || config.bot_mode === 'hibrido') && hasAiKey && isRealQuestionOrConversation) {
+  if (aiActive && isRealQuestionOrConversation) {
     const assistantsList =
       Array.isArray(config.assistants) && config.assistants.length > 0
         ? config.assistants
@@ -1896,7 +1937,7 @@ export async function processIncomingMessage(params: {
       ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
       : config.bot_prompt;
 
-    const aiReply = await generateGeminiBotReply(cleanText, personaPrompt, ownerId, params.chatId);
+    const { text: aiReply, handover } = await generateLeoReply(cleanText, personaPrompt, ownerId, params.chatId);
     await dispatchBotReply({
       chatId: params.chatId,
       text: aiReply,
@@ -1904,7 +1945,19 @@ export async function processIncomingMessage(params: {
       isIncomingAudio,
       ownerId,
     });
-    return { reply: aiReply, source: 'ai' };
+    if (handover) {
+      // A própria IA decidiu chamar a equipe: gera o resumo da triagem e pausa o bot
+      await handoverToTeam({
+        chatId: params.chatId,
+        phone: params.phone,
+        state: {
+          ...currentTriage,
+          nomeCliente: currentTriage?.nomeCliente || (isValidContactName(params.name) ? params.name : undefined),
+          status: currentTriage?.status || 'coletando_demanda',
+        },
+      }).catch(err => console.warn('[WhatsApp] Falha ao transferir para a equipe:', err));
+    }
+    return { reply: aiReply, source: 'ai', paused: handover };
   }
 
   // Triagem inteligente do Léo: coleta nome e o que procura antes de chamar a equipe
@@ -1992,7 +2045,11 @@ export async function simulateBotResponse(
     lower.includes('somente') ||
     lower.includes('separad');
 
-  if (triageState?.nomeCliente && triageState?.status === 'coletando_demanda' && !isSpecificQuestion) {
+  const aiActive = (config.bot_mode === 'ia' || config.bot_mode === 'hibrido') && isAiAvailable(config);
+
+  if (aiActive && triageState?.nomeCliente && triageState?.status === 'coletando_demanda' && !triageState?.oQueProcura && clean.length > 3) {
+    triageState = { ...triageState, oQueProcura: clean };
+  } else if (!aiActive && triageState?.nomeCliente && triageState?.status === 'coletando_demanda' && !isSpecificQuestion) {
     const tRes = await runTriageStep({
       chatId: 'sim_test',
       phone: '5546999999999',
@@ -2046,6 +2103,17 @@ export async function simulateBotResponse(
       source: 'welcome',
       durationMs: Date.now() - start,
       updatedState: triageState || { status: 'coletando_nome' },
+    };
+  }
+
+  // Com IA disponível e cliente já identificado (ou dúvida real), a IA responde em vez da triagem fixa
+  if (aiActive && (triageState?.nomeCliente || clean.includes('?') || clean.split(/\s+/).length >= 4)) {
+    const { text: aiText, handover } = await generateLeoReply(clean, config.bot_prompt);
+    return {
+      reply: aiText,
+      source: 'ai',
+      durationMs: Date.now() - start,
+      updatedState: handover ? { ...triageState, status: 'pronto_para_equipe' } : triageState,
     };
   }
 
