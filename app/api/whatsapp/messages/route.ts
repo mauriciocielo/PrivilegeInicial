@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
-import { getChatMessages, sendMessage, reactToMessage } from '@/lib/whatsapp-service';
+import { getChatMessages, sendMessage, reactToMessage, editMessage, deleteMessage } from '@/lib/whatsapp-service';
 import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +37,24 @@ export async function POST(req: NextRequest) {
       }
       const reactions = await reactToMessage({ messageId, chatId: chatId || '', emoji, ownerId });
       return NextResponse.json({ success: true, reactions });
+    }
+
+    if (body.action === 'edit') {
+      const { messageId, chatId, text: newText } = body;
+      if (!messageId || !newText || !String(newText).trim()) {
+        return NextResponse.json({ success: false, error: 'messageId e novo texto são obrigatórios' }, { status: 400 });
+      }
+      const result = await editMessage({ messageId, chatId: chatId || '', newText: String(newText), ownerId });
+      return NextResponse.json({ success: true, ...result });
+    }
+
+    if (body.action === 'delete') {
+      const { messageId, chatId } = body;
+      if (!messageId) {
+        return NextResponse.json({ success: false, error: 'messageId é obrigatório' }, { status: 400 });
+      }
+      const result = await deleteMessage({ messageId, chatId: chatId || '', ownerId });
+      return NextResponse.json({ success: true, ...result });
     }
 
     const { chatId, text, sentBy, senderName, mediaType, mediaUrl, fileName, mimeType, validarNumeroWhatsapp } = body;

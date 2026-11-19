@@ -1216,3 +1216,51 @@ export async function sendBaileysReaction(
   }
   return false;
 }
+
+/**
+ * Edita uma mensagem enviada ao vivo no WhatsApp (Baileys Protocol Edit).
+ */
+export async function editBaileysMessage(
+  phoneOrChatId: string,
+  newText: string,
+  waKey?: any,
+  ownerId = 'default'
+): Promise<boolean> {
+  const sock = await ensureBaileysConnected(true, ownerId);
+  if (!sock || !waKey?.id) return false;
+
+  try {
+    const jid = waKey.remoteJid || (await resolveWhatsAppJid(sock, phoneOrChatId, ownerId));
+    await sock.sendMessage(jid, {
+      text: newText,
+      edit: waKey,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`[Baileys:${ownerId}] Aviso ao editar mensagem no WhatsApp:`, err);
+    return false;
+  }
+}
+
+/**
+ * Exclui (apaga para todos) uma mensagem enviada ao vivo no WhatsApp.
+ */
+export async function deleteBaileysMessage(
+  phoneOrChatId: string,
+  waKey?: any,
+  ownerId = 'default'
+): Promise<boolean> {
+  const sock = await ensureBaileysConnected(true, ownerId);
+  if (!sock || !waKey?.id) return false;
+
+  try {
+    const jid = waKey.remoteJid || (await resolveWhatsAppJid(sock, phoneOrChatId, ownerId));
+    await sock.sendMessage(jid, {
+      delete: waKey,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`[Baileys:${ownerId}] Aviso ao apagar mensagem no WhatsApp:`, err);
+    return false;
+  }
+}

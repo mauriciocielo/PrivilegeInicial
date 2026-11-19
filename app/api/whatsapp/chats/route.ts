@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { listChats, updateChatCrm, sendMessage } from '@/lib/whatsapp-service';
-import { syncContactProfilePic, buildChatIdForOwner, verificarNumeroNoWhatsApp } from '@/lib/baileys-manager';
+import { syncContactProfilePic, buildChatIdForOwner, verificarNumeroNoWhatsApp, ensureBaileysConnected } from '@/lib/baileys-manager';
 import { getEmailDbPool } from '@/lib/email-db';
 import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
@@ -33,8 +33,78 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, chatId } = body;
 
-    if (!chatId && action !== 'create_chat' && action !== 'close_all_tickets') {
+    if (!chatId && action !== 'create_chat' && action !== 'close_all_tickets' && action !== 'sync_chats') {
       return NextResponse.json({ success: false, error: 'chatId obrigatório' }, { status: 400 });
+    }
+
+    if (action === 'sync_chats') {
+      // 1. Garante conexão ativa do Baileys
+      const sock = await ensureBaileysConnected(true, ownerId).catch(() => null);
+
+      // 2. Mescla automaticamente conversas duplicadas (ex: 12 vs 13 dígitos no Brasil) do mesmo owner_id
+      const allRes = await pool.query(
+        `SELECT id, phone, name, remote_jid, profile_pic, last_message, last_message_time, unread_count
+         FROM whatsapp_chats
+         WHERE COALESCE(owner_id, 'default') = $1
+         ORDER BY last_message_time DESC NULLS LAST`,
+        [ownerId]
+      );
+
+      const grupos = new Map<string, any[]>();
+      for (const row of allRes.rows) {
+        if (String(row.remote_jid || '').endsWith('@g.us') || String(row.id || '').includes('g_us')) continue;
+        const digits = String(row.phone || row.id || '').replace(/[^0-9]/g, '');
+        if (digits.length < 10) continue;
+        const last8 = digits.slice(-8);
+        const ddd = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2, 4) : digits.slice(0, 2);
+        const key = `${ddd}_${last8}`;
+        const list = grupos.get(key) || [];
+        list.push(row);
+        grupos.set(key, list);
+      }
+
+      let mergedCount = 0;
+      for (const [, list] of grupos.entries()) {
+        if (list.length < 2) continue;
+        // Prefere o chat que tem remote_jid preenchido (ou o mais recente)
+        const sorted = [...list].sort((a, b) => {
+          const aHasJid = a.remote_jid ? 1 : 0;
+          const bHasJid = b.remote_jid ? 1 : 0;
+          if (aHasJid !== bHasJid) return bHasJid - aHasJid;
+          return new Date(b.last_message_time || 0).getTime() - new Date(a.last_message_time || 0).getTime();
+        });
+        const principal = sorted[0];
+        for (const dup of sorted.slice(1)) {
+          await pool.query(`UPDATE whatsapp_messages SET chat_id = $1 WHERE chat_id = $2`, [principal.id, dup.id]);
+          await pool.query(
+            `UPDATE whatsapp_chats
+             SET profile_pic = COALESCE(profile_pic, $1),
+                 remote_jid = COALESCE(remote_jid, $2),
+                 unread_count = COALESCE(unread_count, 0) + COALESCE($3, 0)
+             WHERE id = $4`,
+            [dup.profile_pic, dup.remote_jid, dup.unread_count || 0, principal.id]
+          );
+          await pool.query(`DELETE FROM whatsapp_chats WHERE id = $1`, [dup.id]);
+          mergedCount++;
+        }
+        // Atualiza last_message do principal com a última mensagem real
+        const lastMsgRes = await pool.query(
+          `SELECT text, timestamp FROM whatsapp_messages WHERE chat_id = $1 ORDER BY timestamp DESC LIMIT 1`,
+          [principal.id]
+        );
+        if (lastMsgRes.rows[0]) {
+          await pool.query(
+            `UPDATE whatsapp_chats SET last_message = $1, last_message_time = $2 WHERE id = $3`,
+            [lastMsgRes.rows[0].text, lastMsgRes.rows[0].timestamp, principal.id]
+          );
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        connected: !!sock,
+        mergedCount,
+      });
     }
 
     if (action === 'update_crm') {

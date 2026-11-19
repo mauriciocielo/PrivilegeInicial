@@ -1,7 +1,7 @@
 import { getEmailDbPool } from './email-db';
 import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
-import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
+import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import { generateText } from './ai-provider';
@@ -1129,6 +1129,80 @@ export async function sendMessage(params: {
 /**
  * Adiciona ou alterna uma reação (emoji) em uma mensagem e envia ao WhatsApp
  */
+export async function editMessage(params: {
+  messageId: string;
+  chatId: string;
+  newText: string;
+  ownerId?: string;
+}): Promise<{ text: string; editedOnWhatsapp: boolean }> {
+  const pool = getEmailDbPool();
+  if (!pool) throw new Error('Banco de dados indisponível');
+  const ownerId = params.ownerId || 'default';
+  const cleanText = params.newText.trim();
+  if (!cleanText) throw new Error('O texto da mensagem não pode ficar vazio.');
+
+  const res = await pool.query(`SELECT id, chat_id, from_me, wa_key FROM whatsapp_messages WHERE id = $1`, [params.messageId]);
+  const row = res.rows[0];
+  if (!row) throw new Error('Mensagem não encontrada.');
+  if (!row.from_me) throw new Error('Só é possível editar mensagens enviadas por você.');
+
+  let waKey = row.wa_key;
+  if (typeof waKey === 'string') {
+    try { waKey = JSON.parse(waKey); } catch {}
+  }
+
+  const editedOnWhatsapp = await editBaileysMessage(row.chat_id || params.chatId, cleanText, waKey, ownerId);
+
+  await pool.query(`UPDATE whatsapp_messages SET text = $1 WHERE id = $2`, [cleanText, params.messageId]);
+
+  // Se for a mensagem mais recente do chat, atualiza o snippet da lista de conversas
+  const lastRes = await pool.query(
+    `SELECT id FROM whatsapp_messages WHERE chat_id = $1 ORDER BY timestamp DESC LIMIT 1`,
+    [row.chat_id]
+  );
+  if (lastRes.rows[0]?.id === params.messageId) {
+    await pool.query(`UPDATE whatsapp_chats SET last_message = $1 WHERE id = $2`, [cleanText, row.chat_id]);
+  }
+
+  return { text: cleanText, editedOnWhatsapp };
+}
+
+export async function deleteMessage(params: {
+  messageId: string;
+  chatId: string;
+  ownerId?: string;
+}): Promise<{ deletedOnWhatsapp: boolean }> {
+  const pool = getEmailDbPool();
+  if (!pool) throw new Error('Banco de dados indisponível');
+  const ownerId = params.ownerId || 'default';
+
+  const res = await pool.query(`SELECT id, chat_id, from_me, wa_key FROM whatsapp_messages WHERE id = $1`, [params.messageId]);
+  const row = res.rows[0];
+  if (!row) throw new Error('Mensagem não encontrada.');
+  if (!row.from_me) throw new Error('Só é possível excluir mensagens enviadas por você.');
+
+  let waKey = row.wa_key;
+  if (typeof waKey === 'string') {
+    try { waKey = JSON.parse(waKey); } catch {}
+  }
+
+  const deletedOnWhatsapp = await deleteBaileysMessage(row.chat_id || params.chatId, waKey, ownerId);
+
+  await pool.query(`DELETE FROM whatsapp_messages WHERE id = $1`, [params.messageId]);
+
+  // Atualiza last_message do chat com a mensagem anterior
+  const prevRes = await pool.query(
+    `SELECT text FROM whatsapp_messages WHERE chat_id = $1 ORDER BY timestamp DESC LIMIT 1`,
+    [row.chat_id]
+  );
+  await pool.query(`UPDATE whatsapp_chats SET last_message = $1 WHERE id = $2`, [
+    prevRes.rows[0]?.text || 'Mensagem apagada',
+    row.chat_id,
+  ]);
+
+  return { deletedOnWhatsapp };
+}
+
 export async function reactToMessage(params: {
   messageId: string;
   chatId: string;

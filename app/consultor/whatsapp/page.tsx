@@ -45,6 +45,8 @@ import {
   Download,
   Volume2,
   VolumeX,
+  Pencil,
+  X,
 } from 'lucide-react';
 
 interface AutoReplyRule {
@@ -1178,6 +1180,98 @@ export default function WhatsAppPage() {
     recorder.stop();
   }
 
+  const [syncingChats, setSyncingChats] = useState(false);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingMsgText, setEditingMsgText] = useState('');
+  const [savingEditMsg, setSavingEditMsg] = useState(false);
+  const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
+
+  async function handleSyncChats() {
+    setSyncingChats(true);
+    try {
+      const res = await waFetch('/api/whatsapp/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_chats' }),
+      });
+      const data = await res.json();
+      await loadChats(false);
+      if (selectedChat) {
+        await loadMessages(selectedChat.id);
+      }
+      if (data.success) {
+        const extra = data.mergedCount > 0 ? ` (${data.mergedCount} conversa(s) duplicada(s) unificadas)` : '';
+        toast.success(`Conversas sincronizadas com sucesso!${extra}`);
+      } else {
+        toast.error(data.error || 'Não foi possível sincronizar.');
+      }
+    } catch {
+      toast.error('Erro ao sincronizar conversas.');
+    } finally {
+      setSyncingChats(false);
+    }
+  }
+
+  async function handleSaveEditMessage(messageId: string) {
+    if (!selectedChat || !editingMsgText.trim()) return;
+    setSavingEditMsg(true);
+    try {
+      const res = await waFetch('/api/whatsapp/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'edit',
+          messageId,
+          chatId: selectedChat.id,
+          text: editingMsgText.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, text: data.text } : m)));
+        setEditingMsgId(null);
+        setEditingMsgText('');
+        await loadChats(false);
+        toast.success(data.editedOnWhatsapp ? 'Mensagem editada no WhatsApp!' : 'Mensagem editada no painel.');
+      } else {
+        toast.error(data.error || 'Erro ao editar mensagem.');
+      }
+    } catch {
+      toast.error('Erro ao editar mensagem.');
+    } finally {
+      setSavingEditMsg(false);
+    }
+  }
+
+  async function handleDeleteMessage(messageId: string) {
+    if (!selectedChat) return;
+    if (!confirm('Apagar esta mensagem para todos no WhatsApp?')) return;
+    setDeletingMsgId(messageId);
+    try {
+      const res = await waFetch('/api/whatsapp/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          messageId,
+          chatId: selectedChat.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+        await loadChats(false);
+        toast.success(data.deletedOnWhatsapp ? 'Mensagem apagada para todos no WhatsApp!' : 'Mensagem removida do painel.');
+      } else {
+        toast.error(data.error || 'Erro ao excluir mensagem.');
+      }
+    } catch {
+      toast.error('Erro ao excluir mensagem.');
+    } finally {
+      setDeletingMsgId(null);
+    }
+  }
+
   async function handleReactMessage(messageId: string, emoji: string) {
     if (!selectedChat) return;
     setActiveReactionMsgId(null);
@@ -2210,6 +2304,16 @@ export default function WhatsAppPage() {
                   )}
                   <button
                     type="button"
+                    onClick={handleSyncChats}
+                    disabled={syncingChats}
+                    className="wa-btn wa-btn-secondary"
+                    style={{ padding: '5px 9px', fontSize: 11 }}
+                    title="Sincronizar conversas e unificar contatos duplicados"
+                  >
+                    <RefreshCw size={12} className={syncingChats ? 'animate-spin' : ''} /> {syncingChats ? 'Sinc...' : 'Sincronizar'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setIsNewChatModalOpen(true)}
                     className="wa-btn wa-btn-primary"
                     style={{ padding: '5px 10px', fontSize: 11 }}
@@ -2851,11 +2955,75 @@ export default function WhatsAppPage() {
                                 </a>
                               )}
 
-                              {/* Texto / Legenda */}
-                              {msg.text &&
+                              {/* Texto / Legenda ou Edição Inline */}
+                              {editingMsgId === msg.id ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220 }}>
+                                  <textarea
+                                    rows={3}
+                                    value={editingMsgText}
+                                    onChange={e => setEditingMsgText(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Escape') {
+                                        setEditingMsgId(null);
+                                        setEditingMsgText('');
+                                      }
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      borderRadius: 6,
+                                      border: '1px solid rgba(255,255,255,0.35)',
+                                      background: 'rgba(0,0,0,0.18)',
+                                      color: 'inherit',
+                                      padding: '6px 8px',
+                                      fontSize: 13,
+                                      fontFamily: 'inherit',
+                                      resize: 'vertical',
+                                    }}
+                                  />
+                                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingMsgId(null);
+                                        setEditingMsgText('');
+                                      }}
+                                      style={{
+                                        padding: '4px 8px',
+                                        borderRadius: 5,
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        background: 'transparent',
+                                        color: 'inherit',
+                                        fontSize: 11,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={savingEditMsg || !editingMsgText.trim()}
+                                      onClick={() => handleSaveEditMessage(msg.id)}
+                                      style={{
+                                        padding: '4px 10px',
+                                        borderRadius: 5,
+                                        border: 'none',
+                                        background: '#ffffff',
+                                        color: '#111827',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {savingEditMsg ? 'Salvando...' : 'Salvar'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                msg.text &&
                                 !(mType === 'audio' && msg.text === '🎤 Mensagem de áudio') && (
                                   <div style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
-                                )}
+                                )
+                              )}
 
                               <div className="wa-bubble-time">
                                 <span>
@@ -2870,19 +3038,46 @@ export default function WhatsAppPage() {
                               </div>
                             </div>
 
-                            {/* Botão para abrir reações (emoji) */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveReactionMsgId(
-                                  activeReactionMsgId === msg.id ? null : msg.id
-                                )
-                              }
-                              className="wa-react-trigger"
-                              title="Reagir com emoji"
-                            >
-                              <Smile size={14} />
-                            </button>
+                            {/* Botões de ação da mensagem (Reagir + Editar / Excluir para enviadas) */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveReactionMsgId(
+                                    activeReactionMsgId === msg.id ? null : msg.id
+                                  )
+                                }
+                                className="wa-react-trigger"
+                                title="Reagir com emoji"
+                              >
+                                <Smile size={14} />
+                              </button>
+                              {isMe && mType === 'text' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingMsgId(msg.id);
+                                    setEditingMsgText(msg.text || '');
+                                  }}
+                                  className="wa-react-trigger"
+                                  title="Editar mensagem enviada"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              {isMe && (
+                                <button
+                                  type="button"
+                                  disabled={deletingMsgId === msg.id}
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="wa-react-trigger"
+                                  title="Apagar mensagem para todos no WhatsApp"
+                                  style={{ color: 'var(--red)' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           {/* Pílulas de Reações abaixo do balão */}
