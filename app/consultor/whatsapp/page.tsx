@@ -2145,19 +2145,6 @@ export default function WhatsAppPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('crm')}
-            className={`wa-tab-btn ${activeTab === 'crm' ? 'active' : ''}`}
-          >
-            <Kanban size={16} />
-            <span>CRM & Follow-up</span>
-            {pendingFollowups > 0 && (
-              <span className="wa-badge-count" style={{ background: 'var(--yellow)' }}>
-                {pendingFollowups}
-              </span>
-            )}
-          </button>
-
-          <button
             onClick={() => setActiveTab('campaigns')}
             className={`wa-tab-btn ${activeTab === 'campaigns' ? 'active' : ''}`}
           >

@@ -7,9 +7,11 @@ import { toast } from 'sonner';
 import {
   Search, MapPin, Building2, Globe, Mail, MessageSquare, Sparkles,
   Download, Upload, Trash2, CheckCircle2, ExternalLink, Settings,
-  Save, RefreshCw, Copy, Plus, Filter, Star, FileSpreadsheet, X, Radar, Send
+  Save, RefreshCw, Copy, Plus, Filter, Star, FileSpreadsheet, X, Radar, Send,
+  Kanban, Table as TableIcon, FileText, DollarSign, Calendar, Play, Square, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import type { LeadGarimpado } from '../../../api/garimpo-leads/route';
+import { gerarDossieLeadPdf } from '../../../../lib/dossie-lead-pdf';
 
 const SEGMENTOS_RAPIDOS = [
   'Clínica Odontológica',
@@ -61,7 +63,8 @@ export default function GarimpoLeadsPage() {
   const [carregandoBase, setCarregandoBase] = useState(true);
   const [salvandoBase, setSalvandoBase] = useState(false);
 
-  // Filtros da Base (Lapidação Avançada)
+  // Filtros da Base (Lapidação Avançada + Kanban + Cadência em Lote)
+  const [modoBase, setModoBase] = useState<'tabela' | 'kanban'>('kanban');
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroIcp, setFiltroIcp] = useState<'todos' | 'ouro' | 'prata' | 'bronze'>('todos');
@@ -70,6 +73,16 @@ export default function GarimpoLeadsPage() {
   const [apenasCelular, setApenasCelular] = useState(false);
   const [apenasEmail, setApenasEmail] = useState(false);
   const [lapidandoLote, setLapidandoLote] = useState<{ ativo: boolean; atual: number; total: number } | null>(null);
+  const [selecionadosBase, setSelecionadosBase] = useState<Record<string, boolean>>({});
+  const [cadenciaWhats, setCadenciaWhats] = useState<{
+    ativo: boolean;
+    atual: number;
+    total: number;
+    enviados: number;
+    aguardandoSeg: number;
+    leadAtual: string;
+  } | null>(null);
+  const cancelarCadenciaRef = useRef(false);
 
   // Modal de Qualificação IA & Envio Direto de E-mail
   const [leadModal, setLeadModal] = useState<LeadGarimpado | null>(null);
@@ -432,7 +445,17 @@ export default function GarimpoLeadsPage() {
         toast.success(`E-mail enviado com sucesso para ${destino}!`);
         const proximoStatus: LeadGarimpado['status'] =
           lead.status === 'novo' || lead.status === 'qualificado' ? 'contato' : lead.status;
-        const atualizado: LeadGarimpado = { ...lead, email: destino, status: proximoStatus };
+        const novoEvento = {
+          data: new Date().toISOString(),
+          tipo: 'email' as const,
+          resumo: `Cold Email enviado para ${destino} — "${assunto}"`,
+        };
+        const atualizado: LeadGarimpado = {
+          ...lead,
+          email: destino,
+          status: proximoStatus,
+          historico: [novoEvento, ...(lead.historico || [])].slice(0, 20),
+        };
         setLeadModal(atualizado);
         if (baseLeads.some(l => l.id === lead.id)) {
           const novaLista = baseLeads.map(l => (l.id === lead.id ? atualizado : l));
@@ -497,10 +520,20 @@ export default function GarimpoLeadsPage() {
 
       toast.success(`WhatsApp enviado para ${lead.nome} pelo sistema interno!`);
 
-      // Atualiza status para "Em Contato" na base
+      // Atualiza status para "Em Contato" e registra na timeline
       const proximoStatus: LeadGarimpado['status'] =
         lead.status === 'novo' || lead.status === 'qualificado' ? 'contato' : lead.status;
-      const atualizado: LeadGarimpado = { ...lead, status: proximoStatus, iaScriptWhatsapp: textoFinal };
+      const novoEvento = {
+        data: new Date().toISOString(),
+        tipo: 'whatsapp' as const,
+        resumo: `Mensagem enviada via WhatsApp interno (${telefoneAlvo})`,
+      };
+      const atualizado: LeadGarimpado = {
+        ...lead,
+        status: proximoStatus,
+        iaScriptWhatsapp: textoFinal,
+        historico: [novoEvento, ...(lead.historico || [])].slice(0, 20),
+      };
       if (leadModal?.id === lead.id) {
         setLeadModal(atualizado);
       }
@@ -512,6 +545,65 @@ export default function GarimpoLeadsPage() {
       toast.error(`Erro ao enviar WhatsApp: ${err.message}`);
     } finally {
       setEnviandoWhatsId(null);
+    }
+  };
+
+  // Cadência Automática em Lote no WhatsApp Interno (intervalo aleatório 45s-90s anti-bloqueio)
+  const iniciarCadenciaWhatsappLote = async () => {
+    const marcados = leadsFiltrados.filter(l => selecionadosBase[l.id] && (l.whatsapp || l.telefone));
+    if (marcados.length === 0) {
+      toast.info('Selecione ao menos um lead com WhatsApp/telefone na lista para iniciar a cadência.');
+      return;
+    }
+    cancelarCadenciaRef.current = false;
+    let enviados = 0;
+
+    for (let i = 0; i < marcados.length; i++) {
+      if (cancelarCadenciaRef.current) break;
+      const lead = marcados[i];
+      setCadenciaWhats({
+        ativo: true,
+        atual: i + 1,
+        total: marcados.length,
+        enviados,
+        aguardandoSeg: 0,
+        leadAtual: lead.nome,
+      });
+
+      await enviarWhatsappInterno(lead);
+      enviados++;
+
+      // Pausa segura anti-bloqueio entre mensagens (45 a 85 segundos) exceto após o último
+      if (i < marcados.length - 1 && !cancelarCadenciaRef.current) {
+        const pausaSeg = 45 + Math.floor(Math.random() * 41);
+        for (let s = pausaSeg; s > 0; s--) {
+          if (cancelarCadenciaRef.current) break;
+          setCadenciaWhats({
+            ativo: true,
+            atual: i + 1,
+            total: marcados.length,
+            enviados,
+            aguardandoSeg: s,
+            leadAtual: lead.nome,
+          });
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    }
+
+    setCadenciaWhats(null);
+    toast.success(
+      cancelarCadenciaRef.current
+        ? `Cadência interrompida. ${enviados} mensagem(ns) enviada(s).`
+        : `Cadência concluída! ${enviados} mensagem(ns) disparada(s) com segurança.`
+    );
+  };
+
+  const salvarDetalhesLeadModal = async (atualizado: LeadGarimpado) => {
+    setLeadModal(atualizado);
+    if (baseLeads.some(l => l.id === atualizado.id)) {
+      const novaLista = baseLeads.map(l => (l.id === atualizado.id ? atualizado : l));
+      await persistirBase(novaLista, 'Dados do lead atualizados no CRM!');
     }
   };
 
@@ -625,7 +717,10 @@ export default function GarimpoLeadsPage() {
     const comEmail = baseLeads.filter(l => l.email).length;
     const quentes = baseLeads.filter(l => l.score >= 70).length;
     const emFunil = baseLeads.filter(l => ['contato', 'reuniao', 'proposta', 'convertido'].includes(l.status)).length;
-    return { total, comWhats, comEmail, quentes, emFunil };
+    const pipelineMrr = baseLeads
+      .filter(l => l.status !== 'descartado')
+      .reduce((acc, l) => acc + (Number(l.valorMensal) || 0), 0);
+    return { total, comWhats, comEmail, quentes, emFunil, pipelineMrr };
   }, [baseLeads]);
 
   const exportarExcel = () => {
@@ -739,6 +834,13 @@ export default function GarimpoLeadsPage() {
             <div className="kpi-value" style={{ color: 'var(--accent)' }}>{kpis.quentes}</div>
             <div className="kpi-sub">{kpis.emFunil} em negociação ativa</div>
           </div>
+          <div className="kpi-card">
+            <div className="kpi-label">Pipeline Comercial (MRR)</div>
+            <div className="kpi-value" style={{ color: 'var(--gold)' }}>
+              R$ {kpis.pipelineMrr.toLocaleString('pt-BR')}
+            </div>
+            <div className="kpi-sub">Honorários mensais estimados</div>
+          </div>
         </div>
 
         {/* Barra de Abas */}
@@ -819,12 +921,32 @@ export default function GarimpoLeadsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Cidade</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                    <label className="form-label" style={{ margin: 0 }}>Cidade(s) — separe por vírgula para região</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCidade('Francisco Beltrão, Pato Branco, Dois Vizinhos, Marmeleiro');
+                        setEstado('PR');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      + Sudoeste PR
+                    </button>
+                  </div>
                   <input
                     className="form-control"
                     value={cidade}
                     onChange={e => setCidade(e.target.value)}
-                    placeholder="Ex: Francisco Beltrão"
+                    placeholder="Ex: Francisco Beltrão, Pato Branco, Dois Vizinhos"
                     onKeyDown={e => e.key === 'Enter' && executarBuscaMapa()}
                   />
                 </div>
@@ -1120,7 +1242,64 @@ export default function GarimpoLeadsPage() {
                   {leadsFiltrados.length} de {baseLeads.length} lead(s) exibidos · Salvo automaticamente no banco de dados
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Alternador Kanban (Comercial) vs Tabela */}
+                <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setModoBase('kanban')}
+                    style={{
+                      padding: '6px 11px',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      background: modoBase === 'kanban' ? 'var(--accent)' : 'var(--bg-card)',
+                      color: modoBase === 'kanban' ? '#fff' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <Kanban size={13} /> Kanban
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModoBase('tabela')}
+                    style={{
+                      padding: '6px 11px',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      background: modoBase === 'tabela' ? 'var(--accent)' : 'var(--bg-card)',
+                      color: modoBase === 'tabela' ? '#fff' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <TableIcon size={13} /> Tabela
+                  </button>
+                </div>
+
+                {cadenciaWhats ? (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => { cancelarCadenciaRef.current = true; }}
+                  >
+                    <Square size={13} /> Parar Cadência ({cadenciaWhats.atual}/{cadenciaWhats.total})
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-success btn-sm"
+                    onClick={iniciarCadenciaWhatsappLote}
+                    title="Dispara pelo WhatsApp interno em lote com pausa segura anti-bloqueio (45s–85s)"
+                  >
+                    <Play size={13} /> Cadência WhatsApp ({Object.values(selecionadosBase).filter(Boolean).length})
+                  </button>
+                )}
+
                 <button
                   className="btn btn-primary btn-sm"
                   disabled={!!lapidandoLote}
@@ -1140,6 +1319,33 @@ export default function GarimpoLeadsPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Banner de progresso da Cadência WhatsApp Anti-Bloqueio */}
+            {cadenciaWhats && (
+              <div
+                style={{
+                  marginBottom: 14,
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'var(--green-bg)',
+                  border: '1px solid var(--green-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  fontSize: 13,
+                  color: 'var(--green)',
+                }}
+              >
+                <div>
+                  <strong>Cadência WhatsApp Ativa ({cadenciaWhats.atual}/{cadenciaWhats.total})</strong> ·{' '}
+                  {cadenciaWhats.aguardandoSeg > 0
+                    ? `Aguardando ${cadenciaWhats.aguardandoSeg}s (proteção anti-bloqueio) antes do próximo envio...`
+                    : `Enviando para ${cadenciaWhats.leadAtual}...`}
+                </div>
+                <span style={{ fontWeight: 700 }}>{cadenciaWhats.enviados} enviado(s)</span>
+              </div>
+            )}
 
             {/* Barra de Filtros de Lapidação */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, alignItems: 'center' }}>
@@ -1200,11 +1406,190 @@ export default function GarimpoLeadsPage() {
               <div style={{ padding: 36, textAlign: 'center', color: 'var(--text-muted)' }}>
                 Nenhum lead encontrado. Use a aba <strong>Garimpar por Mapa & Nicho</strong> ou importe um CSV do <code>gosom/google-maps-scraper</code>.
               </div>
+            ) : modoBase === 'kanban' ? (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(6, minmax(235px, 1fr))',
+                  gap: 12,
+                  overflowX: 'auto',
+                  paddingBottom: 10,
+                }}
+              >
+                {STATUS_OPTIONS.filter(s => s.value !== 'descartado').map((col, colIdx, colsArr) => {
+                  const cardsCol = leadsFiltrados.filter(l => l.status === col.value);
+                  const mrrCol = cardsCol.reduce((s, l) => s + (Number(l.valorMensal) || 0), 0);
+                  return (
+                    <div
+                      key={col.value}
+                      style={{
+                        background: 'var(--bg-card2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        padding: 10,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
+                        minHeight: 380,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          paddingBottom: 8,
+                          borderBottom: '1px solid var(--border)',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {col.label}
+                          </div>
+                          {mrrCol > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                              R$ {mrrCol.toLocaleString('pt-BR')}/mês
+                            </div>
+                          )}
+                        </div>
+                        <span className={`badge ${col.badge}`}>{cardsCol.length}</span>
+                      </div>
+
+                      {cardsCol.length === 0 ? (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '24px 8px' }}>
+                          Sem leads nesta etapa
+                        </div>
+                      ) : (
+                        cardsCol.map(lead => (
+                          <div
+                            key={lead.id}
+                            style={{
+                              background: 'var(--bg-card)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 10,
+                              padding: 11,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 7,
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 6, cursor: 'pointer', flex: 1 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!selecionadosBase[lead.id]}
+                                  onChange={e =>
+                                    setSelecionadosBase(prev => ({ ...prev, [lead.id]: e.target.checked }))
+                                  }
+                                  style={{ marginTop: 2 }}
+                                />
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                                  {lead.nome}
+                                </span>
+                              </label>
+                              <span className={scoreBadgeClass(lead.score)} style={{ flexShrink: 0 }}>
+                                {lead.score}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                              {lead.categoria} · {lead.cidade}/{lead.estado}
+                            </div>
+
+                            {(lead.valorMensal || lead.proximoFollowup) && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 11 }}>
+                                {lead.valorMensal ? (
+                                  <span className="badge badge-gold">
+                                    R$ {Number(lead.valorMensal).toLocaleString('pt-BR')}/mês
+                                  </span>
+                                ) : null}
+                                {lead.proximoFollowup && (
+                                  <span className="badge badge-blue">
+                                    Follow-up: {new Date(lead.proximoFollowup).toLocaleDateString('pt-BR')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingTop: 4, borderTop: '1px solid var(--border-light)' }}>
+                              {lead.whatsapp && (
+                                <button
+                                  type="button"
+                                  className="btn btn-success btn-sm"
+                                  style={{ padding: '4px 7px', fontSize: 11 }}
+                                  disabled={enviandoWhatsId === lead.id}
+                                  onClick={() => enviarWhatsappInterno(lead)}
+                                  title="Enviar WhatsApp interno"
+                                >
+                                  <MessageSquare size={11} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                style={{ padding: '4px 7px', fontSize: 11 }}
+                                onClick={() => (lead.iaCorpoEmail ? setLeadModal(lead) : qualificarLeadIA(lead))}
+                                title="Abrir IA Script / Enviar E-mail / Editar MRR"
+                              >
+                                <Sparkles size={11} /> Abrir
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 7px', fontSize: 11 }}
+                                onClick={() => gerarDossieLeadPdf(lead)}
+                                title="Baixar Pré-Diagnóstico 360º em PDF"
+                              >
+                                <FileText size={11} /> PDF
+                              </button>
+                              <div style={{ marginLeft: 'auto', display: 'flex', gap: 3 }}>
+                                {colIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ padding: '3px 5px' }}
+                                    onClick={() => atualizarStatusLead(lead.id, colsArr[colIdx - 1].value)}
+                                    title={`Voltar para ${colsArr[colIdx - 1].label}`}
+                                  >
+                                    <ChevronLeft size={13} />
+                                  </button>
+                                )}
+                                {colIdx < colsArr.length - 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ padding: '3px 5px' }}
+                                    onClick={() => atualizarStatusLead(lead.id, colsArr[colIdx + 1].value)}
+                                    title={`Avançar para ${colsArr[colIdx + 1].label}`}
+                                  >
+                                    <ChevronRight size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: 32 }}>
+                        <input
+                          type="checkbox"
+                          checked={leadsFiltrados.length > 0 && leadsFiltrados.every(l => selecionadosBase[l.id])}
+                          onChange={e => {
+                            const next: Record<string, boolean> = { ...selecionadosBase };
+                            leadsFiltrados.forEach(l => { next[l.id] = e.target.checked; });
+                            setSelecionadosBase(next);
+                          }}
+                        />
+                      </th>
                       <th>Empresa / Local</th>
                       <th>Score</th>
                       <th>Status</th>
@@ -1215,6 +1600,15 @@ export default function GarimpoLeadsPage() {
                   <tbody>
                     {leadsFiltrados.map(lead => (
                       <tr key={lead.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={!!selecionadosBase[lead.id]}
+                            onChange={e =>
+                              setSelecionadosBase(prev => ({ ...prev, [lead.id]: e.target.checked }))
+                            }
+                          />
+                        </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{lead.nome}</div>
                           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -1325,6 +1719,13 @@ export default function GarimpoLeadsPage() {
                                 {enviandoWhatsId === lead.id ? 'Enviando...' : 'WhatsApp'}
                               </button>
                             )}
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => gerarDossieLeadPdf(lead)}
+                              title="Gerar Pré-Diagnóstico 360º personalizado em PDF para enviar ao lead"
+                            >
+                              <FileText size={13} /> PDF
+                            </button>
                             <button
                               className="btn btn-secondary btn-sm"
                               disabled={enriquecendoId === lead.id}
@@ -1555,9 +1956,92 @@ export default function GarimpoLeadsPage() {
                   onChange={e => setLeadModal({ ...leadModal, iaCorpoEmail: e.target.value })}
                 />
               </div>
+
+              {/* Dados Comerciais do CRM (Honorário MRR + Follow-up) */}
+              <div
+                style={{
+                  background: 'var(--bg-card2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  padding: 14,
+                }}
+              >
+                <div className="form-row" style={{ marginBottom: 0 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Honorário Estimado (R$/mês — MRR)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      className="form-control"
+                      value={leadModal.valorMensal ?? ''}
+                      onChange={e =>
+                        setLeadModal({ ...leadModal, valorMensal: e.target.value ? Number(e.target.value) : undefined })
+                      }
+                      placeholder="Ex: 2500"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Próximo Follow-up</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={leadModal.proximoFollowup ? leadModal.proximoFollowup.slice(0, 10) : ''}
+                      onChange={e =>
+                        setLeadModal({ ...leadModal, proximoFollowup: e.target.value || undefined })
+                      }
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ width: '100%', justifyContent: 'center' }}
+                      onClick={() => salvarDetalhesLeadModal(leadModal)}
+                    >
+                      <Save size={14} /> Salvar MRR & Follow-up
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline de Interações */}
+              {Array.isArray(leadModal.historico) && leadModal.historico.length > 0 && (
+                <div>
+                  <div className="form-label">Timeline de Interações</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 140, overflowY: 'auto' }}>
+                    {leadModal.historico.map((ev, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          fontSize: 12,
+                          padding: '7px 10px',
+                          borderRadius: 8,
+                          background: 'var(--bg-card2)',
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 10,
+                        }}
+                      >
+                        <span>{ev.resumo}</span>
+                        <span style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          {new Date(ev.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => gerarDossieLeadPdf(leadModal)}
+              >
+                <FileText size={14} /> Baixar Pré-Diagnóstico 360º (PDF)
+              </button>
               <button
                 className="btn btn-secondary"
                 onClick={() => qualificarLeadIA(leadModal)}

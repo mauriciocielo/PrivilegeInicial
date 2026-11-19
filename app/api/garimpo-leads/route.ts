@@ -34,6 +34,9 @@ export interface LeadGarimpado {
   fonte: 'osm' | 'google_places' | 'google_maps' | 'cnpj' | 'gosom_import';
   score: number;
   status: 'novo' | 'qualificado' | 'contato' | 'reuniao' | 'proposta' | 'convertido' | 'descartado';
+  valorMensal?: number;
+  proximoFollowup?: string;
+  historico?: { data: string; tipo: 'whatsapp' | 'email' | 'nota'; resumo: string }[];
   notas?: string;
   iaDiagnostico?: string;
   iaScriptWhatsapp?: string;
@@ -968,38 +971,60 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Informe o segmento e a cidade para garimpar.' }, { status: 400 });
       }
 
+      // Suporta busca regional multi-cidades (separadas por vírgula ou ponto e vírgula)
+      const listaCidades = cidade
+        .split(/[,;]+/)
+        .map(c => c.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+
+      const limitePorCidade = Math.max(8, Math.ceil(limite / listaCidades.length));
       let leads: LeadGarimpado[] = [];
-      const motoresUsados: string[] = [];
+      const motoresUsados = new Set<string>();
+      const vistosGlobal = new Set<string>();
 
-      if (googleKey && fonteBusca !== 'osm') {
-        const gpLeads = await buscarViaGooglePlaces(segmento, cidade, estado, limite, googleKey);
-        leads.push(...gpLeads);
-        if (gpLeads.length > 0) motoresUsados.push('Google Maps Places API');
-      } else if (fonteBusca !== 'osm') {
-        const coords = await geocodificarCidade(cidade, estado);
-        const gmLeads = await buscarViaGoogleMapsDireto(segmento, cidade, estado, limite, coords);
-        leads.push(...gmLeads);
-        if (gmLeads.length > 0) motoresUsados.push('Google Maps');
-      }
+      for (const cid of listaCidades) {
+        let leadsCidade: LeadGarimpado[] = [];
 
-      // Complementa com OpenStreetMap quando modo combinado ou se Google Maps retornou poucos resultados
-      if (fonteBusca === 'osm' || (fonteBusca === 'combinado' && leads.length < limite)) {
-        const osmRes = await buscarViaOpenStreetMap(segmento, cidade, estado, limite);
-        if (osmRes.leads.length > 0) {
-          const vistos = new Set(leads.map(l => normalizarTexto(l.nome)));
-          for (const item of osmRes.leads) {
-            const k = normalizarTexto(item.nome);
-            if (!vistos.has(k)) {
-              vistos.add(k);
-              leads.push(item);
-            }
-            if (leads.length >= limite) break;
-          }
-          motoresUsados.push(osmRes.motor);
+        if (googleKey && fonteBusca !== 'osm') {
+          const gpLeads = await buscarViaGooglePlaces(segmento, cid, estado, limitePorCidade, googleKey);
+          leadsCidade.push(...gpLeads);
+          if (gpLeads.length > 0) motoresUsados.add('Google Maps Places API');
+        } else if (fonteBusca !== 'osm') {
+          const coords = await geocodificarCidade(cid, estado);
+          const gmLeads = await buscarViaGoogleMapsDireto(segmento, cid, estado, limitePorCidade, coords);
+          leadsCidade.push(...gmLeads);
+          if (gmLeads.length > 0) motoresUsados.add('Google Maps');
         }
+
+        if (fonteBusca === 'osm' || (fonteBusca === 'combinado' && leadsCidade.length < limitePorCidade)) {
+          const osmRes = await buscarViaOpenStreetMap(segmento, cid, estado, limitePorCidade);
+          if (osmRes.leads.length > 0) {
+            const vistosLocal = new Set(leadsCidade.map(l => normalizarTexto(l.nome)));
+            for (const item of osmRes.leads) {
+              const k = normalizarTexto(item.nome);
+              if (!vistosLocal.has(k)) {
+                vistosLocal.add(k);
+                leadsCidade.push(item);
+              }
+              if (leadsCidade.length >= limitePorCidade) break;
+            }
+            motoresUsados.add(osmRes.motor);
+          }
+        }
+
+        for (const item of leadsCidade) {
+          const kGlobal = `${normalizarTexto(item.nome)}|${normalizarTexto(item.cidade)}`;
+          if (!vistosGlobal.has(kGlobal)) {
+            vistosGlobal.add(kGlobal);
+            leads.push(item);
+          }
+          if (leads.length >= limite) break;
+        }
+        if (leads.length >= limite) break;
       }
 
-      const motorUsado = motoresUsados.length > 0 ? motoresUsados.join(' + ') : 'Google Maps + OpenStreetMap';
+      const motorUsado = motoresUsados.size > 0 ? Array.from(motoresUsados).join(' + ') : 'Google Maps + OpenStreetMap';
 
       // Enriquecimento automático dos sites encontrados (até 12 em paralelo para manter resposta rápida)
       if (enriquecerSites && leads.length > 0) {
