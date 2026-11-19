@@ -6,8 +6,9 @@ import { LISTA_PADRAO_CLIENTES_NEWSLETTER } from '../../../lib/lista-clientes-ne
 import { toast } from 'sonner';
 import {
   Mail, Send, Users, CheckCircle2, Image as ImageIcon, X, ListPlus, Sparkles,
-  Eye, Download, RefreshCw, Key, ShieldCheck, AlertCircle, Bold, Italic, Underline,
-  Heading2, List, Quote, Link as LinkIcon, Palette, Clock, Play, Pause, Trash2, Timer, Layers
+  Eye, EyeOff, Download, RefreshCw, Key, ShieldCheck, AlertCircle, Bold, Italic, Underline,
+  Heading2, List, Quote, Link as LinkIcon, Palette, Clock, Play, Pause, Trash2, Timer, Layers,
+  Settings, Save, Server
 } from 'lucide-react';
 
 export default function NewsletterPage() {
@@ -32,15 +33,24 @@ export default function NewsletterPage() {
     totalLotes: number;
   } | null>(null);
   
-  // Customização / Ajuste de Senha SMTP em tela
+  // Configuração completa de E-mail Marketing (SMTP + Remetente + Cadência)
   const [showSmtpConfig, setShowSmtpConfig] = useState(false);
-  const [smtpUser, setSmtpUser] = useState('consultoria@privilegecontabilidade.com.br');
-  const [smtpPass, setSmtpPass] = useState('@Privilege1452');
+  const [smtpHost, setSmtpHost] = useState('email-ssl.com.br');
+  const [smtpPort, setSmtpPort] = useState<number>(465);
+  const [smtpUser, setSmtpUser] = useState('consultoria@privilegecontabilidade.cnt.br');
+  const [smtpPass, setSmtpPass] = useState('@Karen1702');
+  const [senderName, setSenderName] = useState('Privilege Contabilidade & Consultoria');
+  const [replyTo, setReplyTo] = useState('consultoria@privilegecontabilidade.cnt.br');
+  const [mostrarSenhaSmtp, setMostrarSenhaSmtp] = useState(false);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [testandoSmtp, setTestandoSmtp] = useState(false);
+  const [emailTesteSmtp, setEmailTesteSmtp] = useState('');
+  const [statusTesteSmtp, setStatusTesteSmtp] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Logs e Auditoria de E-mails
   const [logs, setLogs] = useState<any[]>([]);
   const [carregandoLogs, setCarregandoLogs] = useState(false);
-  const [abaAtiva, setAbaAtiva] = useState<'novo' | 'fila' | 'historico'>('novo');
+  const [abaAtiva, setAbaAtiva] = useState<'novo' | 'fila' | 'historico' | 'config'>('novo');
   const [abaMensagem, setAbaMensagem] = useState<'editor' | 'previa'>('editor');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -181,7 +191,99 @@ export default function NewsletterPage() {
     }
   };
 
+  const carregarConfigEmailMarketing = async () => {
+    try {
+      const res = await fetch('/api/comercial?empresaId=default');
+      if (!res.ok) return;
+      const json = await res.json();
+      const cfg = json?.data?.email_marketing_config;
+      if (cfg && typeof cfg === 'object') {
+        if (cfg.smtpHost) setSmtpHost(cfg.smtpHost);
+        if (cfg.smtpPort) setSmtpPort(Number(cfg.smtpPort) || 465);
+        if (cfg.smtpUser) setSmtpUser(cfg.smtpUser);
+        if (cfg.smtpPass) setSmtpPass(cfg.smtpPass);
+        if (cfg.senderName) setSenderName(cfg.senderName);
+        if (cfg.replyTo !== undefined) setReplyTo(cfg.replyTo);
+        if (cfg.linkDestinoPadrao) setLinkDestinoImagem(cfg.linkDestinoPadrao);
+        if (cfg.tamanhoLotePadrao) setTamanhoLoteFila(Number(cfg.tamanhoLotePadrao) || 70);
+        if (cfg.intervaloMinutosPadrao) setIntervaloMinutosFila(Number(cfg.intervaloMinutosPadrao) || 65);
+      }
+    } catch {}
+  };
+
+  const salvarConfigEmailMarketing = async () => {
+    setSalvandoConfig(true);
+    try {
+      const payload = {
+        smtpHost: smtpHost.trim() || 'email-ssl.com.br',
+        smtpPort: Number(smtpPort) || 465,
+        smtpUser: smtpUser.trim(),
+        smtpPass: smtpPass.trim(),
+        senderName: senderName.trim() || 'Privilege Contabilidade & Consultoria',
+        replyTo: replyTo.trim(),
+        linkDestinoPadrao: linkDestinoImagem.trim(),
+        tamanhoLotePadrao: Number(tamanhoLoteFila) || 70,
+        intervaloMinutosPadrao: Number(intervaloMinutosFila) || 65,
+        atualizadoEm: new Date().toISOString(),
+      };
+      const res = await fetch('/api/comercial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresaId: 'default',
+          sectionKey: 'email_marketing_config',
+          value: payload,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.error(json.error || 'Erro ao salvar configuração de E-mail Marketing.');
+      } else {
+        toast.success('Configuração de E-mail Marketing salva com sucesso!');
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    } finally {
+      setSalvandoConfig(false);
+    }
+  };
+
+  const testarConexaoSmtp = async () => {
+    setTestandoSmtp(true);
+    setStatusTesteSmtp(null);
+    try {
+      const res = await fetch('/api/email-servicos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'teste_smtp',
+          destinatarioEmail: emailTesteSmtp.trim(),
+          smtpHostCustom: smtpHost.trim(),
+          smtpPortCustom: Number(smtpPort) || 465,
+          smtpUserCustom: smtpUser.trim(),
+          smtpPassCustom: smtpPass.trim(),
+          senderNameCustom: senderName.trim(),
+          replyToCustom: replyTo.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setStatusTesteSmtp({ ok: true, msg: json.mensagem || 'Conexão SMTP validada!' });
+        toast.success(json.mensagem || 'Conexão SMTP validada!');
+      } else {
+        setStatusTesteSmtp({ ok: false, msg: json.error || 'Falha na autenticação SMTP.' });
+        toast.error(json.error || 'Falha ao testar SMTP.');
+      }
+    } catch (err: any) {
+      setStatusTesteSmtp({ ok: false, msg: err.message });
+      toast.error(`Falha na conexão: ${err.message}`);
+    } finally {
+      setTestandoSmtp(false);
+    }
+  };
+
   useEffect(() => {
+    carregarConfigEmailMarketing();
     carregarLogsServidor();
     carregarFilaServidor();
 
@@ -457,6 +559,10 @@ export default function NewsletterPage() {
             iniciarEmMinutos: iniciarFilaEmMinutos,
             smtpUserCustom: smtpUser.trim(),
             smtpPassCustom: smtpPass.trim(),
+            smtpHostCustom: smtpHost.trim(),
+            smtpPortCustom: Number(smtpPort) || 465,
+            senderNameCustom: senderName.trim(),
+            replyToCustom: replyTo.trim(),
             imagens: imagensOtimizadas.map((img, idx) => ({
               filename: img.filename,
               base64: img.base64,
@@ -506,6 +612,10 @@ export default function NewsletterPage() {
               destinatariosLista: lote,
               smtpUserCustom: smtpUser.trim(),
               smtpPassCustom: smtpPass.trim(),
+              smtpHostCustom: smtpHost.trim(),
+              smtpPortCustom: Number(smtpPort) || 465,
+              senderNameCustom: senderName.trim(),
+              replyToCustom: replyTo.trim(),
               linkImagem: linkDestinoImagem.trim() || 'https://wa.me/5546999048990',
               imagens: imagensOtimizadas.map((img, idx) => ({
                 filename: img.filename,
@@ -559,134 +669,378 @@ export default function NewsletterPage() {
   };
 
   return (
-    <div className="page-body" style={{ maxWidth: 1080, margin: '0 auto', paddingBottom: 40 }}>
-      {/* Cabeçalho */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+    <div style={{ paddingBottom: 40 }}>
+      {/* Cabeçalho Editorial */}
+      <div className="page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: '#8c1a22', color: '#fff', padding: 8, borderRadius: 8, display: 'flex' }}>
-              <Mail size={24} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#111827' }}>
-                Disparador de Newsletter & Comunicados
-              </h1>
-              <p style={{ fontSize: 13, color: '#6b7280', margin: '2px 0 0' }}>
-                Informativos fiscais, panfletos, boletos e relatórios de rastreamento (Entregue, Visualizado, Baixado)
-              </p>
-            </div>
-          </div>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Mail size={22} color="var(--accent)" />
+            Newsletter & E-mail Marketing
+          </h1>
+          <p className="page-subtitle">
+            Informativos fiscais, campanhas, comunicados e rastreamento em tempo real (Entregue, Visualizado)
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="page-actions">
           <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => setShowSmtpConfig(!showSmtpConfig)}
-            title="Configurar senha do servidor SMTP"
+            className={abaAtiva === 'config' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+            onClick={() => setAbaAtiva(abaAtiva === 'config' ? 'novo' : 'config')}
+            title="Configurar conta de E-mail Marketing e servidor SMTP"
           >
-            <Key size={14} /> {showSmtpConfig ? 'Ocultar Config. SMTP' : '⚙️ Configurar Senha SMTP'}
+            <Settings size={14} /> {abaAtiva === 'config' ? 'Voltar ao Disparo' : 'Configurar E-mail Marketing'}
           </button>
         </div>
       </div>
 
-      {/* Caixa de Ajuste de Senha SMTP */}
-      {showSmtpConfig && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 14, marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Key size={16} /> Credenciais do Servidor de E-mail (mail.privilegecontabilidade.com.br)
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#78350f' }}>E-mail Remetente</label>
-              <input
-                className="form-input"
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #d1d5db' }}
-                value={smtpUser}
-                onChange={e => setSmtpUser(e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#78350f' }}>Senha da Caixa Postal (Webmail / cPanel)</label>
-              <input
-                type="password"
-                className="form-input"
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #d1d5db' }}
-                value={smtpPass}
-                onChange={e => setSmtpPass(e.target.value)}
-                placeholder="Insira a senha do e-mail contato@"
-              />
-            </div>
-          </div>
-          <div style={{ fontSize: 11.5, color: '#92400e', marginTop: 6 }}>
-            ⚠️ Se o servidor retornar <code>Invalid login 535</code>, confirme a senha da sua caixa postal no cPanel/Webmail da Privilege e digite-a acima.
-          </div>
+      <div className="page-body" style={{ maxWidth: 1120, margin: '0 auto' }}>
+        {/* Barra de Abas Executiva */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: 22, overflowX: 'auto' }}>
+          <button
+            onClick={() => setAbaAtiva('novo')}
+            style={{
+              padding: '10px 18px',
+              fontWeight: abaAtiva === 'novo' ? 600 : 500,
+              fontSize: 13.5,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: abaAtiva === 'novo' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: abaAtiva === 'novo' ? 'var(--accent)' : 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Send size={14} /> Novo Disparo
+          </button>
+          <button
+            onClick={() => {
+              setAbaAtiva('fila');
+              carregarFilaServidor();
+            }}
+            style={{
+              padding: '10px 18px',
+              fontWeight: abaAtiva === 'fila' ? 600 : 500,
+              fontSize: 13.5,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: abaAtiva === 'fila' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: abaAtiva === 'fila' ? 'var(--accent)' : 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Clock size={14} /> Fila Automática
+            {campanhaAtiva && campanhaAtiva.destinatariosPendentes?.length > 0 && (
+              <span className="badge badge-yellow" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {campanhaAtiva.destinatariosPendentes.length} pendentes
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setAbaAtiva('historico');
+              carregarLogsServidor();
+            }}
+            style={{
+              padding: '10px 18px',
+              fontWeight: abaAtiva === 'historico' ? 600 : 500,
+              fontSize: 13.5,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: abaAtiva === 'historico' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: abaAtiva === 'historico' ? 'var(--accent)' : 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Eye size={14} /> Histórico & Rastreamento ({logs.length})
+          </button>
+          <button
+            onClick={() => setAbaAtiva('config')}
+            style={{
+              padding: '10px 18px',
+              fontWeight: abaAtiva === 'config' ? 600 : 500,
+              fontSize: 13.5,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: abaAtiva === 'config' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: abaAtiva === 'config' ? 'var(--accent)' : 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Settings size={14} /> E-mail Marketing (SMTP)
+          </button>
         </div>
-      )}
 
-      {/* Abas: Novo Disparo vs Fila Automática vs Histórico & Rastreamento */}
-      <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: 20 }}>
-        <button
-          onClick={() => setAbaAtiva('novo')}
-          style={{
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: 14,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: abaAtiva === 'novo' ? '3px solid #8c1a22' : '3px solid transparent',
-            color: abaAtiva === 'novo' ? '#8c1a22' : '#6b7280',
-          }}
-        >
-          ✉️ Novo Disparo de E-mail
-        </button>
-        <button
-          onClick={() => {
-            setAbaAtiva('fila');
-            carregarFilaServidor();
-          }}
-          style={{
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: 14,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: abaAtiva === 'fila' ? '3px solid #8c1a22' : '3px solid transparent',
-            color: abaAtiva === 'fila' ? '#8c1a22' : '#6b7280',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Clock size={16} /> ⏳ Fila Automática (a cada 65 min)
-          {campanhaAtiva && campanhaAtiva.destinatariosPendentes?.length > 0 && (
-            <span style={{ background: '#f59e0b', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 800 }}>
-              {campanhaAtiva.destinatariosPendentes.length} pendentes
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => {
-            setAbaAtiva('historico');
-            carregarLogsServidor();
-          }}
-          style={{
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: 14,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: abaAtiva === 'historico' ? '3px solid #8c1a22' : '3px solid transparent',
-            color: abaAtiva === 'historico' ? '#8c1a22' : '#6b7280',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          📊 Histórico de Envios & Rastreamento ({logs.length})
-        </button>
-      </div>
+        {/* ABA: CONFIGURAÇÃO DE E-MAIL MARKETING */}
+        {abaAtiva === 'config' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* Presets Rápidos de Provedor */}
+            <div className="card">
+              <div className="card-header" style={{ marginBottom: 14 }}>
+                <div>
+                  <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Server size={16} color="var(--accent)" /> Provedor de Envio (E-mail Marketing)
+                  </h2>
+                  <p className="card-subtitle">
+                    Selecione um perfil pré-configurado ou personalize os dados SMTP da sua conta de marketing.
+                  </p>
+                </div>
+                <span className="badge badge-green">
+                  <ShieldCheck size={12} /> {smtpHost}:{smtpPort}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className={smtpHost === 'email-ssl.com.br' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                  onClick={() => {
+                    setSmtpHost('email-ssl.com.br');
+                    setSmtpPort(465);
+                    if (!smtpUser || smtpUser.includes('.com.br')) setSmtpUser('consultoria@privilegecontabilidade.cnt.br');
+                    toast.info('Perfil Locaweb SSL (email-ssl.com.br:465) aplicado.');
+                  }}
+                >
+                  Locaweb Oficial (.cnt.br)
+                </button>
+                <button
+                  type="button"
+                  className={smtpHost === 'mail.privilegecontabilidade.com.br' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                  onClick={() => {
+                    setSmtpHost('mail.privilegecontabilidade.com.br');
+                    setSmtpPort(465);
+                    toast.info('Perfil cPanel/Mail (mail.privilegecontabilidade.com.br:465) aplicado.');
+                  }}
+                >
+                  Servidor cPanel (.com.br)
+                </button>
+                <button
+                  type="button"
+                  className={smtpHost === 'smtp.gmail.com' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                  onClick={() => {
+                    setSmtpHost('smtp.gmail.com');
+                    setSmtpPort(465);
+                    toast.info('Perfil Google Workspace / Gmail (smtp.gmail.com:465) aplicado.');
+                  }}
+                >
+                  Google Workspace / Gmail
+                </button>
+                <button
+                  type="button"
+                  className={smtpHost === 'smtp-relay.brevo.com' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                  onClick={() => {
+                    setSmtpHost('smtp-relay.brevo.com');
+                    setSmtpPort(587);
+                    toast.info('Perfil Brevo / Sendinblue (smtp-relay.brevo.com:587) aplicado.');
+                  }}
+                >
+                  Brevo / Relay Marketing
+                </button>
+              </div>
+            </div>
+
+            <div className="grid-2" style={{ gap: 18 }}>
+              {/* Identidade do Remetente */}
+              <div className="card">
+                <div className="card-header" style={{ marginBottom: 16 }}>
+                  <div>
+                    <h3 className="card-title">Identidade & Marca do Remetente</h3>
+                    <p className="card-subtitle">Como os destinatários verão o seu e-mail na caixa de entrada.</p>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Nome de Exibição (Remetente)</label>
+                  <input
+                    className="form-control"
+                    value={senderName}
+                    onChange={e => setSenderName(e.target.value)}
+                    placeholder="Ex: Privilege Contabilidade & Consultoria"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">E-mail de Disparo (Marketing / Remetente)</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={smtpUser}
+                    onChange={e => setSmtpUser(e.target.value)}
+                    placeholder="marketing@seudominio.com.br"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">E-mail de Resposta (Reply-To)</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={replyTo}
+                    onChange={e => setReplyTo(e.target.value)}
+                    placeholder="consultoria@privilegecontabilidade.cnt.br"
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Link CTA Padrão (WhatsApp ou Landing Page)</label>
+                  <input
+                    className="form-control"
+                    value={linkDestinoImagem}
+                    onChange={e => setLinkDestinoImagem(e.target.value)}
+                    placeholder="https://wa.me/5546999800010"
+                  />
+                </div>
+              </div>
+
+              {/* Credenciais SMTP & Cadência Anti-Spam */}
+              <div className="card">
+                <div className="card-header" style={{ marginBottom: 16 }}>
+                  <div>
+                    <h3 className="card-title">Servidor SMTP & Cadência Anti-Spam</h3>
+                    <p className="card-subtitle">Conexão autenticada e limites seguros para evitar bloqueios.</p>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Host SMTP</label>
+                    <input
+                      className="form-control"
+                      value={smtpHost}
+                      onChange={e => setSmtpHost(e.target.value)}
+                      placeholder="email-ssl.com.br"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Porta (465 SSL / 587 TLS)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={smtpPort}
+                      onChange={e => setSmtpPort(Number(e.target.value) || 465)}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Senha SMTP / Senha de App</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type={mostrarSenhaSmtp ? 'text' : 'password'}
+                      className="form-control"
+                      value={smtpPass}
+                      onChange={e => setSmtpPass(e.target.value)}
+                      placeholder="Senha da caixa postal"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setMostrarSenhaSmtp(v => !v)}
+                      title={mostrarSenhaSmtp ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {mostrarSenhaSmtp ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-row" style={{ marginBottom: 0 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">E-mails por Lote (Padrão)</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={500}
+                      className="form-control"
+                      value={tamanhoLoteFila}
+                      onChange={e => setTamanhoLoteFila(Number(e.target.value) || 70)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Intervalo entre Lotes (min)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={240}
+                      className="form-control"
+                      value={intervaloMinutosFila}
+                      onChange={e => setIntervaloMinutosFila(Number(e.target.value) || 65)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Teste de Envio & Persistência */}
+            <div className="card">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <div style={{ flex: '1 1 300px' }}>
+                  <label className="form-label">Enviar E-mail de Teste (opcional — deixe em branco para validar só a autenticação)</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={emailTesteSmtp}
+                    onChange={e => setEmailTesteSmtp(e.target.value)}
+                    placeholder="seuemail@empresa.com.br"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={testandoSmtp}
+                    onClick={testarConexaoSmtp}
+                  >
+                    <ShieldCheck size={15} />
+                    {testandoSmtp ? 'Testando SMTP...' : 'Testar Conexão & Enviar Teste'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={salvandoConfig}
+                    onClick={salvarConfigEmailMarketing}
+                  >
+                    <Save size={15} />
+                    {salvandoConfig ? 'Salvando...' : 'Salvar Configuração de E-mail Marketing'}
+                  </button>
+                </div>
+              </div>
+
+              {statusTesteSmtp && (
+                <div
+                  style={{
+                    marginTop: 14,
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    background: statusTesteSmtp.ok ? 'var(--green-bg)' : 'var(--red-bg)',
+                    color: statusTesteSmtp.ok ? 'var(--green)' : 'var(--red)',
+                    border: `1px solid ${statusTesteSmtp.ok ? 'var(--green-border)' : 'var(--red-border)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {statusTesteSmtp.ok ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  <span>{statusTesteSmtp.msg}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {abaAtiva === 'novo' && (
         <>
@@ -1894,6 +2248,7 @@ export default function NewsletterPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

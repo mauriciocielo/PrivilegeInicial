@@ -811,7 +811,7 @@ body {
 }
 
 .btn-danger {
-  background: #fff;
+  background: var(--bg-card);
   color: var(--red);
   border-color: var(--red-border);
 }
@@ -824,7 +824,7 @@ body {
 }
 
 .btn-success {
-  background: #fff;
+  background: var(--bg-card);
   color: var(--green);
   border-color: var(--green-border);
 }
@@ -884,10 +884,11 @@ body {
   letter-spacing: 0.15px;
 }
 
-.form-control {
+.form-control,
+.form-input {
   width: 100%;
   background: var(--bg-input);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
   font-size: 13.5px;
@@ -898,38 +899,47 @@ body {
   line-height: 1.4;
 }
 
-.form-control:hover:not(:focus) {
+.form-control:hover:not(:focus),
+.form-input:hover:not(:focus) {
   border-color: var(--border-dark);
 }
 
-.form-control:focus {
+.form-control:focus,
+.form-input:focus {
   border-color: var(--accent);
   background: var(--bg-card);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.form-control::placeholder { color: var(--text-muted); }
+.form-control::placeholder,
+.form-input::placeholder { color: var(--text-muted); }
 
-select.form-control { cursor: pointer; }
-select.form-control option { background: var(--bg-card2); }
+select.form-control,
+select.form-input { cursor: pointer; }
+select.form-control option,
+select.form-input option { background: var(--bg-card2); }
 
-textarea.form-control {
+textarea.form-control,
+textarea.form-input {
   resize: vertical;
   min-height: 85px;
   line-height: 1.6;
 }
 
-[data-theme="dark"] .form-control {
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-input {
   background: var(--bg-input);
   border-color: var(--border);
   color: var(--text-primary);
 }
 
-[data-theme="dark"] .form-control:focus {
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-input:focus {
   background: var(--bg-card2);
 }
 
-[data-theme="dark"] select.form-control option {
+[data-theme="dark"] select.form-control option,
+[data-theme="dark"] select.form-input option {
   background: var(--bg-card2);
   color: var(--text-primary);
 }
@@ -1017,6 +1027,7 @@ tbody td {
   font-size: 13px;
   color: var(--text-primary);
   vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
@@ -1100,7 +1111,7 @@ tbody td {
   font-family: 'Instrument Serif', Georgia, serif;
   font-size: 24px;
   font-weight: 400;
-  color: #000000;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 

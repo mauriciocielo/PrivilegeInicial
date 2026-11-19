@@ -100,11 +100,11 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: strin
     }
   }
 
-  const smtpHost = envHost || 'mail.privilegecontabilidade.com.br';
+  const smtpHost = envHost || 'email-ssl.com.br';
   const smtpPort = Number(envPort) || 465;
-  const smtpUser = envUser || 'consultoria@privilegecontabilidade.com.br';
-  const smtpPass = envPass || '@Privilege1452';
-  const smtpFrom = envFrom || 'consultoria@privilegecontabilidade.com.br';
+  const smtpUser = envUser || 'consultoria@privilegecontabilidade.cnt.br';
+  const smtpPass = envPass || '@Karen1702';
+  const smtpFrom = customAuth?.user || envFrom || smtpUser;
 
   const transporter = nodemailer.createTransport({
     pool: true,
@@ -145,6 +145,10 @@ export async function POST(req: Request) {
       // Credenciais customizadas caso o usuário queira testar/alterar na própria tela
       smtpUserCustom,
       smtpPassCustom,
+      smtpHostCustom,
+      smtpPortCustom,
+      senderNameCustom,
+      replyToCustom,
       // Dados de cobrança:
       nfseNumero,
       valor,
@@ -160,7 +164,50 @@ export async function POST(req: Request) {
     const { transporter, smtpFrom } = getSmtpConfig({
       user: smtpUserCustom,
       pass: smtpPassCustom,
+      host: smtpHostCustom,
+      port: smtpPortCustom ? Number(smtpPortCustom) : undefined,
     });
+
+    const nomeRemetenteFinal = (senderNameCustom || '').trim() || 'Privilege Contabilidade & Consultoria';
+    const replyToFinal = (replyToCustom || '').trim() || undefined;
+
+    // -------------------------------------------------------------
+    // CASO 0: TESTE DE CONEXÃO / E-MAIL MARKETING
+    // -------------------------------------------------------------
+    if (tipo === 'teste_smtp') {
+      await transporter.verify();
+      const emailTeste = (destinatarioEmail || '').trim();
+      if (emailTeste && emailTeste.includes('@')) {
+        await transporter.sendMail({
+          from: `"${nomeRemetenteFinal}" <${smtpFrom}>`,
+          to: emailTeste,
+          replyTo: replyToFinal,
+          subject: assunto || 'Teste de Configuração — E-mail Marketing Privilege',
+          html: `
+            <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e4e2dd; border-radius: 12px; overflow: hidden;">
+              <div style="background: #600000; color: #ffffff; padding: 18px 24px;">
+                <strong style="font-size: 16px;">${nomeRemetenteFinal}</strong>
+                <div style="font-size: 12px; opacity: 0.85; margin-top: 2px;">Verificação de Servidor E-mail Marketing</div>
+              </div>
+              <div style="padding: 24px; color: #1f2937; font-size: 14px; line-height: 1.6;">
+                <p style="margin: 0 0 12px;">Conexão SMTP validada com sucesso!</p>
+                <p style="margin: 0; color: #52525b; font-size: 13px;">
+                  <strong>Remetente:</strong> ${nomeRemetenteFinal} &lt;${smtpFrom}&gt;<br />
+                  ${replyToFinal ? `<strong>Responder para (Reply-To):</strong> ${replyToFinal}<br />` : ''}
+                  <strong>Servidor:</strong> ${smtpHostCustom || process.env.SMTP_HOST || 'email-ssl.com.br'}:${smtpPortCustom || process.env.SMTP_PORT || 465}
+                </p>
+              </div>
+            </div>
+          `,
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        mensagem: emailTeste
+          ? `Conexão SMTP validada e e-mail de teste enviado para ${emailTeste}.`
+          : 'Conexão SMTP validada com sucesso!',
+      });
+    }
 
     const hostHeader = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
     const protoHeader = req.headers.get('x-forwarded-proto') || (hostHeader.includes('localhost') ? 'http' : 'https');
@@ -626,8 +673,9 @@ export async function POST(req: Request) {
           `;
 
           await transporter.sendMail({
-            from: `"Privilege Consultoria" <${smtpFrom}>`,
+            from: `"${nomeRemetenteFinal}" <${smtpFrom}>`,
             to: dest.email,
+            replyTo: replyToFinal,
             subject: tituloAssunto,
             html: templatePersonalizado,
             attachments: attachmentsNewsletter,

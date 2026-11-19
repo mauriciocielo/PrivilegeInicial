@@ -49,6 +49,10 @@ export async function POST(req: Request) {
         iniciarEmMinutos,
         smtpUserCustom,
         smtpPassCustom,
+        smtpHostCustom,
+        smtpPortCustom,
+        senderNameCustom,
+        replyToCustom,
       } = body;
 
       if (!assunto || !destinatarios || destinatarios.length === 0) {
@@ -68,6 +72,10 @@ export async function POST(req: Request) {
         iniciarEmMinutos: typeof iniciarEmMinutos === 'number' ? iniciarEmMinutos : 0,
         smtpUserCustom,
         smtpPassCustom,
+        smtpHostCustom,
+        smtpPortCustom: smtpPortCustom ? Number(smtpPortCustom) : undefined,
+        senderNameCustom,
+        replyToCustom,
       });
 
       // Se iniciarEmMinutos === 0, processa o primeiro lote imediatamente!

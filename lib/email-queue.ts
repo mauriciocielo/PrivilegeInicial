@@ -34,6 +34,10 @@ export interface CampanhaFila {
   erroUltimaTentativa?: string;
   smtpUserCustom?: string;
   smtpPassCustom?: string;
+  smtpHostCustom?: string;
+  smtpPortCustom?: number;
+  senderNameCustom?: string;
+  replyToCustom?: string;
 }
 
 export function lerFila(): CampanhaFila[] {
@@ -59,11 +63,11 @@ export function obterCampanhaAtiva(): CampanhaFila | null {
   return fila.find(c => c.status === 'aguardando' || c.status === 'processando' || c.status === 'pausada') || null;
 }
 
-function getSmtpConfig(customAuth?: { user?: string; pass?: string }) {
+function getSmtpConfig(customAuth?: { user?: string; pass?: string; host?: string; port?: number }) {
   let envPass = customAuth?.pass || process.env.SMTP_PASS;
   let envUser = customAuth?.user || process.env.SMTP_USER;
-  let envHost = process.env.SMTP_HOST;
-  let envPort = process.env.SMTP_PORT;
+  let envHost = customAuth?.host || process.env.SMTP_HOST;
+  let envPort = customAuth?.port || process.env.SMTP_PORT;
   let envFrom = process.env.SMTP_FROM;
 
   const possiblePaths = [
@@ -86,11 +90,11 @@ function getSmtpConfig(customAuth?: { user?: string; pass?: string }) {
     }
   }
 
-  const smtpHost = envHost || 'mail.privilegecontabilidade.com.br';
+  const smtpHost = envHost || 'email-ssl.com.br';
   const smtpPort = Number(envPort) || 465;
-  const smtpUser = envUser || 'consultoria@privilegecontabilidade.com.br';
-  const smtpPass = envPass || '@Privilege1452';
-  const smtpFrom = envFrom || 'consultoria@privilegecontabilidade.com.br';
+  const smtpUser = envUser || 'consultoria@privilegecontabilidade.cnt.br';
+  const smtpPass = envPass || '@Karen1702';
+  const smtpFrom = customAuth?.user || envFrom || smtpUser;
 
   const transporter = nodemailer.createTransport({
     pool: true,
@@ -170,6 +174,10 @@ export function enfileirarCampanha(params: {
   iniciarEmMinutos?: number; // 0 = dispara 1º lote já; 65 = aguarda 65 min
   smtpUserCustom?: string;
   smtpPassCustom?: string;
+  smtpHostCustom?: string;
+  smtpPortCustom?: number;
+  senderNameCustom?: string;
+  replyToCustom?: string;
 }): CampanhaFila {
   const fila = lerFila();
   const id = `camp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -200,6 +208,10 @@ export function enfileirarCampanha(params: {
     proximoLoteEm,
     smtpUserCustom: params.smtpUserCustom,
     smtpPassCustom: params.smtpPassCustom,
+    smtpHostCustom: params.smtpHostCustom,
+    smtpPortCustom: params.smtpPortCustom,
+    senderNameCustom: params.senderNameCustom,
+    replyToCustom: params.replyToCustom,
   };
 
   // Se já houver outra em andamento, deixa a anterior pausada ou conclui
@@ -244,6 +256,8 @@ export async function processarProximoLote(campanhaId?: string): Promise<{
   const { transporter, smtpFrom } = getSmtpConfig({
     user: camp.smtpUserCustom,
     pass: camp.smtpPassCustom,
+    host: camp.smtpHostCustom,
+    port: camp.smtpPortCustom,
   });
 
   const baseUrl = process.env.NEXTAUTH_URL || 'https://privilegecontabilidade.cnt.br';
@@ -420,8 +434,9 @@ export async function processarProximoLote(campanhaId?: string): Promise<{
 
     try {
       await transporter.sendMail({
-        from: `"Privilege Consultoria" <${smtpFrom}>`,
+        from: `"${camp.senderNameCustom || 'Privilege Contabilidade & Consultoria'}" <${smtpFrom}>`,
         to: dest.email,
+        replyTo: camp.replyToCustom || undefined,
         subject: camp.assunto,
         html: htmlCompleto,
         attachments,
