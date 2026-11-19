@@ -1,7 +1,7 @@
 import { getEmailDbPool } from './email-db';
 import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
-import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected } from './baileys-manager';
+import { sendBaileysLiveMessage, sendBaileysReaction, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import { generateText } from './ai-provider';
@@ -945,6 +945,7 @@ export async function sendMessage(params: {
   fileName?: string;
   mimeType?: string;
   ownerId?: string;
+  validarNumeroWhatsapp?: boolean;
 }): Promise<WhatsAppMessage> {
   const pool = getEmailDbPool();
   const ownerId = params.ownerId || 'default';
@@ -967,9 +968,19 @@ export async function sendMessage(params: {
     sent_by: params.sentBy,
   };
 
+  // 0. Validação opcional de existência do número no WhatsApp (usado pelo Garimpador de Leads para evitar fixos sem WhatsApp)
+  if (params.validarNumeroWhatsapp) {
+    const check = await verificarNumeroNoWhatsApp(params.chatId, ownerId);
+    if (check.conectado && !check.existe) {
+      const numLimpo = params.chatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
+      throw new Error(`O número ${numLimpo} não possui conta ativa no WhatsApp (telefone fixo ou não cadastrado).`);
+    }
+  }
+
   // 1. Envia via Baileys Multi-Device (WhatsApp Oficial ao vivo da instância do usuário)
   let waKey: any = null;
   let baileysSent = false;
+  let baileysErro = '';
   try {
     const bRes = await sendBaileysLiveMessage(
       params.chatId,
@@ -987,7 +998,8 @@ export async function sendMessage(params: {
       waKey = bRes.waKey;
       message.wa_key = waKey;
     }
-  } catch (bErr) {
+  } catch (bErr: any) {
+    baileysErro = bErr?.message || '';
     console.warn(`[WhatsAppService:${ownerId}] Falha no despacho via Baileys:`, bErr);
   }
 
@@ -996,12 +1008,11 @@ export async function sendMessage(params: {
     config.api_url.startsWith('http') &&
     !config.api_url.includes('example')
   );
-  if (!baileysSent && !hasExternalApi) {
-    throw new Error('WhatsApp desconectado. Escaneie o QR Code na aba Conexão QR Code para enviar mensagens.');
-  }
 
-  // 2. Se tiver API externa configurada (Zappfy ou Evolution API), despacha também
-  if (config.api_url && config.api_url.startsWith('http') && !config.api_url.includes('example')) {
+  // 2. Se tiver API externa configurada (Zappfy ou Evolution API) e o Baileys não enviou (ou em paralelo), despacha e valida resposta real
+  let externalSent = false;
+  let externalErro = '';
+  if (hasExternalApi) {
     try {
       let cleanNumber = params.chatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
       if (cleanNumber.length === 10 || cleanNumber.length === 11) {
@@ -1009,7 +1020,7 @@ export async function sendMessage(params: {
       }
 
       if (config.api_url.includes('zappfy.com.br')) {
-        await fetch(config.api_url, {
+        const zRes = await fetch(config.api_url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1020,11 +1031,15 @@ export async function sendMessage(params: {
             body: params.text,
             externalKey: msgId,
           }),
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(8000),
         });
+        externalSent = zRes.ok;
+        if (!zRes.ok) {
+          externalErro = `API externa retornou HTTP ${zRes.status}`;
+        }
       } else {
         const sendUrl = `${config.api_url.replace(/\/+$/, '')}/message/sendText/${encodeURIComponent(config.instance_name)}`;
-        await fetch(sendUrl, {
+        const eRes = await fetch(sendUrl, {
           method: 'POST',
           headers: {
             apikey: config.api_key,
@@ -1034,12 +1049,25 @@ export async function sendMessage(params: {
             number: cleanNumber,
             text: params.text,
           }),
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(8000),
         });
+        externalSent = eRes.ok;
+        if (!eRes.ok) {
+          externalErro = `API externa retornou HTTP ${eRes.status}`;
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
+      externalErro = err?.message || 'Erro de conexão com API externa';
       console.warn('[WhatsAppService] Falha ao enviar para API externa:', err);
     }
+  }
+
+  if (!baileysSent && !externalSent) {
+    throw new Error(
+      baileysErro ||
+        externalErro ||
+        'WhatsApp desconectado ou número sem WhatsApp. Verifique a conexão na aba Conexão QR Code.'
+    );
   }
 
   // 3. Persiste no PostgreSQL

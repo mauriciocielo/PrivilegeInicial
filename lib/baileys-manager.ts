@@ -421,6 +421,45 @@ export async function resolveWhatsAppJid(
 }
 
 /**
+ * Verifica ao vivo no WhatsApp conectado (Baileys) se o número possui conta ativa.
+ * Se o socket não estiver conectado, retorna `conectado: false`.
+ */
+export async function verificarNumeroNoWhatsApp(
+  phoneOrChatId: string,
+  ownerId = 'default'
+): Promise<{ conectado: boolean; existe: boolean; jid?: string }> {
+  const sock = await ensureBaileysConnected(true, ownerId);
+  if (!sock) return { conectado: false, existe: false };
+
+  let digits = phoneOrChatId.replace(/^.*_chat_/, '').replace(/^chat_/, '').replace(/[^0-9]/g, '');
+  if (digits.length === 10 || digits.length === 11) {
+    digits = '55' + digits;
+  }
+  if (digits.length < 10) return { conectado: true, existe: false };
+
+  const candidates = [digits];
+  if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') {
+    candidates.push(digits.slice(0, 4) + digits.slice(5));
+  } else if (digits.startsWith('55') && digits.length === 12) {
+    candidates.push(digits.slice(0, 4) + '9' + digits.slice(4));
+  }
+
+  try {
+    for (const num of candidates) {
+      const results = await sock.onWhatsApp(num);
+      const found = results?.[0];
+      if (found && found.exists && found.jid) {
+        return { conectado: true, existe: true, jid: found.jid };
+      }
+    }
+    return { conectado: true, existe: false };
+  } catch {
+    // Em erro transitório de consulta, permite tentar o envio normal
+    return { conectado: true, existe: true };
+  }
+}
+
+/**
  * Busca a foto de perfil do contato no WhatsApp e salva no banco
  */
 export async function syncContactProfilePic(

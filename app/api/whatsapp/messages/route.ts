@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, reactions });
     }
 
-    const { chatId, text, sentBy, senderName, mediaType, mediaUrl, fileName, mimeType } = body;
+    const { chatId, text, sentBy, senderName, mediaType, mediaUrl, fileName, mimeType, validarNumeroWhatsapp } = body;
 
     if (!chatId || ((!text || !text.trim()) && !mediaUrl)) {
       return NextResponse.json({ success: false, error: 'chatId e conteúdo são obrigatórios' }, { status: 400 });
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       fileName,
       mimeType,
       ownerId,
+      validarNumeroWhatsapp: Boolean(validarNumeroWhatsapp),
     });
 
     return NextResponse.json({ success: true, message });

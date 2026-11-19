@@ -502,7 +502,7 @@ export default function GarimpoLeadsPage() {
         return;
       }
 
-      // 2. Dispara a mensagem pelo WhatsApp interno (Baileys)
+      // 2. Dispara a mensagem pelo WhatsApp interno (validando se o número tem WhatsApp ativo)
       const msgRes = await fetch('/api/whatsapp/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -510,6 +510,7 @@ export default function GarimpoLeadsPage() {
           chatId: chatJson.chat.id,
           text: textoFinal,
           sentBy: 'consultor',
+          validarNumeroWhatsapp: true,
         }),
       });
       const msgJson = await msgRes.json();
