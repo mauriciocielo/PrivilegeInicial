@@ -61,11 +61,15 @@ export default function GarimpoLeadsPage() {
   const [carregandoBase, setCarregandoBase] = useState(true);
   const [salvandoBase, setSalvandoBase] = useState(false);
 
-  // Filtros da Base
+  // Filtros da Base (Lapidação Avançada)
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [filtroIcp, setFiltroIcp] = useState<'todos' | 'ouro' | 'prata' | 'bronze'>('todos');
+  const [filtroNotaMin, setFiltroNotaMin] = useState<number>(0);
   const [apenasWhatsapp, setApenasWhatsapp] = useState(false);
+  const [apenasCelular, setApenasCelular] = useState(false);
   const [apenasEmail, setApenasEmail] = useState(false);
+  const [lapidandoLote, setLapidandoLote] = useState<{ ativo: boolean; atual: number; total: number } | null>(null);
 
   // Modal de Qualificação IA
   const [leadModal, setLeadModal] = useState<LeadGarimpado | null>(null);
@@ -317,39 +321,60 @@ export default function GarimpoLeadsPage() {
     }
   };
 
-  // Enriquecer website sob demanda
-  const enriquecerLeadSite = async (lead: LeadGarimpado) => {
-    if (!lead.website) {
-      toast.info('Este lead não possui website cadastrado.');
-      return;
-    }
+  // Lapidação Profunda Individual (Site + /contato + /sobre + Receita CNPJ + Classificação ICP)
+  const lapidarLeadProfundo = async (lead: LeadGarimpado) => {
     setEnriquecendoId(lead.id);
     try {
       const res = await fetch('/api/garimpo-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'enriquecer_site', website: lead.website }),
+        body: JSON.stringify({ action: 'lapidar_lead', lead }),
       });
       const json = await res.json();
-      if (res.ok && json.ok && json.extra) {
-        const ex = json.extra;
-        const atualizado: LeadGarimpado = {
-          ...lead,
-          email: lead.email || ex.email || '',
-          whatsapp: lead.whatsapp || ex.whatsapp || '',
-          instagram: lead.instagram || ex.instagram || '',
-          cnpj: lead.cnpj || ex.cnpj || '',
-        };
+      if (res.ok && json.ok && json.lead) {
+        const atualizado: LeadGarimpado = json.lead;
         const novaLista = baseLeads.map(l => (l.id === lead.id ? atualizado : l));
-        await persistirBase(novaLista, 'Dados do site enriquecidos!');
+        await persistirBase(novaLista, `${lead.nome} lapidado! Score: ${atualizado.score} pts.`);
       } else {
-        toast.info('Nenhum contato extra encontrado na página inicial do site.');
+        toast.info('Nenhum dado adicional encontrado para este lead.');
       }
     } catch {
-      toast.error('Não foi possível acessar o site.');
+      toast.error('Erro ao lapidar lead.');
     } finally {
       setEnriquecendoId(null);
     }
+  };
+
+  // Lapidação em Lote (até 10 leads filtrados ainda não lapidados)
+  const lapidarLoteFiltrado = async () => {
+    const candidatos = leadsFiltrados.filter(l => !l.lapidadoEm).slice(0, 10);
+    const alvos = candidatos.length > 0 ? candidatos : leadsFiltrados.slice(0, 10);
+    if (alvos.length === 0) {
+      toast.info('Nenhum lead na lista filtrada para lapidar.');
+      return;
+    }
+    setLapidandoLote({ ativo: true, atual: 0, total: alvos.length });
+    let listaAtual = [...baseLeads];
+    let enriquecidos = 0;
+
+    for (let i = 0; i < alvos.length; i++) {
+      setLapidandoLote({ ativo: true, atual: i + 1, total: alvos.length });
+      try {
+        const res = await fetch('/api/garimpo-leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'lapidar_lead', lead: alvos[i] }),
+        });
+        const json = await res.json();
+        if (res.ok && json.ok && json.lead) {
+          listaAtual = listaAtual.map(l => (l.id === alvos[i].id ? json.lead : l));
+          enriquecidos++;
+        }
+      } catch {}
+    }
+
+    setLapidandoLote(null);
+    await persistirBase(listaAtual, `Lapidação concluída: ${enriquecidos} lead(s) enriquecidos e pontuados!`);
   };
 
   const atualizarStatusLead = async (id: string, status: LeadGarimpado['status']) => {
@@ -440,20 +465,31 @@ export default function GarimpoLeadsPage() {
     }
   };
 
-  // Leads filtrados na Base
+  // Leads filtrados na Base (com filtros de Lapidação ICP)
   const leadsFiltrados = useMemo(() => {
     const q = filtroTexto.toLowerCase().trim();
     return baseLeads.filter(l => {
       if (filtroStatus !== 'todos' && l.status !== filtroStatus) return false;
+      const tier = l.icpTier || (l.score >= 80 ? 'ouro' : l.score >= 60 ? 'prata' : 'bronze');
+      if (filtroIcp !== 'todos' && tier !== filtroIcp) return false;
+      if (filtroNotaMin > 0 && (!l.nota || l.nota < filtroNotaMin)) return false;
       if (apenasWhatsapp && !l.whatsapp) return false;
+      if (apenasCelular) {
+        const digits = (l.whatsapp || l.telefone || '').replace(/\D/g, '');
+        const isCel =
+          l.tipoTelefone === 'celular' ||
+          (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') ||
+          (!digits.startsWith('55') && digits.length === 11 && digits[2] === '9');
+        if (!isCel) return false;
+      }
       if (apenasEmail && !l.email) return false;
       if (q) {
-        const hay = `${l.nome} ${l.categoria} ${l.cidade} ${l.email} ${l.telefone} ${l.cnpj} ${l.socios || ''}`.toLowerCase();
+        const hay = `${l.nome} ${l.categoria} ${l.cidade} ${l.email} ${l.telefone} ${l.cnpj} ${l.socios || ''} ${l.porte || ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [baseLeads, filtroTexto, filtroStatus, apenasWhatsapp, apenasEmail]);
+  }, [baseLeads, filtroTexto, filtroStatus, filtroIcp, filtroNotaMin, apenasWhatsapp, apenasCelular, apenasEmail]);
 
   const kpis = useMemo(() => {
     const total = baseLeads.length;
@@ -947,6 +983,17 @@ export default function GarimpoLeadsPage() {
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={!!lapidandoLote}
+                  onClick={lapidarLoteFiltrado}
+                  title="Varre /contato e /sobre dos sites, busca CNPJ na Receita Federal, identifica Celular vs Fixo e recalcula ICP"
+                >
+                  <Sparkles size={14} />
+                  {lapidandoLote
+                    ? `Lapidando ${lapidandoLote.atual}/${lapidandoLote.total}...`
+                    : 'Lapidar em Lote (até 10)'}
+                </button>
                 <button className="btn btn-secondary btn-sm" onClick={copiarEmailsFiltrados}>
                   <Copy size={14} /> Copiar E-mails
                 </button>
@@ -956,18 +1003,18 @@ export default function GarimpoLeadsPage() {
               </div>
             </div>
 
-            {/* Barra de Filtros */}
+            {/* Barra de Filtros de Lapidação */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, alignItems: 'center' }}>
               <input
                 className="form-control"
-                style={{ flex: '1 1 240px' }}
+                style={{ flex: '1 1 220px' }}
                 value={filtroTexto}
                 onChange={e => setFiltroTexto(e.target.value)}
                 placeholder="Buscar por empresa, segmento, cidade, e-mail, CNPJ ou sócio..."
               />
               <select
                 className="form-control"
-                style={{ width: 185 }}
+                style={{ width: 165 }}
                 value={filtroStatus}
                 onChange={e => setFiltroStatus(e.target.value)}
               >
@@ -976,9 +1023,30 @@ export default function GarimpoLeadsPage() {
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
+              <select
+                className="form-control"
+                style={{ width: 155 }}
+                value={filtroIcp}
+                onChange={e => setFiltroIcp(e.target.value as any)}
+              >
+                <option value="todos">Todos ICP</option>
+                <option value="ouro">ICP Ouro (80+)</option>
+                <option value="prata">ICP Prata (60–79)</option>
+                <option value="bronze">ICP Bronze (&lt;60)</option>
+              </select>
+              <select
+                className="form-control"
+                style={{ width: 135 }}
+                value={filtroNotaMin}
+                onChange={e => setFiltroNotaMin(Number(e.target.value))}
+              >
+                <option value={0}>Qualquer Nota</option>
+                <option value={4}>Nota ≥ 4.0★</option>
+                <option value={4.5}>Nota ≥ 4.5★</option>
+              </select>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={apenasWhatsapp} onChange={e => setApenasWhatsapp(e.target.checked)} />
-                Só WhatsApp
+                <input type="checkbox" checked={apenasCelular} onChange={e => setApenasCelular(e.target.checked)} />
+                Só Celular/WhatsApp
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={apenasEmail} onChange={e => setApenasEmail(e.target.checked)} />
@@ -1022,7 +1090,23 @@ export default function GarimpoLeadsPage() {
                           )}
                         </td>
                         <td>
-                          <span className={scoreBadgeClass(lead.score)}>{lead.score} pts</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            <span className={scoreBadgeClass(lead.score)}>{lead.score} pts</span>
+                            <span
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                                color:
+                                  (lead.icpTier || (lead.score >= 80 ? 'ouro' : lead.score >= 60 ? 'prata' : 'bronze')) === 'ouro'
+                                    ? 'var(--gold)'
+                                    : 'var(--text-muted)',
+                              }}
+                            >
+                              ICP {lead.icpTier || (lead.score >= 80 ? 'ouro' : lead.score >= 60 ? 'prata' : 'bronze')}
+                            </span>
+                          </div>
                         </td>
                         <td>
                           <select
@@ -1072,16 +1156,15 @@ export default function GarimpoLeadsPage() {
                               <Sparkles size={13} />
                               {qualificandoId === lead.id ? '...' : lead.iaScriptWhatsapp ? 'Ver Script' : 'IA Script'}
                             </button>
-                            {lead.website && !lead.email && (
-                              <button
-                                className="btn btn-ghost btn-sm"
-                                disabled={enriquecendoId === lead.id}
-                                onClick={() => enriquecerLeadSite(lead)}
-                                title="Extrair e-mail/Instagram do website"
-                              >
-                                <Globe size={13} />
-                              </button>
-                            )}
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              disabled={enriquecendoId === lead.id}
+                              onClick={() => lapidarLeadProfundo(lead)}
+                              title="Lapidar Lead: varrer /contato e /sobre do site, enriquecer CNPJ/Sócios na Receita e recalcular ICP"
+                            >
+                              <Globe size={13} />
+                              {enriquecendoId === lead.id ? 'Lapidando...' : lead.lapidadoEm ? 'Relapidar' : 'Lapidar'}
+                            </button>
                             <button
                               className="btn btn-ghost btn-sm"
                               onClick={() => excluirLead(lead.id)}

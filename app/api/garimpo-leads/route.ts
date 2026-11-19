@@ -16,10 +16,16 @@ export interface LeadGarimpado {
   email: string;
   website: string;
   instagram: string;
+  linkedin?: string;
   cnpj: string;
   porte?: string;
   capitalSocial?: number;
   socios?: string;
+  regimeTributario?: string;
+  dataAbertura?: string;
+  tipoTelefone?: 'celular' | 'fixo' | 'desconhecido';
+  icpTier?: 'ouro' | 'prata' | 'bronze';
+  lapidadoEm?: string;
   nota?: number;
   avaliacoes?: number;
   mapsUrl: string;
@@ -70,89 +76,142 @@ function limparTelefone(tel: string): string {
   return digits;
 }
 
+function detectarTipoTelefone(tel: string): 'celular' | 'fixo' | 'desconhecido' {
+  const digits = limparTelefone(tel);
+  if (!digits) return 'desconhecido';
+  // Brasil: 55 + DD (2) + 9 + 8 dígitos = 13 dígitos
+  if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') return 'celular';
+  if (digits.startsWith('55') && digits.length === 12) return 'fixo';
+  return 'desconhecido';
+}
+
+function calcularIcpTier(score: number): 'ouro' | 'prata' | 'bronze' {
+  if (score >= 80) return 'ouro';
+  if (score >= 60) return 'prata';
+  return 'bronze';
+}
+
 function calcularScoreLead(lead: Partial<LeadGarimpado>): number {
-  let score = 20;
-  if (lead.telefone || lead.whatsapp) score += 22;
-  if (lead.whatsapp) score += 8;
-  if (lead.email) score += 20;
-  if (lead.website) score += 12;
-  if (lead.instagram) score += 6;
+  let score = 15;
+  const tipoTel = detectarTipoTelefone(lead.whatsapp || lead.telefone || '');
+  if (tipoTel === 'celular') score += 26;
+  else if (lead.telefone || lead.whatsapp) score += 16;
+
+  if (lead.email) score += 18;
+  if (lead.website) score += 10;
+  if (lead.instagram || lead.linkedin) score += 5;
   if (lead.cnpj) score += 8;
-  if (lead.endereco && lead.endereco.length > 8) score += 4;
+  if (lead.socios) score += 8;
+  if (lead.porte && !normalizarTexto(lead.porte).includes('mei')) score += 5;
+  if (lead.capitalSocial && lead.capitalSocial >= 50000) score += 5;
   if (lead.nota && lead.nota >= 4.0) score += 5;
   if (lead.avaliacoes && lead.avaliacoes >= 20) score += 5;
   return Math.min(100, Math.max(10, score));
 }
 
-async function extrairDadosDoSite(urlRaw: string): Promise<{
+function extrairContatosDeHtml(html: string): {
   email?: string;
   whatsapp?: string;
   instagram?: string;
+  linkedin?: string;
+  cnpj?: string;
+} {
+  const emailMatches = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+  const emailFiltrado = emailMatches.find(e => {
+    const lower = e.toLowerCase();
+    return (
+      !lower.endsWith('.png') &&
+      !lower.endsWith('.jpg') &&
+      !lower.endsWith('.jpeg') &&
+      !lower.endsWith('.svg') &&
+      !lower.endsWith('.webp') &&
+      !lower.includes('sentry') &&
+      !lower.includes('wixpress') &&
+      !lower.includes('example.') &&
+      !lower.includes('dominio.') &&
+      !lower.includes('seuemail') &&
+      lower.length < 70
+    );
+  });
+
+  const waMatch = html.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\?phone=)(\d{10,15})/i);
+  const whatsapp = waMatch ? limparTelefone(waMatch[1]) : undefined;
+
+  const igMatch = html.match(/https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,35})\/?/i);
+  const igUser = igMatch?.[1]?.toLowerCase();
+  const instagram =
+    igMatch && igUser && !['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'share'].includes(igUser)
+      ? `https://instagram.com/${igMatch[1]}`
+      : undefined;
+
+  const liMatch = html.match(/https?:\/\/(?:[a-z]{2}\.)?linkedin\.com\/company\/([a-zA-Z0-9._-]{2,50})\/?/i);
+  const linkedin = liMatch ? `https://linkedin.com/company/${liMatch[1]}` : undefined;
+
+  const cnpjMatch = html.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
+  const cnpj = cnpjMatch ? cnpjMatch[0] : undefined;
+
+  return {
+    email: emailFiltrado,
+    whatsapp,
+    instagram,
+    linkedin,
+    cnpj,
+  };
+}
+
+async function extrairDadosDoSite(urlRaw: string, profundo = false): Promise<{
+  email?: string;
+  whatsapp?: string;
+  instagram?: string;
+  linkedin?: string;
   cnpj?: string;
 }> {
   if (!urlRaw) return {};
   const url = /^https?:\/\//i.test(urlRaw) ? urlRaw : `https://${urlRaw}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4500);
 
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-      redirect: 'follow',
-    });
-    if (!res.ok) return {};
-    const html = (await res.text()).slice(0, 180000);
+  const fetchHtml = async (target: string, timeoutMs: number) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(target, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+        redirect: 'follow',
+      });
+      if (!res.ok) return '';
+      return (await res.text()).slice(0, 180000);
+    } catch {
+      return '';
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
-    // E-mail corporativo
-    const emailMatches = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-    const emailFiltrado = emailMatches.find(e => {
-      const lower = e.toLowerCase();
-      return (
-        !lower.endsWith('.png') &&
-        !lower.endsWith('.jpg') &&
-        !lower.endsWith('.jpeg') &&
-        !lower.endsWith('.svg') &&
-        !lower.endsWith('.webp') &&
-        !lower.includes('sentry') &&
-        !lower.includes('wixpress') &&
-        !lower.includes('example.') &&
-        !lower.includes('dominio.') &&
-        !lower.includes('seuemail') &&
-        lower.length < 70
-      );
-    });
+  const homeHtml = await fetchHtml(url, 4500);
+  const acumulado = homeHtml ? extrairContatosDeHtml(homeHtml) : {};
 
-    // WhatsApp link
-    const waMatch = html.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\?phone=)(\d{10,15})/i);
-    const whatsapp = waMatch ? limparTelefone(waMatch[1]) : undefined;
-
-    // Instagram
-    const igMatch = html.match(/https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]{2,35})\/?/i);
-    const igUser = igMatch?.[1]?.toLowerCase();
-    const instagram =
-      igMatch && igUser && !['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'share'].includes(igUser)
-        ? `https://instagram.com/${igMatch[1]}`
-        : undefined;
-
-    // CNPJ
-    const cnpjMatch = html.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
-    const cnpj = cnpjMatch ? cnpjMatch[0] : undefined;
-
-    return {
-      email: emailFiltrado,
-      whatsapp,
-      instagram,
-      cnpj,
-    };
-  } catch {
-    return {};
-  } finally {
-    clearTimeout(timeout);
+  // No modo profundo (Lapidação), varre também /contato, /fale-conosco e /sobre se ainda faltar e-mail, CNPJ ou WhatsApp
+  if (profundo && (!acumulado.email || !acumulado.cnpj || !acumulado.whatsapp)) {
+    try {
+      const origin = new URL(url).origin;
+      const subpaths = ['/contato', '/fale-conosco', '/sobre', '/quem-somos'];
+      const htmls = await Promise.all(subpaths.map(p => fetchHtml(`${origin}${p}`, 3500)));
+      for (const h of htmls) {
+        if (!h) continue;
+        const extra = extrairContatosDeHtml(h);
+        if (!acumulado.email && extra.email) acumulado.email = extra.email;
+        if (!acumulado.whatsapp && extra.whatsapp) acumulado.whatsapp = extra.whatsapp;
+        if (!acumulado.instagram && extra.instagram) acumulado.instagram = extra.instagram;
+        if (!acumulado.linkedin && extra.linkedin) acumulado.linkedin = extra.linkedin;
+        if (!acumulado.cnpj && extra.cnpj) acumulado.cnpj = extra.cnpj;
+      }
+    } catch {}
   }
+
+  return acumulado;
 }
 
 async function buscarViaGooglePlaces(
@@ -943,16 +1002,23 @@ export async function POST(req: NextRequest) {
         const comSite = leads.filter(l => l.website).slice(0, 12);
         await Promise.all(
           comSite.map(async lead => {
-            const extra = await extrairDadosDoSite(lead.website);
+            const extra = await extrairDadosDoSite(lead.website, false);
             if (extra.email && !lead.email) lead.email = extra.email;
             if (extra.whatsapp && !lead.whatsapp) lead.whatsapp = extra.whatsapp;
             if (extra.instagram && !lead.instagram) lead.instagram = extra.instagram;
+            if (extra.linkedin && !lead.linkedin) lead.linkedin = extra.linkedin;
             if (extra.cnpj && !lead.cnpj) lead.cnpj = extra.cnpj;
-            lead.score = calcularScoreLead(lead);
           })
         );
-        leads.sort((a, b) => b.score - a.score);
       }
+
+      // Classifica telefone (Celular vs Fixo), Score e ICP Tier em todos os resultados
+      for (const lead of leads) {
+        lead.tipoTelefone = detectarTipoTelefone(lead.whatsapp || lead.telefone || '');
+        lead.score = calcularScoreLead(lead);
+        lead.icpTier = calcularIcpTier(lead.score);
+      }
+      leads.sort((a, b) => b.score - a.score);
 
       return NextResponse.json({
         ok: true,
@@ -967,8 +1033,49 @@ export async function POST(req: NextRequest) {
       if (!website) {
         return NextResponse.json({ error: 'Website não informado.' }, { status: 400 });
       }
-      const extra = await extrairDadosDoSite(website);
+      const extra = await extrairDadosDoSite(website, true);
       return NextResponse.json({ ok: true, extra });
+    }
+
+    if (action === 'lapidar_lead') {
+      const leadOriginal = body.lead as LeadGarimpado;
+      if (!leadOriginal?.nome) {
+        return NextResponse.json({ error: 'Lead inválido.' }, { status: 400 });
+      }
+
+      const lapidado: LeadGarimpado = { ...leadOriginal };
+
+      // 1. Varredura profunda do site (Home + /contato + /fale-conosco + /sobre)
+      if (lapidado.website) {
+        const extraSite = await extrairDadosDoSite(lapidado.website, true);
+        if (extraSite.email && !lapidado.email) lapidado.email = extraSite.email;
+        if (extraSite.whatsapp && !lapidado.whatsapp) lapidado.whatsapp = extraSite.whatsapp;
+        if (extraSite.instagram && !lapidado.instagram) lapidado.instagram = extraSite.instagram;
+        if (extraSite.linkedin && !lapidado.linkedin) lapidado.linkedin = extraSite.linkedin;
+        if (extraSite.cnpj && !lapidado.cnpj) lapidado.cnpj = extraSite.cnpj;
+      }
+
+      // 2. Se possui ou descobriu CNPJ, enriquece automaticamente na Receita Federal (Sócios, Porte, Capital, Regime)
+      if (lapidado.cnpj && (!lapidado.socios || !lapidado.porte)) {
+        const dadosCnpj = await consultarCnpjUnitario(lapidado.cnpj);
+        if (dadosCnpj) {
+          if (!lapidado.socios && dadosCnpj.socios) lapidado.socios = dadosCnpj.socios;
+          if (!lapidado.porte && dadosCnpj.porte) lapidado.porte = dadosCnpj.porte;
+          if (!lapidado.capitalSocial && dadosCnpj.capitalSocial) lapidado.capitalSocial = dadosCnpj.capitalSocial;
+          if (!lapidado.email && dadosCnpj.email) lapidado.email = dadosCnpj.email;
+          if (!lapidado.telefone && dadosCnpj.telefone) lapidado.telefone = dadosCnpj.telefone;
+          if (!lapidado.whatsapp && dadosCnpj.whatsapp) lapidado.whatsapp = dadosCnpj.whatsapp;
+          if (dadosCnpj.notas && !lapidado.notas) lapidado.notas = dadosCnpj.notas;
+        }
+      }
+
+      // 3. Classifica tipo de telefone (Celular/WhatsApp vs Fixo) e recalcula Score ICP
+      lapidado.tipoTelefone = detectarTipoTelefone(lapidado.whatsapp || lapidado.telefone || '');
+      lapidado.score = calcularScoreLead(lapidado);
+      lapidado.icpTier = calcularIcpTier(lapidado.score);
+      lapidado.lapidadoEm = new Date().toISOString();
+
+      return NextResponse.json({ ok: true, lead: lapidado });
     }
 
     if (action === 'enriquecer_cnpj') {
