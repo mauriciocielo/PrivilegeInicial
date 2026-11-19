@@ -211,7 +211,7 @@ async function extrairDadosDoSite(urlRaw: string, profundo = false): Promise<{
         if (!acumulado.linkedin && extra.linkedin) acumulado.linkedin = extra.linkedin;
         if (!acumulado.cnpj && extra.cnpj) acumulado.cnpj = extra.cnpj;
       }
-    } catch {}
+    } catch { }
   }
 
   return acumulado;
@@ -595,7 +595,7 @@ async function geocodificarCidade(cidade: string, estado: string): Promise<{ lat
         return { lat: Number(list[0].lat), lon: Number(list[0].lon) };
       }
     }
-  } catch {}
+  } catch { }
   return undefined;
 }
 
@@ -625,7 +625,7 @@ async function buscarViaOpenStreetMap(
         bbox = `${south},${west},${north},${east}`;
       }
     }
-  } catch {}
+  } catch { }
 
   // 2. Tier 1: Tenta 3 servidores Overpass diferentes com query leve (nwr) e timeout curto
   if (bbox) {
@@ -759,7 +759,7 @@ async function buscarViaOpenStreetMap(
       nomLeads.sort((a, b) => b.score - a.score);
       return { leads: nomLeads, motor: 'OpenStreetMap Nominatim (Fallback)' };
     }
-  } catch {}
+  } catch { }
 
   // 4. Tier 3: Fallback automático via Photon Komoot
   try {
@@ -768,7 +768,7 @@ async function buscarViaOpenStreetMap(
       phoLeads.sort((a, b) => b.score - a.score);
       return { leads: phoLeads, motor: 'Photon Maps (Fallback)' };
     }
-  } catch {}
+  } catch { }
 
   return { leads: [], motor: 'OpenStreetMap' };
 }
@@ -824,7 +824,7 @@ async function consultarCnpjUnitario(cnpjRaw: string): Promise<LeadGarimpado | n
       lead.score = calcularScoreLead(lead);
       return lead;
     }
-  } catch {}
+  } catch { }
 
   // Tentativa 2: publica.cnpj.ws
   try {
@@ -871,7 +871,7 @@ async function consultarCnpjUnitario(cnpjRaw: string): Promise<LeadGarimpado | n
       lead.score = calcularScoreLead(lead);
       return lead;
     }
-  } catch {}
+  } catch { }
 
   return null;
 }
@@ -933,7 +933,7 @@ Responda APENAS em JSON válido com as chaves:
           };
         }
       }
-    } catch {}
+    } catch { }
   }
 
   // Motor consultivo local inteligente (fallback imediato sem dependência de chave externa)
@@ -1111,9 +1111,9 @@ export async function POST(req: NextRequest) {
       const cnpjsRaw: string[] = Array.isArray(body.cnpjs)
         ? body.cnpjs
         : String(body.cnpjs || '')
-            .split(/[\n,;]+/)
-            .map(s => s.trim())
-            .filter(Boolean);
+          .split(/[\n,;]+/)
+          .map(s => s.trim())
+          .filter(Boolean);
 
       const unicos = Array.from(new Set(cnpjsRaw.map(c => c.replace(/\D/g, '')).filter(c => c.length === 14))).slice(0, 20);
       if (unicos.length === 0) {
