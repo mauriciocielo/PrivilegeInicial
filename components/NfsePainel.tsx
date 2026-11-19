@@ -3100,7 +3100,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 </div>
                 <div className="form-group">
                   <label className="form-label">Alíquota ISS (%){aliquotaObrigatoria ? ' *' : ''}</label>
-                  <input type="number" step="0.01" min="0" className="form-control" value={form.aliquotaIss ?? ''} onChange={e => setForm(f => ({ ...f, aliquotaIss: Number(e.target.value) }))} />
+                  <input type="number" step="any" min="0" className="form-control" value={form.aliquotaIss ?? ''} onChange={e => setForm(f => ({ ...f, aliquotaIss: Number(e.target.value) }))} />
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                     {aliquotaObrigatoria ? 'Enviada na nota: obrigatória neste regime.' : 'Só para estimativa: quem define é a parametrização do município.'}
                   </div>
@@ -3133,7 +3133,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </div>
                     <input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       max="100"
                       className="form-control"

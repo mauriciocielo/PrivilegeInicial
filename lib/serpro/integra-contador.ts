@@ -252,7 +252,7 @@ function estimarAliquotaIssAnexoIII(aliquotaEfetiva: number, rbt12: number): num
   else if (rbt12 > 360000) percentualPartilhaIss = 0.325;
   else if (rbt12 > 180000) percentualPartilhaIss = 0.32;
   if (percentualPartilhaIss === 0) return undefined;
-  const calc = Number((aliquotaEfetiva * percentualPartilhaIss).toFixed(2));
+  const calc = Number((aliquotaEfetiva * percentualPartilhaIss).toFixed(4));
   return Math.min(5, Math.max(2, calc));
 }
 
@@ -260,7 +260,18 @@ function extrairIssDoTextoPdf(textoUnido: string, rpa: number, aliquotaEfetiva: 
   aliquotaIss?: number;
   valorIss?: number;
 } {
-  // 1) Tenta ler a linha completa da tabela "Total do Débito Exigível":
+  // 1) Tenta ler diretamente a linha "Alíquota:" da partilha quando contém os valores exatos do PGDAS-D (IRPJ..ISS)
+  const partilhaMatch = textoUnido.match(
+    /ISS[\s\S]{0,120}?Alíquota[:\s\|]+(?:[0-9]{1,2},[0-9]{2,9}\s+){4,5}([0-9]{1,2},[0-9]{2,9})/i
+  );
+  if (partilhaMatch) {
+    const aliq = Number(parseFloat(partilhaMatch[1].replace(',', '.')).toFixed(4));
+    if (aliq >= 1.5 && aliq <= 5.5) {
+      return { aliquotaIss: Math.min(5, Math.max(2, aliq)) };
+    }
+  }
+
+  // 2) Tenta ler a linha completa da tabela "Total do Débito Exigível":
   // Colunas oficiais do extrato PGDAS-D: IRPJ | CSLL | COFINS | PIS/Pasep | INSS/CPP | ICMS | IPI | ISS | Total
   const tabelaMatch = textoUnido.match(
     /Total do Débito Exigível[\s\S]*?Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){7}([0-9\.\,]+)\s*\|\s*[0-9\.\,]+/i
@@ -268,21 +279,10 @@ function extrairIssDoTextoPdf(textoUnido: string, rpa: number, aliquotaEfetiva: 
   if (tabelaMatch && rpa > 0) {
     const valorIss = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
     if (valorIss > 0) {
-      const aliq = Number(((valorIss / rpa) * 100).toFixed(2));
+      const aliq = Number(((valorIss / rpa) * 100).toFixed(4));
       if (aliq >= 1.5 && aliq <= 5.5) {
         return { aliquotaIss: Math.min(5, Math.max(2, aliq)), valorIss };
       }
-    }
-  }
-
-  // 2) Tenta ler diretamente a linha "Alíquota:" da partilha quando contém 6 valores (IRPJ..ISS)
-  const partilhaMatch = textoUnido.match(
-    /ISS[\s\S]{0,120}?Alíquota[:\s\|]+(?:[0-9]{1,2},[0-9]{2,9}\s+){4,5}([0-9]{1,2},[0-9]{2,9})/i
-  );
-  if (partilhaMatch) {
-    const aliq = Number(parseFloat(partilhaMatch[1].replace(',', '.')).toFixed(2));
-    if (aliq >= 1.5 && aliq <= 5.5) {
-      return { aliquotaIss: Math.min(5, Math.max(2, aliq)) };
     }
   }
 
@@ -403,10 +403,13 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
           }
         }
 
-        // Alíquota do Simples Nacional a informar na NFS-e: (Valor do Imposto / RPA) * 100
+        // Alíquota do Simples Nacional exata (preserva até 4 casas decimais)
         let aliquotaEfetiva = 0;
-        if (rpa > 0 && valorDevido > 0) {
-          aliquotaEfetiva = Number(((valorDevido / rpa) * 100).toFixed(2));
+        const aliqDiretaMatch = textoUnido.match(/Receita Tributada Total[^\d]*[0-9\.\,]+\s*Alíquota[:\s]*([0-9]{1,2},[0-9]{2,10})/i);
+        if (aliqDiretaMatch) {
+          aliquotaEfetiva = Number(parseFloat(aliqDiretaMatch[1].replace(',', '.')).toFixed(4));
+        } else if (rpa > 0 && valorDevido > 0) {
+          aliquotaEfetiva = Number(((valorDevido / rpa) * 100).toFixed(4));
         }
 
         // Se este período não teve faturamento/imposto, continua tentando a competência anterior
