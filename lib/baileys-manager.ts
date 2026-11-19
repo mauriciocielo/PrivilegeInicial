@@ -104,6 +104,201 @@ function unwrapWhatsAppMessage(message: any): any {
   return message;
 }
 
+/** Quantas mensagens do histórico importar por conversa ao conectar. */
+const HISTORY_MSGS_PER_CHAT = 40;
+/** Conversas com atividade nesses últimos dias (ou com não lidas) entram como "abertas". */
+const HISTORY_OPEN_DAYS = 7;
+
+function toUnixSeconds(ts: any): number {
+  if (!ts) return 0;
+  const n = Number(typeof ts === 'object' && typeof ts.toString === 'function' ? ts.toString() : ts);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Texto de uma mensagem do histórico, sem baixar mídia (mídia vira um rótulo). */
+function describeHistoryMessage(u: any): string {
+  if (!u) return '';
+  const caption =
+    u.imageMessage?.caption || u.videoMessage?.caption || u.documentMessage?.caption || '';
+  const text = u.conversation || u.extendedTextMessage?.text || '';
+  if (text) return String(text);
+  if (u.imageMessage) return caption ? `📷 ${caption}` : '📷 Imagem';
+  if (u.videoMessage) return caption ? `🎥 ${caption}` : '🎥 Vídeo';
+  if (u.audioMessage) return '🎤 Mensagem de áudio';
+  if (u.documentMessage) return `📄 ${u.documentMessage.fileName || 'Documento'}`;
+  if (u.stickerMessage) return '🖼️ Figurinha';
+  if (u.locationMessage || u.liveLocationMessage) return '📍 Localização';
+  if (u.contactMessage || u.contactsArrayMessage) return '👤 Contato';
+  return '';
+}
+
+/**
+ * Importa as conversas e mensagens que o WhatsApp envia logo após conectar
+ * (evento messaging-history.set). Não aciona o bot: é só histórico.
+ */
+async function syncHistoryBatch(params: {
+  ownerId: string;
+  chats?: any[];
+  messages?: any[];
+}): Promise<void> {
+  const { ownerId } = params;
+  const pool = getEmailDbPool();
+  if (!pool) return;
+  await ensureChatColumns(pool);
+
+  type Agg = {
+    chatId: string;
+    phone: string;
+    sendJid: string;
+    isGroup: boolean;
+    name: string;
+    lastTs: number;
+    lastText: string;
+    unread: number;
+    msgs: Array<{ key: any; fromMe: boolean; sender: string; text: string; ts: number }>;
+  };
+  const byChat = new Map<string, Agg>();
+
+  const getAgg = (rawJid: string, key?: any): Agg | null => {
+    if (!rawJid || rawJid.includes('broadcast') || rawJid.includes('status@') || rawJid.includes('@newsletter')) {
+      return null;
+    }
+    const { phone, sendJid } = resolvePhoneFromJid(rawJid, key, ownerId);
+    const isGroup = rawJid.endsWith('@g.us');
+    if (!phone || (!isGroup && phone.length < 10)) return null;
+    const chatId = buildChatIdForOwner(phone, ownerId);
+    let agg = byChat.get(chatId);
+    if (!agg) {
+      agg = { chatId, phone, sendJid, isGroup, name: '', lastTs: 0, lastText: '', unread: 0, msgs: [] };
+      byChat.set(chatId, agg);
+    }
+    return agg;
+  };
+
+  for (const ch of params.chats || []) {
+    const rawId = String(ch?.id || '');
+    const agg = getAgg(rawId, ch?.pnJid ? { remoteJidAlt: ch.pnJid } : undefined);
+    if (!agg) continue;
+    if (ch?.name) agg.name = String(ch.name).trim();
+    agg.unread = Math.max(agg.unread, Number(ch?.unreadCount || 0));
+    agg.lastTs = Math.max(agg.lastTs, toUnixSeconds(ch?.conversationTimestamp));
+  }
+
+  for (const m of params.messages || []) {
+    const rawJid = String(m?.key?.remoteJid || '');
+    const agg = getAgg(rawJid, m?.key);
+    if (!agg || !m?.message) continue;
+    const unwrapped = unwrapWhatsAppMessage(m.message);
+    if (!unwrapped || unwrapped.reactionMessage || unwrapped.protocolMessage) continue;
+    let text = describeHistoryMessage(unwrapped);
+    if (!text) continue;
+    const fromMe = !!m.key.fromMe;
+    const sender = fromMe ? 'Consultor (Celular)' : String(m.pushName || agg.phone);
+    if (agg.isGroup && !fromMe) text = `[${sender}]: ${text}`;
+    if (!agg.isGroup && !fromMe && m.pushName && !agg.name) agg.name = String(m.pushName).trim();
+    const ts = toUnixSeconds(m.messageTimestamp);
+    agg.msgs.push({ key: m.key, fromMe, sender, text, ts });
+    if (ts >= agg.lastTs) {
+      agg.lastTs = ts;
+      agg.lastText = text;
+    }
+  }
+
+  const openSince = Date.now() / 1000 - HISTORY_OPEN_DAYS * 86400;
+  let synced = 0;
+
+  for (const agg of byChat.values()) {
+    const baseName = agg.name || (agg.isGroup ? 'Grupo WhatsApp' : agg.phone);
+    const displayName = agg.isGroup && !baseName.startsWith('👥') ? `👥 ${baseName}` : baseName;
+    const isRecent = agg.unread > 0 || (agg.lastTs > 0 && agg.lastTs >= openSince);
+
+    try {
+      await pool.query(
+        `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
+         VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $7::bigint > 0 THEN to_timestamp($7::bigint) ELSE NULL END, $8, $9, 'em_atendimento', $10)
+         ON CONFLICT (id) DO UPDATE SET
+           name = CASE
+             WHEN whatsapp_chats.name IS NULL OR whatsapp_chats.name = '' OR whatsapp_chats.name = '👥 Grupo WhatsApp'
+               OR whatsapp_chats.name ~ '^[0-9+()\\s-]+$'
+               THEN EXCLUDED.name
+             ELSE whatsapp_chats.name
+           END,
+           remote_jid = COALESCE(whatsapp_chats.remote_jid, EXCLUDED.remote_jid),
+           -- Chats criados só pela agenda/lista de grupos não têm mensagem, e o last_message_time
+           -- deles é o padrão NOW() da tabela: nesse caso vale a data real vinda do histórico.
+           last_message = CASE
+             WHEN EXCLUDED.last_message <> '' AND EXCLUDED.last_message_time IS NOT NULL
+               AND (COALESCE(whatsapp_chats.last_message, '') = '' OR whatsapp_chats.last_message_time IS NULL
+                    OR EXCLUDED.last_message_time >= whatsapp_chats.last_message_time)
+               THEN EXCLUDED.last_message
+             ELSE whatsapp_chats.last_message
+           END,
+           last_message_time = CASE
+             WHEN COALESCE(whatsapp_chats.last_message, '') = ''
+               THEN COALESCE(EXCLUDED.last_message_time, whatsapp_chats.last_message_time)
+             ELSE GREATEST(whatsapp_chats.last_message_time, EXCLUDED.last_message_time)
+           END,
+           unread_count = GREATEST(COALESCE(whatsapp_chats.unread_count, 0), EXCLUDED.unread_count),
+           ticket_status = CASE
+             WHEN EXCLUDED.ticket_status = 'aberto' AND whatsapp_chats.closed_at IS NULL THEN 'aberto'
+             ELSE whatsapp_chats.ticket_status
+           END`,
+        [
+          agg.chatId,
+          ownerId,
+          agg.phone,
+          displayName,
+          agg.sendJid,
+          agg.lastText,
+          Math.floor(agg.lastTs),
+          agg.unread,
+          !agg.isGroup,
+          isRecent ? 'aberto' : 'encerrado',
+        ]
+      );
+    } catch (e) {
+      console.warn(`[Baileys:${ownerId}] Aviso ao importar conversa ${agg.chatId}:`, e);
+      continue;
+    }
+
+    const recentMsgs = agg.msgs.sort((a, b) => a.ts - b.ts).slice(-HISTORY_MSGS_PER_CHAT);
+    for (const msg of recentMsgs) {
+      const waId = String(msg.key?.id || '');
+      if (!waId) continue;
+      await pool
+        .query(
+          `INSERT INTO whatsapp_messages (id, owner_id, chat_id, from_me, sender_name, text, media_type, media_url, file_name, wa_key, reactions, status, timestamp, sent_by)
+           SELECT $1::text, $2::text, $3::text, $4::boolean, $5::text, $6::text, 'text', NULL, NULL, $7::jsonb, '[]'::jsonb, $8::text,
+                  CASE WHEN $9::bigint > 0 THEN to_timestamp($9::bigint) ELSE NOW() END, $10::text
+           WHERE NOT EXISTS (SELECT 1 FROM whatsapp_messages WHERE chat_id = $3::text AND wa_key->>'id' = $11::text)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            (msg.fromMe ? 'msg_out_' : 'msg_hist_') + waId,
+            ownerId,
+            agg.chatId,
+            msg.fromMe,
+            msg.sender,
+            msg.text,
+            JSON.stringify(msg.key),
+            msg.fromMe ? 'enviado' : 'recebido',
+            Math.floor(msg.ts),
+            msg.fromMe ? 'consultor' : 'cliente',
+            waId,
+          ]
+        )
+        .catch(() => {});
+    }
+
+    if (isRecent) syncContactProfilePic(agg.chatId, agg.sendJid, ownerId).catch(() => {});
+    synced++;
+  }
+
+  if (synced > 0) {
+    console.log(`[Baileys:${ownerId}] Histórico importado: ${synced} conversa(s).`);
+    notifySocketIoClients('sync', ownerId);
+  }
+}
+
 /**
  * Converte JIDs @lid (Linked Identity do WhatsApp) para o número de telefone real usando o mapeamento do Baileys
  */
@@ -827,18 +1022,18 @@ export async function startBaileysSocket(
       syncContactsBatch(mapped).catch(() => {});
     });
 
-    sock.ev.on('messaging-history.set', ({ contacts, chats: histChats }) => {
-      if (Array.isArray(contacts) && contacts.length > 0) {
-        syncContactsBatch(contacts).catch(() => {});
-      }
-      if (Array.isArray(histChats) && histChats.length > 0) {
-        const mapped = histChats.map((ch: any) => ({
-          id: ch?.id,
-          name: ch?.name,
-          phoneNumber: ch?.pnJid,
-        }));
-        syncContactsBatch(mapped).catch(() => {});
-      }
+    sock.ev.on('messaging-history.set', ({ contacts, chats: histChats, messages: histMessages }) => {
+      // Contatos primeiro (nomes da agenda); depois conversas e mensagens com data real
+      (async () => {
+        if (Array.isArray(contacts) && contacts.length > 0) {
+          await syncContactsBatch(contacts).catch(() => {});
+        }
+        await syncHistoryBatch({
+          ownerId,
+          chats: Array.isArray(histChats) ? histChats : [],
+          messages: Array.isArray(histMessages) ? histMessages : [],
+        });
+      })().catch(err => console.warn(`[Baileys:${ownerId}] Aviso ao importar histórico:`, err));
     });
   } catch (err) {
     console.error(`[Baileys:${ownerId}] Falha geral no startBaileysSocket:`, err);
