@@ -458,6 +458,14 @@ export interface NfsE {
   cnae?: string;
   discriminacao: string;       // Descrição detalhada do serviço
   municipioPrestacao?: string;
+  // Dados da Obra (Construção Civil / ex: 07.02.xx)
+  obraCodigo?: string;         // CNO / CEI
+  obraInscImobFisc?: string;   // Inscrição Imobiliária Fiscal
+  obraCep?: string;
+  obraLogradouro?: string;
+  obraNumero?: string;
+  obraComplemento?: string;
+  obraBairro?: string;
   // Valores
   valorServicos: number;
   valorDeducoes: number;

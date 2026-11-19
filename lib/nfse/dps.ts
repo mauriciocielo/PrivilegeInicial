@@ -48,6 +48,18 @@ export interface ConfigFiscalNfse {
   leiaute?: string | null;
 }
 
+export interface DadosObraDps {
+  /** Código da Obra (CNO / CEI). No XSD TCInfoObra é alternativa ao endereço (`end`). */
+  cObra?: string | null;
+  /** Inscrição Imobiliária Fiscal (opcional, 1..30). */
+  inscImobFisc?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+}
+
 export interface DadosDps {
   ambiente: AmbienteNfse;
   serie: string;
@@ -72,6 +84,8 @@ export interface DadosDps {
   tomadorLogradouro?: string | null;
   tomadorNumero?: string | null;
   tomadorBairro?: string | null;
+  /** Grupo <obra> (TCInfoObra) — obrigatório para serviços de construção civil/obra (ex: 07.02.xx). */
+  obra?: DadosObraDps | null;
 }
 
 export const apenasDigitos = (v?: string | null) => (v || '').replace(/\D/g, '');
@@ -168,6 +182,33 @@ export function enderecoTomadorCompleto(d: Pick<DadosDps, 'tomadorCodigoMunicipi
     && !!(d.tomadorBairro || '').trim();
 }
 
+/** Códigos de Tributação Nacional (LC 116) de construção civil/obra que exigem o grupo <obra> na DPS. */
+const PREFIXOS_SERVICO_OBRA = ['0702', '0704', '0705', '0717', '0719'];
+
+export function servicoExigeObra(cTribNac?: string | null): boolean {
+  const d = apenasDigitos(cTribNac);
+  if (d.length < 4) return false;
+  return PREFIXOS_SERVICO_OBRA.includes(d.slice(0, 4));
+}
+
+export function enderecoObraCompleto(obra?: DadosObraDps | null): boolean {
+  if (!obra) return false;
+  return apenasDigitos(obra.cep).length === 8
+    && !!(obra.logradouro || '').trim()
+    && !!(obra.bairro || '').trim();
+}
+
+export function dadosObraInformados(obra?: DadosObraDps | null): boolean {
+  if (!obra) return false;
+  return !!(
+    (obra.cObra || '').trim() ||
+    (obra.inscImobFisc || '').trim() ||
+    apenasDigitos(obra.cep) ||
+    (obra.logradouro || '').trim() ||
+    (obra.bairro || '').trim()
+  );
+}
+
 function grupoIbsCbsCompleto(cfg: ConfigFiscalNfse): boolean {
   return !!(cfg.ibsCbsCIndOp && cfg.ibsCbsCst && cfg.ibsCbsCClassTrib);
 }
@@ -222,6 +263,14 @@ export function validarEmissao(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date =
     problemas.push('A partir da competência 01/2027 o grupo IBS/CBS é obrigatório: preencha cIndOp, CST e cClassTrib na configuração.');
   }
 
+  const temCObra = !!(d.obra?.cObra || '').trim();
+  const temEndObra = enderecoObraCompleto(d.obra);
+  if (servicoExigeObra(d.cTribNac) && !temCObra && !temEndObra) {
+    problemas.push('Serviços de obra/construção civil (ex: 07.02 terraplanagem) exigem o Código da Obra (CNO) ou o Endereço completo da obra (CEP, logradouro e bairro).');
+  } else if (dadosObraInformados(d.obra) && !temCObra && !temEndObra) {
+    problemas.push('Dados da obra incompletos: informe o Código da Obra (CNO) ou preencha CEP (8 dígitos), logradouro e bairro da obra.');
+  }
+
   return problemas;
 }
 
@@ -273,6 +322,37 @@ function montarEnderecoTomador(d: DadosDps): string {
     txt('xLgr', limparTexto(d.tomadorLogradouro || '').slice(0, 255)),
     txt('nro', limparTexto(d.tomadorNumero || '').slice(0, 60) || 'S/N'),
     txt('xBairro', limparTexto(d.tomadorBairro || '').slice(0, 60)),
+  );
+}
+
+/**
+ * Monta o grupo `<obra>` (TCInfoObra) dentro de `<serv>`.
+ * Atenção ao XSD Nacional: `TCEnderObraEvento` NÃO usa `<endNac>` nem `<cMun>` —
+ * `<CEP>` é filho direto de `<end>`, seguido de `<xLgr>`, `<nro>`, `<xCpl>` (opcional) e `<xBairro>`.
+ * Além disso, `<cObra>` e `<end>` são mutuamente exclusivos (`xs:choice`).
+ */
+function montarObra(obra?: DadosObraDps | null): string {
+  if (!obra) return '';
+  const inscImobFisc = limparTexto(obra.inscImobFisc || '').slice(0, 30);
+  const cObra = limparTexto(obra.cObra || '').slice(0, 30);
+  const endOk = enderecoObraCompleto(obra);
+
+  if (!cObra && !endOk) return '';
+
+  const cpl = limparTexto(obra.complemento || '').slice(0, 156);
+  const blocoEscolha = cObra
+    ? txt('cObra', cObra)
+    : tag('end',
+        txt('CEP', apenasDigitos(obra.cep)),
+        txt('xLgr', limparTexto(obra.logradouro || '').slice(0, 255)),
+        txt('nro', limparTexto(obra.numero || '').slice(0, 60) || 'S/N'),
+        !!cpl && txt('xCpl', cpl),
+        txt('xBairro', limparTexto(obra.bairro || '').slice(0, 60)),
+      );
+
+  return tag('obra',
+    !!inscImobFisc && txt('inscImobFisc', inscImobFisc),
+    blocoEscolha,
   );
 }
 
@@ -363,6 +443,7 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
         !!cNbs && txt('cNBS', cNbs),
         nt009 && descricao,
       ),
+      montarObra(d.obra),
     ),
     tag('valores',
       tag('vServPrest', txt('vServ', dec2(d.valorServicos))),

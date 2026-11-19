@@ -133,6 +133,15 @@ export async function POST(request: Request) {
       tomadorLogradouro: textoOuNull(n.tomadorEndereco),
       tomadorNumero: textoOuNull(n.tomadorNumero),
       tomadorBairro: textoOuNull(n.tomadorBairro),
+      obra: {
+        cObra: textoOuNull(n.obraCodigo),
+        inscImobFisc: textoOuNull(n.obraInscImobFisc),
+        cep: textoOuNull(n.obraCep),
+        logradouro: textoOuNull(n.obraLogradouro),
+        numero: textoOuNull(n.obraNumero),
+        complemento: textoOuNull(n.obraComplemento),
+        bairro: textoOuNull(n.obraBairro),
+      },
     };
 
     // A alíquota do Simples muda com o faturamento: a digitada na nota vale para esta emissão.

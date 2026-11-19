@@ -19,7 +19,7 @@ import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
 import BoletoSicoobOficial from './BoletoSicoobOficial';
-import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia } from '../lib/nfse/dps';
+import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
@@ -806,10 +806,53 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     };
   };
 
+  const [mostrarDadosObra, setMostrarDadosObra] = useState(false);
+  const [buscandoCepObra, setBuscandoCepObra] = useState(false);
+
+  const buscarCepObra = async (cepBruto: string) => {
+    const cepLimpo = apenasDigitos(cepBruto).slice(0, 8);
+    if (cepLimpo.length !== 8) return;
+    setBuscandoCepObra(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      if (res.ok) {
+        const d = await res.json();
+        if (!d.erro) {
+          setForm(f => ({
+            ...f,
+            obraCep: cepLimpo,
+            obraLogradouro: d.logradouro || f.obraLogradouro || '',
+            obraBairro: d.bairro || f.obraBairro || '',
+            ...(d.ibge && /^\d{7}$/.test(String(d.ibge)) ? { municipioPrestacao: String(d.ibge) } : {}),
+          }));
+          toast.success('Endereço da obra preenchido pelo CEP.');
+        }
+      }
+    } catch {
+      /* segue com preenchimento manual */
+    } finally {
+      setBuscandoCepObra(false);
+    }
+  };
+
   const handleSave = async (emitir: boolean) => {
     if (!form.discriminacao?.trim()) { toast.error('Preencha a descrição do serviço.'); return; }
     if (!form.tomadorCnpjCpf || !form.tomadorRazaoSocial) { toast.error('Preencha os dados do tomador.'); return; }
     if (!valorForm) { toast.error('Informe o valor do serviço.'); return; }
+    const exigeObra = servicoExigeObra(form.codigoServico);
+    if (emitir && exigeObra) {
+      const temCno = !!(form.obraCodigo || '').trim();
+      const temEndObra = enderecoObraCompleto({
+        cep: form.obraCep,
+        logradouro: form.obraLogradouro,
+        bairro: form.obraBairro,
+      });
+      if (!temCno && !temEndObra) {
+        setMostrarDadosObra(true);
+        toast.error('Para serviços de obra (ex: 07.02 terraplanagem), informe o Endereço completo da obra (CEP, logradouro e bairro) ou o Código da Obra (CNO).');
+        return;
+      }
+    }
     const financeiroErro = financeiroInvalido(financeiroForm);
     if (financeiroErro) { toast.error(financeiroErro); return; }
     const aliquotaSimples = Number(aliquotaSimplesForm);
@@ -2869,6 +2912,175 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   value={form.discriminacao || ''} onChange={e => setForm(f => ({ ...f, discriminacao: e.target.value }))} />
               </div>
             </div>
+
+            {/* dados da obra (construção civil / terraplanagem — ex: 07.02.02) */}
+            {(() => {
+              const exigeObra = servicoExigeObra(form.codigoServico);
+              const temAlgumCampoObra = !!(form.obraCodigo || form.obraCep || form.obraLogradouro || form.obraBairro || form.obraInscImobFisc);
+              const aberto = exigeObra || mostrarDadosObra || temAlgumCampoObra;
+
+              if (!aberto) {
+                return (
+                  <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setMostrarDadosObra(true)}
+                    >
+                      + Informar Endereço / Dados da Obra (Construção Civil)
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  style={{
+                    ...secaoStyle,
+                    border: exigeObra ? '1px solid #d97706' : secaoStyle.border,
+                    background: exigeObra ? 'rgba(245, 158, 11, 0.06)' : secaoStyle.background,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: exigeObra ? '#b45309' : '#171717', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                        Dados da Obra (Construção Civil / Terraplanagem)
+                      </span>
+                      {exigeObra && (
+                        <span className="badge badge-yellow">Obrigatório para cód. {form.codigoServico}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {(form.tomadorCep || form.tomadorEndereco) && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            setForm(f => ({
+                              ...f,
+                              obraCep: apenasDigitos(f.tomadorCep || ''),
+                              obraLogradouro: f.tomadorEndereco || '',
+                              obraNumero: f.tomadorNumero || 'S/N',
+                              obraBairro: f.tomadorBairro || '',
+                            }));
+                            toast.success('Endereço da obra copiado do tomador.');
+                          }}
+                        >
+                          Copiar endereço do tomador
+                        </button>
+                      )}
+                      {!exigeObra && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => {
+                            setMostrarDadosObra(false);
+                            setForm(f => ({
+                              ...f,
+                              obraCodigo: '',
+                              obraInscImobFisc: '',
+                              obraCep: '',
+                              obraLogradouro: '',
+                              obraNumero: '',
+                              obraComplemento: '',
+                              obraBairro: '',
+                            }));
+                          }}
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                    No Padrão Nacional da NFS-e, para serviços de obra (ex: <strong>07.02.02</strong>), informe o <strong>Endereço completo da obra</strong> (CEP, logradouro e bairro) <strong>ou</strong> o <strong>Código da Obra (CNO/CEI)</strong>.
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ maxWidth: 180 }}>
+                      <label className="form-label">CEP da Obra {!form.obraCodigo?.trim() ? '*' : ''}</label>
+                      <input
+                        className="form-control"
+                        maxLength={9}
+                        placeholder="00000-000"
+                        value={form.obraCep || ''}
+                        onChange={e => {
+                          const v = apenasDigitos(e.target.value).slice(0, 8);
+                          setForm(f => ({ ...f, obraCep: v }));
+                          if (v.length === 8) buscarCepObra(v);
+                        }}
+                      />
+                      {buscandoCepObra && (
+                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 2 }}>Buscando CEP...</div>
+                      )}
+                    </div>
+                    <div className="form-group" style={{ flex: 2 }}>
+                      <label className="form-label">Logradouro da Obra {!form.obraCodigo?.trim() ? '*' : ''}</label>
+                      <input
+                        className="form-control"
+                        placeholder="Rua, Avenida, Rodovia, Linha..."
+                        value={form.obraLogradouro || ''}
+                        onChange={e => setForm(f => ({ ...f, obraLogradouro: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group" style={{ maxWidth: 120 }}>
+                      <label className="form-label">Número</label>
+                      <input
+                        className="form-control"
+                        placeholder="S/N"
+                        value={form.obraNumero || ''}
+                        onChange={e => setForm(f => ({ ...f, obraNumero: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Bairro / Distrito {!form.obraCodigo?.trim() ? '*' : ''}</label>
+                      <input
+                        className="form-control"
+                        placeholder="Bairro ou localidade da obra"
+                        value={form.obraBairro || ''}
+                        onChange={e => setForm(f => ({ ...f, obraBairro: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Complemento <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional)</span></label>
+                      <input
+                        className="form-control"
+                        placeholder="Lote, Quadra, Bloco..."
+                        value={form.obraComplemento || ''}
+                        onChange={e => setForm(f => ({ ...f, obraComplemento: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row" style={{ marginBottom: 0 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Código da Obra — CNO / CEI <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Alternativa ao endereço)</span></label>
+                      <input
+                        className="form-control"
+                        maxLength={30}
+                        placeholder="Se informado, substitui o endereço no XML (<cObra>)"
+                        value={form.obraCodigo || ''}
+                        onChange={e => setForm(f => ({ ...f, obraCodigo: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Inscrição Imobiliária Fiscal <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional)</span></label>
+                      <input
+                        className="form-control"
+                        maxLength={30}
+                        placeholder="Inscrição municipal/IPTU da obra"
+                        value={form.obraInscImobFisc || ''}
+                        onChange={e => setForm(f => ({ ...f, obraInscImobFisc: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* valores */}
             <div style={secaoStyle}>
