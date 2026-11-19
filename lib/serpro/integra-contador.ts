@@ -224,6 +224,9 @@ function extrairTextoPdf(pdfBuf: Buffer): string[] {
 export interface AliquotaSimplesResult {
   sucesso: boolean;
   aliquota: number;
+  /** Alíquota efetiva do ISS na partilha do Simples Nacional (2% a 5%), usada quando há ISS retido. */
+  aliquotaIss?: number;
+  valorIss?: number;
   rbt12?: number;
   rpa?: number;
   valorDevido?: number;
@@ -234,6 +237,58 @@ export interface AliquotaSimplesResult {
   pdfBase64?: string;
   detalhes?: string;
   aviso?: string;
+}
+
+/**
+ * Calcula a partilha oficial do ISS no Anexo III (Serviços) a partir da alíquota efetiva e da RBT12,
+ * usado como fallback caso a linha de ISS não esteja legível no PDF do extrato PGDAS-D.
+ */
+function estimarAliquotaIssAnexoIII(aliquotaEfetiva: number, rbt12: number): number | undefined {
+  if (!(aliquotaEfetiva > 0)) return undefined;
+  let percentualPartilhaIss = 0.335; // Faixa 1 (até 180k): 33,5%
+  if (rbt12 > 3600000) percentualPartilhaIss = 0; // Acima do sublimite (ISS fora do SN)
+  else if (rbt12 > 1800000) percentualPartilhaIss = 0.335;
+  else if (rbt12 > 720000) percentualPartilhaIss = 0.335;
+  else if (rbt12 > 360000) percentualPartilhaIss = 0.325;
+  else if (rbt12 > 180000) percentualPartilhaIss = 0.32;
+  if (percentualPartilhaIss === 0) return undefined;
+  const calc = Number((aliquotaEfetiva * percentualPartilhaIss).toFixed(2));
+  return Math.min(5, Math.max(2, calc));
+}
+
+function extrairIssDoTextoPdf(textoUnido: string, rpa: number, aliquotaEfetiva: number, rbt12: number): {
+  aliquotaIss?: number;
+  valorIss?: number;
+} {
+  // 1) Tenta ler a linha completa da tabela "Total do Débito Exigível":
+  // Colunas oficiais do extrato PGDAS-D: IRPJ | CSLL | COFINS | PIS/Pasep | INSS/CPP | ICMS | IPI | ISS | Total
+  const tabelaMatch = textoUnido.match(
+    /Total do Débito Exigível[\s\S]*?Total\s*\|\s*(?:[0-9\.\,]+\s*\|\s*){7}([0-9\.\,]+)\s*\|\s*[0-9\.\,]+/i
+  );
+  if (tabelaMatch && rpa > 0) {
+    const valorIss = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
+    if (valorIss > 0) {
+      const aliq = Number(((valorIss / rpa) * 100).toFixed(2));
+      if (aliq >= 1.5 && aliq <= 5.5) {
+        return { aliquotaIss: Math.min(5, Math.max(2, aliq)), valorIss };
+      }
+    }
+  }
+
+  // 2) Tenta ler diretamente a linha "Alíquota:" da partilha quando contém 6 valores (IRPJ..ISS)
+  const partilhaMatch = textoUnido.match(
+    /ISS[\s\S]{0,120}?Alíquota[:\s\|]+(?:[0-9]{1,2},[0-9]{2,9}\s+){4,5}([0-9]{1,2},[0-9]{2,9})/i
+  );
+  if (partilhaMatch) {
+    const aliq = Number(parseFloat(partilhaMatch[1].replace(',', '.')).toFixed(2));
+    if (aliq >= 1.5 && aliq <= 5.5) {
+      return { aliquotaIss: Math.min(5, Math.max(2, aliq)) };
+    }
+  }
+
+  // 3) Fallback oficial pela partilha do Anexo III com base na alíquota efetiva e RBT12
+  const estimada = estimarAliquotaIssAnexoIII(aliquotaEfetiva, rbt12);
+  return { aliquotaIss: estimada };
 }
 
 /**
@@ -282,16 +337,24 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
       aviso: 'Nenhuma competência do PGDAS-D entregue foi encontrada para este CNPJ na Receita Federal.',
     };
   }
-  const ultimoPeriodoEncontrado = escolhido.periodo;
-  const ultimasOperacoes = escolhido.operacoes;
+  // Percorre as competências entregues (da mais recente para a mais antiga, até 6 períodos)
+  // até encontrar uma apuração com DAS emitido e receita/imposto > 0 (evita cair em mês sem movimento).
+  let fallbackComDeclaracao: { periodo: any; numeroDeclaracao?: string } | null = null;
 
-  // Tenta localizar um DAS emitido na última apuração para buscar o extrato com alíquotas oficiais
-  const dasOp = ultimasOperacoes.find(o => o.indiceDas?.numeroDas);
-  const numeroDas = dasOp?.indiceDas?.numeroDas;
-  const decOp = ultimasOperacoes.find(o => o.indiceDeclaracao?.numeroDeclaracao);
-  const numeroDeclaracao = decOp?.indiceDeclaracao?.numeroDeclaracao;
+  for (const item of entregues.slice(0, 6)) {
+    const ultimoPeriodoEncontrado = item.periodo;
+    const ultimasOperacoes = item.operacoes;
+    const dasOp = ultimasOperacoes.find(o => o.indiceDas?.numeroDas);
+    const numeroDas = dasOp?.indiceDas?.numeroDas;
+    const decOp = ultimasOperacoes.find(o => o.indiceDeclaracao?.numeroDeclaracao);
+    const numeroDeclaracao = decOp?.indiceDeclaracao?.numeroDeclaracao;
 
-  if (numeroDas) {
+    if (!fallbackComDeclaracao) {
+      fallbackComDeclaracao = { periodo: ultimoPeriodoEncontrado, numeroDeclaracao };
+    }
+
+    if (!numeroDas) continue;
+
     try {
       const resExtrato = await chamarIntegraContador('Consultar', cnpjLimpo, {
         idSistema: 'PGDASD',
@@ -323,8 +386,6 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
         }
 
         // Busca Valor Total do Imposto (Débito do Simples Nacional)
-        // 1ª opção: Na seção do DAS Gerado (Principal / Total do DAS)
-        // 2ª opção: Na coluna Total do Débito Exigível
         let valorDevido = 0;
         const dasTotalMatch = textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Principal\s*\|\s*([0-9\.\,]+)/i)
           || textoUnido.match(/Informações sobre DAS Gerado[\s\S]*?Total\s*\|\s*([0-9\.\,]+)/i);
@@ -335,7 +396,6 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
           if (tabelaMatch) {
             valorDevido = parseFloat(tabelaMatch[1].replace(/\./g, '').replace(',', '.'));
           } else {
-            // Fallback para último valor numérico após Total do Débito Exigível
             const debitoMatch = textoUnido.match(/Total do Débito Exigível.*?Total\s*\|\s*([0-9\.\,]+)/i);
             if (debitoMatch) {
               valorDevido = parseFloat(debitoMatch[1].replace(/\./g, '').replace(',', '.'));
@@ -349,13 +409,20 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
           aliquotaEfetiva = Number(((valorDevido / rpa) * 100).toFixed(2));
         }
 
-        // Período de apuração (ex: 12/2024)
+        // Se este período não teve faturamento/imposto, continua tentando a competência anterior
+        if (!(aliquotaEfetiva > 0)) continue;
+
+        const { aliquotaIss, valorIss } = extrairIssDoTextoPdf(textoUnido, rpa, aliquotaEfetiva, rbt12);
+
+        // Período de apuração (ex: 09/2026)
         const paMatch = textoUnido.match(/Período de Apuração.*?([0-9]{2}\/[0-9]{4})/i);
         const periodoApuracao = paMatch ? paMatch[1] : String(ultimoPeriodoEncontrado.periodoApuracao);
 
         return {
           sucesso: true,
           aliquota: aliquotaEfetiva,
+          aliquotaIss,
+          valorIss,
           rbt12,
           rpa,
           valorDevido,
@@ -363,7 +430,7 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
           numeroDas,
           numeroDeclaracao,
           pdfBase64: pdfB64,
-          detalhes: `Alíquota calculada: ${aliquotaEfetiva}% (Imposto: R$ ${valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${rpa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) - PA: ${periodoApuracao}`,
+          detalhes: `Alíquota Simples: ${aliquotaEfetiva}%${aliquotaIss ? ` · ISS: ${aliquotaIss}%` : ''} (Imposto: R$ ${valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${rpa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) - PA: ${periodoApuracao}`,
         };
       }
     } catch (err) {
@@ -372,7 +439,7 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
   }
 
   // Fallback: consulta última declaração via CONSULTIMADECREC14
-  const paString = String(ultimoPeriodoEncontrado.periodoApuracao);
+  const paString = String((fallbackComDeclaracao?.periodo || escolhido.periodo).periodoApuracao);
   const resUltima = await chamarIntegraContador('Consultar', cnpjLimpo, {
     idSistema: 'PGDASD',
     idServico: 'CONSULTIMADECREC14',
@@ -383,10 +450,11 @@ export async function buscarAliquotaSimplesNacional(cnpj: string): Promise<Aliqu
   if (resUltima.status === 200) {
     return {
       sucesso: true,
-      aliquota: 6.00, // Alíquota inicial de referência para prestação de serviços no Simples
+      aliquota: 6.00,
+      aliquotaIss: 2.01,
       periodoApuracao: paString,
       numeroDeclaracao: resUltima.dados?.numeroDeclaracao,
-      aviso: 'Declaração localizada, sugerida alíquota de referência para emissão.',
+      aviso: 'Declaração localizada sem DAS calculado; sugerida alíquota inicial de referência (Anexo III).',
     };
   }
 

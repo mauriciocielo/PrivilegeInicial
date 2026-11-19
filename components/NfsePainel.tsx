@@ -532,11 +532,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       const data = await res.json();
       if (data.sucesso && data.aliquota > 0) {
         setAliquotaSimplesDigitada(String(data.aliquota));
+        if (data.aliquotaIss && Number(data.aliquotaIss) > 0) {
+          setForm(f => ({ ...f, aliquotaIss: Number(data.aliquotaIss) }));
+        }
+        const parteIss = data.aliquotaIss ? ` · ISS: ${data.aliquotaIss}%` : '';
         const det = data.rpa && data.valorDevido
-          ? `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (Imposto: R$ ${Number(data.valorDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${Number(data.rpa).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
-          : `PGDAS-D (${data.periodoApuracao || 'último PA'}): ${data.aliquota}% (RBT12: R$ ${(data.rbt12 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
+          ? `PGDAS-D (${data.periodoApuracao || 'último PA'}): Simples ${data.aliquota}%${parteIss} (Imposto: R$ ${Number(data.valorDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / RPA: R$ ${Number(data.rpa).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+          : `PGDAS-D (${data.periodoApuracao || 'último PA'}): Simples ${data.aliquota}%${parteIss} (RBT12: R$ ${(data.rbt12 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
         setInfoAliquotaSerpro(det);
-        toast.success(`Alíquota do Simples atualizada via Integra Contador: ${data.aliquota}%`);
+        toast.success(
+          data.aliquotaIss
+            ? `SERPRO atualizado: Simples ${data.aliquota}% e ISS ${data.aliquotaIss}%`
+            : `Alíquota do Simples atualizada via Integra Contador: ${data.aliquota}%`
+        );
       } else {
         toast.error(data.error || 'Nenhuma apuração recente do Simples Nacional foi localizada no SERPRO para este CNPJ.');
       }

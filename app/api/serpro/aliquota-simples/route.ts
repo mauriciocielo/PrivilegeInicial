@@ -69,6 +69,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       sucesso: true,
       aliquota: resultado.aliquota,
+      aliquotaIss: resultado.aliquotaIss,
+      valorIss: resultado.valorIss,
       rbt12: resultado.rbt12,
       rpa: resultado.rpa,
       valorDevido: resultado.valorDevido,
