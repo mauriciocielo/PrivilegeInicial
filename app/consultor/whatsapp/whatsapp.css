@@ -4,39 +4,40 @@
    ============================================================ */
 
 .wa-container {
-  padding: 24px 32px;
-  max-width: 1720px;
+  padding: 14px 22px 18px;
+  max-width: 100%;
   margin: 0 auto;
   font-family: var(--font-main, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
   color: var(--text-primary);
 }
 
-/* Header */
+/* Header — Compacto e Executivo */
 .wa-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow);
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  box-shadow: none;
 }
 
 .wa-title-group {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .wa-icon-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(21, 128, 61, 0.1);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-border);
   color: var(--green);
   display: flex;
   align-items: center;
@@ -45,18 +46,20 @@
 
 .wa-title {
   font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  line-height: 1.1;
 }
 
 .wa-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
   margin: 2px 0 0 0;
 }
 
@@ -104,24 +107,25 @@
   align-items: center;
   background: var(--bg-card2);
   border: 1px solid var(--border);
-  padding: 4px;
-  border-radius: 14px;
-  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 3px;
+  flex-wrap: wrap;
 }
 
 .wa-tab-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 13px;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--dur-fast) ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
 .wa-tab-btn:hover {
@@ -150,15 +154,14 @@
    ============================================================ */
 .wa-inbox-grid {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  height: calc(100vh - 190px);
-  min-height: 520px;
-  max-height: 820px;
+  grid-template-columns: 350px 1fr;
+  height: calc(100vh - 156px);
+  min-height: 540px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 @media (max-width: 900px) {
@@ -259,16 +262,21 @@
 .wa-chat-list {
   flex: 1;
   overflow-y: auto;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .wa-chat-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-light);
+  gap: 11px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--dur-fast), border-color var(--dur-fast);
 }
 
 .wa-chat-item:hover {
@@ -276,18 +284,18 @@
 }
 
 .wa-chat-item.selected {
-  background: rgba(96, 0, 0, 0.04);
-  border-left: 4px solid var(--accent);
+  background: var(--accent-glow);
+  border-color: var(--accent-border);
 }
 
 .wa-avatar {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #600000 0%, #3b0000 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: #fff;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,11 +403,11 @@
   flex: 1 1 0%;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 26px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: var(--bg-card2);
+  gap: 10px;
+  background: var(--bg-base);
 }
 
 .wa-msg-wrapper {
@@ -416,12 +424,12 @@
 }
 
 .wa-bubble {
-  max-width: 72%;
+  max-width: 70%;
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: 14px;
   font-size: 13.5px;
-  line-height: 1.5;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  line-height: 1.52;
+  box-shadow: none;
   position: relative;
   word-break: break-word;
 }
@@ -434,8 +442,9 @@
 }
 
 .wa-bubble.me.bot {
-  background: #1e3a8a;
-  color: #ffffff;
+  background: #1c1e24;
+  color: #f4f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom-right-radius: 4px;
 }
 
@@ -510,22 +519,24 @@
 .wa-input-text {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--bg-card2);
+  background: var(--bg-base);
   color: var(--text-primary);
   font-size: 13.5px;
   outline: none;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
 }
 
 .wa-input-text:focus {
   border-color: var(--accent);
   background: var(--bg-card);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .wa-send-btn {
-  padding: 10px 18px;
-  border-radius: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
   background: var(--accent);
   color: #fff;
   border: none;
@@ -604,30 +615,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--border);
-  font-size: 13px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
 }
 
 .crm-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: var(--shadow-sm);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
-  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 
 .crm-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
   border-color: var(--accent-border);
+  background: var(--bg-hover);
 }
 
 .crm-card-title {
