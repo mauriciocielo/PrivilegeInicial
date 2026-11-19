@@ -175,9 +175,11 @@ async function enviarEmailRelatorioMensal(destinatarios: string, resultados: Exe
       </div>
     `;
 
+    const remetenteCert = process.env.SMTP_FROM || process.env.SMTP_USER || 'consultoria@privilegecontabilidade.cnt.br';
     await transporter.sendMail({
-      from: `"Privilege Contabilidade" <${process.env.SMTP_FROM || 'contato@privilegecontabilidade.com.br'}>`,
+      from: `"Privilege Contabilidade" <${remetenteCert}>`,
       to: destinatarios,
+      bcc: remetenteCert,
       subject: `Situação fiscal federal (${mesAno}): ${totalComPendencia} empresa(s) com pendências`,
       html,
     });

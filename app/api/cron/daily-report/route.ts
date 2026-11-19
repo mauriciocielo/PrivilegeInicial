@@ -248,6 +248,7 @@ export async function GET(request: Request) {
           await transporter.sendMail({
             from: `"Privilege Relatório Diário" <${smtpFrom}>`,
             to: user.email,
+            bcc: smtpFrom,
             subject: `Resumo Financeiro Diário - ${today.split('-').reverse().join('/')}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">

@@ -181,6 +181,7 @@ export async function POST(req: Request) {
         await transporter.sendMail({
           from: `"${nomeRemetenteFinal}" <${smtpFrom}>`,
           to: emailTeste,
+          bcc: smtpFrom,
           replyTo: replyToFinal,
           subject: assunto || 'Teste de Configuração — E-mail Marketing Privilege',
           html: `
@@ -356,6 +357,7 @@ export async function POST(req: Request) {
         const info = await transporter.sendMail({
           from: `"Privilege Consultoria" <${smtpFrom}>`,
           to: emailAlvo,
+          bcc: smtpFrom,
           subject,
           html,
           attachments,
@@ -675,6 +677,7 @@ export async function POST(req: Request) {
           await transporter.sendMail({
             from: `"${nomeRemetenteFinal}" <${smtpFrom}>`,
             to: dest.email,
+            bcc: smtpFrom,
             replyTo: replyToFinal,
             subject: tituloAssunto,
             html: templatePersonalizado,

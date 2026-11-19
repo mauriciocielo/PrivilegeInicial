@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         await transporter.sendMail({
           from: `"Privilege Financeiro" <${smtpFrom}>`,
           to: cleanEmail,
+          bcc: smtpFrom,
           subject: 'Sua nova senha de acesso - Privilege',
           text: `Olá, ${user.name}.\n\nUma nova senha temporária foi gerada para a sua conta.\n\nSua nova senha de acesso: ${newPassword}\n\nRecomendamos alterar sua senha após fazer login.\n\nAtenciosamente,\nEquipe Privilege`,
           html: `

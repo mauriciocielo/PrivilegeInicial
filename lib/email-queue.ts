@@ -436,6 +436,7 @@ export async function processarProximoLote(campanhaId?: string): Promise<{
       await transporter.sendMail({
         from: `"${camp.senderNameCustom || 'Privilege Contabilidade & Consultoria'}" <${smtpFrom}>`,
         to: dest.email,
+        bcc: smtpFrom,
         replyTo: camp.replyToCustom || undefined,
         subject: camp.assunto,
         html: htmlCompleto,

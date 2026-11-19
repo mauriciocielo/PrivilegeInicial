@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       from: `"Portal Privilege" <${smtpFrom}>`,
       to: 'contato@privilegecontabilidade.com.br',
       cc: 'consultoria@privilegecontabilidade.com.br',
+      bcc: smtpFrom,
       subject: `Nova Solicitação de Diagnóstico - ${nome}`,
       text: `Uma nova solicitação de diagnóstico foi recebida através da página inicial.\n\n` +
             `Detalhes do Contato:\n` +

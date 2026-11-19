@@ -289,9 +289,11 @@ async function executar(opcoes: OpcoesRelatorioFiscal): Promise<ResultadoRelator
     tls: { rejectUnauthorized: false },
   });
   const sufixo = dataInicio === dataFim ? dataInicio : `${dataInicio}_a_${dataFim}`;
+  const remetenteFiscal = process.env.SMTP_FROM || smtpUser;
   await transporter.sendMail({
-    from: `"Privilege Setor Fiscal" <${process.env.SMTP_FROM || 'no-reply@privilegecontabilidade.com.br'}>`,
+    from: `"Privilege Setor Fiscal" <${remetenteFiscal}>`,
     to: destinatarios.join(', '),
+    bcc: remetenteFiscal,
     subject: `[NFS-e] ${emitidas.length} emitida(s) e ${tomadas.length} tomada(s) — ${periodoLabel}`,
     html,
     attachments: zip ? [{ filename: `NFSe_${sufixo}.zip`, content: zip, contentType: 'application/zip' }] : [],
