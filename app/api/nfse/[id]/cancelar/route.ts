@@ -7,6 +7,7 @@ import { assinarXml, CertificadoInvalidoError } from '../../../../../lib/nfse/as
 import { CofreNaoConfiguradoError } from '../../../../../lib/nfse/cofre';
 import { montarCancelamento, MOTIVOS_CANCELAMENTO, validarCancelamento, type AmbienteNfse, type ModoCancelamento } from '../../../../../lib/nfse/dps';
 import { criarTransporteMtls, registrarEvento, SefinIndisponivelError } from '../../../../../lib/nfse/sefin';
+import { enviarEmailNfseCancelada } from '../../../../../lib/nfse/enviar-email-nfse';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (auth.error) return auth.error;
     const { id } = await params;
 
-    const nota = await db.nfsE.findUnique({ where: { id } });
+    const nota = await db.nfsE.findUnique({ where: { id }, include: { documento: true } });
     if (!nota) return NextResponse.json({ error: 'Nota não encontrada no servidor.' }, { status: 404 });
     const negado = await acessoEmissaoNegado(auth.session, nota.empresaId);
     if (negado) return negado;
@@ -45,7 +46,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // E0840: o evento já está vinculado; a nota foi cancelada em outra tentativa ou no portal.
       if (codigos.includes('E0840')) {
         await db.nfsE.update({ where: { id }, data: { status: 'cancelada', motivoCancelamento, cancelamentoEmAnalise: false } });
-        return NextResponse.json({ nota: { status: 'cancelada', motivoCancelamento, cancelamentoEmAnalise: false } });
+        const emailCancelamento = await enviarEmailNfseCancelada({
+          numero: nota.numero,
+          dataEmissao: nota.dataEmissao,
+          prestadorNome: nota.prestadorRazaoSocial,
+          tomadorNome: nota.tomadorRazaoSocial,
+          tomadorDocumento: nota.tomadorCnpjCpf,
+          tomadorEmail: nota.tomadorEmail,
+          valorLiquido: Number(nota.valorLiquido || nota.valorServicos || 0),
+          motivoCancelamento,
+          chaveAcesso: nota.chaveAcesso,
+          nfseXml: nota.documento?.nfseXml || null,
+          ambiente,
+        });
+        return NextResponse.json({
+          nota: { status: 'cancelada', motivoCancelamento, cancelamentoEmAnalise: false },
+          emailCancelamento,
+        });
       }
       return NextResponse.json({
         error: resumirErros(resultado.erros, resultado.mensagem, config.usarProcuracao),
@@ -62,7 +79,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       where: { id },
       data: { ...dados, documento: { update: { eventoXml: resultado.eventoXml } } },
     });
-    return NextResponse.json({ nota: dados });
+
+    const emailCancelamento = modo === 'direto'
+      ? await enviarEmailNfseCancelada({
+          numero: nota.numero,
+          dataEmissao: nota.dataEmissao,
+          prestadorNome: nota.prestadorRazaoSocial,
+          tomadorNome: nota.tomadorRazaoSocial,
+          tomadorDocumento: nota.tomadorCnpjCpf,
+          tomadorEmail: nota.tomadorEmail,
+          valorLiquido: Number(nota.valorLiquido || nota.valorServicos || 0),
+          motivoCancelamento,
+          chaveAcesso: nota.chaveAcesso,
+          nfseXml: nota.documento?.nfseXml || null,
+          eventoXml: resultado.eventoXml || null,
+          ambiente,
+        })
+      : { enviado: false, destinatarios: [], motivo: 'Cancelamento em análise fiscal.' };
+
+    return NextResponse.json({ nota: dados, emailCancelamento });
   } catch (error) {
     if (error instanceof SefinIndisponivelError) {
       return NextResponse.json({ error: `${error.message} O cancelamento não foi confirmado: tente de novo.` }, { status: 503 });

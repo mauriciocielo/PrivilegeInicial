@@ -280,3 +280,234 @@ export async function enviarEmailNfseEmitida(params: {
     return { enviado: false, destinatarios: [], motivo: err?.message || 'Erro ao enviar e-mail' };
   }
 }
+
+export async function enviarEmailNfseCancelada(params: {
+  numero: string;
+  dataEmissao: string;
+  prestadorNome: string;
+  tomadorNome: string;
+  tomadorDocumento: string;
+  tomadorEmail?: string | null;
+  valorLiquido: number;
+  motivoCancelamento: string;
+  chaveAcesso?: string | null;
+  nfseXml?: string | null;
+  eventoXml?: string | null;
+  ambiente: string;
+}): Promise<ResultadoEmailNfse> {
+  try {
+    if (params.ambiente !== 'producao') {
+      return { enviado: false, destinatarios: [], motivo: 'Ambiente de homologação.' };
+    }
+
+    const cnpjTomador = apenasDigitos(params.tomadorDocumento || '');
+    const emailReceita = await buscarEmailReceitaCnpj(cnpjTomador);
+    const emailNota = typeof params.tomadorEmail === 'string' ? params.tomadorEmail.trim().toLowerCase() : '';
+
+    const destinatarios = Array.from(
+      new Set([emailReceita, emailNota].filter((e): e is string => Boolean(e && e.includes('@'))))
+    );
+
+    if (destinatarios.length === 0) {
+      return { enviado: false, destinatarios: [], motivo: 'Nenhum e-mail encontrado no CNPJ da Receita ou na nota.' };
+    }
+
+    const smtpUser = DEFAULT_SMTP_USER;
+    const smtpPass = DEFAULT_SMTP_PASS;
+    const smtpHost = DEFAULT_SMTP_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT) || DEFAULT_SMTP_PORT;
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass },
+      tls: { rejectUnauthorized: false },
+    });
+
+    const numLimpo = (params.numero || 'SN').replace(/\D/g, '') || 'SN';
+    const valorFmt = params.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const linkPortal = params.chaveAcesso ? urlConsultaPublica(params.chaveAcesso) : '';
+
+    let emailLogoBuffer: Buffer | null = null;
+    for (const candidate of ['privilege-logo-email.png', 'privilege-email-logo.png', 'logo.png']) {
+      try {
+        const p = path.join(process.cwd(), 'public', candidate);
+        if (fs.existsSync(p)) {
+          emailLogoBuffer = fs.readFileSync(p);
+          break;
+        }
+      } catch {}
+    }
+
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string; cid?: string }> = [];
+
+    // Se temos o XML da nota, gera a DANFSe com marca d'água CANCELADA
+    if (params.nfseXml) {
+      try {
+        const dados = lerDadosDanfse(params.nfseXml);
+        const qrText = dados.chave ? urlConsultaPublica(dados.chave) : '';
+        const qrPng = qrText
+          ? await QRCode.toBuffer(qrText, { errorCorrectionLevel: 'M', margin: 0, width: 140 }).catch(() => Buffer.alloc(0))
+          : Buffer.alloc(0);
+        const logoPng = Buffer.from(logoNfse.png, 'base64');
+        const pdfCancelada = gerarDanfsePdf(dados, {
+          logoPng,
+          qrPng,
+          marcaDagua: marcaDaguaDaNota('cancelada', null),
+        });
+        attachments.push({
+          filename: `DANFSe_${numLimpo}_CANCELADA.pdf`,
+          content: pdfCancelada,
+          contentType: 'application/pdf',
+        });
+      } catch {}
+    }
+
+    if (params.eventoXml) {
+      attachments.push({
+        filename: `EventoCancelamento_NFSe_${numLimpo}.xml`,
+        content: Buffer.from(params.eventoXml, 'utf8'),
+        contentType: 'application/xml',
+      });
+    }
+
+    if (emailLogoBuffer) {
+      attachments.push({
+        filename: 'privilege-logo.png',
+        content: emailLogoBuffer,
+        contentType: 'image/png',
+        cid: 'privilege-logo',
+      });
+    }
+
+    await transporter.sendMail({
+      from: `"Privilege Consultoria" <${smtpUser}>`,
+      to: destinatarios.join(', '),
+      cc: smtpUser,
+      subject: `CANCELAMENTO — NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
+      text:
+        `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
+        `Informamos que a Nota Fiscal de Serviço Eletrônica (NFS-e) nº ${numLimpo}, emitida em ${params.dataEmissao} no valor líquido de ${valorFmt} por ${params.prestadorNome}, foi CANCELADA junto ao Sefin Nacional.\n\n` +
+        `Motivo do cancelamento: ${params.motivoCancelamento}\n\n` +
+        `Por favor, desconsidere a nota anterior (e eventual cobrança vinculada a ela).\n\n` +
+        `Sistema PRIVILEGE CONSULTORIA LTDA · Site: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 99980-0010`,
+      html: `
+        <!doctype html>
+        <html>
+          <body style="margin:0;padding:24px 12px;background-color:#f3f4f6;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#111827;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 8px 24px rgba(15,23,42,0.06);">
+              <tr>
+                <td style="background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 100%);padding:24px 28px;color:#ffffff;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td style="vertical-align:middle;">
+                        ${
+                          emailLogoBuffer
+                            ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
+                                 <img src="cid:privilege-logo" alt="Privilege Consultoria" style="height:36px;width:auto;display:block;" />
+                               </div>`
+                            : ''
+                        }
+                        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fecaca;">
+                          Comunicado Fiscal Oficial • Nota Cancelada
+                        </div>
+                        <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;">
+                          Cancelamento — NFS-e nº ${numLimpo}
+                        </h1>
+                      </td>
+                      <td style="text-align:right;vertical-align:top;">
+                        <span style="display:inline-block;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#ffffff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;">
+                          ✕ Cancelada
+                        </span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:26px 28px;">
+                  <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">
+                    Olá, <strong>${params.tomadorNome || 'Cliente'}</strong>!
+                  </p>
+                  <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#374151;">
+                    Informamos que a Nota Fiscal de Serviço Eletrônica (<strong>NFS-e nº ${numLimpo}</strong>), emitida por <strong>${params.prestadorNome}</strong>, foi <strong>cancelada oficialmente</strong> no Sefin Nacional. Por favor, desconsidere o documento anterior.
+                  </p>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;margin-bottom:18px;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#991b1b;margin-bottom:4px;">
+                          Motivo do Cancelamento
+                        </div>
+                        <div style="font-size:14px;font-weight:600;color:#7f1d1d;line-height:1.5;">
+                          ${params.motivoCancelamento}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:18px;font-size:13px;">
+                    <tr style="background:#f9fafb;">
+                      <td style="padding:9px 14px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Prestador</td>
+                      <td style="padding:9px 14px;font-weight:600;text-align:right;border-bottom:1px solid #e5e7eb;">${params.prestadorNome}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:9px 14px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Número da NFS-e</td>
+                      <td style="padding:9px 14px;font-weight:600;text-align:right;border-bottom:1px solid #e5e7eb;">${numLimpo}</td>
+                    </tr>
+                    <tr style="background:#f9fafb;">
+                      <td style="padding:9px 14px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Data de Emissão</td>
+                      <td style="padding:9px 14px;font-weight:600;text-align:right;border-bottom:1px solid #e5e7eb;">${params.dataEmissao}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:9px 14px;color:#6b7280;">Valor Líquido</td>
+                      <td style="padding:9px 14px;font-weight:700;color:#991b1b;text-align:right;">${valorFmt}</td>
+                    </tr>
+                  </table>
+
+                  ${
+                    linkPortal
+                      ? `<div style="text-align:center;margin:18px 0 6px;">
+                           <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;background:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">
+                             Consultar situação no Portal Nacional da NFS-e
+                           </a>
+                         </div>`
+                      : ''
+                  }
+                </td>
+              </tr>
+              <tr>
+                <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center;">
+                  <div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
+                    NFS-e cancelada por ${params.prestadorNome}
+                  </div>
+                  <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
+                    Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
+                  </div>
+                  <div style="margin-bottom:10px;">
+                    <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
+                      🌐 privilegecontabilidade.cnt.br
+                    </a>
+                    <a href="https://wa.me/5546999800010" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
+                      💬 WhatsApp (46) 99980-0010
+                    </a>
+                  </div>
+                  <div style="font-size:11px;color:#9ca3af;">
+                    E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+      attachments,
+    });
+
+    return { enviado: true, destinatarios };
+  } catch (err: any) {
+    console.error('Falha ao enviar e-mail de cancelamento da NFS-e:', err?.message || err);
+    return { enviado: false, destinatarios: [], motivo: err?.message || 'Erro ao enviar e-mail' };
+  }
+}

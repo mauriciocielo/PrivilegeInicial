@@ -1284,9 +1284,16 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         return;
       }
       aplicarCancelamento({ ...cancelModal, ...dados.nota }, justificativa);
-      toast.success(dados.nota.status === 'cancelada'
-        ? 'NFS-e cancelada no Sefin.'
-        : 'Análise fiscal solicitada: a nota segue válida até o município decidir.');
+      if (dados.nota.status === 'cancelada') {
+        const emailInfo = dados.emailCancelamento;
+        if (emailInfo?.enviado && emailInfo.destinatarios?.length > 0) {
+          toast.success(`NFS-e cancelada! E-mail de cancelamento enviado para ${emailInfo.destinatarios.join(', ')}.`, { duration: 7000 });
+        } else {
+          toast.success('NFS-e cancelada no Sefin.');
+        }
+      } else {
+        toast.success('Análise fiscal solicitada: a nota segue válida até o município decidir.');
+      }
     } catch {
       toast.warning('A conexão caiu e o cancelamento não foi confirmado. Tente de novo.');
     } finally {
@@ -3540,14 +3547,22 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               </div>
             )}
             <div className="form-group" style={{ marginTop: 16 }}>
-              <label className="form-label">Justificativa * (15 a 200 caracteres)</label>
-              <textarea className="form-control" rows={3} maxLength={200} value={justificativaCancel} onChange={e => setJustificativaCancel(e.target.value)} placeholder="Descreva o motivo do cancelamento..." />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{justificativaCancel.trim().length}/200</div>
+              <label className="form-label">Motivo / Justificativa do Cancelamento * (obrigatório — 15 a 200 caracteres)</label>
+              <textarea className="form-control" rows={3} maxLength={200} value={justificativaCancel} onChange={e => setJustificativaCancel(e.target.value)} placeholder="Informe o motivo do cancelamento (será enviado no evento ao Sefin e no e-mail ao cliente)..." />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                <span>O cliente receberá automaticamente um e-mail informando o cancelamento e o motivo.</span>
+                <span>{justificativaCancel.trim().length}/200</span>
+              </div>
             </div>
             <div className="form-actions" style={{ marginTop: 20 }}>
               <button className="btn btn-secondary" onClick={() => setCancelModal(null)}>Voltar</button>
-              <button className="btn btn-danger" onClick={handleCancelar} disabled={cancelando}>
-                {cancelando ? 'Enviando...' : exigeAnalise ? 'Solicitar Análise Fiscal' : 'Confirmar Cancelamento'}
+              <button
+                className="btn btn-danger"
+                onClick={handleCancelar}
+                disabled={cancelando || justificativaCancel.trim().length < 15}
+                title={justificativaCancel.trim().length < 15 ? 'Informe o motivo do cancelamento (mínimo 15 caracteres)' : undefined}
+              >
+                {cancelando ? 'Cancelando...' : exigeAnalise ? 'Solicitar Análise Fiscal' : 'Confirmar Cancelamento'}
               </button>
             </div>
           </div>
