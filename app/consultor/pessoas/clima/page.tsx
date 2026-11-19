@@ -305,7 +305,7 @@ export default function PessoasClimaPage() {
         />
 
         {/* Card Link Público para Celular / Computador */}
-        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--accent)' }}>
+        <div className="card" style={{ padding: '16px 20px', border: '1px solid var(--accent-border)', background: 'var(--accent-glow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
