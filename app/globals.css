@@ -2140,6 +2140,139 @@ table th {
 }
 
 /* ============================================================
+   ONDA 1 — DESIGN SYSTEM UNIFICADO & POLISH GLOBAL
+   ============================================================ */
+.cmd-trigger-btn:hover {
+  border-color: #600000 !important;
+  color: #171717 !important;
+}
+
+.ui-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.ui-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ui-page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
+.ui-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ui-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ui-kpi-card:hover {
+  border-color: rgba(96, 0, 0, 0.28);
+}
+
+.ui-kpi-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.ui-kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.ui-kpi-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.ui-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--bg-base);
+}
+
+.ui-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(96, 0, 0, 0.08);
+  color: #600000;
+  margin-bottom: 10px;
+}
+
+.ui-empty-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ui-empty-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  max-width: 420px;
+  margin: 4px auto 0;
+  line-height: 1.45;
+}
+
+.ui-skeleton {
+  background: linear-gradient(90deg, var(--bg-card2, #f1f1f1) 25%, var(--bg-hover, #e5e5e5) 50%, var(--bg-card2, #f1f1f1) 75%);
+  background-size: 700px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.table-wrap {
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+  .ui-page-title {
+    font-size: 19px;
+  }
+}
+
+/* ============================================================
    PRINT
    ============================================================ */
 @media print {

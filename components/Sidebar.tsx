@@ -5,6 +5,8 @@ import { useAcessoNfse } from '../lib/nfse/use-acesso-nfse';
 import { useState, useEffect, useRef } from 'react';
 import BrandLogo from './BrandLogo';
 import TwoFactorModal from './TwoFactorModal';
+import CommandPalette from './CommandPalette';
+import NotificationCenter from './NotificationCenter';
 import {
   Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
@@ -276,10 +278,24 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   }, []);
 
   // Ao mudar de rota, fecha dropdowns abertos
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  useEffect(() => {
+    const onGlobalShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', onGlobalShortcut);
+    return () => window.removeEventListener('keydown', onGlobalShortcut);
+  }, []);
+
   useEffect(() => {
     setOpenDropdownSection(null);
     setShowCompanyDropdown(false);
     setShowProfilePopover(false);
+    setShowCommandPalette(false);
   }, [pathname]);
 
   // Só um submenu aberto por vez, e nada fica salvo: um submenu que continua aberto
@@ -827,30 +843,55 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         })}
       </nav>
 
-      <div className="sidebar-footer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 0, flexShrink: 0 }}>
-        {/* Central de Notificações — pendências de conciliação (compacta) */}
-        {pendenciasReconciliacao > 0 && (
-          <div
-            onClick={() => router.push(role === 'cliente' ? '/cliente/extrato' : '/consultor/importar-ofx')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 11.5,
-              fontWeight: 600,
-              padding: '5px 10px',
-              borderRadius: 99,
-              background: '#fffbeb',
-              color: '#b45309',
-              border: '1px solid #fde68a',
-              cursor: 'pointer',
-            }}
-            title={`${pendenciasReconciliacao} conciliações pendentes`}
-          >
-            <Bell size={13} style={{ flexShrink: 0 }} />
-            <span>{pendenciasReconciliacao}</span>
-          </div>
-        )}
+      <div className="sidebar-footer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 0, flexShrink: 0 }}>
+        {/* Botão de Busca Global (Ctrl+K) */}
+        <button
+          type="button"
+          onClick={() => setShowCommandPalette(true)}
+          title="Busca rápida de telas e empresas (Ctrl+K)"
+          className="cmd-trigger-btn"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 10px',
+            borderRadius: 99,
+            background: '#ffffff',
+            color: '#525252',
+            border: '1px solid #e5e5e5',
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'border-color 0.15s, color 0.15s',
+          }}
+        >
+          <Search size={13} style={{ color: '#600000' }} />
+          {!isSidebarCompact && <span>Buscar</span>}
+          {!isSidebarCompact && (
+            <kbd
+              style={{
+                fontSize: 10,
+                padding: '1px 5px',
+                borderRadius: 5,
+                border: '1px solid #e5e5e5',
+                background: '#fafafa',
+                color: '#737373',
+                fontFamily: 'inherit',
+              }}
+            >
+              Ctrl K
+            </kbd>
+          )}
+        </button>
+
+        {/* Central de Notificações & Status 24h */}
+        <NotificationCenter
+          empresaId={selectedEmpresa}
+          role={role}
+          pendenciasReconciliacao={pendenciasReconciliacao}
+          onNavigate={href => router.push(href)}
+        />
 
         {/* Indicador discreto de sincronização na nuvem */}
         {syncStatus !== 'idle' && (
@@ -1010,6 +1051,17 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           )}
         </div>
       </div>
+
+      <CommandPalette
+        open={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        navSections={nav}
+        empresas={selectableEmpresas}
+        selectedEmpresaId={selectedEmpresa}
+        currentPath={pathname || ''}
+        onNavigate={href => router.push(href)}
+        onSelectEmpresa={id => handleEmpresaChange(id)}
+      />
 
       <TwoFactorModal
         open={showTwoFactorModal}
