@@ -876,10 +876,14 @@ async function consultarCnpjUnitario(cnpjRaw: string): Promise<LeadGarimpado | n
 async function qualificarLeadComIA(lead: LeadGarimpado, contextoOferta: string) {
   const oferta =
     contextoOferta?.trim() ||
-    'Privilege Contabilidade & Consultoria (BPO Financeiro, Precificação Real, Margem de Lucro e Planejamento Tributário em Francisco Beltrão/PR e região)';
+    'Privilege Consultoria — Consultoria Empresarial 360º voltada ao Financeiro (DRE gerencial, fluxo de caixa, precificação real, margem de lucro e BPO) integrando todas as áreas da empresa: Financeiro, Comercial, Marketing, Processos e Pessoas/RH. Site: https://privilegecontabilidade.cnt.br | Instagram da Consultoria: https://instagram.com/privilegeconsultoria.fb (@privilegeconsultoria.fb)';
 
   const prompt = `Você é um especialista sênior em prospecção B2B consultiva.
 Oferta da nossa empresa: ${oferta}
+Canais oficiais que DEVEM aparecer de forma natural na mensagem de WhatsApp e no e-mail:
+- Site: https://privilegecontabilidade.cnt.br
+- Instagram da Consultoria: https://instagram.com/privilegeconsultoria.fb
+
 Dados do lead:
 - Empresa: ${lead.nome}
 - Segmento/Categoria: ${lead.categoria}
@@ -892,10 +896,10 @@ Dados do lead:
 Responda APENAS em JSON válido com as chaves:
 {
   "score": <numero de 0 a 100>,
-  "diagnostico": "<2 frases curtas sobre a provável dor financeira/tributária/gestão desse tipo de empresa>",
-  "scriptWhatsapp": "<mensagem curta, natural e consultiva de primeira abordagem no WhatsApp, sem parecer robô, convidando para um Raio-X rápido>",
-  "assuntoEmail": "<assunto curto e persuasivo de cold email>",
-  "corpoEmail": "<corpo de e-mail B2B objetivo com 3 parágrafos curtos>"
+  "diagnostico": "<2 frases curtas sobre como a falta de integração 360º (Financeiro, Comercial, Marketing e Pessoas) costuma corroer o lucro e o caixa desse tipo de empresa>",
+  "scriptWhatsapp": "<mensagem natural, executiva e consultiva de primeira abordagem no WhatsApp falando da Consultoria 360º com foco central no Financeiro (conectando Comercial, Marketing, Processos e Pessoas), convidando para um Diagnóstico 360º rápido e incluindo o site https://privilegecontabilidade.cnt.br e o Instagram https://instagram.com/privilegeconsultoria.fb>",
+  "assuntoEmail": "<assunto curto e persuasivo sobre Consultoria Financeira & Gestão 360º>",
+  "corpoEmail": "<corpo de e-mail B2B objetivo com 3 parágrafos curtos sobre Consultoria Empresarial 360º voltada ao Financeiro integrando todas as áreas da empresa, incluindo o site https://privilegecontabilidade.cnt.br e o Instagram @privilegeconsultoria.fb (https://instagram.com/privilegeconsultoria.fb)>"
 }`;
 
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -921,7 +925,7 @@ Responda APENAS em JSON válido com as chaves:
             score: Math.min(100, Math.max(10, Number(parsed.score) || lead.score)),
             diagnostico: String(parsed.diagnostico),
             scriptWhatsapp: String(parsed.scriptWhatsapp),
-            assuntoEmail: String(parsed.assuntoEmail || `Diagnóstico Financeiro & Tributário — ${lead.nome}`),
+            assuntoEmail: String(parsed.assuntoEmail || `Diagnóstico Financeiro & Gestão 360º — ${lead.nome}`),
             corpoEmail: String(parsed.corpoEmail || ''),
           };
         }
@@ -936,10 +940,10 @@ Responda APENAS em JSON válido com as chaves:
 
   return {
     score: scoreFinal,
-    diagnostico: `Empresas do segmento de ${lead.categoria || 'serviços/comércio'} em ${lead.cidade || 'sua região'} frequentemente vendem bem, mas sofrem com vazamento de margem por formação de preço imprecisa, taxas financeiras ocultas e carga tributária acima do ideal.`,
-    scriptWhatsapp: `${saudacao}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nAcompanhamos empresas do ramo de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e temos visto muitos empresários faturando bem, mas sem ver o lucro sobrar no caixa por conta de impostos e precificação.\n\nO Mauricio separou 2 horários esta semana para um Raio-X rápido e gratuito de margem e tributos. Faz sentido conversarmos 15 minutinhos?`,
-    assuntoEmail: `Raio-X de Lucro & Impostos para a ${lead.nome}`,
-    corpoEmail: `${saudacao},\n\nNa Privilege Contabilidade & Consultoria ajudamos empresas de ${lead.categoria || 'gestão empresarial'} em ${lead.cidade || 'sua região'} a estancar vazamentos de caixa através de precificação real, BPO Financeiro e planejamento tributário.\n\nMuitos gestores só percebem que estão pagando imposto a mais ou vendendo com margem apertada no fechamento do ano. Nossa proposta é fazer um Raio-X rápido e sem compromisso da estrutura atual da ${lead.nome}.\n\nPodemos agendar uma conversa objetiva de 15 minutos esta semana? Responda este e-mail ou chame no WhatsApp (46) 99980-0010.`,
+    diagnostico: `Empresas do segmento de ${lead.categoria || 'serviços/comércio'} em ${lead.cidade || 'sua região'} frequentemente faturam bem, mas perdem lucratividade porque o Financeiro (caixa, DRE e precificação) não conversa com Comercial, Marketing, Processos e Pessoas. Uma visão 360º ancorada nos números resolve os gargalos na raiz.`,
+    scriptWhatsapp: `${saudacao}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nTrabalhamos com *Consultoria Empresarial 360º voltada ao Financeiro* — olhamos o caixa, a margem e a precificação real da empresa, conectando todas as áreas que impactam o resultado: *Financeiro, Comercial, Marketing, Processos e Pessoas*.\n\nAcompanhamos empresas do ramo de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Diagnóstico 360º rápido e gratuito.\n\nPara conhecer um pouco do nosso trabalho:\n🌐 Site: https://privilegecontabilidade.cnt.br\n📸 Instagram: https://instagram.com/privilegeconsultoria.fb\n\nFaz sentido conversarmos 15 minutinhos esta semana?`,
+    assuntoEmail: `Consultoria Financeira & Gestão 360º para a ${lead.nome}`,
+    corpoEmail: `${saudacao},\n\nNa Privilege Consultoria atuamos com Consultoria Empresarial 360º com foco central no Financeiro. Mais do que organizar o fluxo de caixa, a DRE e a precificação, conectamos os números a todas as áreas que determinam o lucro real da empresa: Comercial, Marketing, Processos e Pessoas/RH.\n\nEm empresas do segmento de ${lead.categoria || 'gestão empresarial'} em ${lead.cidade || 'sua região'}, é muito comum o faturamento crescer enquanto o lucro fica preso em gargalos operacionais, comerciais ou de margem. Nossa proposta é fazer um Diagnóstico 360º objetivo e sem compromisso da estrutura atual da ${lead.nome}.\n\nVocê pode conhecer mais sobre nossa metodologia no nosso site (https://privilegecontabilidade.cnt.br) e acompanhar nossos conteúdos no Instagram da Consultoria (@privilegeconsultoria.fb — https://instagram.com/privilegeconsultoria.fb).\n\nPodemos agendar uma conversa rápida de 15 minutos esta semana? Responda este e-mail ou fale conosco no WhatsApp (46) 99980-0010.`,
   };
 }
 

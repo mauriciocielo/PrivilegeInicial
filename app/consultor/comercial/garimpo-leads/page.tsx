@@ -83,7 +83,7 @@ export default function GarimpoLeadsPage() {
   const [googlePlacesApiKey, setGooglePlacesApiKey] = useState('');
   const [gosomUrl, setGosomUrl] = useState('');
   const [contextoOferta, setContextoOferta] = useState(
-    'Privilege Contabilidade & Consultoria — BPO Financeiro, Precificação Real, Margem de Lucro e Planejamento Tributário'
+    'Privilege Consultoria — Consultoria Empresarial 360º voltada ao Financeiro (caixa, DRE, precificação e margem) integrando todas as áreas: Financeiro, Comercial, Marketing, Processos e Pessoas/RH. Site: https://privilegecontabilidade.cnt.br | Instagram: https://instagram.com/privilegeconsultoria.fb'
   );
   const [salvandoConfig, setSalvandoConfig] = useState(false);
 
@@ -459,7 +459,7 @@ export default function GarimpoLeadsPage() {
 
     const textoFinal =
       (textoCustom ?? lead.iaScriptWhatsapp ?? '').trim() ||
-      `Olá, pessoal da ${lead.nome}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nAcompanhamos empresas do segmento de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Raio-X rápido e gratuito de precificação, margem e impostos. Faz sentido conversarmos 15 minutinhos?`;
+      `Olá, pessoal da ${lead.nome}! Tudo bem? Aqui é da equipe do Mauricio na Privilege Consultoria.\n\nTrabalhamos com *Consultoria Empresarial 360º voltada ao Financeiro* — olhamos o caixa, a margem e a precificação real da empresa, integrando todas as áreas que impactam o resultado: *Financeiro, Comercial, Marketing, Processos e Pessoas*.\n\nAcompanhamos empresas de ${lead.categoria || 'vocês'} em ${lead.cidade || 'sua região'} e o Mauricio separou dois horários esta semana para um Diagnóstico 360º rápido e gratuito.\n\nPara conhecer nosso trabalho:\n🌐 Site: https://privilegecontabilidade.cnt.br\n📸 Instagram: https://instagram.com/privilegeconsultoria.fb\n\nFaz sentido conversarmos 15 minutinhos esta semana?`;
 
     setEnviandoWhatsId(lead.id);
     try {
