@@ -44,6 +44,7 @@ export default function GarimpoLeadsPage() {
   const [cidade, setCidade] = useState('Francisco Beltrão');
   const [estado, setEstado] = useState('PR');
   const [limite, setLimite] = useState(25);
+  const [fonteBusca, setFonteBusca] = useState<'combinado' | 'google_maps' | 'osm'>('combinado');
   const [enriquecerSites, setEnriquecerSites] = useState(true);
   const [buscandoMapa, setBuscandoMapa] = useState(false);
   const [motorUsado, setMotorUsado] = useState('');
@@ -184,6 +185,7 @@ export default function GarimpoLeadsPage() {
           cidade: cidade.trim(),
           estado: estado.trim().toUpperCase() || 'PR',
           limite,
+          fonteBusca,
           enriquecerSites,
           googlePlacesApiKey: googlePlacesApiKey.trim() || undefined,
         }),
@@ -616,15 +618,13 @@ export default function GarimpoLeadsPage() {
             <div className="card">
               <div className="card-header" style={{ marginBottom: 14 }}>
                 <div>
-                  <h2 className="card-title">Motor de Busca Geolocalizada</h2>
+                  <h2 className="card-title">Motor de Busca Geolocalizada (Google Maps + OpenStreetMap)</h2>
                   <p className="card-subtitle">
-                    {googlePlacesApiKey
-                      ? 'Modo Google Maps Places API ativo (extrai notas, avaliações, telefone e site).'
-                      : 'Modo Nativo Gratuito ativo (OpenStreetMap + Extrator de E-mail/Instagram/CNPJ de Websites). Configure uma Google Places API Key na aba Integrações para puxar notas do Google Maps.'}
+                    Busca empresas diretamente no Google Maps e complementa com OpenStreetMap, extraindo telefone, site, notas, e-mail, Instagram e CNPJ.
                   </p>
                 </div>
-                <span className={googlePlacesApiKey ? 'badge badge-green' : 'badge badge-gold'}>
-                  {googlePlacesApiKey ? 'Google Places API' : 'OpenStreetMap + Web'}
+                <span className="badge badge-green">
+                  {googlePlacesApiKey ? 'Google Places API + OSM' : 'Google Maps + OSM'}
                 </span>
               </div>
 
@@ -673,6 +673,14 @@ export default function GarimpoLeadsPage() {
                     onChange={e => setEstado(e.target.value.toUpperCase())}
                     placeholder="PR"
                   />
+                </div>
+                <div className="form-group" style={{ maxWidth: 210 }}>
+                  <label className="form-label">Motor de Busca</label>
+                  <select className="form-control" value={fonteBusca} onChange={e => setFonteBusca(e.target.value as any)}>
+                    <option value="combinado">Google Maps + OSM</option>
+                    <option value="google_maps">Somente Google Maps</option>
+                    <option value="osm">Somente OpenStreetMap</option>
+                  </select>
                 </div>
                 <div className="form-group" style={{ maxWidth: 130 }}>
                   <label className="form-label">Limite</label>

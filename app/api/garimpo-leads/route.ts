@@ -25,7 +25,7 @@ export interface LeadGarimpado {
   mapsUrl: string;
   latitude?: number;
   longitude?: number;
-  fonte: 'osm' | 'google_places' | 'cnpj' | 'gosom_import';
+  fonte: 'osm' | 'google_places' | 'google_maps' | 'cnpj' | 'gosom_import';
   score: number;
   status: 'novo' | 'qualificado' | 'contato' | 'reuniao' | 'proposta' | 'convertido' | 'descartado';
   notas?: string;
@@ -221,121 +221,75 @@ async function buscarViaGooglePlaces(
   });
 }
 
-async function buscarViaOpenStreetMap(
+async function fetchComTimeout(url: string, options: RequestInit = {}, ms = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function buscarViaNominatimPOI(
   segmento: string,
   cidade: string,
   estado: string,
   limite: number
 ): Promise<LeadGarimpado[]> {
-  // 1. Geocodifica a cidade via Nominatim
-  const qGeo = encodeURIComponent(`${cidade}, ${estado}, Brazil`);
-  const geoRes = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${qGeo}&format=json&limit=1&addressdetails=1`,
+  const q = encodeURIComponent(`${segmento} ${cidade} ${estado} Brasil`);
+  const res = await fetchComTimeout(
+    `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&extratags=1&namedetails=1&limit=${Math.min(40, limite)}`,
     {
       headers: {
         'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0 (contato@privilegecontabilidade.cnt.br)',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
       },
-    }
-  );
-  if (!geoRes.ok) {
-    throw new Error('Não foi possível localizar a cidade no OpenStreetMap (Nominatim).');
-  }
-  const geoList: any[] = await geoRes.json();
-  if (!geoList.length || !geoList[0].boundingbox) {
-    throw new Error(`Cidade "${cidade} - ${estado}" não encontrada. Verifique a grafia.`);
-  }
-
-  const [south, north, west, east] = geoList[0].boundingbox.map(Number);
-  const bbox = `${south},${west},${north},${east}`;
-
-  // 2. Monta filtros Overpass de acordo com o segmento
-  const segNorm = normalizarTexto(segmento);
-  const matchedFilters = new Set<string>();
-  for (const group of SEGMENTO_OSM_TAGS) {
-    if (group.keywords.some(k => segNorm.includes(normalizarTexto(k)))) {
-      group.filters.forEach(f => matchedFilters.add(f));
-    }
-  }
-
-  // Regex seguro para nome do estabelecimento
-  const safeNameRegex = segmento.replace(/[.*+?^${}()|[\]\\"]/g, '').trim();
-  const queryParts: string[] = [];
-
-  if (matchedFilters.size > 0) {
-    for (const f of matchedFilters) {
-      queryParts.push(`node[${f}]["name"](${bbox});`);
-      queryParts.push(`way[${f}]["name"](${bbox});`);
-    }
-  }
-  if (safeNameRegex.length >= 3) {
-    queryParts.push(`node["name"~"${safeNameRegex}",i](${bbox});`);
-    queryParts.push(`way["name"~"${safeNameRegex}",i](${bbox});`);
-  }
-  if (queryParts.length === 0) {
-    queryParts.push(`node["shop"]["name"](${bbox});`);
-    queryParts.push(`node["office"]["name"](${bbox});`);
-    queryParts.push(`node["amenity"~"restaurant|clinic|pharmacy|dentist"]["name"](${bbox});`);
-  }
-
-  const overpassQuery = `[out:json][timeout:25];(${queryParts.join('')});out center ${Math.min(120, Math.max(20, limite * 2))};`;
-
-  const overRes = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0',
     },
-    body: `data=${encodeURIComponent(overpassQuery)}`,
-  });
-
-  if (!overRes.ok) {
-    throw new Error('Serviço de mapas OpenStreetMap temporariamente sobrecarregado. Tente novamente em instantes.');
-  }
-
-  const overData = await overRes.json();
-  const elements: any[] = overData.elements || [];
-  const seen = new Set<string>();
+    10000
+  );
+  if (!res.ok) return [];
+  const list: any[] = await res.json();
   const now = new Date().toISOString();
+  const seen = new Set<string>();
   const results: LeadGarimpado[] = [];
 
-  for (const el of elements) {
-    const tags = el.tags || {};
-    const nome = (tags.name || '').trim();
+  for (const item of list) {
+    const extra = item.extratags || {};
+    const addr = item.address || {};
+    const nome = (
+      item.name ||
+      item.namedetails?.name ||
+      (item.display_name ? String(item.display_name).split(',')[0] : '')
+    ).trim();
     if (!nome) continue;
-
     const key = normalizarTexto(nome);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const rua = tags['addr:street'] || '';
-    const num = tags['addr:housenumber'] || '';
-    const bairro = tags['addr:suburb'] || tags['addr:neighbourhood'] || '';
-    const cidadeTag = tags['addr:city'] || cidade;
+    const cidadeTag = addr.city || addr.town || addr.municipality || cidade;
+    const rua = addr.road || '';
+    const num = addr.house_number || '';
+    const bairro = addr.suburb || addr.neighbourhood || '';
     const endereco = [rua ? `${rua}${num ? `, ${num}` : ''}` : '', bairro, `${cidadeTag}/${estado}`]
       .filter(Boolean)
       .join(' · ');
 
-    const telefone = tags['contact:phone'] || tags.phone || tags['contact:mobile'] || '';
-    const whatsappRaw = tags['contact:whatsapp'] || telefone;
-    const whatsapp = limparTelefone(whatsappRaw);
-    const email = tags['contact:email'] || tags.email || '';
-    const website = tags['contact:website'] || tags.website || tags.url || '';
-    const instagramRaw = tags['contact:instagram'] || tags.instagram || '';
-    const instagram = instagramRaw
-      ? instagramRaw.startsWith('http')
-        ? instagramRaw
-        : `https://instagram.com/${instagramRaw.replace(/^@/, '')}`
+    const telefone = extra['contact:phone'] || extra.phone || extra['contact:mobile'] || '';
+    const whatsapp = limparTelefone(extra['contact:whatsapp'] || telefone);
+    const email = extra['contact:email'] || extra.email || '';
+    const website = extra['contact:website'] || extra.website || extra.url || '';
+    const igRaw = extra['contact:instagram'] || extra.instagram || '';
+    const instagram = igRaw
+      ? igRaw.startsWith('http')
+        ? igRaw
+        : `https://instagram.com/${igRaw.replace(/^@/, '')}`
       : '';
 
-    const lat = el.lat ?? el.center?.lat;
-    const lon = el.lon ?? el.center?.lon;
-    const categoria =
-      tags.shop || tags.office || tags.amenity || tags.healthcare || tags.craft || tags.tourism || segmento;
-
     const lead: LeadGarimpado = {
-      id: `osm_${el.type}_${el.id}`,
+      id: `nom_${item.place_id || Date.now()}_${results.length}`,
       nome,
-      categoria: String(categoria).replace(/_/g, ' '),
+      categoria: String(item.type || item.class || segmento).replace(/_/g, ' '),
       cidade: cidadeTag,
       estado,
       endereco,
@@ -346,8 +300,8 @@ async function buscarViaOpenStreetMap(
       instagram,
       cnpj: '',
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${nome} ${cidadeTag} ${estado}`)}`,
-      latitude: lat,
-      longitude: lon,
+      latitude: item.lat ? Number(item.lat) : undefined,
+      longitude: item.lon ? Number(item.lon) : undefined,
       fonte: 'osm',
       score: 0,
       status: 'novo',
@@ -358,9 +312,403 @@ async function buscarViaOpenStreetMap(
     if (results.length >= limite) break;
   }
 
-  // Prioriza quem tem telefone/site/email no topo
-  results.sort((a, b) => b.score - a.score);
   return results;
+}
+
+async function buscarViaPhoton(
+  segmento: string,
+  cidade: string,
+  estado: string,
+  limite: number
+): Promise<LeadGarimpado[]> {
+  const q = encodeURIComponent(`${segmento} ${cidade} ${estado}`);
+  const res = await fetchComTimeout(
+    `https://photon.komoot.io/api/?q=${q}&limit=${Math.min(35, limite)}`,
+    { headers: { 'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0' } },
+    9000
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  const features: any[] = data?.features || [];
+  const now = new Date().toISOString();
+  const seen = new Set<string>();
+  const results: LeadGarimpado[] = [];
+
+  for (const f of features) {
+    const p = f.properties || {};
+    const nome = (p.name || '').trim();
+    if (!nome) continue;
+    // Filtra para manter no Brasil / cidade aproximada
+    if (p.countrycode && String(p.countrycode).toUpperCase() !== 'BR') continue;
+    const key = normalizarTexto(nome);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const cidadeTag = p.city || p.county || cidade;
+    const endereco = [
+      p.street ? `${p.street}${p.housenumber ? `, ${p.housenumber}` : ''}` : '',
+      p.district || '',
+      `${cidadeTag}/${estado}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const coords = f.geometry?.coordinates || [];
+    const lead: LeadGarimpado = {
+      id: `pho_${p.osm_id || Date.now()}_${results.length}`,
+      nome,
+      categoria: String(p.osm_value || segmento).replace(/_/g, ' '),
+      cidade: cidadeTag,
+      estado,
+      endereco,
+      telefone: '',
+      whatsapp: '',
+      email: '',
+      website: '',
+      instagram: '',
+      cnpj: '',
+      mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${nome} ${cidadeTag} ${estado}`)}`,
+      latitude: typeof coords[1] === 'number' ? coords[1] : undefined,
+      longitude: typeof coords[0] === 'number' ? coords[0] : undefined,
+      fonte: 'osm',
+      score: 0,
+      status: 'novo',
+      criadoEm: now,
+    };
+    lead.score = calcularScoreLead(lead);
+    results.push(lead);
+    if (results.length >= limite) break;
+  }
+
+  return results;
+}
+
+async function buscarViaGoogleMapsDireto(
+  segmento: string,
+  cidade: string,
+  estado: string,
+  limite: number,
+  coords?: { lat: number; lon: number }
+): Promise<LeadGarimpado[]> {
+  try {
+    const lat = coords?.lat ?? -26.0811;
+    const lon = coords?.lon ?? -53.055;
+    const query = `${segmento} em ${cidade} ${estado}`;
+    const count = Math.min(20, Math.max(10, limite));
+
+    const url =
+      `https://www.google.com/search?tbm=map&authuser=0&hl=pt-BR&gl=br` +
+      `&pb=!4m12!1m3!1d45000!2d${lon}!3d${lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!7i${count}!10b1` +
+      `&q=${encodeURIComponent(query)}`;
+
+    const res = await fetchComTimeout(
+      url,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+        },
+      },
+      10000
+    );
+
+    if (!res.ok) return [];
+    let raw = await res.text();
+    // Remove prefixo anti-XSSI do Google Maps: )]}'
+    raw = raw.replace(/^\)\]\}'\s*/, '');
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+
+    // O payload do tbm=map vem em parsed[0][1] ou dentro de uma string JSON em parsed.d
+    let root: any = parsed;
+    if (parsed && typeof parsed.d === 'string') {
+      try {
+        root = JSON.parse(parsed.d.replace(/^\)\]\}'\s*/, ''));
+      } catch {
+        return [];
+      }
+    }
+
+    const listaBruta: any[] = Array.isArray(root?.[0]?.[1]) ? root[0][1] : [];
+    const now = new Date().toISOString();
+    const seen = new Set<string>();
+    const results: LeadGarimpado[] = [];
+
+    for (const entry of listaBruta) {
+      const place = Array.isArray(entry) ? entry[14] : null;
+      if (!Array.isArray(place)) continue;
+
+      const nome = typeof place[11] === 'string' ? place[11].trim() : '';
+      if (!nome) continue;
+      const key = normalizarTexto(nome);
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // Endereço
+      const endereco =
+        (typeof place[39] === 'string' && place[39]) ||
+        (typeof place[18] === 'string' && place[18]) ||
+        (Array.isArray(place[2]) ? place[2].filter((x: any) => typeof x === 'string').join(', ') : '') ||
+        `${cidade}/${estado}`;
+
+      // Categoria
+      const categoria =
+        (Array.isArray(place[13]) && typeof place[13][0] === 'string' ? place[13][0] : '') || segmento;
+
+      // Nota e Avaliações
+      const nota = Array.isArray(place[4]) && typeof place[4][7] === 'number' ? place[4][7] : undefined;
+      const avaliacoes = Array.isArray(place[4]) && typeof place[4][8] === 'number' ? place[4][8] : undefined;
+
+      // Website
+      const website =
+        Array.isArray(place[7]) && typeof place[7][0] === 'string' ? place[7][0].trim() : '';
+
+      // Telefone (varre sub-arrays conhecidos de telefone do Maps)
+      let telefone = '';
+      if (Array.isArray(place[178])) {
+        const flat = JSON.stringify(place[178]);
+        const telMatch = flat.match(/(\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}/);
+        if (telMatch) telefone = telMatch[0];
+      }
+      if (!telefone) {
+        const flatAll = JSON.stringify(place);
+        const telMatch = flatAll.match(/\(?\d{2}\)\s?\d{4,5}-\d{4}/);
+        if (telMatch) telefone = telMatch[0];
+      }
+
+      const latP = Array.isArray(place[9]) && typeof place[9][2] === 'number' ? place[9][2] : undefined;
+      const lonP = Array.isArray(place[9]) && typeof place[9][3] === 'number' ? place[9][3] : undefined;
+      const placeId = typeof place[78] === 'string' ? place[78] : `${Date.now()}_${results.length}`;
+
+      const lead: LeadGarimpado = {
+        id: `gm_${placeId}`,
+        nome,
+        categoria,
+        cidade,
+        estado,
+        endereco,
+        telefone,
+        whatsapp: limparTelefone(telefone),
+        email: '',
+        website,
+        instagram: '',
+        cnpj: '',
+        nota,
+        avaliacoes,
+        mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${nome} ${cidade} ${estado}`)}`,
+        latitude: latP,
+        longitude: lonP,
+        fonte: 'google_maps',
+        score: 0,
+        status: 'novo',
+        criadoEm: now,
+      };
+      lead.score = calcularScoreLead(lead);
+      results.push(lead);
+      if (results.length >= limite) break;
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+async function geocodificarCidade(cidade: string, estado: string): Promise<{ lat: number; lon: number } | undefined> {
+  try {
+    const qGeo = encodeURIComponent(`${cidade}, ${estado}, Brazil`);
+    const geoRes = await fetchComTimeout(
+      `https://nominatim.openstreetmap.org/search?q=${qGeo}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0' } },
+      6000
+    );
+    if (geoRes.ok) {
+      const list: any[] = await geoRes.json();
+      if (list[0]?.lat && list[0]?.lon) {
+        return { lat: Number(list[0].lat), lon: Number(list[0].lon) };
+      }
+    }
+  } catch {}
+  return undefined;
+}
+
+async function buscarViaOpenStreetMap(
+  segmento: string,
+  cidade: string,
+  estado: string,
+  limite: number
+): Promise<{ leads: LeadGarimpado[]; motor: string }> {
+  // 1. Geocodifica a cidade via Nominatim
+  let bbox: string | null = null;
+  try {
+    const qGeo = encodeURIComponent(`${cidade}, ${estado}, Brazil`);
+    const geoRes = await fetchComTimeout(
+      `https://nominatim.openstreetmap.org/search?q=${qGeo}&format=json&limit=1&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0 (contato@privilegecontabilidade.cnt.br)',
+        },
+      },
+      8000
+    );
+    if (geoRes.ok) {
+      const geoList: any[] = await geoRes.json();
+      if (geoList.length && geoList[0].boundingbox) {
+        const [south, north, west, east] = geoList[0].boundingbox.map(Number);
+        bbox = `${south},${west},${north},${east}`;
+      }
+    }
+  } catch {}
+
+  // 2. Tier 1: Tenta 3 servidores Overpass diferentes com query leve (nwr) e timeout curto
+  if (bbox) {
+    const segNorm = normalizarTexto(segmento);
+    const matchedFilters = new Set<string>();
+    for (const group of SEGMENTO_OSM_TAGS) {
+      if (group.keywords.some(k => segNorm.includes(normalizarTexto(k)))) {
+        group.filters.forEach(f => matchedFilters.add(f));
+      }
+    }
+
+    const safeNameRegex = segmento.replace(/[.*+?^${}()|[\]\\"]/g, '').trim();
+    const queryParts: string[] = [];
+
+    if (matchedFilters.size > 0) {
+      for (const f of matchedFilters) {
+        queryParts.push(`nwr[${f}]["name"](${bbox});`);
+      }
+    } else if (safeNameRegex.length >= 3) {
+      queryParts.push(`nwr["name"~"${safeNameRegex}",i](${bbox});`);
+    } else {
+      queryParts.push(`node["shop"]["name"](${bbox});`);
+      queryParts.push(`node["office"]["name"](${bbox});`);
+    }
+
+    const overpassQuery = `[out:json][timeout:14];(${queryParts.join('')});out center ${Math.min(100, Math.max(25, limite * 2))};`;
+
+    const mirrors = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    ];
+
+    for (const mirror of mirrors) {
+      try {
+        const overRes = await fetchComTimeout(
+          mirror,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'PrivilegeConsultoriaLeadFinder/1.0',
+            },
+            body: `data=${encodeURIComponent(overpassQuery)}`,
+          },
+          11000
+        );
+
+        if (!overRes.ok) continue;
+
+        const overData = await overRes.json();
+        const elements: any[] = overData.elements || [];
+        const seen = new Set<string>();
+        const now = new Date().toISOString();
+        const results: LeadGarimpado[] = [];
+
+        for (const el of elements) {
+          const tags = el.tags || {};
+          const nome = (tags.name || '').trim();
+          if (!nome) continue;
+
+          const key = normalizarTexto(nome);
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const rua = tags['addr:street'] || '';
+          const num = tags['addr:housenumber'] || '';
+          const bairro = tags['addr:suburb'] || tags['addr:neighbourhood'] || '';
+          const cidadeTag = tags['addr:city'] || cidade;
+          const endereco = [rua ? `${rua}${num ? `, ${num}` : ''}` : '', bairro, `${cidadeTag}/${estado}`]
+            .filter(Boolean)
+            .join(' · ');
+
+          const telefone = tags['contact:phone'] || tags.phone || tags['contact:mobile'] || '';
+          const whatsappRaw = tags['contact:whatsapp'] || telefone;
+          const whatsapp = limparTelefone(whatsappRaw);
+          const email = tags['contact:email'] || tags.email || '';
+          const website = tags['contact:website'] || tags.website || tags.url || '';
+          const instagramRaw = tags['contact:instagram'] || tags.instagram || '';
+          const instagram = instagramRaw
+            ? instagramRaw.startsWith('http')
+              ? instagramRaw
+              : `https://instagram.com/${instagramRaw.replace(/^@/, '')}`
+            : '';
+
+          const lat = el.lat ?? el.center?.lat;
+          const lon = el.lon ?? el.center?.lon;
+          const categoria =
+            tags.shop || tags.office || tags.amenity || tags.healthcare || tags.craft || tags.tourism || segmento;
+
+          const lead: LeadGarimpado = {
+            id: `osm_${el.type}_${el.id}`,
+            nome,
+            categoria: String(categoria).replace(/_/g, ' '),
+            cidade: cidadeTag,
+            estado,
+            endereco,
+            telefone,
+            whatsapp,
+            email,
+            website,
+            instagram,
+            cnpj: '',
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${nome} ${cidadeTag} ${estado}`)}`,
+            latitude: lat,
+            longitude: lon,
+            fonte: 'osm',
+            score: 0,
+            status: 'novo',
+            criadoEm: now,
+          };
+          lead.score = calcularScoreLead(lead);
+          results.push(lead);
+          if (results.length >= limite) break;
+        }
+
+        if (results.length > 0) {
+          results.sort((a, b) => b.score - a.score);
+          return { leads: results, motor: 'OpenStreetMap Overpass (Gratuito)' };
+        }
+      } catch {
+        // Tenta próximo espelho Overpass
+      }
+    }
+  }
+
+  // 3. Tier 2: Fallback automático via Nominatim POI Search
+  try {
+    const nomLeads = await buscarViaNominatimPOI(segmento, cidade, estado, limite);
+    if (nomLeads.length > 0) {
+      nomLeads.sort((a, b) => b.score - a.score);
+      return { leads: nomLeads, motor: 'OpenStreetMap Nominatim (Fallback)' };
+    }
+  } catch {}
+
+  // 4. Tier 3: Fallback automático via Photon Komoot
+  try {
+    const phoLeads = await buscarViaPhoton(segmento, cidade, estado, limite);
+    if (phoLeads.length > 0) {
+      phoLeads.sort((a, b) => b.score - a.score);
+      return { leads: phoLeads, motor: 'Photon Maps (Fallback)' };
+    }
+  } catch {}
+
+  return { leads: [], motor: 'OpenStreetMap' };
 }
 
 async function consultarCnpjUnitario(cnpjRaw: string): Promise<LeadGarimpado | null> {
@@ -551,20 +899,44 @@ export async function POST(req: NextRequest) {
       const limite = Math.min(60, Math.max(5, Number(body.limite) || 25));
       const enriquecerSites = Boolean(body.enriquecerSites);
       const googleKey = String(body.googlePlacesApiKey || process.env.GOOGLE_PLACES_API_KEY || '').trim();
+      const fonteBusca = String(body.fonteBusca || 'combinado'); // 'combinado' | 'google_maps' | 'osm'
 
       if (!segmento || !cidade) {
         return NextResponse.json({ error: 'Informe o segmento e a cidade para garimpar.' }, { status: 400 });
       }
 
       let leads: LeadGarimpado[] = [];
-      let motorUsado = 'OpenStreetMap (Gratuito)';
+      const motoresUsados: string[] = [];
 
-      if (googleKey) {
-        leads = await buscarViaGooglePlaces(segmento, cidade, estado, limite, googleKey);
-        motorUsado = 'Google Maps Places API';
-      } else {
-        leads = await buscarViaOpenStreetMap(segmento, cidade, estado, limite);
+      if (googleKey && fonteBusca !== 'osm') {
+        const gpLeads = await buscarViaGooglePlaces(segmento, cidade, estado, limite, googleKey);
+        leads.push(...gpLeads);
+        if (gpLeads.length > 0) motoresUsados.push('Google Maps Places API');
+      } else if (fonteBusca !== 'osm') {
+        const coords = await geocodificarCidade(cidade, estado);
+        const gmLeads = await buscarViaGoogleMapsDireto(segmento, cidade, estado, limite, coords);
+        leads.push(...gmLeads);
+        if (gmLeads.length > 0) motoresUsados.push('Google Maps');
       }
+
+      // Complementa com OpenStreetMap quando modo combinado ou se Google Maps retornou poucos resultados
+      if (fonteBusca === 'osm' || (fonteBusca === 'combinado' && leads.length < limite)) {
+        const osmRes = await buscarViaOpenStreetMap(segmento, cidade, estado, limite);
+        if (osmRes.leads.length > 0) {
+          const vistos = new Set(leads.map(l => normalizarTexto(l.nome)));
+          for (const item of osmRes.leads) {
+            const k = normalizarTexto(item.nome);
+            if (!vistos.has(k)) {
+              vistos.add(k);
+              leads.push(item);
+            }
+            if (leads.length >= limite) break;
+          }
+          motoresUsados.push(osmRes.motor);
+        }
+      }
+
+      const motorUsado = motoresUsados.length > 0 ? motoresUsados.join(' + ') : 'Google Maps + OpenStreetMap';
 
       // Enriquecimento automático dos sites encontrados (até 12 em paralelo para manter resposta rápida)
       if (enriquecerSites && leads.length > 0) {
