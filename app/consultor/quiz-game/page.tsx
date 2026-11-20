@@ -427,7 +427,7 @@ export default function QuizGameHostPage() {
                     <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{q.title}</h3>
                     <span
                       style={{
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight: 700,
                         padding: '3px 9px',
                         borderRadius: 999,
@@ -440,7 +440,7 @@ export default function QuizGameHostPage() {
                       {q.questions?.length || 0} perguntas
                     </span>
                   </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.45 }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.45 }}>
                     {q.description || 'Quiz corporativo interativo.'}
                   </p>
                 </div>
@@ -453,7 +453,7 @@ export default function QuizGameHostPage() {
                     style={{
                       flex: 1,
                       padding: '9px 12px',
-                      fontSize: 13,
+                      fontSize: 14.5,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -559,10 +559,10 @@ export default function QuizGameHostPage() {
               className="btn btn-primary"
               style={{
                 padding: '10px 16px',
-                fontSize: 13,
+                fontSize: 14.5,
               }}
             >
-              {generatingAi ? 'Gerando...' : '✨ Gerar Perguntas'}
+              {generatingAi ? 'Gerando...' : 'Gerar Perguntas'}
             </button>
           </div>
 
@@ -571,11 +571,11 @@ export default function QuizGameHostPage() {
             <div key={q.id} className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <strong style={{ fontSize: 14 }}>Pergunta {qIdx + 1}</strong>
+                  <strong style={{ fontSize: 15.5 }}>Pergunta {qIdx + 1}</strong>
                   <input
                     type="text"
                     className="form-control"
-                    style={{ width: 170, padding: '4px 8px', fontSize: 12 }}
+                    style={{ width: 170, padding: '4px 8px', fontSize: 14 }}
                     placeholder="Categoria (opcional)"
                     value={q.category || ''}
                     onChange={e => {
@@ -619,20 +619,20 @@ export default function QuizGameHostPage() {
                   </button>
                   <select
                     className="form-control"
-                    style={{ width: 130, padding: '5px 8px', fontSize: 12 }}
+                    style={{ width: 130, padding: '5px 8px', fontSize: 14 }}
                     value={q.timeLimitSec}
                     onChange={e => {
                       const val = Number(e.target.value);
                       setQuestions(prev => prev.map((item, i) => (i === qIdx ? { ...item, timeLimitSec: val } : item)));
                     }}
                   >
-                    <option value={10}>⏱️ 10s</option>
-                    <option value={15}>⏱️ 15s</option>
-                    <option value={20}>⏱️ 20s</option>
-                    <option value={30}>⏱️ 30s</option>
-                    <option value={45}>⏱️ 45s</option>
-                    <option value={60}>⏱️ 60s</option>
-                    <option value={0}>⏱️ Sem limite</option>
+                    <option value={10}>10s</option>
+                    <option value={15}>15s</option>
+                    <option value={20}>20s</option>
+                    <option value={30}>30s</option>
+                    <option value={45}>45s</option>
+                    <option value={60}>60s</option>
+                    <option value={0}>Sem limite</option>
                   </select>
                   {questions.length > 1 && (
                     <button
@@ -695,7 +695,7 @@ export default function QuizGameHostPage() {
                       <input
                         type="text"
                         className="form-control"
-                        style={{ flex: 1, fontSize: 13 }}
+                        style={{ flex: 1, fontSize: 14.5 }}
                         placeholder={`Opção ${st.name}`}
                         value={opt}
                         onChange={e => {
@@ -711,7 +711,7 @@ export default function QuizGameHostPage() {
                         }}
                         required
                       />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                         <input
                           type="radio"
                           name={`correct_${q.id}`}
@@ -791,7 +791,7 @@ export default function QuizGameHostPage() {
           {/* Barra superior da Arena */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <div>
-              <div style={{ fontSize: 12, opacity: 0.78, fontWeight: 700 }}>QUIZ AO VIVO</div>
+              <div style={{ fontSize: 14, opacity: 0.78, fontWeight: 700 }}>QUIZ AO VIVO</div>
               <div style={{ fontSize: 18, fontWeight: 900 }}>{session.title}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -801,7 +801,7 @@ export default function QuizGameHostPage() {
                   padding: '6px 14px',
                   borderRadius: 999,
                   fontWeight: 800,
-                  fontSize: 14,
+                  fontSize: 15.5,
                 }}
               >
                 PIN: {session.pin}
@@ -812,7 +812,7 @@ export default function QuizGameHostPage() {
                   padding: '6px 14px',
                   borderRadius: 999,
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -850,7 +850,7 @@ export default function QuizGameHostPage() {
                   padding: '0 12px',
                   height: 36,
                   fontWeight: 800,
-                  fontSize: 12,
+                  fontSize: 14,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
@@ -886,8 +886,8 @@ export default function QuizGameHostPage() {
           {session.status === 'lobby' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, alignItems: 'center', margin: '24px 0' }}>
               <div style={{ background: '#fff', color: '#111827', borderRadius: 18, padding: 22, textAlign: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280' }}>ENTRE PELO CELULAR EM:</div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#600000', wordBreak: 'break-all', margin: '4px 0 12px' }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: '#6b7280' }}>ENTRE PELO CELULAR EM:</div>
+                <div style={{ fontSize: 14.5, fontWeight: 800, color: '#600000', wordBreak: 'break-all', margin: '4px 0 12px' }}>
                   {joinUrl}
                 </div>
                 {qrDataUrl && (
@@ -897,7 +897,7 @@ export default function QuizGameHostPage() {
                     style={{ width: 190, height: 190, margin: '0 auto 12px', display: 'block', borderRadius: 12 }}
                   />
                 )}
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>PIN DO JOGO</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>PIN DO JOGO</div>
                 <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 6, color: '#3b0000', lineHeight: 1.1 }}>
                   {session.pin}
                 </div>
@@ -914,7 +914,7 @@ export default function QuizGameHostPage() {
                       borderRadius: 8,
                       border: '1px solid #d1d5db',
                       background: '#f9fafb',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -934,7 +934,7 @@ export default function QuizGameHostPage() {
                       borderRadius: 8,
                       background: 'rgba(96, 0, 0, 0.08)',
                       color: '#600000',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 700,
                       textDecoration: 'none',
                       display: 'inline-flex',
@@ -953,7 +953,7 @@ export default function QuizGameHostPage() {
                 </h2>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, minHeight: 120, alignContent: 'flex-start' }}>
                   {sortedPlayers.length === 0 ? (
-                    <div style={{ opacity: 0.75, fontSize: 14 }}>
+                    <div style={{ opacity: 0.75, fontSize: 15.5 }}>
                       Peça para os participantes escanearem o QR Code ou acessarem <strong>/quiz</strong> com o PIN{' '}
                       <strong>{session.pin}</strong>...
                     </div>
@@ -966,7 +966,7 @@ export default function QuizGameHostPage() {
                           padding: '8px 14px',
                           borderRadius: 999,
                           fontWeight: 800,
-                          fontSize: 14,
+                          fontSize: 15.5,
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 6,
@@ -980,7 +980,7 @@ export default function QuizGameHostPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', padding: '6px 10px', borderRadius: 10, fontSize: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', padding: '6px 10px', borderRadius: 10, fontSize: 14 }}>
                     <span>Tempo:</span>
                     <select
                       value={lobbyTimeOverride}
@@ -989,7 +989,7 @@ export default function QuizGameHostPage() {
                         setLobbyTimeOverride(val);
                         if (activeGameId) handleStartArena(activeGameId, lobbyQuestionLimit, val);
                       }}
-                      style={{ background: '#2b0404', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
+                      style={{ background: '#2b0404', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '4px 8px', fontSize: 14 }}
                     >
                       <option value={-1}>Padrão do quiz</option>
                       <option value={10}>10s</option>
@@ -1001,7 +1001,7 @@ export default function QuizGameHostPage() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', padding: '6px 10px', borderRadius: 10, fontSize: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', padding: '6px 10px', borderRadius: 10, fontSize: 14 }}>
                     <span>Perguntas:</span>
                     <select
                       value={lobbyQuestionLimit}
@@ -1010,7 +1010,7 @@ export default function QuizGameHostPage() {
                         setLobbyQuestionLimit(val);
                         if (activeGameId) handleStartArena(activeGameId, val, lobbyTimeOverride);
                       }}
-                      style={{ background: '#2b0404', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
+                      style={{ background: '#2b0404', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '4px 8px', fontSize: 14 }}
                     >
                       <option value={0}>Todas ({session.questions?.length || 0})</option>
                       <option value={5}>5 perguntas</option>
@@ -1052,7 +1052,7 @@ export default function QuizGameHostPage() {
                         border: '1px solid rgba(255,255,255,0.28)',
                         background: 'rgba(255,255,255,0.12)',
                         color: '#fff',
-                        fontSize: 14,
+                        fontSize: 15.5,
                         fontWeight: 800,
                         cursor: 'pointer',
                         display: 'inline-flex',
@@ -1073,17 +1073,17 @@ export default function QuizGameHostPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, margin: '20px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800 }}>
+                  <span style={{ fontSize: 15.5, fontWeight: 800 }}>
                     Pergunta {session.current_question_index + 1} de {session.questions.length}
                   </span>
                   {currentQ.category && (
-                    <span style={{ fontSize: 12, fontWeight: 700, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 999 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 999 }}>
                       {currentQ.category}
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, background: 'rgba(255,255,255,0.14)', padding: '6px 14px', borderRadius: 999 }}>
+                  <span style={{ fontSize: 15.5, fontWeight: 700, background: 'rgba(255,255,255,0.14)', padding: '6px 14px', borderRadius: 999 }}>
                     {answeredCount} / {sortedPlayers.length} responderam
                   </span>
                   <span
@@ -1155,7 +1155,7 @@ export default function QuizGameHostPage() {
                     background: '#fff',
                     color: '#312e81',
                     fontWeight: 800,
-                    fontSize: 14,
+                    fontSize: 15.5,
                     cursor: 'pointer',
                   }}
                 >
@@ -1245,7 +1245,7 @@ export default function QuizGameHostPage() {
           {session.status === 'leaderboard' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, margin: '20px 0' }}>
               <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, textAlign: 'center' }}>
-                🏆 Placar Parcial (Top 5)
+                Placar Parcial (Top 5)
               </h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 640, width: '100%', margin: '0 auto' }}>
@@ -1267,7 +1267,7 @@ export default function QuizGameHostPage() {
                       <span style={{ fontSize: 22 }}>{p.avatar}</span>
                       <span>{p.nickname}</span>
                       {p.streak >= 2 && (
-                        <span style={{ fontSize: 12, background: 'rgba(0,0,0,0.28)', padding: '3px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ fontSize: 14, background: 'rgba(0,0,0,0.28)', padding: '3px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                           <Flame size={12} color="#fde047" /> {p.streak}x
                         </span>
                       )}
@@ -1296,7 +1296,7 @@ export default function QuizGameHostPage() {
                   }}
                 >
                   {session.current_question_index + 1 >= session.questions.length
-                    ? 'Ver Pódio Final 🏆'
+                    ? 'Ver Pódio Final '
                     : 'Próxima Pergunta →'}
                 </button>
               </div>
@@ -1355,7 +1355,7 @@ export default function QuizGameHostPage() {
                   background: '#fff',
                   color: '#312e81',
                   fontWeight: 900,
-                  fontSize: 14,
+                  fontSize: 15.5,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1367,7 +1367,7 @@ export default function QuizGameHostPage() {
             </div>
           )}
 
-          <div style={{ fontSize: 11.5, opacity: 0.7, textAlign: 'center' }}>
+          <div style={{ fontSize: 13.5, opacity: 0.7, textAlign: 'center' }}>
             Privilege Quiz Arena · Participantes entram em <strong>/quiz</strong> com o PIN <strong>{session.pin}</strong>
           </div>
         </div>
@@ -1398,7 +1398,7 @@ export default function QuizGameHostPage() {
                 <BarChart3 size={18} color="var(--accent)" />
                 Dashboard de Respostas em Tempo Real
               </h3>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', padding: '4px 10px', borderRadius: 999 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', padding: '4px 10px', borderRadius: 999 }}>
                 ● Atualização ao vivo (PIN {session.pin})
               </span>
             </div>
@@ -1406,22 +1406,22 @@ export default function QuizGameHostPage() {
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 18 }}>
               <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Participantes na Sala</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>Participantes na Sala</div>
                 <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>{playersList.length}</div>
               </div>
               <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Respostas na Rodada</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>Respostas na Rodada</div>
                 <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>
                   {answeredCount}/{playersList.length}{' '}
-                  <span style={{ fontSize: 13, color: 'var(--accent)' }}>({roundPct}%)</span>
+                  <span style={{ fontSize: 14.5, color: 'var(--accent)' }}>({roundPct}%)</span>
                 </div>
               </div>
               <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Taxa Geral de Acerto</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>Taxa Geral de Acerto</div>
                 <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4, color: '#16a34a' }}>{accuracyPct}%</div>
               </div>
               <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Tempo Médio</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>Tempo Médio</div>
                 <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>{avgTimeSec}s</div>
               </div>
             </div>
@@ -1429,7 +1429,7 @@ export default function QuizGameHostPage() {
             {/* Distribuição ao vivo por alternativa */}
             {currentQ && (
               <div style={{ marginBottom: 18, padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
                   Distribuição das respostas — Pergunta {session.current_question_index + 1}:
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1450,7 +1450,7 @@ export default function QuizGameHostPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 13,
+                            fontSize: 14.5,
                             fontWeight: 900,
                             flexShrink: 0,
                           }}
@@ -1458,7 +1458,7 @@ export default function QuizGameHostPage() {
                           {st.shape}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginBottom: 3 }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {opt} {showCorrectMark ? '✅' : ''}
                             </span>
@@ -1486,7 +1486,7 @@ export default function QuizGameHostPage() {
 
             {/* Tabela ao vivo por participante */}
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '8px 10px' }}>#</th>
@@ -1519,18 +1519,18 @@ export default function QuizGameHostPage() {
                             {!currentQ ? (
                               <span style={{ color: 'var(--text-muted)' }}>Na sala</span>
                             ) : !ans ? (
-                              <span style={{ color: '#d97706', fontWeight: 600 }}>⏳ Aguardando...</span>
+                              <span style={{ color: '#d97706', fontWeight: 600 }}>Aguardando...</span>
                             ) : session.status === 'question' ? (
                               <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
                                 {optStyle?.shape} Respondeu
                               </span>
                             ) : ans.correct ? (
                               <span style={{ color: '#16a34a', fontWeight: 700 }}>
-                                ✅ Acertou (+{ans.points} pts)
+                                Acertou (+{ans.points} pts)
                               </span>
                             ) : (
                               <span style={{ color: '#dc2626', fontWeight: 700 }}>
-                                ❌ Errou ({optStyle?.shape})
+                                Errou ({optStyle?.shape})
                               </span>
                             )}
                           </td>

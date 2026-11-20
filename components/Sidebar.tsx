@@ -698,7 +698,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             title={selectableEmpresas.length > 1 ? "Trocar de empresa" : "Empresa ativa"}
           >
             <Building2 size={13} style={{ flexShrink: 0, color: '#600000' }} />
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial || 'Selecionar empresa'}
             </span>
             {(selectableEmpresas.length > 1 || isConsultorOrAdmin) && (
@@ -723,7 +723,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                   value={searchEmpresa}
                   onChange={e => setSearchEmpresa(e.target.value)}
                   style={{
-                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 12.5, borderRadius: 10,
+                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 14, borderRadius: 10,
                     border: '1px solid #e5e5e5', outline: 'none', color: '#171717',
                   }}
                 />
@@ -731,14 +731,14 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               {!searchEmpresa && recentEmpresas.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Clock size={11} /> Recentes
                   </div>
                   {recentEmpresas.map(id => {
                     const e = selectableEmpresas.find(x => x.id === id);
                     if (!e) return null;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         {e.nomeFantasia || e.razaoSocial}
                       </div>
                     );
@@ -748,13 +748,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               {!searchEmpresa && gruposEconomicos.length > 0 && isConsultorOrAdmin && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Globe size={11} /> Grupos econômicos
                   </div>
                   {gruposEconomicos.map(g => {
                     const id = `grupo:${g}`;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: id === selectedEmpresa ? 600 : 400, background: id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: id === selectedEmpresa ? 600 : 400, background: id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         Grupo {g}
                       </div>
                     );
@@ -763,18 +763,18 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
 
               <div>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                   {isConsultorOrAdmin ? `Todas as empresas (${selectableEmpresas.length})` : `Empresas autorizadas (${selectableEmpresas.length})`}
                 </div>
                 {selectableEmpresas
                   .filter(e => !searchEmpresa || `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase()))
                   .map(e => (
-                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                       {e.nomeFantasia || e.razaoSocial}
                     </div>
                   ))}
                 {searchEmpresa && selectableEmpresas.filter(e => `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase())).length === 0 && (
-                  <div style={{ fontSize: 12, color: '#737373', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
+                  <div style={{ fontSize: 14, color: '#737373', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
                 )}
               </div>
             </div>
@@ -871,7 +871,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             background: '#ffffff',
             color: '#525252',
             border: '1px solid #e5e5e5',
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 500,
             cursor: 'pointer',
             flexShrink: 0,
@@ -883,7 +883,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           {!isSidebarCompact && (
             <kbd
               style={{
-                fontSize: 10,
+                fontSize: 12.5,
                 padding: '1px 5px',
                 borderRadius: 5,
                 border: '1px solid #e5e5e5',
@@ -917,7 +917,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               borderRadius: 99,
               background: syncStatus === 'synced' ? 'transparent' : syncStatus === 'syncing' ? '#fffbeb' : '#fef2f2',
               color: syncStatus === 'synced' ? '#16a34a' : syncStatus === 'syncing' ? '#d97706' : '#dc2626',
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 500,
             }}
           >
@@ -948,7 +948,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             background: pathname?.includes('/whatsapp') ? '#15803d' : 'rgba(22, 163, 74, 0.1)',
             color: pathname?.includes('/whatsapp') ? '#ffffff' : '#15803d',
             border: '1px solid rgba(22, 163, 74, 0.3)',
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',
             flexShrink: 0,
@@ -991,7 +991,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 background: '#171717',
                 color: '#fff',
                 fontWeight: 600,
-                fontSize: 11,
+                fontSize: 13,
                 borderRadius: '50%',
                 border: 'none',
               }}
@@ -1007,7 +1007,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
             </div>
             {!isSidebarCompact && (
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user?.name?.split(' ')[0] || 'Conta'}
               </span>
             )}
@@ -1031,16 +1031,16 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 marginTop: 8
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 2 }}>{user?.name}</div>
-              <div style={{ fontSize: 11.5, color: '#737373', marginBottom: 8 }}>{user?.email}</div>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 2 }}>{user?.name}</div>
+              <div style={{ fontSize: 13.5, color: '#737373', marginBottom: 8 }}>{user?.email}</div>
               <div style={{ height: 1, background: '#f0f0f0', margin: '8px 0' }} />
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                  <span style={{ fontSize: 12, color: '#525252' }}>Tema</span>
+                  <span style={{ fontSize: 14, color: '#525252' }}>Tema</span>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ padding: '4px 10px', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    style={{ padding: '4px 10px', fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                     onClick={toggleTheme}
                   >
                     {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}

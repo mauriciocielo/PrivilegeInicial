@@ -103,7 +103,7 @@ export default function ClientePoliticasPage() {
           <div className="page-subtitle">Consulte as diretrizes e regras corporativas homologadas</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={handlePrint}>🖨️ Imprimir / PDF</button>
+          <button className="btn btn-primary" onClick={handlePrint}>Imprimir / PDF</button>
         </div>
       </div>
 
@@ -151,7 +151,7 @@ export default function ClientePoliticasPage() {
                 <span>{POLICY_INFO[activeTab].icon}</span>
                 {POLICY_INFO[activeTab].title}
               </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
                 {POLICY_INFO[activeTab].description}
               </p>
             </div>
@@ -165,7 +165,7 @@ export default function ClientePoliticasPage() {
                   border: '1px solid var(--border-light)', 
                   borderRadius: 8, 
                   padding: '24px 30px', 
-                  fontSize: 13.5, 
+                  fontSize: 15, 
                   lineHeight: '1.8',
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'Georgia, serif',
@@ -178,8 +178,8 @@ export default function ClientePoliticasPage() {
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-light)', borderRadius: 8, padding: 40, color: 'var(--text-muted)' }}>
                 <span style={{ fontSize: 40, marginBottom: 12 }}>📋</span>
-                <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Sem Diretriz Homologada</h4>
-                <p style={{ fontSize: 12, textAlign: 'center', maxWidth: '300px' }}>
+                <h4 style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Sem Diretriz Homologada</h4>
+                <p style={{ fontSize: 14, textAlign: 'center', maxWidth: '300px' }}>
                   Sua assessoria financeira Privilege Consultoria ainda não rascunhou a política de {POLICY_INFO[activeTab].title.toLowerCase()} para sua empresa.
                 </p>
               </div>
@@ -204,10 +204,10 @@ export default function ClientePoliticasPage() {
               <h1 style={{ fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', margin: '0 0 6px 0' }}>
                 {POLICY_INFO[activeTab].title}
               </h1>
-              <p style={{ fontSize: '12px', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+              <p style={{ fontSize: '14px', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
                 {empresa?.razaoSocial} • CNPJ {empresa?.cnpj}
               </p>
-              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0 0' }}>
                 Emitido em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
               </p>
             </div>
@@ -215,7 +215,7 @@ export default function ClientePoliticasPage() {
             {/* Texto */}
             <div 
               style={{ 
-                fontSize: '13px', 
+                fontSize: '14.5px', 
                 lineHeight: '1.7', 
                 whiteSpace: 'pre-wrap', 
                 color: '#000',
@@ -229,13 +229,13 @@ export default function ClientePoliticasPage() {
             <div style={{ marginTop: 60, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, paddingTop: 30, borderTop: '1px dashed #ccc' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '200px', margin: '0 auto', marginTop: 30 }}></div>
-                <p style={{ fontSize: '11px', fontWeight: 600, margin: '6px 0 0 0' }}>{empresa?.responsavel || 'Responsável Legal'}</p>
-                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>Representante Corporativo</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, margin: '6px 0 0 0' }}>{empresa?.responsavel || 'Responsável Legal'}</p>
+                <p style={{ fontSize: '12.5px', color: '#666', margin: 0 }}>Representante Corporativo</p>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '200px', margin: '0 auto', marginTop: 30 }}></div>
-                <p style={{ fontSize: '11px', fontWeight: 600, margin: '6px 0 0 0' }}>Privilege Consultoria</p>
-                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>Assessor Financeiro / CFO Adjunto</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, margin: '6px 0 0 0' }}>Privilege Consultoria</p>
+                <p style={{ fontSize: '12.5px', color: '#666', margin: 0 }}>Assessor Financeiro / CFO Adjunto</p>
               </div>
             </div>
 

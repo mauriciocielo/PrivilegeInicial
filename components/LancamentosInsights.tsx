@@ -114,7 +114,7 @@ export default function LancamentosInsights({
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <h3 className="ai-insights-title" style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+      <h3 className="ai-insights-title" style={{ fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
         <Sparkles size={14} className="pulse-glow" /> Insights da IA
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -142,16 +142,16 @@ export default function LancamentosInsights({
                 <Icon size={16} strokeWidth={2.2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 12.5, letterSpacing: 0.2, marginBottom: 3 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14, letterSpacing: 0.2, marginBottom: 3 }}>
                   {insight.title}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   {insight.desc}
                 </div>
                 {insight.onClick && (
                   <button
                     className="btn btn-ghost btn-sm"
-                    style={{ marginTop: 8, padding: '3px 10px', fontSize: 11 }}
+                    style={{ marginTop: 8, padding: '3px 10px', fontSize: 13 }}
                     onClick={insight.onClick}
                   >
                     {insight.actionLabel || 'Ver'}

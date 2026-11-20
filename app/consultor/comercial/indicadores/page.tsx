@@ -167,41 +167,41 @@ export default function ComercialIndicadoresPage() {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 20 }}>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Faturamento Mensal Médio</span>
             <DollarSign size={15} color="var(--accent)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: 'var(--accent)' }}>{fmtBRL(kpis.avgMensal)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>Acumulado: {fmtBRL(kpis.totalRealizado)}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>Acumulado: {fmtBRL(kpis.totalRealizado)}</div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Ticket Médio</span>
             <TrendingUp size={15} color="var(--gold)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{fmtBRL(kpis.ticketMedio)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{kpis.totalVendas} vendas no período</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>{kpis.totalVendas} vendas no período</div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Atingimento da Projeção</span>
             <Target size={15} color="#16a34a" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: kpis.atingimento >= 100 ? '#16a34a' : 'var(--yellow)' }}>
             {kpis.atingimento.toFixed(1)}%
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>Meta total: {fmtBRL(kpis.totalMeta)}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>Meta total: {fmtBRL(kpis.totalMeta)}</div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Taxa de Conversão</span>
             <Percent size={15} color="var(--accent)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{kpis.convGlobal.toFixed(1)}%</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>
             Fechamento de propostas: {kpis.convProposta.toFixed(1)}%
           </div>
         </div>
@@ -212,20 +212,20 @@ export default function ComercialIndicadoresPage() {
         <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 12px' }}>Funil de Monetização e Conversão</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 700 }}>1. LEADS GERADOS</div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 700 }}>1. LEADS GERADOS</div>
             <div style={{ fontSize: 26, fontWeight: 900, marginTop: 4 }}>{kpis.totalLeads}</div>
           </div>
           <div style={{ padding: 14, borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 700 }}>2. PROPOSTAS ENVIADAS</div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 700 }}>2. PROPOSTAS ENVIADAS</div>
             <div style={{ fontSize: 26, fontWeight: 900, marginTop: 4 }}>{kpis.totalPropostas}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>
+            <div style={{ fontSize: 13.5, color: 'var(--accent)', fontWeight: 700 }}>
               {kpis.totalLeads > 0 ? ((kpis.totalPropostas / kpis.totalLeads) * 100).toFixed(1) : '0.0'}% dos leads
             </div>
           </div>
           <div style={{ padding: 14, borderRadius: 12, background: 'var(--accent-glow)', border: '1px solid var(--accent-border)' }}>
-            <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>3. VENDAS FECHADAS</div>
+            <div style={{ fontSize: 13.5, color: 'var(--accent)', fontWeight: 700 }}>3. VENDAS FECHADAS</div>
             <div style={{ fontSize: 26, fontWeight: 900, marginTop: 4, color: 'var(--accent)' }}>{kpis.totalVendas}</div>
-            <div style={{ fontSize: 11.5, color: '#16a34a', fontWeight: 700 }}>
+            <div style={{ fontSize: 13.5, color: '#16a34a', fontWeight: 700 }}>
               {kpis.convProposta.toFixed(1)}% das propostas
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function ComercialIndicadoresPage() {
       <div className="card" style={{ padding: 18 }}>
         <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 12px' }}>Projeções de Vendas &amp; Faturamento Mensal (Editável com o Cliente)</h3>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '8px' }}>Mês</th>
@@ -259,7 +259,7 @@ export default function ComercialIndicadoresPage() {
                     <td style={{ padding: '6px 8px' }}>
                       <input
                         className="form-control"
-                        style={{ width: 100, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 100, padding: '5px 8px', fontSize: 14 }}
                         value={r.month}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, month: e.target.value } : x)))}
                       />
@@ -268,7 +268,7 @@ export default function ComercialIndicadoresPage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 125, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 125, padding: '5px 8px', fontSize: 14 }}
                         value={r.meta}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, meta: Number(e.target.value) } : x)))}
                       />
@@ -277,7 +277,7 @@ export default function ComercialIndicadoresPage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 125, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 125, padding: '5px 8px', fontSize: 14 }}
                         value={r.realizado}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, realizado: Number(e.target.value) } : x)))}
                       />
@@ -286,7 +286,7 @@ export default function ComercialIndicadoresPage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 80, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 80, padding: '5px 8px', fontSize: 14 }}
                         value={r.leadsCount}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, leadsCount: Number(e.target.value) } : x)))}
                       />
@@ -295,7 +295,7 @@ export default function ComercialIndicadoresPage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 80, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 80, padding: '5px 8px', fontSize: 14 }}
                         value={r.propostasCount}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, propostasCount: Number(e.target.value) } : x)))}
                       />
@@ -304,7 +304,7 @@ export default function ComercialIndicadoresPage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 80, padding: '5px 8px', fontSize: 12 }}
+                        style={{ width: 80, padding: '5px 8px', fontSize: 14 }}
                         value={r.vendasCount}
                         onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, vendasCount: Number(e.target.value) } : x)))}
                       />

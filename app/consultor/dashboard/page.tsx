@@ -251,7 +251,7 @@ export default function ConsultorDashboard() {
     const favoravel = subiu === favoravelSeMaior;
     return (
       <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 11, fontWeight: 800,
+        display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 13, fontWeight: 800,
         color: favoravel ? 'var(--green)' : 'var(--red)',
       }}>
         {subiu ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>vs. mês anterior</span>
@@ -325,17 +325,17 @@ export default function ConsultorDashboard() {
             justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a3a3a3' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a3a3a3' }}>
                 Caixa Consolidado ({empresa?.nomeFantasia || 'Empresa'})
               </span>
-              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.1)', color: '#e5e5e5' }}>
+              <span style={{ fontSize: 13, padding: '3px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.1)', color: '#e5e5e5' }}>
                 {mesAtualLabel}
               </span>
             </div>
             <div style={{
-              fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: 44,
-              fontWeight: 400,
+              fontVariantNumeric: 'tabular-nums',
+              fontSize: 38,
+              fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: '-0.02em',
               color: '#ffffff',
@@ -343,7 +343,7 @@ export default function ConsultorDashboard() {
             }}>
               <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
             </div>
-            <div style={{ fontSize: 12.5, color: '#a3a3a3' }}>
+            <div style={{ fontSize: 14, color: '#a3a3a3' }}>
               Saldo consolidado nas contas e portadores ativos até o encerramento do período selecionado.
             </div>
           </div>
@@ -356,23 +356,23 @@ export default function ConsultorDashboard() {
             justifyContent: 'space-between',
           }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
                 Valuation Estimado (Múltiplo {valuation.mult}x EBITDA)
               </div>
               <div style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 38,
-                fontWeight: 400,
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 32,
+                fontWeight: 700,
                 lineHeight: 1.1,
                 color: '#000000',
               }}>
                 <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
               </div>
-              <div style={{ fontSize: 12.5, color: '#525252', marginTop: 8 }}>
+              <div style={{ fontSize: 14, color: '#525252', marginTop: 8 }}>
                 Baseado no EBITDA médio mensal de <strong><AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} /></strong> anualizado, deduzido do passivo de <strong><AnimatedCounter target={valuation.divida} prefix="R$ " decimals={2} /></strong>.
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 24, paddingTop: 14, marginTop: 14, borderTop: '1px solid #f0f0f0', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 24, paddingTop: 14, marginTop: 14, borderTop: '1px solid #f0f0f0', fontSize: 14 }}>
               <div>
                 <span style={{ color: '#737373' }}>Faturamento Meta: </span>
                 <strong style={{ color: '#171717' }}>{fmt.currency(indicador?.faturamento || empresa?.receitaMensalEstimada || 0)}</strong>
@@ -441,21 +441,21 @@ export default function ConsultorDashboard() {
             <div className="card-header">
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>DRE Interativa — YOY / MoM</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Crescimento e Margem nos últimos 6 meses (Waterfall simulado)</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Crescimento e Margem nos últimos 6 meses (Waterfall simulado)</div>
               </div>
             </div>
             <div className="chart-container" style={{ paddingTop: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={resumo} barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 13, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.8)', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                     formatter={(v: any) => fmt.currency(Number(v || 0))}
                   />
-                  <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
+                  <Legend wrapperStyle={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
                   <Bar dataKey="receitas" name="Entradas (Revenue)" fill="url(#colorRecC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
                   <Bar dataKey="despesas" name="Saídas (Costs)" fill="url(#colorDespC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
                   <Bar dataKey="saldo" name="Margem Bruta (Net)" fill="var(--amber)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
@@ -480,8 +480,8 @@ export default function ConsultorDashboard() {
                     const pctRec = anterior.receitas > 0 ? (diffRec / anterior.receitas) * 100 : 0;
                     return (
                       <div style={{ padding: '12px', background: 'rgba(255,255,255,0.94)', borderRadius: 8, border: '1px solid rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Receita vs Mês Ant.)</span>
-                         <span style={{ fontSize: 13, fontWeight: 800, color: diffRec >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                         <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Receita vs Mês Ant.)</span>
+                         <span style={{ fontSize: 14.5, fontWeight: 800, color: diffRec >= 0 ? 'var(--green)' : 'var(--red)' }}>
                            {diffRec >= 0 ? '↗' : '↘'} {Math.abs(pctRec).toFixed(1)}% ({fmt.currency(diffRec)})
                          </span>
                       </div>
@@ -494,8 +494,8 @@ export default function ConsultorDashboard() {
                     const pctDesp = anterior.despesas > 0 ? (diffDesp / anterior.despesas) * 100 : 0;
                     return (
                       <div style={{ padding: '12px', background: 'rgba(255,255,255,0.94)', borderRadius: 8, border: '1px solid rgba(0,0,0,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Despesas vs Mês Ant.)</span>
-                         <span style={{ fontSize: 13, fontWeight: 800, color: diffDesp <= 0 ? 'var(--green)' : 'var(--red)' }}>
+                         <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600 }}>MoM (Despesas vs Mês Ant.)</span>
+                         <span style={{ fontSize: 14.5, fontWeight: 800, color: diffDesp <= 0 ? 'var(--green)' : 'var(--red)' }}>
                            {diffDesp <= 0 ? '↘' : '↗'} {Math.abs(pctDesp).toFixed(1)}% ({fmt.currency(diffDesp)})
                          </span>
                       </div>
@@ -509,7 +509,7 @@ export default function ConsultorDashboard() {
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontSize: '18px', fontWeight: 800 }}>Mapeamento de Despesas</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Classificação ABC - Mês atual</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Classificação ABC - Mês atual</div>
               </div>
             </div>
             <div className="chart-container" style={{ position: 'relative' }}>
@@ -523,7 +523,7 @@ export default function ConsultorDashboard() {
                     formatter={(v: any) => fmt.currency(Number(v || 0))} 
                     contentStyle={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} 
                   />
-                  <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
+                  <Legend wrapperStyle={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -536,7 +536,7 @@ export default function ConsultorDashboard() {
             <div className="card-header" style={{ marginBottom: 24 }}>
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Central de Relatórios e Auditoria</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Acesse os demonstrativos detalhados com inteligência artificial</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Acesse os demonstrativos detalhados com inteligência artificial</div>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', flex: 1 }}>
@@ -546,7 +546,7 @@ export default function ConsultorDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Fluxo de Caixa Mensal</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas, Saídas e Saldos Diários (Regime de Caixa)</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas, Saídas e Saldos Diários (Regime de Caixa)</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3b82f6', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
                 </a>
@@ -557,7 +557,7 @@ export default function ConsultorDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>DRE Gerencial</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Análise de Resultados e Provisões (Regime de Competência)</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Análise de Resultados e Provisões (Regime de Competência)</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
                 </a>
@@ -568,7 +568,7 @@ export default function ConsultorDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Balanço Patrimonial</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Ativos, Passivos, PL e Indicadores de Liquidez</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Ativos, Passivos, PL e Indicadores de Liquidez</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f59e0b', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>→</div>
                 </a>
@@ -588,9 +588,9 @@ export default function ConsultorDashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, background: `${color}15`, borderRadius: '6px', color: color }}>🏦</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{p.nome}</span>
+                        <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>{p.nome}</span>
                       </div>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      <span style={{ fontSize: 15.5, fontWeight: 800, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {fmt.currency(p.saldo)}
                       </span>
                     </div>
@@ -605,22 +605,22 @@ export default function ConsultorDashboard() {
             {/* Políticas e Diretrizes Estratégicas */}
             {(empresa?.politicaReceberName || empresa?.politicaComprasName || empresa?.politicaCobrancaName) && (
               <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px dashed rgba(0,0,0,0.1)' }}>
-                <h4 style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16 }}>Políticas Estratégicas Estabelecidas</h4>
+                <h4 style={{ fontSize: 14.5, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16 }}>Políticas Estratégicas Estabelecidas</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {empresa.politicaReceberName && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.94) 100%)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.8)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>💵</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Contas a Receber</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaReceberName}</div>
+                          <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>Contas a Receber</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaReceberName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=receber`} 
                         download={empresa.politicaReceberName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 11, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
+                        style={{ fontSize: 13, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
                       >
                         Baixar Doc
                       </a>
@@ -631,15 +631,15 @@ export default function ConsultorDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🛒</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Compras / Suprimentos</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaComprasName}</div>
+                          <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>Compras / Suprimentos</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaComprasName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=compras`} 
                         download={empresa.politicaComprasName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 11, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
+                        style={{ fontSize: 13, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
                       >
                         Baixar Doc
                       </a>
@@ -650,15 +650,15 @@ export default function ConsultorDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <span style={{ fontSize: 18, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>⚖️</span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Cobrança / Crédito</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaCobrancaName}</div>
+                          <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>Cobrança / Crédito</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{empresa.politicaCobrancaName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=cobranca`} 
                         download={empresa.politicaCobrancaName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 11, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
+                        style={{ fontSize: 13, padding: '4px 12px', background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-primary)' }}
                       >
                         Baixar Doc
                       </a>
@@ -676,7 +676,7 @@ export default function ConsultorDashboard() {
             <div className="card-header" style={{ marginBottom: 20 }}>
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '20px', fontWeight: 800 }}>Resumo de Endividamentos</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Acompanhamento de contratos e financiamentos em andamento</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Acompanhamento de contratos e financiamentos em andamento</div>
               </div>
               <a href="/consultor/endividamento" className="btn" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.1)', color: 'var(--text-primary)', padding: '8px 16px' }}>Ver Detalhes →</a>
             </div>
@@ -684,7 +684,7 @@ export default function ConsultorDashboard() {
             <div style={{ overflowX: 'auto' }}>
               <div style={{ minWidth: '800px' }}>
                 {/* Custom Table Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1.5fr', padding: '12px 16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1.5fr', padding: '12px 16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   <div>Banco / Conta</div>
                   <div>Contrato</div>
                   <div>Taxa</div>
@@ -701,7 +701,7 @@ export default function ConsultorDashboard() {
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b45309' }} />
                         {e.banco}
                       </div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{e.contrato}</div>
+                      <div style={{ fontSize: '14.5px', color: 'var(--text-secondary)' }}>{e.contrato}</div>
                       <div style={{ fontWeight: 600 }}>{e.taxa}% /m</div>
                       <div style={{ fontWeight: 600 }}>{e.parcelasFaltantes}x</div>
                       <div style={{ color: 'var(--red)', fontWeight: 600 }}>{fmt.currency(e.parcela)}</div>
@@ -721,7 +721,7 @@ export default function ConsultorDashboard() {
           <div className="card-header" style={{ marginBottom: 20 }}>
             <div>
               <div className="card-title text-gradient" style={{ fontSize: '20px', fontWeight: 800 }}>Radar de Lançamentos</div>
-              <div className="card-subtitle" style={{ fontSize: '13px' }}>Últimas movimentações financeiras executadas ou previstas</div>
+              <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Últimas movimentações financeiras executadas ou previstas</div>
             </div>
             <a href="/consultor/lancamentos" className="btn" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', color: '#fff', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '8px 16px' }}>Gestão Completa →</a>
           </div>
@@ -729,7 +729,7 @@ export default function ConsultorDashboard() {
           <div style={{ overflowX: 'auto' }}>
             <div style={{ minWidth: '900px' }}>
               {/* Custom Table Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 3fr 1.5fr 1.5fr 1fr 1.5fr', padding: '12px 16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 3fr 1.5fr 1.5fr 1fr 1.5fr', padding: '12px 16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 <div>Data</div>
                 <div>Descrição</div>
                 <div>Tipo</div>
@@ -744,27 +744,27 @@ export default function ConsultorDashboard() {
                   const port = store.getPortadores(empresaId).find(p => p.id === l.portadorId);
                   return (
                     <div key={l.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 3fr 1.5fr 1.5fr 1fr 1.5fr', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '12px', transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={ev => ev.currentTarget.style.backgroundColor = '#fff'} onMouseLeave={ev => ev.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.96)'}>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>{fmt.date(l.data)}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 600 }}>{fmt.date(l.data)}</div>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{l.descricao}</div>
                       <div>
                         {l.tipo === 'receita' ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(90deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.05) 100%)', color: '#059669', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(16,185,129,0.2)' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(90deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.05) 100%)', color: '#059669', padding: '4px 10px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, border: '1px solid rgba(16,185,129,0.2)' }}>
                             <TrendingUp size={12} /> Receita
                           </div>
                         ) : (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%)', color: '#dc2626', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(239,68,68,0.2)' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%)', color: '#dc2626', padding: '4px 10px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, border: '1px solid rgba(239,68,68,0.2)' }}>
                             <TrendingDown size={12} /> Despesa
                           </div>
                         )}
                       </div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500 }}>{port?.nome || '-'}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>{port?.nome || '-'}</div>
                       <div>
                         {l.status === 'realizado' ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb', fontSize: '12px', fontWeight: 700 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb', fontSize: '14px', fontWeight: 700 }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2563eb', display: 'inline-block' }} /> Realizado
                           </div>
                         ) : (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706', fontSize: '12px', fontWeight: 700 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706', fontSize: '14px', fontWeight: 700 }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#d97706', display: 'inline-block' }} /> Previsto
                           </div>
                         )}

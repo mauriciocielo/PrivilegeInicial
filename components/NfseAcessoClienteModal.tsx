@@ -200,12 +200,12 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !salvando && onFechar()}>
+    <div className="modal-overlay nfse-ui" onClick={e => e.target === e.currentTarget && !salvando && onFechar()}>
       <div className="modal modal-lg" style={{ maxWidth: 680, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">🔑 Acesso do Cliente para Emitir NFS-e</h2>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            <h2 className="modal-title">Acesso do Cliente para Emitir NFS-e</h2>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>
               {nomeEmpresa} · <span style={{ fontFamily: 'monospace' }}>{empresa.cnpj}</span>
             </div>
           </div>
@@ -219,19 +219,19 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
           borderRadius: 10,
           padding: '12px 16px',
           marginBottom: 16,
-          fontSize: 12.5,
+          fontSize: 14,
           lineHeight: 1.55,
           color: 'var(--text-secondary)',
         }}>
           <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>
-            💡 Como funciona o login do cliente para emissão de notas:
+            Como funciona o login do cliente para emissão de notas:
           </div>
           <div>1. Crie abaixo o <strong>e-mail e senha</strong> do cliente (ou vincule um e-mail já existente).</div>
           <div>2. O cliente acessa a tela normal de login (<code>/login</code>) com esse e-mail e senha (ou pelo botão do Google com o mesmo e-mail).</div>
           <div>3. Ele entra <strong>direto e exclusivamente na tela de NFS-e</strong> desta empresa — sem acesso às telas financeiras internas do BPO.</div>
           {empresa.procuracaoStatus !== 'ativa' && (
             <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontWeight: 600 }}>
-              ⚠️ Atenção: lembre-se de verificar a procuração desta empresa em &quot;Emissores por Procuração&quot; para que o cliente consiga transmitir notas.
+              Atenção: lembre-se de verificar a procuração desta empresa em &quot;Emissores por Procuração&quot; para que o cliente consiga transmitir notas.
             </div>
           )}
         </div>
@@ -245,15 +245,15 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
             padding: 14,
             marginBottom: 16,
           }}>
-            <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13.5, marginBottom: 8 }}>
-              ✅ Login liberado! Envie os dados abaixo para o cliente:
+            <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 15, marginBottom: 8 }}>
+              Login liberado! Envie os dados abaixo para o cliente:
             </div>
             <pre style={{
               background: 'var(--bg-base)',
               border: '1px solid var(--border-light)',
               borderRadius: 8,
               padding: 10,
-              fontSize: 12,
+              fontSize: 14,
               whiteSpace: 'pre-wrap',
               fontFamily: 'monospace',
               margin: '0 0 10px 0',
@@ -262,7 +262,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
             </pre>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => copiarMensagem(credencialCriada)}>
-                📋 Copiar mensagem de acesso
+                Copiar mensagem de acesso
               </button>
               {credencialCriada.telefone && (
                 <a
@@ -271,7 +271,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                   target="_blank"
                   rel="noreferrer"
                 >
-                  💬 Enviar pelo WhatsApp
+                  Enviar pelo WhatsApp
                 </a>
               )}
             </div>
@@ -280,13 +280,13 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
 
         {/* Lista de usuários já vinculados */}
         <div style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            👥 Logins já liberados para esta empresa ({usuarios?.length || 0})
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Logins já liberados para esta empresa ({usuarios?.length || 0})
           </div>
           {carregando ? (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>⏳ Carregando acessos...</div>
+            <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>Carregando acessos...</div>
           ) : !usuarios || usuarios.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>
               Nenhum login de cliente vinculado ainda. Preencha o formulário abaixo para criar o primeiro acesso.
             </div>
           ) : (
@@ -307,8 +307,8 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{u.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    <div style={{ fontWeight: 600, fontSize: 14.5 }}>{u.name}</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                       {u.email}
                       {u.phone ? ` · 📱 ${u.phone}` : ''}
                     </div>
@@ -317,7 +317,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 11, padding: '4px 10px' }}
+                      style={{ fontSize: 13, padding: '4px 10px' }}
                       onClick={() => {
                         setEditandoEmail(u.email);
                         setNome(u.name);
@@ -327,16 +327,16 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                         setCredencialCriada(null);
                       }}
                     >
-                      🔑 Trocar Senha
+                      Trocar Senha
                     </button>
                     <button
                       type="button"
                       className="btn btn-danger btn-sm"
-                      style={{ fontSize: 11, padding: '4px 10px' }}
+                      style={{ fontSize: 13, padding: '4px 10px' }}
                       disabled={removendoId === u.id}
                       onClick={() => handleRemover(u)}
                     >
-                      {removendoId === u.id ? '⏳' : '🗑️ Remover'}
+                      {removendoId === u.id ? '⏳' : 'Remover'}
                     </button>
                   </div>
                 </div>
@@ -348,14 +348,14 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
         {/* Formulário de criação / atualização */}
         <form onSubmit={handleSalvar} style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: 14, border: '1px solid var(--border-light)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {editandoEmail ? `🔑 Redefinir senha de ${editandoEmail}` : '＋ Criar novo login para o cliente'}
             </div>
             {editandoEmail && (
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                style={{ fontSize: 11, padding: '2px 8px' }}
+                style={{ fontSize: 13, padding: '2px 8px' }}
                 onClick={() => {
                   setEditandoEmail(null);
                   setNome(nomeEmpresa);
@@ -411,14 +411,14 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ whiteSpace: 'nowrap', padding: '0 10px', fontSize: 12 }}
+                  style={{ whiteSpace: 'nowrap', padding: '0 10px', fontSize: 14 }}
                   title="Gerar senha numérica de 6 dígitos"
                   onClick={() => setSenha(gerarSenhaSugerida())}
                 >
-                  🎲 Gerar
+                  Gerar
                 </button>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Visível para você copiar e enviar ao cliente.
               </div>
             </div>
@@ -431,7 +431,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
                 value={telefone}
                 onChange={e => setTelefone(e.target.value.replace(/\D/g, ''))}
               />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Permite enviar o login direto no WhatsApp com 1 clique.
               </div>
             </div>
@@ -442,7 +442,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
               Fechar
             </button>
             <button type="submit" className="btn btn-primary" disabled={salvando}>
-              {salvando ? '⏳ Salvando...' : editandoEmail ? '✓ Salvar Nova Senha' : '✓ Liberar Acesso do Cliente'}
+              {salvando ? 'Salvando...' : editandoEmail ? '✓ Salvar Nova Senha' : '✓ Liberar Acesso do Cliente'}
             </button>
           </div>
         </form>

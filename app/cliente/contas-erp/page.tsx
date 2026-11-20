@@ -106,10 +106,10 @@ export default function ClienteContasErpPage() {
 
       <div className="page-body">
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 10 }}>
-          <button className={`btn ${aba === 'receber' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setAba('receber')}>
+          <button className={`btn ${aba === 'receber' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => setAba('receber')}>
             ↑ A Receber
           </button>
-          <button className={`btn ${aba === 'pagar' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setAba('pagar')}>
+          <button className={`btn ${aba === 'pagar' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => setAba('pagar')}>
             ↓ A Pagar
           </button>
         </div>
@@ -150,7 +150,7 @@ export default function ClienteContasErpPage() {
           </div>
 
           {erro && (
-            <div style={{ padding: 16, color: 'var(--red)', fontSize: 13 }}>{erro}</div>
+            <div style={{ padding: 16, color: 'var(--red)', fontSize: 14.5 }}>{erro}</div>
           )}
 
           {!erro && loading ? (
@@ -188,9 +188,9 @@ export default function ClienteContasErpPage() {
                       <Fragment key={c.id}>
                         <tr style={{ cursor: c.baixas.length > 0 ? 'pointer' : 'default' }} onClick={() => c.baixas.length > 0 && setExpandido(aberta ? null : c.id)}>
                           <td style={{ fontWeight: 600 }}>{pessoa?.nome || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                             {c.numeroDocumento || c.descricao || '—'}
-                            {c.formaPagamentoPrevista && <div style={{ fontSize: 10.5, color: 'var(--accent)', marginTop: 2 }}>💳 {c.formaPagamentoPrevista}</div>}
+                            {c.formaPagamentoPrevista && <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2 }}>💳 {c.formaPagamentoPrevista}</div>}
                           </td>
                           <td style={{ whiteSpace: 'nowrap', color: vencida(c) ? 'var(--red)' : undefined, fontWeight: vencida(c) ? 700 : 400 }}>
                             {fmt.date(c.dataVencimento)} {vencida(c) && '⚠️'}
@@ -198,13 +198,13 @@ export default function ClienteContasErpPage() {
                           <td style={{ textAlign: 'right' }}>{fmt.currency(c.valorLiquido)}</td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(Math.max(0, emAberto))}</td>
                           <td><span className={`badge ${STATUS_BADGE[c.status]}`}>{STATUS_LABEL[c.status]}</span></td>
-                          <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                             {c.baixas.length > 0 && (aberta ? '▲' : `▼ ${c.baixas.length} mov.`)}
                           </td>
                         </tr>
                         {aberta && c.baixas.map(b => (
                           <tr key={b.id} style={{ background: 'var(--bg-card2)' }}>
-                            <td colSpan={7} style={{ padding: '8px 16px 8px 32px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                            <td colSpan={7} style={{ padding: '8px 16px 8px 32px', fontSize: 14, color: 'var(--text-secondary)' }}>
                               {b.valor < 0 ? '↩ Estorno' : '✓ Baixa'} de {fmt.currency(Math.abs(b.valor))} em {fmt.date(b.data)}
                               {b.formaPagamento && ` · ${b.formaPagamento}`}
                               {b.observacao && ` · ${b.observacao}`}

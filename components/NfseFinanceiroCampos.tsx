@@ -36,7 +36,7 @@ export default function NfseFinanceiroCampos({ valor, portadores, planoContas, o
           alignItems: 'center',
           gap: 8,
           cursor: 'pointer',
-          fontSize: 13,
+          fontSize: 14.5,
           fontWeight: 700,
           color: '#008a49',
           background: 'rgba(0, 168, 89, 0.08)',
@@ -62,7 +62,7 @@ export default function NfseFinanceiroCampos({ valor, portadores, planoContas, o
             })
           }
         />
-        ⚡ Emitir Boleto / Cobrança Pix Sicoob (API Direta mTLS) ao autorizar a NFS-e
+        Emitir Boleto / Cobrança Pix Sicoob (API Direta mTLS) ao autorizar a NFS-e
       </label>
 
       {valor.emitirBoletoSicoob && !valor.gerarContaReceber && (
@@ -78,12 +78,12 @@ export default function NfseFinanceiroCampos({ valor, portadores, planoContas, o
       )}
 
       {portadores.length === 0 && !valor.gerarContaReceber ? (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
           Esta empresa não tem portadores internos cadastrados para conciliação local, mas pode emitir Cobrança / Boleto Sicoob via API normalmente.
         </div>
       ) : (
         <>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14.5 }}>
             <input
               type="checkbox"
               checked={valor.gerarContaReceber}
@@ -101,7 +101,7 @@ export default function NfseFinanceiroCampos({ valor, portadores, planoContas, o
                   value={valor.vencimento}
                   onChange={e => onChange({ ...valor, vencimento: e.target.value })}
                 />
-                {ajudaVencimento && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{ajudaVencimento}</div>}
+                {ajudaVencimento && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{ajudaVencimento}</div>}
               </div>
               <div className="form-group">
                 <label className="form-label">Portador / Conta *</label>

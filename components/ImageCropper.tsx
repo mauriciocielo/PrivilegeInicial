@@ -118,7 +118,7 @@ export default function ImageCropper({ src, aspectRatio, onCrop, onCancel }: Ima
           <button className="modal-close" onClick={onCancel}>✕</button>
         </div>
         
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+        <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 16 }}>
           Arraste a imagem para reposicionar e use a barra de rolagem para ajustar o zoom.
         </p>
 
@@ -163,7 +163,7 @@ export default function ImageCropper({ src, aspectRatio, onCrop, onCancel }: Ima
         </div>
 
         <div style={{ padding: '0 10px', marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>
             <span>Zoom</span>
             <span>{Math.round(zoom * 100)}%</span>
           </div>

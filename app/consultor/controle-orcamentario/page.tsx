@@ -53,7 +53,7 @@ export default function OrcamentoPage() {
           </div>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>Budget & Controle Orçamentário</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Análise de Consumo Mensal: {empresa.nomeFantasia}</p>
+            <p style={{ fontSize: 15.5, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Análise de Consumo Mensal: {empresa.nomeFantasia}</p>
           </div>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function OrcamentoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {Object.keys(orcamentos).map(cat => (
               <div key={cat}>
-                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{cat}</label>
+                <label style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-secondary)' }}>{cat}</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                    <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>R$</span>
                    <input 
@@ -87,10 +87,10 @@ export default function OrcamentoPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Termômetro de Consumo</h2>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Mês Atual: O que foi efetivamente pago comparado ao teto estipulado.</p>
+              <p style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>Mês Atual: O que foi efetivamente pago comparado ao teto estipulado.</p>
             </div>
             <div style={{ textAlign: 'right' }}>
-               <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Gasto vs Planejado</div>
+               <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Gasto vs Planejado</div>
                <div style={{ fontSize: 22, fontWeight: 900, color: totalGasto > totalOrcado ? 'var(--red)' : 'var(--text-primary)' }}>
                  {fmt.currency(totalGasto)} / {fmt.currency(totalOrcado)}
                </div>
@@ -110,7 +110,7 @@ export default function OrcamentoPage() {
               return (
                 <div key={cat} style={{ background: 'rgba(255,255,255,0.7)', padding: 16, borderRadius: 12, border: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{cat}</span>
+                    <span style={{ fontWeight: 700, fontSize: 15.5 }}>{cat}</span>
                     <span style={{ fontWeight: 800, color: fill }}>{pct.toFixed(1)}% consumido</span>
                   </div>
                   
@@ -119,13 +119,13 @@ export default function OrcamentoPage() {
                     <div style={{ position: 'absolute', top: 0, bottom: 0, left: '100%', borderLeft: pct > 100 ? '2px solid red' : 'none', zIndex: 10 }} />
                   </div>
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, color: 'var(--text-muted)', marginTop: 8 }}>
                     <span>Efetivo: {fmt.currency(gasto)}</span>
                     <span>Teto Líder: {fmt.currency(limite)}</span>
                   </div>
 
                   {pct > 100 && (
-                    <div style={{ marginTop: 12, background: 'rgba(239, 68, 68, 0.1)', color: '#dc2626', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ marginTop: 12, background: 'rgba(239, 68, 68, 0.1)', color: '#dc2626', padding: '8px 12px', borderRadius: 8, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                        <ShieldAlert size={14} /> Teto estourado em {fmt.currency(Math.max(0, gasto - limite))}! Avalie paralisação de compras.
                     </div>
                   )}

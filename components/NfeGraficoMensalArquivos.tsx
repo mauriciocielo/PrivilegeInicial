@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { instrumentSerif as serif } from '../app/fonts';
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell
@@ -77,7 +76,7 @@ export default function NfeGraficoMensalArquivos({
   if (carregando) {
     return (
       <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#6b7280', fontSize: 14 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#6b7280', fontSize: 15.5 }}>
           <div className="spinner" style={{ width: 18, height: 18, border: '2px solid #e5e7eb', borderTopColor: '#600000', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           Carregando histórico e evolução mensal de arquivos fiscais...
         </div>
@@ -89,10 +88,10 @@ export default function NfeGraficoMensalArquivos({
     return (
       <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: 20, padding: 36, textAlign: 'center' }}>
         <FileText size={36} color="#9ca3af" style={{ margin: '0 auto 12px' }} />
-        <h4 className={serif.className} style={{ fontSize: 22, color: '#111827', margin: '0 0 6px' }}>
+        <h4 style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: 19, color: '#111827', margin: '0 0 6px' }}>
           Nenhum arquivo fiscal encontrado para este cliente
         </h4>
-        <p style={{ fontSize: 13, color: '#6b7280', maxWidth: 460, margin: '0 auto' }}>
+        <p style={{ fontSize: 14.5, color: '#6b7280', maxWidth: 460, margin: '0 auto' }}>
           Assim que a SEFAZ ou SEFIN processar notas destinadas ou emitidas para esta empresa, o gráfico histórico de arquivos mensais será gerado automaticamente.
         </p>
       </div>
@@ -117,14 +116,14 @@ export default function NfeGraficoMensalArquivos({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#600000' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000' }}>
               Volumetria Mensal de Documentos Fiscais
             </span>
           </div>
-          <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', margin: '0 0 4px' }}>
+          <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '0 0 4px' }}>
             Evolução de Arquivos por Mês — {empresa.razaoSocial}
           </h3>
-          <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+          <p style={{ fontSize: 14.5, color: '#525252', margin: 0 }}>
             Análise temporal da quantidade de arquivos XML de NF-e recebidas, emitidas e notas de serviço registradas.
           </p>
         </div>
@@ -141,7 +140,7 @@ export default function NfeGraficoMensalArquivos({
                 background: periodoFiltro === '6m' ? '#fff' : 'transparent',
                 color: periodoFiltro === '6m' ? '#111827' : '#6b7280',
                 fontWeight: periodoFiltro === '6m' ? 600 : 500,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 10px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -158,7 +157,7 @@ export default function NfeGraficoMensalArquivos({
                 background: periodoFiltro === '12m' ? '#fff' : 'transparent',
                 color: periodoFiltro === '12m' ? '#111827' : '#6b7280',
                 fontWeight: periodoFiltro === '12m' ? 600 : 500,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 10px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -175,7 +174,7 @@ export default function NfeGraficoMensalArquivos({
                 background: periodoFiltro === 'todos' ? '#fff' : 'transparent',
                 color: periodoFiltro === 'todos' ? '#111827' : '#6b7280',
                 fontWeight: periodoFiltro === 'todos' ? 600 : 500,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 10px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -197,7 +196,7 @@ export default function NfeGraficoMensalArquivos({
                 background: modoVisualizacao === 'tipo' ? '#600000' : 'transparent',
                 color: modoVisualizacao === 'tipo' ? '#fff' : '#4b5563',
                 fontWeight: 600,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 12px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -217,7 +216,7 @@ export default function NfeGraficoMensalArquivos({
                 background: modoVisualizacao === 'xml' ? '#600000' : 'transparent',
                 color: modoVisualizacao === 'xml' ? '#fff' : '#4b5563',
                 fontWeight: 600,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 12px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -237,7 +236,7 @@ export default function NfeGraficoMensalArquivos({
                 background: modoVisualizacao === 'area' ? '#600000' : 'transparent',
                 color: modoVisualizacao === 'area' ? '#fff' : '#4b5563',
                 fontWeight: 600,
-                fontSize: 12,
+                fontSize: 14,
                 padding: '5px 12px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -256,52 +255,52 @@ export default function NfeGraficoMensalArquivos({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 20 }}>
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Total de Arquivos Processados</span>
+            <span style={{ fontSize: 13.5, color: '#64748b', fontWeight: 600 }}>Total de Arquivos Processados</span>
             <FileText size={15} color="#2563eb" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#0f172a' }}>
             {resumo.totalGeral}
           </div>
-          <span style={{ fontSize: 11, color: '#64748b' }}>
+          <span style={{ fontSize: 13, color: '#64748b' }}>
             {resumo.totalRecebidas} compras • {resumo.totalEmitidas} vendas {resumo.totalNfse > 0 ? `• ${resumo.totalNfse} serviços` : ''} {resumo.totalCte ? `• ${resumo.totalCte} fretes (CT-e)` : ''}
           </span>
         </div>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Média Mensal do Cliente</span>
+            <span style={{ fontSize: 13.5, color: '#64748b', fontWeight: 600 }}>Média Mensal do Cliente</span>
             <Calendar size={15} color="#059669" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#0f172a' }}>
-            ~{resumo.mediaMensal} <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>arquivos/mês</span>
+            ~{resumo.mediaMensal} <span style={{ fontSize: 14.5, fontWeight: 500, color: '#64748b' }}>arquivos/mês</span>
           </div>
-          <span style={{ fontSize: 11, color: '#059669' }}>
+          <span style={{ fontSize: 13, color: '#059669' }}>
             Com base em {resumo.quantidadeMeses} {resumo.quantidadeMeses === 1 ? 'mês' : 'meses'} de histórico
           </span>
         </div>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Mês com Maior Volume (Pico)</span>
+            <span style={{ fontSize: 13.5, color: '#64748b', fontWeight: 600 }}>Mês com Maior Volume (Pico)</span>
             <TrendingUp size={15} color="#d97706" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#0f172a' }}>
-            {resumo.mesPico.total} <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>arquivos</span>
+            {resumo.mesPico.total} <span style={{ fontSize: 14.5, fontWeight: 500, color: '#64748b' }}>arquivos</span>
           </div>
-          <span style={{ fontSize: 11, color: '#d97706', fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: '#d97706', fontWeight: 600 }}>
             {resumo.mesPico.label || 'Sem dados'}
           </span>
         </div>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Disponibilidade de XMLs</span>
+            <span style={{ fontSize: 13.5, color: '#64748b', fontWeight: 600 }}>Disponibilidade de XMLs</span>
             <CheckCircle2 size={15} color="#16a34a" />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#16a34a' }}>
             {resumo.taxaXml}%
           </div>
-          <span style={{ fontSize: 11, color: '#64748b' }}>
+          <span style={{ fontSize: 13, color: '#64748b' }}>
             {resumo.totalComXml} arquivos com XML baixado
           </span>
         </div>
@@ -323,12 +322,12 @@ export default function NfeGraficoMensalArquivos({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }}
                 axisLine={{ stroke: '#e2e8f0' }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#64748b', fontSize: 13 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -340,7 +339,7 @@ export default function NfeGraficoMensalArquivos({
                   border: '1px solid #e2e8f0',
                   borderRadius: 10,
                   boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-                  fontSize: 12.5,
+                  fontSize: 14,
                 }}
                 labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}
                 formatter={(val: any, name: any) => [
@@ -351,7 +350,7 @@ export default function NfeGraficoMensalArquivos({
                 ]}
               />
               <Legend
-                wrapperStyle={{ fontSize: 12, paddingTop: 10 }}
+                wrapperStyle={{ fontSize: 14, paddingTop: 10 }}
                 formatter={(value) => {
                   if (value === 'recebidas') return 'Arquivos Recebidos (Compras de Fornecedores)';
                   if (value === 'emitidas') return 'Arquivos Emitidos (Vendas do Cliente)';
@@ -411,12 +410,12 @@ export default function NfeGraficoMensalArquivos({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }}
                 axisLine={{ stroke: '#e2e8f0' }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#64748b', fontSize: 13 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -427,7 +426,7 @@ export default function NfeGraficoMensalArquivos({
                   border: '1px solid #e2e8f0',
                   borderRadius: 10,
                   boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-                  fontSize: 12.5,
+                  fontSize: 14,
                 }}
                 labelStyle={{ fontWeight: 700, color: '#0f172a' }}
                 formatter={(val: any, name: any) => [
@@ -436,7 +435,7 @@ export default function NfeGraficoMensalArquivos({
                 ]}
               />
               <Legend
-                wrapperStyle={{ fontSize: 12, paddingTop: 10 }}
+                wrapperStyle={{ fontSize: 14, paddingTop: 10 }}
                 formatter={(value) => (value === 'comXml' ? 'Arquivo XML Completo Disponível' : 'Em Formato de Resumo SEFAZ')}
               />
               <Bar dataKey="comXml" name="comXml" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
@@ -460,12 +459,12 @@ export default function NfeGraficoMensalArquivos({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }}
                 axisLine={{ stroke: '#e2e8f0' }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#64748b', fontSize: 13 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -476,12 +475,12 @@ export default function NfeGraficoMensalArquivos({
                   border: '1px solid #e2e8f0',
                   borderRadius: 10,
                   boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-                  fontSize: 12.5,
+                  fontSize: 14,
                 }}
                 labelStyle={{ fontWeight: 700, color: '#0f172a' }}
                 formatter={(val: any) => [`${val} arquivos fiscais no mês`, 'Total Geral']}
               />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+              <Legend wrapperStyle={{ fontSize: 14, paddingTop: 10 }} />
               <Area
                 type="monotone"
                 dataKey="total"
@@ -496,8 +495,8 @@ export default function NfeGraficoMensalArquivos({
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#64748b', marginBottom: 16 }}>
-        <span>💡 Dica: Clique em qualquer barra ou mês no gráfico para filtrar as notas fiscais daquele mês instantaneamente.</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 14, color: '#64748b', marginBottom: 16 }}>
+        <span>Dica: Clique em qualquer barra ou mês no gráfico para filtrar as notas fiscais daquele mês instantaneamente.</span>
         {mesSelecionadoFiltro && (
           <span style={{ color: '#600000', fontWeight: 600 }}>
             Mês ativo no filtro: {mesSelecionadoFiltro}
@@ -507,7 +506,7 @@ export default function NfeGraficoMensalArquivos({
 
       {/* TABELA DE DETALHAMENTO MENSAL */}
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '9px 14px', fontWeight: 600, color: '#475569' }}>Mês / Competência</th>
@@ -558,7 +557,7 @@ export default function NfeGraficoMensalArquivos({
                       style={{
                         padding: '2px 8px',
                         borderRadius: 12,
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         fontWeight: 600,
                         background: m.semXml === 0 ? '#dcfce7' : '#fef3c7',
                         color: m.semXml === 0 ? '#166534' : '#92400e',
@@ -577,7 +576,7 @@ export default function NfeGraficoMensalArquivos({
                         onClick={() => onSelecionarMes(m.mes)}
                         className="btn btn-secondary btn-sm"
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 13.5,
                           padding: '3px 8px',
                           display: 'inline-flex',
                           alignItems: 'center',

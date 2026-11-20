@@ -197,24 +197,24 @@ export default function ComercialEquipePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 20 }}>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Meta Global da Equipe</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>Meta Global da Equipe</div>
           <div style={{ fontSize: 23, fontWeight: 900, marginTop: 6 }}>{fmtBRL(summary.totalMeta)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Realizado: {fmtBRL(summary.totalVendido)}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Realizado: {fmtBRL(summary.totalVendido)}</div>
         </div>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Taxa de Conversão Média</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>Taxa de Conversão Média</div>
           <div style={{ fontSize: 23, fontWeight: 900, marginTop: 6, color: 'var(--accent)' }}>{summary.convMedia.toFixed(1)}%</div>
         </div>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Custo Total Remuneração</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>Custo Total Remuneração</div>
           <div style={{ fontSize: 23, fontWeight: 900, marginTop: 6 }}>{fmtBRL(summary.totalRemun)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Representa {summary.custoSobreVenda.toFixed(1)}% das vendas</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Representa {summary.custoSobreVenda.toFixed(1)}% das vendas</div>
         </div>
       </div>
 
       <div className="card" style={{ padding: 18 }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Vendedor</th>
@@ -241,7 +241,7 @@ export default function ComercialEquipePage() {
                     <td style={{ padding: 6 }}>
                       <input
                         className="form-control"
-                        style={{ width: 145, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 145, padding: '5px 7px', fontSize: 14 }}
                         value={s.name}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))}
                       />
@@ -249,7 +249,7 @@ export default function ComercialEquipePage() {
                     <td style={{ padding: 6 }}>
                       <input
                         className="form-control"
-                        style={{ width: 155, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 155, padding: '5px 7px', fontSize: 14 }}
                         value={s.profile}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, profile: e.target.value } : x)))}
                       />
@@ -258,7 +258,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 95, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 95, padding: '5px 7px', fontSize: 14 }}
                         value={s.metaMensal}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, metaMensal: Number(e.target.value) } : x)))}
                       />
@@ -267,7 +267,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 95, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 95, padding: '5px 7px', fontSize: 14 }}
                         value={s.vendidoMes}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, vendidoMes: Number(e.target.value) } : x)))}
                       />
@@ -276,7 +276,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 60, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 60, padding: '5px 7px', fontSize: 14 }}
                         value={s.atendimentos}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, atendimentos: Number(e.target.value) } : x)))}
                       />
@@ -285,7 +285,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 60, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 60, padding: '5px 7px', fontSize: 14 }}
                         value={s.fechamentos}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, fechamentos: Number(e.target.value) } : x)))}
                       />
@@ -295,7 +295,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 80, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 80, padding: '5px 7px', fontSize: 14 }}
                         value={s.salarioFixo}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, salarioFixo: Number(e.target.value) } : x)))}
                       />
@@ -305,7 +305,7 @@ export default function ComercialEquipePage() {
                         type="number"
                         step="0.1"
                         className="form-control"
-                        style={{ width: 65, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 65, padding: '5px 7px', fontSize: 14 }}
                         value={s.comissaoPct}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, comissaoPct: Number(e.target.value) } : x)))}
                       />
@@ -314,7 +314,7 @@ export default function ComercialEquipePage() {
                       <input
                         type="number"
                         className="form-control"
-                        style={{ width: 75, padding: '5px 7px', fontSize: 12 }}
+                        style={{ width: 75, padding: '5px 7px', fontSize: 14 }}
                         value={s.bonusMeta}
                         onChange={e => setSellers(prev => prev.map((x, i) => (i === idx ? { ...x, bonusMeta: Number(e.target.value) } : x)))}
                       />

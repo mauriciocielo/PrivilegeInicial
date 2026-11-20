@@ -252,13 +252,13 @@ export default function PerfilDiscPage() {
         <div className="card">
           {erro ? (
             <div style={{ padding: 16, textAlign: 'center' }}>
-              <p style={{ fontSize: 14, color: 'var(--red)', margin: '0 0 12px' }}>{erro}</p>
+              <p style={{ fontSize: 15.5, color: 'var(--red)', margin: '0 0 12px' }}>{erro}</p>
               <button className="btn btn-secondary btn-sm" onClick={carregar}>Tentar de novo</button>
             </div>
           ) : avaliacoes === null ? (
-            <div style={{ padding: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>⏳ Carregando avaliações...</div>
+            <div style={{ padding: 24, textAlign: 'center', fontSize: 15.5, color: 'var(--text-muted)' }}>Carregando avaliações...</div>
           ) : visiveis.length === 0 ? (
-            <div style={{ padding: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>
+            <div style={{ padding: 24, textAlign: 'center', fontSize: 15.5, color: 'var(--text-muted)' }}>
               {avaliacoes.length === 0 ? 'Nenhum link gerado ainda. Clique em "Gerar link" para começar.' : 'Nenhuma avaliação encontrada com estes filtros.'}
             </div>
           ) : (
@@ -280,15 +280,15 @@ export default function PerfilDiscPage() {
                     return (
                       <tr key={a.id}>
                         <td>
-                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{a.nomeRespondente || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Pessoa ainda não identificada</span>}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          <div style={{ fontWeight: 600, fontSize: 15 }}>{a.nomeRespondente || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Pessoa ainda não identificada</span>}</div>
+                          <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                             {nomeTipoRespondente(a.tipoRespondente)}{a.cargoRespondente ? ` · ${a.cargoRespondente}` : ''}{a.emailRespondente ? ` · ${a.emailRespondente}` : ''}
                           </div>
                         </td>
-                        <td style={{ fontSize: 13 }}>{a.empresaNome}</td>
+                        <td style={{ fontSize: 14.5 }}>{a.empresaNome}</td>
                         <td><span className={`badge ${s.classe}`}>{s.texto}</span></td>
-                        <td style={{ fontWeight: 700, fontSize: 14 }}>{a.perfilNatural || '—'}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <td style={{ fontWeight: 700, fontSize: 15.5 }}>{a.perfilNatural || '—'}</td>
+                        <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           {new Date(a.concluidoEm || a.createdAt).toLocaleDateString('pt-BR')}
                           {a.status === 'concluida' && <div style={{ color: 'var(--text-muted)' }}>{formatarTempoResposta(a.tempoRespostaSeg)}</div>}
                           {a.token && (
@@ -342,13 +342,13 @@ export default function PerfilDiscPage() {
 
             {criados ? (
               <>
-                <p style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+                <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
                   {criados.length > 1 ? `Foram gerados ${criados.length} links. Envie um diferente para cada pessoa.` : 'Envie este link para a pessoa.'} Cada um vale por 24 horas, aceita uma única resposta e dispensa login.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', marginBottom: 14 }}>
                   {criados.map((c, i) => (
                     <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 10px', background: 'var(--bg-hover)', borderRadius: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{urlDoLink(c.token)}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{urlDoLink(c.token)}</span>
                       <button className="btn btn-secondary btn-sm" onClick={() => copiar(mensagemConvite(c.token, c.nomeRespondente), `Convite ${criados.length > 1 ? i + 1 : ''} copiado.`)}>Copiar</button>
                       <button
                         type="button"
@@ -372,7 +372,7 @@ export default function PerfilDiscPage() {
             ) : (
               <>
                 {empresas.length === 0 && (
-                  <p role="alert" style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--red)', margin: '0 0 12px' }}>
+                  <p role="alert" style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--red)', margin: '0 0 12px' }}>
                     Seu usuário não tem empresas vinculadas. Peça a um administrador para vincular em Usuários.
                   </p>
                 )}
@@ -413,7 +413,7 @@ export default function PerfilDiscPage() {
                 </div>
 
                 {varios ? (
-                  <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '12px 0 0' }}>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '12px 0 0' }}>
                     Com vários links, cada pessoa informa o próprio nome ao abrir o formulário.
                   </p>
                 ) : (
@@ -436,7 +436,7 @@ export default function PerfilDiscPage() {
                 <div className="form-actions" style={{ marginTop: 18 }}>
                   <button className="btn btn-secondary" onClick={() => setModalAberto(false)} disabled={salvando}>Cancelar</button>
                   <button className="btn btn-primary" onClick={gerar} disabled={salvando || !form.empresaId}>
-                    {salvando ? '⏳ Gerando...' : varios ? `Gerar ${form.quantidade} links` : 'Gerar link'}
+                    {salvando ? 'Gerando...' : varios ? `Gerar ${form.quantidade} links` : 'Gerar link'}
                   </button>
                 </div>
               </>

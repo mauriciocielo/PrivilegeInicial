@@ -370,17 +370,17 @@ export default function NewsletterPage() {
 
   const modelosProntos = [
     {
-      titulo: '📅 Lembrete de Envio de Documentos e Fechamento Mensal',
+      titulo: 'Lembrete de Envio de Documentos e Fechamento Mensal',
       assunto: 'Privilege Consultoria — Lembrete de Documentos para Fechamento Fiscal/Contábil',
       texto: `Prezados clientes,\n\nSolicitamos a gentileza do envio dos extratos bancários em formato OFX/PDF, notas fiscais de entrada e comprovantes de pagamentos referentes ao mês anterior até o 5º dia útil.\n\nO envio tempestivo dos documentos garante a apuração correta dos seus impostos e evita multas ou inconsistências com o fisco.\n\nQualquer dúvida, nossa equipe está à disposição!\n\nAtenciosamente,\nEquipe Privilege Consultoria`,
     },
     {
-      titulo: '📢 Alerta sobre Atualizações na Legislação Tributária',
+      titulo: 'Alerta sobre Atualizações na Legislação Tributária',
       assunto: 'Informativo Tributário Importante — Novas Regras e Impactos Fiscais',
       texto: `Prezado cliente parceiro,\n\nGostaríamos de compartilhar um informativo importante sobre as atualizações recentes nas normas fiscais e de faturamento que entraram em vigor neste mês.\n\nRecomendamos a revisão dos parâmetros de emissão de suas notas fiscais de serviços e mercadorias para garantir conformidade contínua.\n\nNossa equipe de consultoria preparou um acompanhamento personalizado para orientar sua empresa em qualquer ajuste necessário.\n\nAtenciosamente,\nPrivilege Consultoria`,
     },
     {
-      titulo: '💡 Boas Práticas de Gestão Financeira e Fluxo de Caixa',
+      titulo: 'Boas Práticas de Gestão Financeira e Fluxo de Caixa',
       assunto: 'Dicas de Gestão Financeira para o Crescimento da sua Empresa',
       texto: `Olá!\n\nManter um fluxo de caixa saudável é o alicerce para decisões estratégicas seguras. Neste mês, destacamos três pontos fundamentais para o sucesso financeiro da sua empresa:\n\n1. Conciliação bancária diária ou semanal;\n2. Acompanhamento rigoroso da inadimplência em Contas a Receber;\n3. Projeção de fluxo de caixa para os próximos 30 a 90 dias.\n\nConte sempre conosco para otimizar os resultados do seu negócio!\n\nCordialmente,\nPrivilege Consultoria`,
     },
@@ -700,7 +700,7 @@ export default function NewsletterPage() {
             style={{
               padding: '10px 18px',
               fontWeight: abaAtiva === 'novo' ? 600 : 500,
-              fontSize: 13.5,
+              fontSize: 15,
               border: 'none',
               background: 'none',
               cursor: 'pointer',
@@ -722,7 +722,7 @@ export default function NewsletterPage() {
             style={{
               padding: '10px 18px',
               fontWeight: abaAtiva === 'fila' ? 600 : 500,
-              fontSize: 13.5,
+              fontSize: 15,
               border: 'none',
               background: 'none',
               cursor: 'pointer',
@@ -749,7 +749,7 @@ export default function NewsletterPage() {
             style={{
               padding: '10px 18px',
               fontWeight: abaAtiva === 'historico' ? 600 : 500,
-              fontSize: 13.5,
+              fontSize: 15,
               border: 'none',
               background: 'none',
               cursor: 'pointer',
@@ -768,7 +768,7 @@ export default function NewsletterPage() {
             style={{
               padding: '10px 18px',
               fontWeight: abaAtiva === 'config' ? 600 : 500,
-              fontSize: 13.5,
+              fontSize: 15,
               border: 'none',
               background: 'none',
               cursor: 'pointer',
@@ -1024,7 +1024,7 @@ export default function NewsletterPage() {
                     marginTop: 14,
                     padding: '10px 14px',
                     borderRadius: 8,
-                    fontSize: 13,
+                    fontSize: 14.5,
                     fontWeight: 500,
                     background: statusTesteSmtp.ok ? 'var(--green-bg)' : 'var(--red-bg)',
                     color: statusTesteSmtp.ok ? 'var(--green)' : 'var(--red)',
@@ -1047,42 +1047,42 @@ export default function NewsletterPage() {
           {/* Cartões de Status */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 20 }}>
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 14.5, fontWeight: 600 }}>
                 <Users size={18} /> Clientes Cadastrados
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#111827', marginTop: 6 }}>
                 {clientes.length}
               </div>
-              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{clientesComEmail.length} possuem e-mail válido</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>{clientesComEmail.length} possuem e-mail válido</div>
             </div>
 
             <div style={{ background: '#fff', border: '1px solid #10b981', borderRadius: 10, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#047857', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#047857', fontSize: 14.5, fontWeight: 600 }}>
                 <CheckCircle2 size={18} /> Destinatários do Disparo
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#059669', marginTop: 6 }}>
                 {totalDestinatariosEstimados}
               </div>
-              <div style={{ fontSize: 11, color: '#059669', marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: '#059669', marginTop: 2 }}>
                 {modoDestinatarios === 'clientes' ? 'Base de clientes' : 'Lista manual de e-mails'}
               </div>
             </div>
 
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4b5563', fontSize: 14.5, fontWeight: 600 }}>
                 <Eye size={18} /> Taxa de Visualização dos Envios
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#2563eb', marginTop: 6 }}>
                 {logs.length > 0 ? `${Math.round((logs.filter(l => l.visualizadoEm).length / logs.length) * 100)}%` : '0%'}
               </div>
-              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Rastreamento por pixel ativo</div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Rastreamento por pixel ativo</div>
             </div>
           </div>
 
           {/* Modelos Prontos (Visíveis apenas no modo Texto) */}
           {tipoFormato === 'texto' && (
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 700, color: '#334155', marginBottom: 12 }}>
                 <Sparkles size={16} color="#8c1a22" /> Modelos Prontos de Comunicados (Clique para carregar)
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
@@ -1107,8 +1107,8 @@ export default function NewsletterPage() {
                     onMouseEnter={e => (e.currentTarget.style.borderColor = '#8c1a22')}
                     onMouseLeave={e => (e.currentTarget.style.borderColor = '#cbd5e1')}
                   >
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>{mod.titulo}</div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3 }}>{mod.assunto}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{mod.titulo}</div>
+                    <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 3 }}>{mod.assunto}</div>
                   </button>
                 ))}
               </div>
@@ -1120,8 +1120,8 @@ export default function NewsletterPage() {
             
             {/* Escolha do Formato do Comunicado */}
             <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 10, display: 'block', color: '#1e293b' }}>
-                🎨 Formato do E-mail
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, display: 'block', color: '#1e293b' }}>
+                Formato do E-mail
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div
@@ -1135,10 +1135,10 @@ export default function NewsletterPage() {
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: tipoFormato === 'imagem' ? '#8c1a22' : '#1e293b' }}>
-                    <ImageIcon size={18} /> 🖼️ Somente Imagem (Flyer / Arte / Panfleto)
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, color: tipoFormato === 'imagem' ? '#8c1a22' : '#1e293b' }}>
+                    <ImageIcon size={18} /> Somente Imagem (Flyer / Arte / Panfleto)
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 14, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
                     Habilita <strong>apenas o Assunto e a Imagem</strong>. O e-mail exibe a logo oficial do escritório e o flyer em destaque.
                   </div>
                 </div>
@@ -1154,10 +1154,10 @@ export default function NewsletterPage() {
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: tipoFormato === 'texto' ? '#8c1a22' : '#1e293b' }}>
-                    <Sparkles size={18} /> 📝 Texto & Comunicado Completo
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, color: tipoFormato === 'texto' ? '#8c1a22' : '#1e293b' }}>
+                    <Sparkles size={18} /> Texto & Comunicado Completo
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 14, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
                     Permite redigir texto com parágrafos, modelos prontos e assinatura formal do escritório.
                   </div>
                 </div>
@@ -1166,8 +1166,8 @@ export default function NewsletterPage() {
 
             {/* Seletor de Destinatários */}
             <div style={{ marginBottom: 18 }}>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 8, display: 'block' }}>
-                🎯 Destinatários do Envio
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, display: 'block' }}>
+                Destinatários do Envio
               </label>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <label
@@ -1181,7 +1181,7 @@ export default function NewsletterPage() {
                     borderRadius: 8,
                     cursor: 'pointer',
                     fontWeight: 600,
-                    fontSize: 13,
+                    fontSize: 14.5,
                     color: modoDestinatarios === 'clientes' ? '#8c1a22' : '#374151',
                   }}
                 >
@@ -1205,7 +1205,7 @@ export default function NewsletterPage() {
                     borderRadius: 8,
                     cursor: 'pointer',
                     fontWeight: 600,
-                    fontSize: 13,
+                    fontSize: 14.5,
                     color: modoDestinatarios === 'manual' ? '#8c1a22' : '#374151',
                   }}
                 >
@@ -1223,18 +1223,18 @@ export default function NewsletterPage() {
             {/* Caixa de Lista Manual de E-mails */}
             {modoDestinatarios === 'manual' && (
               <div style={{ marginBottom: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
-                <label className="form-label" style={{ fontWeight: 600, fontSize: 13, color: '#334155' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: 14.5, color: '#334155' }}>
                   Cole os e-mails separados por vírgula ou um por linha:
                 </label>
                 <textarea
                   className="form-input"
                   rows={4}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', fontFamily: 'monospace' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 6, border: '1px solid #cbd5e1', fontFamily: 'monospace' }}
                   placeholder="cliente1@empresa.com.br, cliente2@outro.com.br"
                   value={listaManual}
                   onChange={e => setListaManual(e.target.value)}
                 />
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <span>Total identificados: <strong>{destinatariosManuaisValidos.length} e-mail(s) válidos</strong></span>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button
@@ -1243,9 +1243,9 @@ export default function NewsletterPage() {
                         setListaManual(LISTA_PADRAO_CLIENTES_NEWSLETTER.join(';\n'));
                         toast.success('351 e-mails da base carregados na lista!');
                       }}
-                      style={{ fontSize: 11, background: '#fdf2f2', border: '1px solid #8c1a22', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontWeight: 700, color: '#8c1a22' }}
+                      style={{ fontSize: 13, background: '#fdf2f2', border: '1px solid #8c1a22', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontWeight: 700, color: '#8c1a22' }}
                     >
-                      📋 Carregar Base Geral (351 e-mails)
+                      Carregar Base Geral (351 e-mails)
                     </button>
                     <button
                       type="button"
@@ -1253,7 +1253,7 @@ export default function NewsletterPage() {
                         setListaManual(prev => (prev ? `${prev}, consultoria@privilegecontabilidade.com.br` : 'consultoria@privilegecontabilidade.com.br'));
                         toast.success('consultoria@privilegecontabilidade.com.br adicionado!');
                       }}
-                      style={{ fontSize: 11, background: '#e2e8f0', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}
+                      style={{ fontSize: 13, background: '#e2e8f0', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontWeight: 600, color: '#1e293b' }}
                     >
                       + Inserir consultoria@...
                     </button>
@@ -1265,13 +1265,13 @@ export default function NewsletterPage() {
             {/* Aviso sobre Bloqueio Spamhaus em Hotmail/Outlook */}
             {totalHotmailOutlook > 0 && (
               <div style={{ marginBottom: 18, background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#92400e' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 700, color: '#92400e' }}>
                   <AlertCircle size={16} /> Atenção aos e-mails @hotmail e @outlook ({totalHotmailOutlook} contatos)
                 </div>
-                <div style={{ fontSize: 12, color: '#78350f', marginTop: 4, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, color: '#78350f', marginTop: 4, lineHeight: 1.5 }}>
                   O IP do servidor de envio da Privilege (<code>177.101.135.181</code>) está em lista de verificação na Spamhaus. Por esse motivo, a Microsoft devolve esses e-mails com <em>MAILER-DAEMON</em>.
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: '#b45309' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#b45309' }}>
                   <input
                     type="checkbox"
                     checked={filtrarHotmailOutlook}
@@ -1287,13 +1287,13 @@ export default function NewsletterPage() {
             {/* Proteção Antiduplicação (Não reenviar para quem já recebeu este assunto hoje) */}
             {totalJaEnviadosHoje > 0 && (
               <div style={{ marginBottom: 18, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#166534' }}>
-                  <ShieldCheck size={18} color="#16a34a" /> 🛡️ Proteção Antiduplicação Inteligente
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 700, color: '#166534' }}>
+                  <ShieldCheck size={18} color="#16a34a" /> Proteção Antiduplicação Inteligente
                 </div>
-                <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, color: '#15803d', marginTop: 4, lineHeight: 1.5 }}>
                   Identificamos que <strong>{totalJaEnviadosHoje}</strong> destinatário(s) desta lista já receberam com sucesso este mesmo comunicado nas últimas 24 horas.
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: '#166534' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#166534' }}>
                   <input
                     type="checkbox"
                     checked={evitarDuplicados}
@@ -1308,13 +1308,13 @@ export default function NewsletterPage() {
 
             {/* Assunto */}
             <div className="form-group" style={{ marginBottom: 18 }}>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: 13.5, color: '#111827' }}>
-                🏷️ Assunto do E-mail *
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
+                Assunto do E-mail *
               </label>
               <input
                 type="text"
                 className="form-input"
-                style={{ width: '100%', padding: '10px 14px', fontSize: 14, borderRadius: 6, border: '1px solid #cbd5e1', fontWeight: 500 }}
+                style={{ width: '100%', padding: '10px 14px', fontSize: 15.5, borderRadius: 6, border: '1px solid #cbd5e1', fontWeight: 500 }}
                 placeholder={tipoFormato === 'imagem' ? 'Ex: Comunicado Importante — Privilege Contabilidade' : 'Ex: Privilege Consultoria — Lembrete de Fechamento Fiscal'}
                 value={assunto}
                 onChange={e => setAssunto(e.target.value)}
@@ -1325,10 +1325,10 @@ export default function NewsletterPage() {
             {tipoFormato === 'imagem' ? (
               <div style={{ marginBottom: 22, background: '#fff', border: '2px dashed #8c1a22', borderRadius: 10, padding: 20, textAlign: 'center' }}>
                 <div style={{ maxWidth: 500, margin: '0 auto' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#8c1a22', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 700, color: '#8c1a22', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <ImageIcon size={20} /> Imagem / Flyer do Comunicado *
                   </div>
-                  <p style={{ fontSize: 12.5, color: '#64748b', margin: '0 0 16px' }}>
+                  <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 16px' }}>
                     O e-mail será enviado com a logo oficial da Privilege no topo e esta arte em largura total.
                   </p>
 
@@ -1344,7 +1344,7 @@ export default function NewsletterPage() {
                         borderRadius: 8,
                         cursor: 'pointer',
                         fontWeight: 700,
-                        fontSize: 14,
+                        fontSize: 15.5,
                         boxShadow: '0 2px 6px rgba(140,26,34,0.25)',
                       }}
                     >
@@ -1367,14 +1367,14 @@ export default function NewsletterPage() {
                               border: '1px solid #e2e8f0',
                             }}
                           />
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginTop: 8 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginTop: 8 }}>
                             Arquivo: {img.filename}
                           </div>
                           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
                             <label
                               style={{
                                 cursor: 'pointer',
-                                fontSize: 12.5,
+                                fontSize: 14,
                                 fontWeight: 600,
                                 color: '#8c1a22',
                                 background: '#fdf2f2',
@@ -1391,7 +1391,7 @@ export default function NewsletterPage() {
                               onClick={() => handleRemoverImagem(idx)}
                               style={{
                                 cursor: 'pointer',
-                                fontSize: 12.5,
+                                fontSize: 14,
                                 fontWeight: 600,
                                 color: '#dc2626',
                                 background: '#fef2f2',
@@ -1411,13 +1411,13 @@ export default function NewsletterPage() {
                   {imagens.length > 0 && (
                     <div style={{ marginTop: 20, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '14px 16px', textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <label style={{ fontSize: 14.5, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16 }}>💬</span> Link de Destino ao Clicar na Imagem (WhatsApp)
                         </label>
                         <button
                           type="button"
                           onClick={() => setLinkDestinoImagem('https://wa.me/5546999048990?text=' + encodeURIComponent('Olá! Vi o comunicado da Privilege e gostaria de mais informações.'))}
-                          style={{ fontSize: 11.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+                          style={{ fontSize: 13.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
                         >
                           Usar WhatsApp Oficial (46) 99904-8990
                         </button>
@@ -1428,10 +1428,10 @@ export default function NewsletterPage() {
                         value={linkDestinoImagem}
                         onChange={e => setLinkDestinoImagem(e.target.value)}
                         placeholder="https://wa.me/5546999048990?text=Olá"
-                        style={{ fontSize: 13, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
+                        style={{ fontSize: 14.5, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
                       />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
-                        <span>✅ Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 13.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
+                        <span>Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
                         <a href={linkDestinoImagem} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', fontWeight: 700, color: '#166534' }}>
                           Testar Link ↗
                         </a>
@@ -1446,8 +1446,8 @@ export default function NewsletterPage() {
                 {/* MODO TEXTO: Editor Formatado com Toolbar e Prévia em Tempo Real */}
                 <div className="form-group" style={{ marginBottom: 18 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', margin: 0 }}>
-                      ✍️ Conteúdo da Mensagem (com Formatação)
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: 14.5, color: '#1e293b', margin: 0 }}>
+                      Conteúdo da Mensagem (com Formatação)
                     </label>
                     <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
                       <button
@@ -1457,7 +1457,7 @@ export default function NewsletterPage() {
                           border: 'none',
                           padding: '4px 10px',
                           borderRadius: 4,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 600,
                           cursor: 'pointer',
                           background: abaMensagem === 'editor' ? '#fff' : 'transparent',
@@ -1465,7 +1465,7 @@ export default function NewsletterPage() {
                           boxShadow: abaMensagem === 'editor' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                         }}
                       >
-                        ✏️ Editor
+                        Editor
                       </button>
                       <button
                         type="button"
@@ -1474,7 +1474,7 @@ export default function NewsletterPage() {
                           border: 'none',
                           padding: '4px 10px',
                           borderRadius: 4,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 600,
                           cursor: 'pointer',
                           background: abaMensagem === 'previa' ? '#fff' : 'transparent',
@@ -1482,7 +1482,7 @@ export default function NewsletterPage() {
                           boxShadow: abaMensagem === 'previa' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                         }}
                       >
-                        👁️ Prévia Formatada
+                        Prévia Formatada
                       </button>
                     </div>
                   </div>
@@ -1505,7 +1505,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Negrito (**texto**)"
                       onClick={() => aplicarFormatacao('**', '**', 'texto em negrito')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 14.5 }}
                     >
                       B
                     </button>
@@ -1513,7 +1513,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Itálico (*texto*)"
                       onClick={() => aplicarFormatacao('*', '*', 'texto em itálico')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontStyle: 'italic', fontSize: 13 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontStyle: 'italic', fontSize: 14.5 }}
                     >
                       I
                     </button>
@@ -1521,7 +1521,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Sublinhado (<u>texto</u>)"
                       onClick={() => aplicarFormatacao('<u>', '</u>', 'texto sublinhado')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', textDecoration: 'underline', fontSize: 13 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', textDecoration: 'underline', fontSize: 14.5 }}
                     >
                       U
                     </button>
@@ -1530,7 +1530,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Título Grande (# Título)"
                       onClick={() => aplicarFormatacao('### ', '\n', 'Título da Seção')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}
                     >
                       H3 Título
                     </button>
@@ -1538,7 +1538,7 @@ export default function NewsletterPage() {
                       type="button"
                       title="Lista com Marcadores (• Item)"
                       onClick={() => aplicarFormatacao('• ', '\n', 'Item da lista')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 14 }}
                     >
                       • Lista
                     </button>
@@ -1546,9 +1546,9 @@ export default function NewsletterPage() {
                       type="button"
                       title="Caixa de Aviso / Destaque (> Aviso)"
                       onClick={() => aplicarFormatacao('> ', '\n', 'Importante: insira aqui o comunicado de destaque.')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 14 }}
                     >
-                      💬 Destaque
+                      Destaque
                     </button>
                     <span style={{ width: 1, height: 18, background: '#cbd5e1', margin: '0 4px' }} />
                     <button
@@ -1558,25 +1558,25 @@ export default function NewsletterPage() {
                         const url = prompt('Digite a URL do link (ex: https://privilegecontabilidade.cnt.br):', 'https://');
                         if (url) aplicarFormatacao('[', `](${url})`, 'Clique aqui');
                       }}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 14 }}
                     >
-                      🔗 Link
+                      Link
                     </button>
                     <button
                       type="button"
                       title="Texto em Cor Vinho Privilege"
                       onClick={() => aplicarFormatacao('<span style="color: #600000; font-weight: bold;">', '</span>', 'Texto Vinho')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#600000', fontWeight: 700, fontSize: 12 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#600000', fontWeight: 700, fontSize: 14 }}
                     >
-                      🍷 Vinho Privilege
+                      Vinho Privilege
                     </button>
                     <button
                       type="button"
                       title="Texto em Cor Verde Sucesso"
                       onClick={() => aplicarFormatacao('<span style="color: #16a34a; font-weight: bold;">', '</span>', 'Texto Verde')}
-                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#16a34a', fontWeight: 700, fontSize: 12 }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#16a34a', fontWeight: 700, fontSize: 14 }}
                     >
-                      🟢 Verde
+                      Verde
                     </button>
                   </div>
 
@@ -1589,7 +1589,7 @@ export default function NewsletterPage() {
                       style={{
                         width: '100%',
                         padding: '12px 14px',
-                        fontSize: 14,
+                        fontSize: 15.5,
                         borderRadius: '0 0 6px 6px',
                         border: '1px solid #d1d5db',
                         fontFamily: 'Arial, Helvetica, sans-serif',
@@ -1609,22 +1609,22 @@ export default function NewsletterPage() {
                         background: '#ffffff',
                         border: '1px solid #d1d5db',
                         borderRadius: '0 0 6px 6px',
-                        fontSize: 14,
+                        fontSize: 15.5,
                         lineHeight: 1.6,
                         color: '#1e293b',
                       }}
                       dangerouslySetInnerHTML={{ __html: renderPreviewHtml(mensagem) }}
                     />
                   )}
-                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
-                    💡 Dica: Você pode usar formatação rápida com botões acima ou digitar diretamente em <strong>HTML</strong> e <strong>Markdown</strong>.
+                  <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 4 }}>
+                    Dica: Você pode usar formatação rápida com botões acima ou digitar diretamente em <strong>HTML</strong> e <strong>Markdown</strong>.
                   </div>
                 </div>
 
                 {/* Imagens Anexadas Opcionais */}
                 <div style={{ marginBottom: 22, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <label style={{ fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <label style={{ fontWeight: 700, fontSize: 14.5, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <ImageIcon size={16} color="#8c1a22" /> Panfletos & Imagens (Opcional)
                     </label>
                     <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
@@ -1634,7 +1634,7 @@ export default function NewsletterPage() {
                   </div>
 
                   {imagens.length === 0 ? (
-                    <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>
                       Nenhuma imagem anexada. Você pode adicionar panfletos, banners ou comunicados visuais em PNG/JPG.
                     </div>
                   ) : (
@@ -1653,7 +1653,7 @@ export default function NewsletterPage() {
                           }}
                         >
                           <img src={img.base64} alt={img.filename} style={{ width: 140, height: 100, objectFit: 'cover', borderRadius: 4, display: 'block' }} />
-                          <div style={{ fontSize: 11, color: '#374151', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: 13, color: '#374151', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {img.filename}
                           </div>
                           <button
@@ -1685,13 +1685,13 @@ export default function NewsletterPage() {
                   {imagens.length > 0 && (
                     <div style={{ marginTop: 20, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 8, padding: '14px 16px', textAlign: 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <label style={{ fontSize: 14.5, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16 }}>💬</span> Link de Destino ao Clicar na Imagem (WhatsApp)
                         </label>
                         <button
                           type="button"
                           onClick={() => setLinkDestinoImagem('https://wa.me/5546999048990?text=' + encodeURIComponent('Olá! Vi o comunicado da Privilege e gostaria de mais informações.'))}
-                          style={{ fontSize: 11.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+                          style={{ fontSize: 13.5, background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
                         >
                           Usar WhatsApp Oficial (46) 99904-8990
                         </button>
@@ -1702,10 +1702,10 @@ export default function NewsletterPage() {
                         value={linkDestinoImagem}
                         onChange={e => setLinkDestinoImagem(e.target.value)}
                         placeholder="https://wa.me/5546999048990?text=Olá"
-                        style={{ fontSize: 13, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
+                        style={{ fontSize: 14.5, borderColor: '#86efac', background: '#ffffff', color: '#14532d', fontWeight: 500 }}
                       />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
-                        <span>✅ Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, fontSize: 13.5, color: '#15803d', flexWrap: 'wrap', gap: 6 }}>
+                        <span>Quando o cliente clicar no panfleto ou no botão verde no e-mail, abrirá seu WhatsApp instantaneamente!</span>
                         <a href={linkDestinoImagem} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', fontWeight: 700, color: '#166534' }}>
                           Testar Link ↗
                         </a>
@@ -1727,18 +1727,18 @@ export default function NewsletterPage() {
                   border: `1px solid ${resultadoEnvio.falhas === 0 ? '#10b981' : '#f59e0b'}`,
                 }}
               >
-                <div style={{ fontSize: 14, fontWeight: 700, color: resultadoEnvio.falhas === 0 ? '#065f46' : '#92400e' }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: resultadoEnvio.falhas === 0 ? '#065f46' : '#92400e' }}>
                   {resultadoEnvio.falhas === 0 ? '✓ Todos os e-mails foram entregues com sucesso!' : 'Aviso no envio de e-mails:'}
                 </div>
-                <div style={{ fontSize: 12.5, color: '#374151', marginTop: 4 }}>
+                <div style={{ fontSize: 14, color: '#374151', marginTop: 4 }}>
                   <strong>{resultadoEnvio.enviados}</strong> entregue(s) de <strong>{resultadoEnvio.totalDestinatarios}</strong> destinatários.
                 </div>
                 {resultadoEnvio.logs && resultadoEnvio.logs.some(l => l.status === 'erro') && (
-                  <div style={{ marginTop: 8, padding: 8, background: '#fee2e2', borderRadius: 6, fontSize: 12, color: '#b91c1c' }}>
+                  <div style={{ marginTop: 8, padding: 8, background: '#fee2e2', borderRadius: 6, fontSize: 14, color: '#b91c1c' }}>
                     <strong>Detalhe da falha retornado pelo servidor:</strong>
                     <div>{resultadoEnvio.logs.find(l => l.status === 'erro')?.erro}</div>
                     <div style={{ marginTop: 4, fontStyle: 'italic' }}>
-                      👉 Dica: Se a falha for <code>Invalid login 535</code>, clique em <strong>"⚙️ Configurar Senha SMTP"</strong> no topo da tela e digite a senha correta do e-mail.
+                      Dica: Se a falha for <code>Invalid login 535</code>, clique em <strong>"Configurar Senha SMTP"</strong> no topo da tela e digite a senha correta do e-mail.
                     </div>
                   </div>
                 )}
@@ -1748,8 +1748,8 @@ export default function NewsletterPage() {
             {/* Barra de Progresso em Tempo Real (Lotes) */}
             {progressoEnvio?.ativo && (
               <div style={{ background: '#fdf2f2', border: '1.5px solid #8c1a22', borderRadius: 8, padding: 14, marginBottom: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, fontSize: 13, color: '#8c1a22' }}>
-                  <span>📨 Enviando em Lotes: Lote {progressoEnvio.loteAtual} de {progressoEnvio.totalLotes}...</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, fontSize: 14.5, color: '#8c1a22' }}>
+                  <span>Enviando em Lotes: Lote {progressoEnvio.loteAtual} de {progressoEnvio.totalLotes}...</span>
                   <span>{progressoEnvio.atual} / {progressoEnvio.total} ({Math.round((progressoEnvio.atual / Math.max(progressoEnvio.total, 1)) * 100)}%)</span>
                 </div>
                 <div style={{ width: '100%', height: 10, background: '#fee2e2', borderRadius: 5, overflow: 'hidden' }}>
@@ -1762,7 +1762,7 @@ export default function NewsletterPage() {
                     }}
                   />
                 </div>
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
                   <span>Enviando com pool SMTP protegido contra tempo limite.</span>
                   <span>Aguarde a conclusão de todos os lotes...</span>
                 </div>
@@ -1771,7 +1771,7 @@ export default function NewsletterPage() {
 
             {/* Seletor de Modo de Envio: Fila a cada 65 min vs Disparo Imediato */}
             <div style={{ marginBottom: 20, background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 8, padding: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: '#1e293b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Timer size={16} color="#8c1a22" /> Escolha o Modo de Envio
               </div>
 
@@ -1786,10 +1786,10 @@ export default function NewsletterPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: modoEnvio === 'fila' ? '#8c1a22' : '#1e293b' }}>
-                    <Clock size={16} /> ⏳ Fila Segura (Lotes a cada 65 min)
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 14.5, color: modoEnvio === 'fila' ? '#8c1a22' : '#1e293b' }}>
+                    <Clock size={16} /> Fila Segura (Lotes a cada 65 min)
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
                     <strong>Recomendado!</strong> Envia em lotes de {tamanhoLoteFila} e-mails a cada {intervaloMinutosFila} min. <strong>Nunca estoura o limite por hora</strong> da hospedagem.
                   </div>
                 </div>
@@ -1804,10 +1804,10 @@ export default function NewsletterPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: modoEnvio === 'imediato' ? '#8c1a22' : '#1e293b' }}>
-                    <Send size={16} /> ⚡ Disparo Direto Imediato
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 14.5, color: modoEnvio === 'imediato' ? '#8c1a22' : '#1e293b' }}>
+                    <Send size={16} /> Disparo Direto Imediato
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 13.5, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
                     Dispara todos os {totalDestinatariosEstimados} e-mails na sequência agora (pode falhar se o limite da hospedagem já estiver esgotado).
                   </div>
                 </div>
@@ -1817,7 +1817,7 @@ export default function NewsletterPage() {
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, padding: 12 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
                     <div>
-                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
                         E-mails por Ciclo (Tamanho do Lote)
                       </label>
                       <input
@@ -1826,13 +1826,13 @@ export default function NewsletterPage() {
                         max={150}
                         value={tamanhoLoteFila}
                         onChange={e => setTamanhoLoteFila(Number(e.target.value) || 70)}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 14.5, borderRadius: 6, border: '1px solid #cbd5e1' }}
                       />
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Recomendado: 60 a 80</span>
+                      <span style={{ fontSize: 13, color: '#94a3b8' }}>Recomendado: 60 a 80</span>
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
                         Intervalo entre Lotes (Minutos)
                       </label>
                       <input
@@ -1841,25 +1841,25 @@ export default function NewsletterPage() {
                         max={180}
                         value={intervaloMinutosFila}
                         onChange={e => setIntervaloMinutosFila(Number(e.target.value) || 65)}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 14.5, borderRadius: 6, border: '1px solid #cbd5e1' }}
                       />
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Recomendado: 65 min</span>
+                      <span style={{ fontSize: 13, color: '#94a3b8' }}>Recomendado: 65 min</span>
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
                         Quando Iniciar o 1º Lote?
                       </label>
                       <select
                         value={iniciarFilaEmMinutos}
                         onChange={e => setIniciarFilaEmMinutos(Number(e.target.value))}
-                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 14.5, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
                       >
                         <option value={65}>Em 65 min (pois a hospedagem já bateu o limite)</option>
                         <option value={0}>Imediatamente agora (1º lote)</option>
                         <option value={30}>Em 30 minutos</option>
                       </select>
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Garante que não bloqueie</span>
+                      <span style={{ fontSize: 13, color: '#94a3b8' }}>Garante que não bloqueie</span>
                     </div>
                   </div>
                 </div>
@@ -1867,7 +1867,7 @@ export default function NewsletterPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>
+              <div style={{ fontSize: 14, color: '#6b7280' }}>
                 Destinatários: <strong>{totalDestinatariosEstimados} e-mail(s) pendente(s)</strong>
                 {totalJaEnviadosHoje > 0 && evitarDuplicados && (
                   <span style={{ color: '#16a34a', marginLeft: 8, fontWeight: 600 }}>
@@ -1882,7 +1882,7 @@ export default function NewsletterPage() {
                   background: '#8c1a22',
                   borderColor: '#8c1a22',
                   padding: '10px 22px',
-                  fontSize: 14,
+                  fontSize: 15.5,
                   fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1895,7 +1895,7 @@ export default function NewsletterPage() {
               >
                 <Send size={16} />
                 {enviando
-                  ? '⏳ Processando Disparo...'
+                  ? 'Processando Disparo...'
                   : totalDestinatariosEstimados === 0 && totalJaEnviadosHoje > 0
                   ? '✓ Todos já Receberam Hoje'
                   : modoEnvio === 'fila'
@@ -1915,25 +1915,25 @@ export default function NewsletterPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#111827' }}>
-                    📦 Fila de Disparos em Lotes Automáticos
+                    Fila de Disparos em Lotes Automáticos
                   </h2>
                   {campanhaAtiva && (
                     <span style={{
-                      fontSize: 11.5,
+                      fontSize: 13.5,
                       fontWeight: 700,
                       padding: '3px 10px',
                       borderRadius: 12,
                       background: campanhaAtiva.status === 'processando' ? '#dbeafe' : campanhaAtiva.status === 'pausada' ? '#fef3c7' : campanhaAtiva.status === 'concluida' ? '#dcfce7' : '#fef3c7',
                       color: campanhaAtiva.status === 'processando' ? '#1d4ed8' : campanhaAtiva.status === 'pausada' ? '#b45309' : campanhaAtiva.status === 'concluida' ? '#15803d' : '#b45309',
                     }}>
-                      {campanhaAtiva.status === 'processando' && '🔄 Processando Lote Agora...'}
-                      {campanhaAtiva.status === 'aguardando' && '⏳ Aguardando Próximo Ciclo'}
-                      {campanhaAtiva.status === 'pausada' && '⏸ Fila Pausada'}
-                      {campanhaAtiva.status === 'concluida' && '✅ Campanha Concluída'}
+                      {campanhaAtiva.status === 'processando' && 'Processando Lote Agora...'}
+                      {campanhaAtiva.status === 'aguardando' && 'Aguardando Próximo Ciclo'}
+                      {campanhaAtiva.status === 'pausada' && 'Fila Pausada'}
+                      {campanhaAtiva.status === 'concluida' && 'Campanha Concluída'}
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 12.5, color: '#64748b', margin: '4px 0 0' }}>
+                <p style={{ fontSize: 14, color: '#64748b', margin: '4px 0 0' }}>
                   Os lotes são processados automaticamente a cada 65 minutos no servidor para respeitar a cota de envio da sua hospedagem.
                 </p>
               </div>
@@ -1956,14 +1956,14 @@ export default function NewsletterPage() {
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 18 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Assunto da Mensagem</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Assunto da Mensagem</span>
                       <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 2 }}>
                         {campanhaAtiva.assunto}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Regra de Envio dos Lotes</span>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#334155', marginTop: 2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Regra de Envio dos Lotes</span>
+                      <div style={{ fontSize: 14.5, fontWeight: 600, color: '#334155', marginTop: 2 }}>
                         {campanhaAtiva.tamanhoLote} e-mails a cada {campanhaAtiva.intervaloMinutos} minutos
                       </div>
                     </div>
@@ -1971,8 +1971,8 @@ export default function NewsletterPage() {
 
                   {/* Alerta de tempo limite ou erro do servidor */}
                   {campanhaAtiva.erroUltimaTentativa && (
-                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 12.5, color: '#92400e' }}>
-                      <strong>⚠️ Observação da Hospedagem:</strong> {campanhaAtiva.erroUltimaTentativa}
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 14, color: '#92400e' }}>
+                      <strong>Observação da Hospedagem:</strong> {campanhaAtiva.erroUltimaTentativa}
                     </div>
                   )}
 
@@ -1982,10 +1982,10 @@ export default function NewsletterPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Timer size={22} color="#8c1a22" />
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#8c1a22' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#8c1a22' }}>
                             Próximo Lote Agendado
                           </div>
-                          <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                          <div style={{ fontSize: 13.5, color: '#64748b' }}>
                             Disparo automático às {new Date(campanhaAtiva.proximoLoteEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -2001,29 +2001,29 @@ export default function NewsletterPage() {
                 {/* Métricas e Barra de Progresso */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Total de Destinatários</div>
+                    <div style={{ fontSize: 13.5, color: '#64748b', fontWeight: 600 }}>Total de Destinatários</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>{campanhaAtiva.totalDestinatarios}</div>
                   </div>
 
                   <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11.5, color: '#166534', fontWeight: 600 }}>Enviados com Sucesso</div>
+                    <div style={{ fontSize: 13.5, color: '#166534', fontWeight: 600 }}>Enviados com Sucesso</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#15803d', marginTop: 4 }}>{campanhaAtiva.destinatariosEnviados?.length || 0}</div>
                   </div>
 
                   <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11.5, color: '#854d0e', fontWeight: 600 }}>Pendentes na Fila</div>
+                    <div style={{ fontSize: 13.5, color: '#854d0e', fontWeight: 600 }}>Pendentes na Fila</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#a16207', marginTop: 4 }}>{campanhaAtiva.destinatariosPendentes?.length || 0}</div>
                   </div>
 
                   <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11.5, color: '#991b1b', fontWeight: 600 }}>Falhas Registradas</div>
+                    <div style={{ fontSize: 13.5, color: '#991b1b', fontWeight: 600 }}>Falhas Registradas</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#b91c1c', marginTop: 4 }}>{campanhaAtiva.destinatariosFalhas?.length || 0}</div>
                   </div>
                 </div>
 
                 {/* Barra de Progresso Geral */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                     <span>Progresso da Campanha</span>
                     <span>{Math.round(((campanhaAtiva.destinatariosEnviados?.length || 0) / Math.max(campanhaAtiva.totalDestinatarios, 1)) * 100)}%</span>
                   </div>
@@ -2092,10 +2092,10 @@ export default function NewsletterPage() {
                 {/* Próximos Destinatários na Linha */}
                 {campanhaAtiva.destinatariosPendentes?.length > 0 && (
                   <div style={{ marginTop: 22 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Users size={16} /> Próximos e-mails da fila ({campanhaAtiva.destinatariosPendentes.length} restantes):
                     </div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 14px', maxHeight: 150, overflowY: 'auto', fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 14px', maxHeight: 150, overflowY: 'auto', fontSize: 14, color: '#475569', fontFamily: 'monospace' }}>
                       {campanhaAtiva.destinatariosPendentes.slice(0, 30).map((d: any, idx: number) => (
                         <div key={idx} style={{ padding: '2px 0' }}>
                           #{idx + 1}: {d.email}
@@ -2114,7 +2114,7 @@ export default function NewsletterPage() {
               <div style={{ textAlign: 'center', padding: '50px 20px', color: '#9ca3af' }}>
                 <Clock size={48} style={{ margin: '0 auto 12px', opacity: 0.5, color: '#8c1a22' }} />
                 <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Nenhuma fila em andamento no momento</div>
-                <p style={{ fontSize: 13, color: '#64748b', maxWidth: 440, margin: '6px auto 16px' }}>
+                <p style={{ fontSize: 14.5, color: '#64748b', maxWidth: 440, margin: '6px auto 16px' }}>
                   Quando você fizer um disparo de newsletter e escolher a opção <strong>"Fila Segura (Lotes a cada 65 min)"</strong>, ela aparecerá aqui e disparará os lotes automaticamente a cada 65 min sem estourar o limite da sua hospedagem.
                 </p>
                 <button
@@ -2139,7 +2139,7 @@ export default function NewsletterPage() {
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
                 Relatório de Disparos e Rastreamento de E-mails
               </h2>
-              <p style={{ fontSize: 12.5, color: '#6b7280', margin: '2px 0 0' }}>
+              <p style={{ fontSize: 14, color: '#6b7280', margin: '2px 0 0' }}>
                 Acompanhe em tempo real se o cliente recebeu, abriu/visualizou o comunicado ou se houve falha na entrega
               </p>
             </div>
@@ -2155,12 +2155,12 @@ export default function NewsletterPage() {
           {logs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
               <Mail size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Nenhum envio registrado ainda</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Os disparos de newsletter e cobranças aparecerão aqui automaticamente.</div>
+              <div style={{ fontWeight: 600, fontSize: 15.5 }}>Nenhum envio registrado ainda</div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>Os disparos de newsletter e cobranças aparecerão aqui automaticamente.</div>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.5 }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
                     <th style={{ padding: '10px 12px', color: '#475569' }}>Data / Hora</th>
@@ -2179,12 +2179,12 @@ export default function NewsletterPage() {
                       </td>
                       <td style={{ padding: '10px 12px' }}>
                         <div style={{ fontWeight: 700, color: '#1e293b' }}>{log.destinatarioNome || 'Cliente'}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{log.destinatarioEmail}</div>
+                        <div style={{ fontSize: 14, color: '#64748b' }}>{log.destinatarioEmail}</div>
                       </td>
                       <td style={{ padding: '10px 12px' }}>
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 13,
                             padding: '2px 6px',
                             borderRadius: 4,
                             fontWeight: 700,
@@ -2216,7 +2216,7 @@ export default function NewsletterPage() {
                               color: '#1d4ed8',
                               padding: '3px 8px',
                               borderRadius: 6,
-                              fontSize: 11.5,
+                              fontSize: 13.5,
                               fontWeight: 700,
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -2226,10 +2226,10 @@ export default function NewsletterPage() {
                             <Eye size={13} /> Visualizado{log.visualizadoEm ? ` às ${new Date(log.visualizadoEm).toLocaleTimeString('pt-BR')}` : ''}
                           </span>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: 12 }}>Aguardando abertura</span>
+                          <span style={{ color: '#94a3b8', fontSize: 14 }}>Aguardando abertura</span>
                         )}
                       </td>
-                      <td style={{ padding: '10px 12px', fontSize: 12, color: '#64748b' }}>
+                      <td style={{ padding: '10px 12px', fontSize: 14, color: '#64748b' }}>
                         {log.erroMensagem ? (
                           <span style={{ color: '#dc2626' }} title={log.erroMensagem}>
                             {log.erroMensagem.slice(0, 35)}...

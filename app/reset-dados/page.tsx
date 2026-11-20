@@ -33,7 +33,7 @@ export default function ResetDadosPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">🔄 Reset de Dados</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Reset de Dados</h1>
         <p className="text-gray-600 mb-6">{status}</p>
 
         {done && (
@@ -43,8 +43,8 @@ export default function ResetDadosPage() {
               <li>1. Você será redirecionado para o login</li>
               <li>2. Faça login com as credenciais de teste:
                 <ul className="ml-4 mt-1">
-                  <li>📧 cliente@empresa.com / 123456</li>
-                  <li>👨‍💼 consultor@sistema.com / 123456</li>
+                  <li>cliente@empresa.com / 123456</li>
+                  <li>consultor@sistema.com / 123456</li>
                 </ul>
               </li>
               <li>3. Os dados de teste serão carregados automaticamente</li>

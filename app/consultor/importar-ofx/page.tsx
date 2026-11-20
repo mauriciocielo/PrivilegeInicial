@@ -370,13 +370,13 @@ export default function ImportarOFXPage() {
             className={`btn ${activeTab === 'import' ? 'btn-primary' : 'btn-secondary'}`} 
             onClick={() => setActiveTab('import')}
           >
-            📂 Importar Extrato (OFX)
+            Importar Extrato (OFX)
           </button>
           <button 
             className={`btn ${activeTab === 'rules' ? 'btn-primary' : 'btn-secondary'}`} 
             onClick={() => { setActiveTab('rules'); loadRules(); }}
           >
-            🧠 Regras de Autoclassificação ({rules.length})
+            Regras de Autoclassificação ({rules.length})
           </button>
         </div>
 
@@ -408,24 +408,24 @@ export default function ImportarOFXPage() {
             </div>
             <input ref={fileRef} type="file" accept=".ofx,.qfx,.txt" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
 
-            <div style={{ textAlign: 'center', margin: '16px 0', color: 'var(--text-muted)', fontSize: 12 }}>— ou —</div>
+            <div style={{ textAlign: 'center', margin: '16px 0', color: 'var(--text-muted)', fontSize: 14 }}>— ou —</div>
             <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginBottom: 20 }} onClick={loadSample}>
-              🧪 Carregar OFX de Exemplo (Demo)
+              Carregar OFX de Exemplo (Demo)
             </button>
 
             <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>🔌 Conexão Direta via API (Open Finance)</span>
-                <span className="badge badge-purple" style={{ fontSize: 9, padding: '2px 6px', fontWeight: 700 }}>NOVO</span>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>Conexão Direta via API (Open Finance)</span>
+                <span className="badge badge-purple" style={{ fontSize: 11.5, padding: '2px 6px', fontWeight: 700 }}>NOVO</span>
               </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, lineHeight: '1.4' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: '1.4' }}>
                 Sincronize o extrato bancário diretamente da conta do cooperado/cliente Sicredi e outros bancos homologados via API.
               </p>
               
               <div style={{ display: 'flex', gap: 8 }}>
                 <select 
                   className="form-control" 
-                  style={{ fontSize: 12.5, flex: 1 }}
+                  style={{ fontSize: 14, flex: 1 }}
                   value={bancoSync}
                   onChange={e => setBancoSync(e.target.value)}
                   disabled={syncingApi}
@@ -438,26 +438,26 @@ export default function ImportarOFXPage() {
                 </select>
                 <button 
                   className="btn btn-primary"
-                  style={{ fontSize: 12.5, background: 'linear-gradient(135deg, var(--purple) 0%, #7c3aed 100%)', borderColor: 'var(--purple)' }}
+                  style={{ fontSize: 14, background: 'linear-gradient(135deg, var(--purple) 0%, #7c3aed 100%)', borderColor: 'var(--purple)' }}
                   onClick={handleSyncApi}
                   disabled={syncingApi || !bancoSync}
                 >
-                  {syncingApi ? '⏳ Aguarde...' : '🔌 Conectar'}
+                  {syncingApi ? 'Aguarde...' : 'Conectar'}
                 </button>
               </div>
               {syncStatusText && (
-                <div style={{ fontSize: 11.5, color: 'var(--purple)', marginTop: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="pulse-glow" style={{ fontSize: 14 }}>📡</span> {syncStatusText}
+                <div style={{ fontSize: 13.5, color: 'var(--purple)', marginTop: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="pulse-glow" style={{ fontSize: 15.5 }}>📡</span> {syncStatusText}
                 </div>
               )}
             </div>
 
             {ofxInfo && (
               <div style={{ marginTop: 20, padding: '14px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600 }}>Informações do Extrato</div>
-                {ofxInfo.bankId && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Banco: <strong style={{ color: 'var(--text-primary)' }}>{ofxInfo.bankId}</strong></div>}
-                {ofxInfo.acctId && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Conta: <strong style={{ color: 'var(--text-primary)' }}>{ofxInfo.acctId}</strong></div>}
-                {ofxInfo.dtStart && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Período: <strong style={{ color: 'var(--text-primary)' }}>{fmt.date(ofxInfo.dtStart)} — {fmt.date(ofxInfo.dtEnd || '')}</strong></div>}
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600 }}>Informações do Extrato</div>
+                {ofxInfo.bankId && <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Banco: <strong style={{ color: 'var(--text-primary)' }}>{ofxInfo.bankId}</strong></div>}
+                {ofxInfo.acctId && <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Conta: <strong style={{ color: 'var(--text-primary)' }}>{ofxInfo.acctId}</strong></div>}
+                {ofxInfo.dtStart && <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Período: <strong style={{ color: 'var(--text-primary)' }}>{fmt.date(ofxInfo.dtStart)} — {fmt.date(ofxInfo.dtEnd || '')}</strong></div>}
               </div>
             )}
           </div>
@@ -474,7 +474,7 @@ export default function ImportarOFXPage() {
                 </select>
               </div>
               <div className="alert alert-info">
-                💡 As transações de débito serão lançadas como despesas e crédito como receitas. Você pode alterar a categoria individualmente antes de importar.
+                As transações de débito serão lançadas como despesas e crédito como receitas. Você pode alterar a categoria individualmente antes de importar.
               </div>
             </div>
 
@@ -485,17 +485,17 @@ export default function ImportarOFXPage() {
                   <span className="badge badge-blue">{transactions.length} transações</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Selecionadas:</span>
                     <strong>{selected.size}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Créditos:</span>
                     <strong style={{ color: 'var(--green)' }}>
                       {fmt.currency(transactions.filter(t => t.type === 'CREDIT' && selected.has(t.id)).reduce((a, t) => a + t.amount, 0))}
                     </strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Débitos:</span>
                     <strong style={{ color: 'var(--red)' }}>
                       {fmt.currency(transactions.filter(t => t.type === 'DEBIT' && selected.has(t.id)).reduce((a, t) => a + t.amount, 0))}
@@ -508,7 +508,7 @@ export default function ImportarOFXPage() {
                   onClick={handleImport}
                   disabled={importing || selected.size === 0}
                 >
-                  {importing ? '⏳ Importando...' : `⬇ Importar ${selected.size} Lançamentos`}
+                  {importing ? 'Importando...' : `⬇ Importar ${selected.size} Lançamentos`}
                 </button>
               </div>
             )}
@@ -554,11 +554,11 @@ export default function ImportarOFXPage() {
                           style={{ cursor: 'pointer', accentColor: 'var(--accent)', width: 16, height: 16 }}
                         />
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(t.date)}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(t.date)}</td>
                       <td style={{ fontWeight: 500, maxWidth: 250 }}>
                         <div>{t.description}</div>
                         {t.memo && (
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
                             {t.memo}
                           </div>
                         )}
@@ -572,13 +572,13 @@ export default function ImportarOFXPage() {
                           if (matches.length > 0) {
                             return (
                               <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(96,0,0,0.06)', color: 'var(--accent)', borderRadius: 4, fontWeight: 600 }}>💡 Conciliação</span>
+                                <span style={{ fontSize: 12.5, padding: '2px 6px', background: 'rgba(96,0,0,0.06)', color: 'var(--accent)', borderRadius: 4, fontWeight: 600 }}>Conciliação</span>
                                 <button
                                   onClick={() => handleReconcile(t, matches[0].id)}
                                   className="btn btn-ghost btn-sm"
-                                  style={{ padding: '2px 6px', fontSize: 10, border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', borderRadius: 4 }}
+                                  style={{ padding: '2px 6px', fontSize: 12.5, border: '1px solid var(--accent)', color: 'var(--accent)', cursor: 'pointer', borderRadius: 4 }}
                                 >
-                                  🤝 Conciliar: "{matches[0].descricao}"
+                                  Conciliar: "{matches[0].descricao}"
                                 </button>
                               </div>
                             );
@@ -588,12 +588,12 @@ export default function ImportarOFXPage() {
                             const pessoa = contaMatch.tipo === 'receber' ? contaMatch.conta.sacado?.nome : contaMatch.conta.fornecedor?.nome;
                             return (
                               <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(37,99,235,0.08)', color: '#2563eb', borderRadius: 4, fontWeight: 600 }}>🔌 Título ERP</span>
+                                <span style={{ fontSize: 12.5, padding: '2px 6px', background: 'rgba(37,99,235,0.08)', color: '#2563eb', borderRadius: 4, fontWeight: 600 }}>Título ERP</span>
                                 <button
                                   onClick={() => handleReconcileContaFinanceira(t, contaMatch.conta, contaMatch.tipo)}
                                   disabled={baixandoContaId === contaMatch.conta.id}
                                   className="btn btn-ghost btn-sm"
-                                  style={{ padding: '2px 6px', fontSize: 10, border: '1px solid #2563eb', color: '#2563eb', cursor: 'pointer', borderRadius: 4 }}
+                                  style={{ padding: '2px 6px', fontSize: 12.5, border: '1px solid #2563eb', color: '#2563eb', cursor: 'pointer', borderRadius: 4 }}
                                 >
                                   {baixandoContaId === contaMatch.conta.id ? 'Baixando...' : `💵 Importar e baixar título: "${pessoa || '—'}"`}
                                 </button>
@@ -614,7 +614,7 @@ export default function ImportarOFXPage() {
                             className="form-control"
                             style={{ 
                               padding: '4px 8px', 
-                              fontSize: 12,
+                              fontSize: 14,
                               border: store.classifyDescription(empresaId, t.description) ? '1.5px solid var(--accent)' : '1px solid var(--border-light)',
                               background: store.classifyDescription(empresaId, t.description) ? 'rgba(96,0,0,0.03)' : 'transparent',
                               fontWeight: store.classifyDescription(empresaId, t.description) ? 600 : 'normal'
@@ -628,7 +628,7 @@ export default function ImportarOFXPage() {
                             ))}
                           </select>
                           {store.classifyDescription(empresaId, t.description) && (
-                            <span title="Categoria auto-sugerida pela Inteligência Privilege baseada em seus lançamentos anteriores" style={{ fontSize: 14, cursor: 'help' }}>🧠</span>
+                            <span title="Categoria auto-sugerida pela Inteligência Privilege baseada em seus lançamentos anteriores" style={{ fontSize: 15.5, cursor: 'help' }}>🧠</span>
                           )}
                         </div>
                       </td>
@@ -748,7 +748,7 @@ export default function ImportarOFXPage() {
                 value={rulePattern} 
                 onChange={e => setRulePattern(e.target.value)} 
               />
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
                 O sistema fará correspondência parcial desse termo (sem distinção entre maiúsculas/minúsculas).
               </span>
             </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { inter as sans, instrumentSerif as serif } from './fonts';
+import { inter as sans } from './fonts';
 import {
   CheckCircle2,
   ChevronDown,
@@ -57,9 +57,9 @@ export default function HomePage() {
         .container { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 40px; box-sizing: border-box; }
 
         /* Typography */
-        h1, h2, h3 { font-family: ${serif.style.fontFamily}; color: #111113; }
-        h1 { font-size: 66px; line-height: 1.03; margin-bottom: 24px; letter-spacing: -0.025em; }
-        h2 { font-size: 50px; margin-bottom: 36px; letter-spacing: -0.02em; }
+        h1, h2, h3 { font-family: ${sans.style.fontFamily}; font-weight: 700; letter-spacing: -0.02em; color: #111113; }
+        h1 { font-size: 52px; line-height: 1.03; margin-bottom: 24px; letter-spacing: -0.025em; }
+        h2 { font-size: 40px; margin-bottom: 36px; letter-spacing: -0.02em; }
 
         /* Navigation */
         nav { padding: 28px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(20,20,22,0.06); }
@@ -194,10 +194,10 @@ export default function HomePage() {
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.08 }}
             priority
           />
-          <span style={{ color: 'var(--accent)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '14px' }}>
+          <span style={{ color: 'var(--accent)', fontSize: '14.5px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '14px' }}>
             Escritório de Contabilidade & BPO em Francisco Beltrão / PR
           </span>
-          <h1 className="serif">
+          <h1>
             Contabilidade Consultiva e BPO Financeiro em Francisco Beltrão
           </h1>
           <p style={{ fontSize: '19px', color: 'var(--text-light)', maxWidth: '760px', margin: '0 auto 36px', lineHeight: 1.6 }}>
@@ -226,10 +226,10 @@ export default function HomePage() {
         {/* Hub de Soluções Rápidas (4 Páginas Dedicadas de SEO) */}
         <section style={{ margin: '10px 0 60px' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <span style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <span style={{ color: 'var(--accent)', fontSize: '14px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               Páginas de Atuação Especializada
             </span>
-            <h3 className="serif" style={{ fontSize: '28px', margin: '6px 0 0' }}>Conheça Nossos Principais Polos de Entrega</h3>
+            <h3 style={{ fontSize: '24px', margin: '6px 0 0' }}>Conheça Nossos Principais Polos de Entrega</h3>
           </div>
           <div className="solutions-hub">
             <Link href="/bpo-financeiro-francisco-beltrao" className="hub-card">
@@ -238,11 +238,11 @@ export default function HomePage() {
                 <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px 0', color: '#111' }}>
                   BPO Financeiro
                 </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '15px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
                   Terceirize contas a pagar, receber, conciliação e tenha um DFC diário sem custo com equipe interna.
                 </p>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 Ver BPO em Francisco Beltrão <ArrowRight size={14} />
               </span>
             </Link>
@@ -253,11 +253,11 @@ export default function HomePage() {
                 <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px 0', color: '#111' }}>
                   Planejamento Tributário
                 </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '15px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
                   Simulação entre Simples, Presumido e Lucro Real, monofásicos e adequação à Reforma Tributária.
                 </p>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 Ver Planejamento Fiscal <ArrowRight size={14} />
               </span>
             </Link>
@@ -268,11 +268,11 @@ export default function HomePage() {
                 <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px 0', color: '#111' }}>
                   Abertura de Empresa
                 </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '15px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
                   Do contrato social à liberação de alvarás em Francisco Beltrão com proteção patrimonial e agilidade.
                 </p>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 Abrir CNPJ em Beltrão <ArrowRight size={14} />
               </span>
             </Link>
@@ -283,11 +283,11 @@ export default function HomePage() {
                 <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px 0', color: '#111' }}>
                   Contabilidade Agro & LCDPR
                 </h4>
-                <p style={{ fontSize: '13.5px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '15px', color: 'var(--text-light)', margin: 0, lineHeight: 1.5 }}>
                   Livro Caixa Digital do Produtor Rural, planejamento sucessório, holding rural e declaração de ITR.
                 </p>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--accent)', marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 Ver Soluções para o Agro <ArrowRight size={14} />
               </span>
             </Link>
@@ -304,10 +304,10 @@ export default function HomePage() {
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }}
           />
           <div className="impact-card">
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14.5, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               Resultados Alcançados
             </span>
-            <div style={{ fontSize: '76px', fontWeight: '400', margin: '12px 0', fontFamily: serif.style.fontFamily }}>
+            <div style={{ fontSize: '56px', fontWeight: 700, margin: '12px 0', letterSpacing: '-0.02em' }}>
               R$ 10 Mi+
             </div>
             <p style={{ fontSize: '18px', lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
@@ -326,7 +326,7 @@ export default function HomePage() {
                   <CheckCircle2 size={22} color="var(--accent)" style={{ marginTop: 2, flexShrink: 0 }} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '16px' }}>{f.title}</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-light)' }}>{f.desc}</div>
+                    <div style={{ fontSize: '15.5px', color: 'var(--text-light)' }}>{f.desc}</div>
                   </div>
                 </div>
               ))}
@@ -337,10 +337,10 @@ export default function HomePage() {
         {/* Services Switcher */}
         <section id="solucoes" style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center' }}>
-            <span style={{ color: 'var(--accent)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--accent)', fontSize: '14.5px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '8px' }}>
               Catálogo de Serviços Completo
             </span>
-            <h2 className="serif">Nossas Soluções</h2>
+            <h2>Nossas Soluções</h2>
             <p style={{ fontSize: '18px', color: 'var(--text-light)', maxWidth: '680px', margin: '0 auto 36px' }}>
               Atuamos desde a contabilidade tradicional obrigatória até a consultoria de alta gestão e BPO financeiro.
             </p>
@@ -366,7 +366,7 @@ export default function HomePage() {
           <div className="grid">
             {currentServices.map(s => (
               <div key={s.title} className="card">
-                <h3 className="serif" style={{ fontSize: 26, marginBottom: 14 }}>{s.title}</h3>
+                <h3 style={{ fontSize: 22, marginBottom: 14 }}>{s.title}</h3>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', lineHeight: 1.6 }}>{s.desc}</p>
                 <ul className="item-list">
                   {s.items.map(item => (
@@ -390,10 +390,10 @@ export default function HomePage() {
             style={{ objectFit: 'cover', zIndex: -1, opacity: 0.05 }}
           />
           <div style={{ maxWidth: '920px', marginBottom: '48px' }}>
-            <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
+            <span style={{ color: 'var(--accent)', fontSize: 14.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
               Quem Somos
             </span>
-            <h2 className="serif" style={{ fontSize: 44, marginBottom: 24, lineHeight: 1.15 }}>
+            <h2 style={{ fontSize: 36, marginBottom: 24, lineHeight: 1.15 }}>
               Sua parceira estratégica em contabilidade e gestão.
             </h2>
             <p style={{ fontSize: 17, color: 'var(--text-light)', marginBottom: 18, textAlign: 'justify', lineHeight: 1.75 }}>
@@ -406,7 +406,7 @@ export default function HomePage() {
 
           {/* Nossos Pilares de Atuação */}
           <div style={{ marginBottom: '56px' }}>
-            <h3 className="serif" style={{ fontSize: 32, marginBottom: 10 }}>Nossos Pilares de Atuação</h3>
+            <h3 style={{ fontSize: 26, marginBottom: 10 }}>Nossos Pilares de Atuação</h3>
             <p style={{ fontSize: 16, color: 'var(--text-light)', marginBottom: 28 }}>
               Nossa essência e o padrão de excelência que entregamos todos os dias aos nossos parceiros estão fundamentados em três valores centrais:
             </p>
@@ -414,7 +414,7 @@ export default function HomePage() {
               <div className="mvv-card">
                 <div className="mvv-card-head">
                   <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
-                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Segurança e Confiança</h4>
+                  <h4 style={{ fontSize: 19, margin: 0, color: '#000' }}>Segurança e Confiança</h4>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Atuação altamente responsável, rigor técnico e compromisso inegociável com a conformidade legal, societária e tributária para garantir a total tranquilidade da sua empresa.
@@ -424,7 +424,7 @@ export default function HomePage() {
               <div className="mvv-card">
                 <div className="mvv-card-head">
                   <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
-                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Inteligência Estratégica</h4>
+                  <h4 style={{ fontSize: 19, margin: 0, color: '#000' }}>Inteligência Estratégica</h4>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Diagnósticos precisos, soluções contábeis e consultorias customizadas que apoiam decisões eficientes, evitam desperdícios e geram resultados financeiros reais.
@@ -434,7 +434,7 @@ export default function HomePage() {
               <div className="mvv-card">
                 <div className="mvv-card-head">
                   <CheckCircle2 size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: 4 }} />
-                  <h4 className="serif" style={{ fontSize: 22, margin: 0, color: '#000' }}>Pessoas e Excelência</h4>
+                  <h4 style={{ fontSize: 19, margin: 0, color: '#000' }}>Pessoas e Excelência</h4>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Contamos com uma equipe de cerca de 30 profissionais altamente qualificados e em constante evolução, unidos por uma cultura de proximidade e dedicação total às necessidades de cada cliente.
@@ -445,7 +445,7 @@ export default function HomePage() {
 
           {/* Liderança com Visão de Futuro */}
           <div style={{ maxWidth: '920px', marginBottom: '44px' }}>
-            <h3 className="serif" style={{ fontSize: 32, marginBottom: 14 }}>Liderança com Visão de Futuro</h3>
+            <h3 style={{ fontSize: 26, marginBottom: 14 }}>Liderança com Visão de Futuro</h3>
             <p style={{ fontSize: 16.5, color: 'var(--text-light)', marginBottom: 14, textAlign: 'justify', lineHeight: 1.75 }}>
               Sob a direção de <strong style={{ color: 'var(--text)' }}>Marcos Cancelier</strong> — contador, empresário, consultor, professor e palestrante, especialista em Gestão Empresarial e Direito Tributário — e <strong style={{ color: 'var(--text)' }}>Mauricio Cielo</strong> — contador e consultor especialista em inteligência financeira, auditoria e riscos —, a Privilege une a bagagem e a autoridade técnica de quem entende o mercado de ponta a ponta com o dinamismo de uma estrutura ágil e focada em resultados.
             </p>
@@ -469,19 +469,19 @@ export default function HomePage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Marcos Cancelier</h3>
-                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 14, marginBottom: 4 }}>
+                <h3 style={{ fontSize: 22, marginBottom: 4 }}>Marcos Cancelier</h3>
+                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15.5, marginBottom: 4 }}>
                   Sócio-Diretor · Contabilidade & Consultoria · CRC-PR 062232/O-1
                 </p>
                 <a
                   href="https://instagram.com/marcos.cancelier"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '13px', marginBottom: '14px', textDecoration: 'none' }}
+                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '14.5px', marginBottom: '14px', textDecoration: 'none' }}
                 >
                   @marcos.cancelier ↗
                 </a>
-                <p style={{ fontSize: 14, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
+                <p style={{ fontSize: 15.5, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
                   Bacharel em Ciências Contábeis pela UTFPR (CRC-PR 062232/O-1) com pós-graduações em Direito Tributário e Gestão Empresarial. Palestrante do SESCAP-PR, atua na gestão executiva dos dois braços do grupo, conectando o rigor técnico contábil à estratégia empresarial e tomada de decisão.
                 </p>
               </div>
@@ -500,19 +500,19 @@ export default function HomePage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 className="serif" style={{ fontSize: 26, marginBottom: 4 }}>Mauricio Cielo</h3>
-                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 14, marginBottom: 4 }}>
+                <h3 style={{ fontSize: 22, marginBottom: 4 }}>Mauricio Cielo</h3>
+                <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 15.5, marginBottom: 4 }}>
                   Sócio-Administrador · Consultoria Estratégica · CRC-PR 082974/O-7
                 </p>
                 <a
                   href="https://instagram.com/mauricio.cielo"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '13px', marginBottom: '14px', textDecoration: 'none' }}
+                  style={{ display: 'inline-block', color: 'var(--text-light)', fontSize: '14.5px', marginBottom: '14px', textDecoration: 'none' }}
                 >
                   @mauricio.cielo ↗
                 </a>
-                <p style={{ fontSize: 14, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
+                <p style={{ fontSize: 15.5, color: 'var(--text-light)', lineHeight: 1.6, textAlign: 'justify', margin: 0 }}>
                   Bacharel em Ciências Contábeis (CRC-PR 082974/O-7) com extensões em Auditoria e Riscos. Com mais de 500 empresas atendidas, lidera as divisões de inteligência financeira, reestruturação de fluxo de caixa e planejamento tributário estratégico na Privilege Consultoria.
                 </p>
               </div>
@@ -521,11 +521,11 @@ export default function HomePage() {
 
           {/* Missão, Visão e Valores */}
           <div style={{ marginTop: '60px' }}>
-            <h2 className="serif" style={{ fontSize: 36, marginBottom: '30px' }}>Missão, Visão e Valores</h2>
+            <h2 style={{ fontSize: 30, marginBottom: '30px' }}>Missão, Visão e Valores</h2>
             <div className="mvv-grid">
               <div className="mvv-card">
                 <div className="mvv-card-head" style={{ minHeight: '52px' }}>
-                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Missão</h3>
+                  <h3 style={{ fontSize: 19, margin: 0 }}>Missão</h3>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Impulsionar o crescimento sustentável de nossos clientes por meio de inteligência contábil, planejamento tributário ético e disciplina financeira.
@@ -533,7 +533,7 @@ export default function HomePage() {
               </div>
               <div className="mvv-card">
                 <div className="mvv-card-head" style={{ minHeight: '52px' }}>
-                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Visão</h3>
+                  <h3 style={{ fontSize: 19, margin: 0 }}>Visão</h3>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Ser reconhecido, nos próximos 5 anos, em Francisco Beltrão, como o escritório de referência em contabilidade — um destino natural para quem busca excelência, confiança e resultados concretos.
@@ -541,7 +541,7 @@ export default function HomePage() {
               </div>
               <div className="mvv-card">
                 <div className="mvv-card-head" style={{ minHeight: '52px' }}>
-                  <h3 className="serif" style={{ fontSize: 22, margin: 0 }}>Valores</h3>
+                  <h3 style={{ fontSize: 19, margin: 0 }}>Valores</h3>
                 </div>
                 <p style={{ fontSize: 15, color: 'var(--text-light)', textAlign: 'justify', lineHeight: 1.65, margin: 0 }}>
                   Ética & Comprometimento, Responsabilidade & Confiança, Excelência & Qualidade, Inovação & Evolução, Sustentabilidade & Organização.
@@ -553,7 +553,7 @@ export default function HomePage() {
           {/* Onde Estamos com NAP em Texto + Telefone Clicável + Mapa da Empresa */}
           <div style={{ marginTop: '70px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-              <h2 className="serif" style={{ fontSize: 36, margin: 0 }}>Onde Estamos em Francisco Beltrão</h2>
+              <h2 style={{ fontSize: 30, margin: 0 }}>Onde Estamos em Francisco Beltrão</h2>
               <a
                 href={GOOGLE_MAPS_URL}
                 target="_blank"
@@ -561,7 +561,7 @@ export default function HomePage() {
                 style={{
                   color: 'var(--accent)',
                   fontWeight: 600,
-                  fontSize: '14px',
+                  fontSize: '15.5px',
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -573,7 +573,7 @@ export default function HomePage() {
             </div>
 
             {/* Bloco NAP Visível com links tel: e mailto: */}
-            <div style={{ background: '#f5f5f7', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', fontSize: '14px' }}>
+            <div style={{ background: '#f5f5f7', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', fontSize: '15.5px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <MapPin size={22} color="var(--accent)" style={{ flexShrink: 0 }} />
                 <div>
@@ -626,7 +626,7 @@ export default function HomePage() {
 
           {/* Parceiros Institucionais */}
           <div style={{ marginTop: '70px' }}>
-            <h3 className="serif" style={{ fontSize: 32, marginBottom: '24px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: 26, marginBottom: '24px', textAlign: 'center' }}>
               Parceiros & Ecossistema de Integrações
             </h3>
             <div className="marquee-container">
@@ -661,7 +661,7 @@ export default function HomePage() {
         {/* Emissão Rápida de Certidões (CNDs) */}
         <section id="cnds" style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto 30px' }}>
-            <h2 className="serif" style={{ fontSize: 36, marginBottom: 12 }}>Emissão Rápida de Certidões (CNDs)</h2>
+            <h2 style={{ fontSize: 30, marginBottom: 12 }}>Emissão Rápida de Certidões (CNDs)</h2>
             <p style={{ fontSize: 16, color: 'var(--text-light)' }}>
               Acesse os canais oficiais para emissão e consulta da regularidade fiscal da sua empresa.
             </p>
@@ -669,8 +669,8 @@ export default function HomePage() {
           <div className="cnd-grid">
             {cnds.map(cnd => (
               <a key={cnd.label} href={cnd.url} target="_blank" rel="noopener noreferrer" className="cnd-card">
-                <span style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>{cnd.label}</span>
-                <span style={{ fontSize: 12, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500 }}>
+                <span style={{ fontWeight: 600, fontSize: 15.5, marginBottom: 12 }}>{cnd.label}</span>
+                <span style={{ fontSize: 14, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500 }}>
                   Acessar portal oficial <ExternalLink size={12} />
                 </span>
               </a>
@@ -680,7 +680,7 @@ export default function HomePage() {
 
         {/* Impostômetro com Lazy Loading */}
         <section id="impostometro" style={{ padding: '80px 0', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
-          <h2 className="serif" style={{ fontSize: 36, marginBottom: 16 }}>Acompanhe o Impostômetro Brasileiro</h2>
+          <h2 style={{ fontSize: 30, marginBottom: 16 }}>Acompanhe o Impostômetro Brasileiro</h2>
           <p style={{ fontSize: 15, color: 'var(--text-light)', maxWidth: '600px', margin: '0 auto 28px' }}>
             Estimativa em tempo real dos tributos federais, estaduais e municipais pagos pelos cidadãos brasileiros neste ano.
           </p>
@@ -701,7 +701,7 @@ export default function HomePage() {
         {/* Perguntas Frequentes (FAQ) */}
         <section id="faq" style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto 40px' }}>
-            <h2 className="serif" style={{ fontSize: 36, marginBottom: 12 }}>Dúvidas Frequentes</h2>
+            <h2 style={{ fontSize: 30, marginBottom: 12 }}>Dúvidas Frequentes</h2>
             <p style={{ fontSize: 16, color: 'var(--text-light)' }}>
               Esclarecimentos sobre os modelos de atuação, troca de contador e terceirização financeira.
             </p>
@@ -757,7 +757,7 @@ export default function HomePage() {
             margin: '60px 0',
           }}
         >
-          <h2 className="serif" style={{ fontSize: 44, marginBottom: 16, color: '#fff' }}>
+          <h2 style={{ fontSize: 36, marginBottom: 16, color: '#fff' }}>
             Pronto para estruturar o crescimento da sua empresa?
           </h2>
           <p style={{ fontSize: 18, color: '#d4d4d4', marginBottom: 36, maxWidth: '580px', margin: '0 auto 36px', lineHeight: 1.6 }}>
@@ -797,7 +797,7 @@ export default function HomePage() {
                 height={42}
                 style={{ marginBottom: '20px', filter: 'brightness(0) invert(1)' }}
               />
-              <p style={{ fontSize: '13.5px', color: '#a3a3a3', maxWidth: '280px', marginBottom: 20, lineHeight: 1.6 }}>
+              <p style={{ fontSize: '15px', color: '#a3a3a3', maxWidth: '280px', marginBottom: 20, lineHeight: 1.6 }}>
                 Inteligência contábil, consultoria estratégica e BPO financeiro em Francisco Beltrão - PR.
               </p>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -805,7 +805,7 @@ export default function HomePage() {
                   href="https://instagram.com/privilegefb"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#fff', fontSize: '13px', textDecoration: 'none' }}
+                  style={{ color: '#fff', fontSize: '14.5px', textDecoration: 'none' }}
                 >
                   Instagram
                 </a>
@@ -813,7 +813,7 @@ export default function HomePage() {
                   href="https://www.linkedin.com/company/privilege-assessoria-cont%C3%A1bil/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#fff', fontSize: '13px', textDecoration: 'none' }}
+                  style={{ color: '#fff', fontSize: '14.5px', textDecoration: 'none' }}
                 >
                   LinkedIn
                 </a>
@@ -821,7 +821,7 @@ export default function HomePage() {
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#fff', fontSize: '13px', textDecoration: 'none' }}
+                  style={{ color: '#fff', fontSize: '14.5px', textDecoration: 'none' }}
                 >
                   Google Maps
                 </a>
@@ -829,46 +829,46 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
+              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '14.5px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
                 Serviços Focados
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '10px' }}>
-                <li><Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>BPO Financeiro</Link></li>
-                <li><Link href="/planejamento-tributario" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Planejamento Tributário</Link></li>
-                <li><Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Abertura de Empresa</Link></li>
-                <li><Link href="/contabilidade-agronegocio" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Contabilidade Agro (LCDPR)</Link></li>
+                <li><Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>BPO Financeiro</Link></li>
+                <li><Link href="/planejamento-tributario" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Planejamento Tributário</Link></li>
+                <li><Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Abertura de Empresa</Link></li>
+                <li><Link href="/contabilidade-agronegocio" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Contabilidade Agro (LCDPR)</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
+              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '14.5px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
                 Institucional
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '10px' }}>
-                <li><a href="#quem-somos" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Quem Somos</a></li>
-                <li><Link href="/contato" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Contato e Localização</Link></li>
-                <li><Link href="/login" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Área do Cliente</Link></li>
-                <li><Link href="/privacidade" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Política de Privacidade</Link></li>
-                <li><Link href="/termos" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Termos de Uso</Link></li>
+                <li><a href="#quem-somos" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Quem Somos</a></li>
+                <li><Link href="/contato" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Contato e Localização</Link></li>
+                <li><Link href="/login" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Área do Cliente</Link></li>
+                <li><Link href="/privacidade" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Política de Privacidade</Link></li>
+                <li><Link href="/termos" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Termos de Uso</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
+              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '14.5px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
                 Utilidades
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '10px' }}>
-                <li><a href="#cnds" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Certidões Negativas (CND)</a></li>
-                <li><a href="#faq" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Dúvidas Frequentes</a></li>
-                <li><a href="#impostometro" style={{ color: '#a3a3a3', fontSize: '13.5px', textDecoration: 'none' }}>Impostômetro Nacional</a></li>
+                <li><a href="#cnds" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Certidões Negativas (CND)</a></li>
+                <li><a href="#faq" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Dúvidas Frequentes</a></li>
+                <li><a href="#impostometro" style={{ color: '#a3a3a3', fontSize: '15px', textDecoration: 'none' }}>Impostômetro Nacional</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
+              <h4 style={{ fontWeight: 600, marginBottom: '18px', fontSize: '14.5px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
                 Fale Conosco
               </h4>
-              <div style={{ fontSize: '13.5px', color: '#a3a3a3', lineHeight: 1.6, display: 'grid', gap: '8px' }}>
+              <div style={{ fontSize: '15px', color: '#a3a3a3', lineHeight: 1.6, display: 'grid', gap: '8px' }}>
                 <div>
                   <strong>Telefone:</strong>{' '}
                   <a href="tel:+554630351018" style={{ color: '#fff', textDecoration: 'none' }}>
@@ -899,7 +899,7 @@ export default function HomePage() {
           </div>
 
           {/* NAP (Name, Address, Phone) em Texto Puro e Clicável */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '28px', marginBottom: '24px', fontSize: '13px', color: '#888', lineHeight: 1.7 }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '28px', marginBottom: '24px', fontSize: '14.5px', color: '#888', lineHeight: 1.7 }}>
             <p style={{ margin: 0 }}>
               <strong style={{ color: '#d4d4d4' }}>Privilege Contabilidade e Consultoria</strong> · Razão Social: PRIVILEGE CONSULTORIA LTDA · CNPJ: 58.033.979/0001-84 · Responsáveis Técnicos: Marcos Cancelier (CRC-PR 062232/O-1) e Mauricio Cielo (CRC-PR 082974/O-7)<br />
               <span style={{ color: '#fff' }}>Rua Pará, 127, Sala 03 – Centro, Francisco Beltrão – PR, CEP 85601-290</span> · Telefone:{' '}
@@ -913,7 +913,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', color: '#737373', fontSize: '12.5px', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', color: '#737373', fontSize: '14px', flexWrap: 'wrap', gap: 14 }}>
             <div>© {new Date().getFullYear()} Privilege Contabilidade e Consultoria. Todos os direitos reservados.</div>
             <div style={{ display: 'flex', gap: '20px' }}>
               <Link href="/contato" style={{ color: '#a3a3a3', textDecoration: 'none' }}>Contato</Link>

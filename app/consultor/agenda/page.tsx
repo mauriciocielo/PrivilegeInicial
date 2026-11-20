@@ -587,14 +587,14 @@ export default function AgendaPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {googleConectado ? (
             <>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--green)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--green)' }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />
                 Google conectado
               </span>
               <button className="btn btn-secondary" onClick={sincronizarAgora} disabled={sincronizando} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
-                {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar agora'}
+                {sincronizando ? 'Sincronizando...' : 'Sincronizar agora'}
               </button>
-              <button className="btn btn-ghost" onClick={desconectarGoogle} style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              <button className="btn btn-ghost" onClick={desconectarGoogle} style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                 Desconectar
               </button>
             </>
@@ -646,7 +646,7 @@ export default function AgendaPage() {
         {/* Cabeçalho dos dias da semana */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0, marginBottom: 2 }}>
           {DIAS_SEMANA.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: 'var(--text-muted)', padding: '4px 0' }}>
+            <div key={d} style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, letterSpacing: '.05em', color: 'var(--text-muted)', padding: '4px 0' }}>
               {d}
             </div>
           ))}
@@ -682,7 +682,7 @@ export default function AgendaPage() {
                 <div style={{ display: 'flex', justifyContent: view === 'month' ? 'flex-end' : 'center' }}>
                   <span style={{
                     width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRadius: '50%', fontSize: 12.5, fontWeight: dia.isHoje ? 800 : 600,
+                    borderRadius: '50%', fontSize: 14, fontWeight: dia.isHoje ? 800 : 600,
                     background: dia.isHoje ? 'var(--accent)' : 'transparent',
                     color: dia.isHoje ? '#fff' : 'var(--text-primary)',
                   }}>
@@ -699,7 +699,7 @@ export default function AgendaPage() {
                         className="event-chip"
                         title={`${t.horario} · ${t.title}`}
                         style={{
-                          fontSize: 10.5, fontWeight: 600, padding: '2px 6px', borderRadius: 5,
+                          fontSize: 13, fontWeight: 600, padding: '2px 6px', borderRadius: 5,
                           background: isGoogle ? 'rgba(59,130,246,0.12)' : 'rgba(140,26,34,0.1)',
                           color: isGoogle ? '#2563eb' : 'var(--accent)',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -713,7 +713,7 @@ export default function AgendaPage() {
                     );
                   })}
                   {resto > 0 && (
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px' }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px' }}>
                       +{resto} mais
                     </div>
                   )}
@@ -738,7 +738,7 @@ export default function AgendaPage() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderBottom: '1px solid var(--border-light)' }}>
               <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                   {DIAS_SEMANA[diaSelecionado.date.getDay()]}
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 800 }}>
@@ -756,7 +756,7 @@ export default function AgendaPage() {
               </button>
 
               {tarefasDoDiaSelecionado.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: 14.5 }}>
                   Nenhum compromisso neste dia.
                 </div>
               )}
@@ -775,7 +775,7 @@ export default function AgendaPage() {
                       animationDelay: `${index * 0.08}s`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.completed ? 'line-through' : 'none' }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, textDecoration: task.completed ? 'line-through' : 'none' }}>
                           <span style={{ color: isGoogle ? '#3b82f6' : 'var(--accent)', marginRight: 6 }}>{task.horario}</span>
                           {task.title}
                         </div>
@@ -802,9 +802,9 @@ export default function AgendaPage() {
                           </button>
                         </div>
                       </div>
-                      {emp && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
-                      {!isGoogle && consNomes && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>👥 {consNomes}</div>}
-                      {isGoogle && <div style={{ fontSize: 10.5, color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>🌐 Google Calendar</div>}
+                      {emp && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
+                      {!isGoogle && consNomes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>👥 {consNomes}</div>}
+                      {isGoogle && <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>Google Calendar</div>}
                     </div>
                   );
                 })}
@@ -841,7 +841,7 @@ export default function AgendaPage() {
                 <label className="form-label" style={{ fontWeight: 600 }}>Equipe Responsável (Selecione um ou mais)</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 110, overflowY: 'auto', border: '1px solid var(--border)', padding: '10px 12px', borderRadius: 8 }}>
                   {users.map(u => (
-                    <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                    <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
                         checked={((newTask as any).consultoresIds || []).includes(u.id)} 

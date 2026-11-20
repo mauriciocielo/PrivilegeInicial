@@ -745,16 +745,16 @@ export default function RelatoriosPage() {
           <div className="page-subtitle">Emissão e exportação de relatórios financeiros</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={handlePrint} disabled={!!generating}>🖨️ Imprimir</button>
+          <button className="btn btn-secondary" onClick={handlePrint} disabled={!!generating}>Imprimir</button>
           <button className="btn btn-success" onClick={handleXLS} disabled={!!generating}>
-            {generating === 'xls' ? '⏳...' : '📊 Excel'}
+            {generating === 'xls' ? '⏳...' : 'Excel'}
           </button>
           <button className="btn btn-primary" onClick={handlePDF} disabled={!!generating}>
-            {generating === 'pdf' ? '⏳...' : '📄 PDF'}
+            {generating === 'pdf' ? '⏳...' : 'PDF'}
           </button>
           {currentUser?.role === 'administrador' && (
             <button className="btn" onClick={handleWhatsAppClick} disabled={!!generating} style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 600 }}>
-              💬 WhatsApp
+              WhatsApp
             </button>
           )}
         </div>
@@ -1247,10 +1247,10 @@ export default function RelatoriosPage() {
         <div className="modal-overlay no-print" onClick={e => e.target === e.currentTarget && setViewPdfData(false)}>
           <div className="modal modal-lg ata-print-container" style={{ maxWidth: 850, background: 'var(--bg-card)', padding: 0 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header no-print" style={{ marginBottom: 0, padding: 24, borderBottom: '1px solid var(--border)' }}>
-              <h2 className="modal-title">📄 Visualizar PDF Analítico</h2>
+              <h2 className="modal-title">Visualizar PDF Analítico</h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-primary" onClick={generateRealPDF} disabled={isGeneratingPdf}>
-                  {isGeneratingPdf ? '⏳ Gerando...' : '🖨 Baixar PDF'}
+                  {isGeneratingPdf ? 'Gerando...' : 'Baixar PDF'}
                 </button>
                 <button className="modal-close" style={{ position: 'relative', top: 0, right: 0 }} onClick={() => setViewPdfData(false)}>✕</button>
               </div>

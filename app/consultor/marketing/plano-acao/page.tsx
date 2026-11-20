@@ -168,16 +168,16 @@ export default function MarketingPlanoAcaoPage() {
       {/* Cronograma 90 dias + Rotina */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
         <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>MÊS 1 · ESTRUTURAÇÃO (&ldquo;ARRUMAR A CASA&rdquo;)</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>Configuração de ferramentas, ICP, scripts e definição de metas.</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>MÊS 1 · ESTRUTURAÇÃO (&ldquo;ARRUMAR A CASA&rdquo;)</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Configuração de ferramentas, ICP, scripts e definição de metas.</div>
         </div>
         <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>MÊS 2 · GO-TO-MARKET (TRAÇÃO)</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>Início das campanhas pagas, prospecção ativa e leitura inicial de dados.</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>MÊS 2 · GO-TO-MARKET (TRAÇÃO)</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Início das campanhas pagas, prospecção ativa e leitura inicial de dados.</div>
         </div>
         <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>MÊS 3 · OTIMIZAÇÃO &amp; ESCALA</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>Refinamento de público/criativos e aumento de verba no que traz ROI.</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)' }}>MÊS 3 · OTIMIZAÇÃO &amp; ESCALA</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Refinamento de público/criativos e aumento de verba no que traz ROI.</div>
         </div>
       </div>
 
@@ -200,14 +200,14 @@ export default function MarketingPlanoAcaoPage() {
                 <tr key={a.id}>
                   <td style={{ minWidth: 200 }}>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{a.acao}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{a.porque}</div>
+                    <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>{a.porque}</div>
                   </td>
-                  <td style={{ minWidth: 170, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <td style={{ minWidth: 170, fontSize: 14, color: 'var(--text-secondary)' }}>
                     <div><strong>Onde:</strong> {a.onde}</div>
                     <div><strong>Quem:</strong> {a.quem}</div>
                     <div><strong>Quando:</strong> {a.quando}</div>
                   </td>
-                  <td style={{ minWidth: 240, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  <td style={{ minWidth: 240, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                     {a.como}
                   </td>
                   <td style={{ whiteSpace: 'nowrap', fontWeight: 700 }}>{a.custo}</td>
@@ -218,7 +218,7 @@ export default function MarketingPlanoAcaoPage() {
                       style={{
                         padding: '4px 10px',
                         borderRadius: 999,
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         fontWeight: 700,
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
@@ -226,9 +226,9 @@ export default function MarketingPlanoAcaoPage() {
                         color: a.status === 'concluida' ? 'var(--green)' : a.status === 'em_execucao' ? 'var(--yellow)' : 'var(--text-secondary)',
                       }}
                     >
-                      <option value="pendente">⏳ Pendente</option>
-                      <option value="em_execucao">🚀 Em Execução</option>
-                      <option value="concluida">✅ Concluída</option>
+                      <option value="pendente">Pendente</option>
+                      <option value="em_execucao">Em Execução</option>
+                      <option value="concluida">Concluída</option>
                     </select>
                   </td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -261,9 +261,9 @@ export default function MarketingPlanoAcaoPage() {
               <div>
                 <label className="form-label">Status</label>
                 <select className="form-control" style={{ width: '100%' }} value={editingAction.status} onChange={e => setEditingAction(a => a ? { ...a, status: e.target.value as any } : null)}>
-                  <option value="pendente">⏳ Pendente</option>
-                  <option value="em_execucao">🚀 Em Execução</option>
-                  <option value="concluida">✅ Concluída</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="em_execucao">Em Execução</option>
+                  <option value="concluida">Concluída</option>
                 </select>
               </div>
             </div>

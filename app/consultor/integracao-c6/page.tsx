@@ -339,7 +339,7 @@ export default function IntegracaoC6Page() {
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={testConnection}>
-            ⚡ Testar Conectividade
+            Testar Conectividade
           </button>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function IntegracaoC6Page() {
           {/* Card Configuração API */}
           <div className="card">
             <h2 className="card-title" style={{ fontSize: 16, borderBottom: '1px solid var(--border-light)', paddingBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔑 Credenciais da API do Banco C6
+              Credenciais da API do Banco C6
             </h2>
             <div style={{ marginTop: 15 }}>
               <div className="form-group">
@@ -386,8 +386,8 @@ export default function IntegracaoC6Page() {
                 <div className="form-group">
                   <label className="form-label">Certificado Digital (A1 .pfx)</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="file" accept=".pfx,.pem,.crt" onChange={handleCertUpload} style={{ fontSize: 11 }} />
-                    {certName && <span style={{ fontSize: 12, color: 'var(--green)' }}>✓ {certName}</span>}
+                    <input type="file" accept=".pfx,.pem,.crt" onChange={handleCertUpload} style={{ fontSize: 13 }} />
+                    {certName && <span style={{ fontSize: 14, color: 'var(--green)' }}>✓ {certName}</span>}
                   </div>
                 </div>
               </div>
@@ -396,7 +396,7 @@ export default function IntegracaoC6Page() {
                   Salvar Configuração
                 </button>
                 {savedConfig && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--green)', fontSize: 13, fontWeight: 500 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--green)', fontSize: 14.5, fontWeight: 500 }}>
                     ✓ Ativa no Sistema
                   </span>
                 )}
@@ -407,9 +407,9 @@ export default function IntegracaoC6Page() {
           {/* Logs / Terminal */}
           <div className="card" style={{ background: '#0a0b10', color: '#a9b1d6', border: '1px solid #1a1b26' }}>
             <h2 className="card-title" style={{ fontSize: 16, color: '#fff', borderBottom: '1px solid #1a1b26', paddingBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🖥️ Console de Transmissão API & Logs
+              Console de Transmissão API & Logs
             </h2>
-            <div style={{ fontFamily: 'monospace', fontSize: 12, height: 220, overflowY: 'auto', marginTop: 15, padding: 8, background: '#12131a', borderRadius: 6, border: '1px solid #1a1b26' }}>
+            <div style={{ fontFamily: 'monospace', fontSize: 14, height: 220, overflowY: 'auto', marginTop: 15, padding: 8, background: '#12131a', borderRadius: 6, border: '1px solid #1a1b26' }}>
               {logs.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)' }}>Aguardando interações...</div>
               ) : (
@@ -433,7 +433,7 @@ export default function IntegracaoC6Page() {
         {/* Gerador CNAB240 */}
         <div className="card" style={{ marginTop: 20 }}>
           <h2 className="card-title" style={{ fontSize: 16, borderBottom: '1px solid var(--border-light)', paddingBottom: 10, marginBottom: 15 }}>
-            📦 Geração de Arquivo CNAB240 (Cobrança)
+            Geração de Arquivo CNAB240 (Cobrança)
           </h2>
           <div className="form-row">
             <div className="form-group">
@@ -476,7 +476,7 @@ export default function IntegracaoC6Page() {
 
           <div style={{ marginTop: 20 }}>
             <button className="btn btn-primary" onClick={generateCnab240}>
-              ⚙️ Gerar Lote de Remessa (CNAB 240)
+              Gerar Lote de Remessa (CNAB 240)
             </button>
           </div>
 
@@ -485,12 +485,12 @@ export default function IntegracaoC6Page() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label className="form-label" style={{ margin: 0 }}>Visualização do Arquivo de Remessa (.REM):</label>
                 <button className="btn btn-secondary btn-sm" onClick={handleDownloadCnab}>
-                  📥 Baixar Arquivo CNAB240
+                  Baixar Arquivo CNAB240
                 </button>
               </div>
               <pre style={{ 
                 fontFamily: 'monospace', 
-                fontSize: 11, 
+                fontSize: 13, 
                 padding: '12px', 
                 background: 'var(--bg-card2)', 
                 borderRadius: 'var(--radius-sm)', 

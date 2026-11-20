@@ -491,17 +491,17 @@ export default function ContasReceberPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">💰 Contas a Receber</div>
+          <div className="page-title">Contas a Receber</div>
           <div className="page-subtitle">
             {empresa?.nomeFantasia || empresa?.razaoSocial} — {pendentes.length} pendente(s)
-            {hasC6 && <span className="badge badge-gray" style={{ marginLeft: 8, background: '#000', color: '#fff', fontSize: 10 }}>🖤 C6 Bank</span>}
+            {hasC6 && <span className="badge badge-gray" style={{ marginLeft: 8, background: '#000', color: '#fff', fontSize: 12.5 }}>C6 Bank</span>}
           </div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
           {selectedIds.length > 0 && (
             <>
               <button className="btn btn-primary" onClick={marcarRecebidoLote}>
-                ✅ Receber {selectedIds.length} Selecionado(s) · {fmt.currency(totalSelecionado)}
+                Receber {selectedIds.length} Selecionado(s) · {fmt.currency(totalSelecionado)}
               </button>
               <button className="btn btn-danger btn-sm" onClick={async () => {
                 if (!(await confirmAsync(`Excluir ${selectedIds.length} lançamento(s)?`))) return;
@@ -509,14 +509,14 @@ export default function ContasReceberPage() {
                 setSelectedIds([]);
                 load(empresaId);
               }}>
-                🗑️ Excluir ({selectedIds.length})
+                Excluir ({selectedIds.length})
               </button>
               <button className="btn btn-secondary" onClick={gerarRemessaSicoob} title="Gerar o arquivo de remessa CNAB 240 do Sicoob com os boletos selecionados">
-                🏦 Gerar Remessa Sicoob ({selectedIds.length})
+                Gerar Remessa Sicoob ({selectedIds.length})
               </button>
             </>
           )}
-          <button className="btn btn-secondary btn-sm" onClick={() => { setRascunhoCfg(configSicoob); setShowRemessaConfig(true); }} title="Dados de cobrança do Sicoob (agência, conta, carteira) para a remessa CNAB">⚙️ Cobrança Sicoob</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => { setRascunhoCfg(configSicoob); setShowRemessaConfig(true); }} title="Dados de cobrança do Sicoob (agência, conta, carteira) para a remessa CNAB">Cobrança Sicoob</button>
           <button className="btn btn-secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Exportar a lista filtrada para CSV">⬇️ Exportar CSV</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Conta a Receber</button>
         </div>
@@ -529,41 +529,41 @@ export default function ContasReceberPage() {
             <div className="stat-icon green">⏳</div>
             <div className="stat-label">Total a Receber</div>
             <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>{fmt.currency(totalPendente)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid #ef4444' }}>
             <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>⚠️</div>
             <div className="stat-label">Vencidas (Inadimplência)</div>
             <div className="stat-value" style={{ fontSize: 18, color: '#ef4444' }}>{fmt.currency(vencidos.reduce((a, l) => a + l.valor, 0))}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
           </div>
           <div className="stat-card blue">
             <div className="stat-icon blue">✅</div>
             <div className="stat-label">Total Recebido (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalRecebido)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{recebidos.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{recebidos.length} conta(s)</div>
           </div>
           <div className="stat-card purple">
             <div className="stat-icon purple">📊</div>
             <div className="stat-label">Total Geral (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPendente + totalRecebido)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
           </div>
         </div>
 
         {/* Quick Filters */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {([
-            { key: 'todos', label: '📋 Todos' },
-            { key: 'vencidos', label: '🔴 Vencidos' },
-            { key: 'hoje', label: '🟡 Vence Hoje' },
-            { key: 'proximos7', label: '📅 Próx. 7 dias' },
-            { key: 'proximos30', label: '📆 Próx. 30 dias' },
+            { key: 'todos', label: 'Todos' },
+            { key: 'vencidos', label: 'Vencidos' },
+            { key: 'hoje', label: 'Vence Hoje' },
+            { key: 'proximos7', label: 'Próx. 7 dias' },
+            { key: 'proximos30', label: 'Próx. 30 dias' },
           ] as const).map(f => (
             <button
               key={f.key}
               className={`btn ${filtros.vencimento === f.key ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: 12.5 }}
+              style={{ fontSize: 14 }}
               onClick={() => setFiltros(x => ({ ...x, vencimento: f.key }))}
             >
               {f.label}
@@ -654,20 +654,20 @@ export default function ContasReceberPage() {
                       <td style={{ textAlign: 'center' }}>
                         <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
-                      <td style={{ fontSize: 12, whiteSpace: 'nowrap', color: isVencido ? '#ef4444' : 'var(--text-secondary)', fontWeight: isVencido ? 700 : 400 }}>
+                      <td style={{ fontSize: 14, whiteSpace: 'nowrap', color: isVencido ? '#ef4444' : 'var(--text-secondary)', fontWeight: isVencido ? 700 : 400 }}>
                         {fmt.date(l.data)}
                       </td>
                       <td style={{ fontWeight: 500, maxWidth: 220 }}>
                         <div>
                           {l.descricao}
-                          {l.origem === 'api' && <span title="Lançado automaticamente via integração de API" className="badge badge-blue" style={{ marginLeft: 6, fontSize: 9.5 }}>🔌 API</span>}
+                          {l.origem === 'api' && <span title="Lançado automaticamente via integração de API" className="badge badge-blue" style={{ marginLeft: 6, fontSize: 12 }}>API</span>}
                         </div>
-                        {l.clienteId && (() => { const c = clientes.find(x => x.id === l.clienteId); return c ? <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2, fontWeight: 600 }}>👤 {c.nomeFantasia || c.nome}</div> : null; })()}
-                        {l.observacao && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{l.observacao}</div>}
+                        {l.clienteId && (() => { const c = clientes.find(x => x.id === l.clienteId); return c ? <div style={{ fontSize: 13, color: 'var(--green)', marginTop: 2, fontWeight: 600 }}>👤 {c.nomeFantasia || c.nome}</div> : null; })()}
+                        {l.observacao && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{l.observacao}</div>}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
-                      <td style={{ fontSize: 12 }}>{port?.nome || '-'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
+                      <td style={{ fontSize: 14 }}>{port?.nome || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
                       <td><span className={`badge ${cls}`}>{label}</span></td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--green)', whiteSpace: 'nowrap' }}>
                         +{fmt.currency(l.valor)}
@@ -678,11 +678,11 @@ export default function ContasReceberPage() {
                           {l.status === 'previsto' && (hasC6 || (!!configSicoob.agencia && !!configSicoob.convenio)) && (
                             <button
                               className="btn btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 11, background: '#003641', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              style={{ padding: '4px 8px', fontSize: 13, background: '#003641', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                               onClick={() => openC6Boleto(l)}
                               title="Gerar/visualizar o boleto deste título"
                             >
-                              🏦 Boleto
+                              Boleto
                             </button>
                           )}
                           {l.status === 'previsto' && (() => {
@@ -701,26 +701,26 @@ export default function ContasReceberPage() {
                                   })
                                 }
                                 className="btn btn-secondary btn-sm"
-                                style={{ fontSize: 11, padding: '4px 8px', background: 'rgba(37, 211, 102, 0.08)', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                style={{ fontSize: 13, padding: '4px 8px', background: 'rgba(37, 211, 102, 0.08)', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.25)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                 title="Enviar cobrança via WhatsApp"
                               >
-                                💬 Cobrar
+                                Cobrar
                               </button>
                             );
                           })()}
                           {l.status === 'previsto' ? (
                             <button
                               className="btn btn-primary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => marcarRecebido(l.id)}
                               title="Marcar como recebido"
                             >
-                              ✅ Receber
+                              Receber
                             </button>
                           ) : (
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => marcarPendente(l.id)}
                               title="Desfazer recebimento"
                             >
@@ -738,7 +738,7 @@ export default function ContasReceberPage() {
               {filtered.length > 0 && (
                 <tfoot>
                   <tr style={{ background: 'var(--bg-card2)' }}>
-                    <td colSpan={7} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', paddingLeft: 12 }}>
+                    <td colSpan={7} style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', paddingLeft: 12 }}>
                       {filtered.length} registro(s) | {pendentes.length} pendente(s) | {recebidos.length} recebido(s)
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--green)' }}>
@@ -796,7 +796,7 @@ export default function ContasReceberPage() {
                 <option value="">— Sem vínculo com cadastro —</option>
                 {clientes.map(c => <option key={c.id} value={c.id}>{c.nomeFantasia || c.nome} ({c.cpfCnpj})</option>)}
               </select>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Vincule ao cliente para rastrear histórico e preencher o boleto automaticamente.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Vincule ao cliente para rastrear histórico e preencher o boleto automaticamente.</div>
             </div>
 
             <div className="form-group">
@@ -848,15 +848,15 @@ export default function ContasReceberPage() {
                   border: '1px solid rgba(16, 185, 129, 0.28)',
                 }}
               >
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: '#065f46' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#065f46' }}>
                   <input
                     type="checkbox"
                     checked={emitirBoletoAoSalvar}
                     onChange={e => setEmitirBoletoAoSalvar(e.target.checked)}
                   />
-                  🏦 Já emitir e abrir Boleto Híbrido Sicoob (Código de Barras + QR Code Pix API) ao salvar
+                  Já emitir e abrir Boleto Híbrido Sicoob (Código de Barras + QR Code Pix API) ao salvar
                 </label>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, marginLeft: 22 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, marginLeft: 22 }}>
                   Gera automaticamente a Ficha de Compensação 756-0 (Linha Digitável + Código de Barras) e o QR Code Pix oficial na API do Sicoob (Cooperativa 4342 / Conta 175.204-9).
                 </div>
               </div>
@@ -874,8 +874,8 @@ export default function ContasReceberPage() {
       {showRemessaConfig && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.target === e.currentTarget && setShowRemessaConfig(false)}>
           <div className="modal" style={{ maxWidth: 560 }}>
-            <h2 className="modal-title">🏦 Dados de Cobrança — Sicoob (CNAB 240)</h2>
-            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+            <h2 className="modal-title">Dados de Cobrança — Sicoob (CNAB 240)</h2>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
               Informe exatamente os dados que o Sicoob forneceu ao beneficiário. A remessa usa a razão social e o CNPJ da empresa.
             </p>
             <div className="form-row" style={{ marginTop: 12 }}>
@@ -920,8 +920,8 @@ export default function ContasReceberPage() {
                 <input className="form-control" type="number" min={1} value={rascunhoCfg.proximoNossoNumero} onChange={e => setRascunhoCfg(c => ({ ...c, proximoNossoNumero: Math.max(1, Number(e.target.value) || 1) }))} />
               </div>
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'var(--bg-base)', padding: 10, borderRadius: 8, marginTop: 4 }}>
-              ⚠️ A remessa precisa passar pela <strong>homologação do Sicoob</strong> antes do uso em produção. O nosso número é atribuído em sequência a partir do valor acima; confirme que está dentro da faixa liberada pelo banco.
+            <div style={{ fontSize: 13.5, color: 'var(--text-muted)', background: 'var(--bg-base)', padding: 10, borderRadius: 8, marginTop: 4 }}>
+              A remessa precisa passar pela <strong>homologação do Sicoob</strong> antes do uso em produção. O nosso número é atribuído em sequência a partir do valor acima; confirme que está dentro da faixa liberada pelo banco.
             </div>
             <div className="form-actions" style={{ marginTop: 16 }}>
               <button className="btn btn-secondary" onClick={() => setShowRemessaConfig(false)}>Cancelar</button>
@@ -950,8 +950,8 @@ export default function ContasReceberPage() {
             {/* Header — no-print */}
             <div className="no-print" style={{ fontFamily: 'var(--font-sans)', borderBottom: '1px solid #e5e7eb', paddingBottom: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#003641' }}>🏦 Boleto Híbrido Sicoob (756-0 + QR Code Pix Oficial)</h2>
-                <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#6b7280' }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#003641' }}>Boleto Híbrido Sicoob (756-0 + QR Code Pix Oficial)</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#6b7280' }}>
                   Ficha de Compensação com Linha Digitável, Código de Barras ITF e QR Code Pix registrado via API mTLS Sicoob
                 </p>
               </div>
@@ -965,7 +965,7 @@ export default function ContasReceberPage() {
                       toast.success('Linha digitável copiada!');
                     }}
                   >
-                    📋 Copiar Linha Digitável
+                    Copiar Linha Digitável
                   </button>
                 )}
                 {pixSicoobDados?.brcode && (
@@ -977,7 +977,7 @@ export default function ContasReceberPage() {
                       toast.success('Pix Copia e Cola Sicoob copiado!');
                     }}
                   >
-                    ⚡ Copiar Pix Copia e Cola
+                    Copiar Pix Copia e Cola
                   </button>
                 )}
                 <button
@@ -1031,16 +1031,16 @@ export default function ContasReceberPage() {
                   disabled={gerandoPixSicoob}
                   onClick={() => emitirPixApiParaBoleto(c6BoletoLanc, c6Sacado.nome, c6Sacado.cpfCnpj)}
                 >
-                  {gerandoPixSicoob ? '⏳ Registrando Pix API...' : '🔄 Atualizar QR Code API Sicoob'}
+                  {gerandoPixSicoob ? 'Registrando Pix API...' : 'Atualizar QR Code API Sicoob'}
                 </button>
-                <button className="btn btn-primary" style={{ background: '#003641', borderColor: '#003641', fontFamily: 'var(--font-sans)' }} onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
+                <button className="btn btn-primary" style={{ background: '#003641', borderColor: '#003641', fontFamily: 'var(--font-sans)' }} onClick={() => window.print()}>Imprimir / Salvar PDF</button>
                 <button className="modal-close" onClick={() => setShowC6BoletoModal(false)}>✕</button>
               </div>
             </div>
 
             {/* Sacado form — no-print */}
             <div className="no-print" style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 20 }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#374151' }}>📋 Dados do Pagador (Sacado)</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14.5, fontWeight: 600, marginBottom: 12, color: '#374151' }}>Dados do Pagador (Sacado)</div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div className="form-group" style={{ flex: 2, minWidth: 200, margin: 0 }}>
                   <label className="form-label" style={{ fontFamily: 'var(--font-sans)' }}>Nome / Razão Social</label>
@@ -1060,9 +1060,9 @@ export default function ContasReceberPage() {
             {/* Status do Registro Online Sicoob (Pix + Código de Barras CIP) — no-print */}
             <div className="no-print" style={{ marginBottom: 14, fontFamily: 'var(--font-sans)' }}>
               {pixSicoobDados?.boletoRegistradoOnline ? (
-                <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', fontSize: 12.5, color: '#065f46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#065f46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div>
-                    <strong>✅ Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong> Tanto o código de barras quanto o Pix já podem ser pagos imediatamente em qualquer banco.
+                    <strong>Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong> Tanto o código de barras quanto o Pix já podem ser pagos imediatamente em qualquer banco.
                   </div>
                   {pixSicoobDados.pdfBoletoOficialBase64 && (
                     <button
@@ -1075,20 +1075,20 @@ export default function ContasReceberPage() {
                         window.open(url, '_blank');
                       }}
                     >
-                      📄 Abrir PDF Oficial do Servidor Sicoob
+                      Abrir PDF Oficial do Servidor Sicoob
                     </button>
                   )}
                 </div>
               ) : (
-                <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', lineHeight: 1.45 }}>
+                <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#92400e', lineHeight: 1.45 }}>
                   <div>
-                    <strong>✅ QR Code Pix Oficial Sicoob: REGISTRADO E ATIVO IMEDIATAMENTE</strong>{' '}
+                    <strong>QR Code Pix Oficial Sicoob: REGISTRADO E ATIVO IMEDIATAMENTE</strong>{' '}
                     {pixSicoobDados?.txid ? `(TXID: ${pixSicoobDados.txid})` : ''}. O cliente já pode pagar pelo QR Code Pix ou Pix Copia e Cola deste boleto agora mesmo!
                   </div>
                   <div style={{ marginTop: 4 }}>
-                    <strong>⚠️ Por que o Código de Barras ainda não consta registrado na CIP?</strong>{' '}
+                    <strong>Por que o Código de Barras ainda não consta registrado na CIP?</strong>{' '}
                     {pixSicoobDados?.motivoCodigoBarrasNaoRegistrado ||
-                      "No portal developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs, você marcou 'Conta Corrente' e 'Pix', mas falta marcar a opção 'Cobrança Bancária'. Assim que marcar 'Cobrança Bancária' no portal do Sicoob (ou enviar o arquivo em '🏦 Gerar Remessa Sicoob'), o código de barras também será registrado automaticamente na CIP!"}
+                      "No portal developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs, você marcou 'Conta Corrente' e 'Pix', mas falta marcar a opção 'Cobrança Bancária'. Assim que marcar 'Cobrança Bancária' no portal do Sicoob (ou enviar o arquivo em 'Gerar Remessa Sicoob'), o código de barras também será registrado automaticamente na CIP!"}
                   </div>
                 </div>
               )}
@@ -1120,8 +1120,8 @@ export default function ContasReceberPage() {
                 txidPix={pixSicoobDados?.txid}
               />
             ) : (
-              <div style={{ fontSize: 12, color: '#b91c1c', padding: 16 }}>
-                Preencha os dados em “⚙️ Cobrança Sicoob” (agência, conta e convênio) para gerar o boleto.
+              <div style={{ fontSize: 14, color: '#b91c1c', padding: 16 }}>
+                Preencha os dados em “Cobrança Sicoob” (agência, conta e convênio) para gerar o boleto.
               </div>
             )}
           </div>

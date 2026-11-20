@@ -152,7 +152,7 @@ export default function PlanejamentoTributarioPage() {
             </Link>
             <span
               style={{
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -167,19 +167,19 @@ export default function PlanejamentoTributarioPage() {
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <Link href="/" style={{ color: '#525252', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            <Link href="/" style={{ color: '#525252', textDecoration: 'none', fontSize: '15.5px', fontWeight: 500 }}>
               Início
             </Link>
-            <Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#525252', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            <Link href="/bpo-financeiro-francisco-beltrao" style={{ color: '#525252', textDecoration: 'none', fontSize: '15.5px', fontWeight: 500 }}>
               BPO Financeiro
             </Link>
-            <Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#525252', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            <Link href="/abertura-de-empresa-francisco-beltrao" style={{ color: '#525252', textDecoration: 'none', fontSize: '15.5px', fontWeight: 500 }}>
               Abrir Empresa
             </Link>
-            <Link href="/contabilidade-agronegocio" style={{ color: '#525252', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            <Link href="/contabilidade-agronegocio" style={{ color: '#525252', textDecoration: 'none', fontSize: '15.5px', fontWeight: 500 }}>
               Agronegócio
             </Link>
-            <Link href="/contato" style={{ color: '#525252', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            <Link href="/contato" style={{ color: '#525252', textDecoration: 'none', fontSize: '15.5px', fontWeight: 500 }}>
               Contato
             </Link>
             <a
@@ -193,7 +193,7 @@ export default function PlanejamentoTributarioPage() {
                 borderRadius: '8px',
                 textDecoration: 'none',
                 fontWeight: 600,
-                fontSize: '13.5px',
+                fontSize: '15px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -206,7 +206,7 @@ export default function PlanejamentoTributarioPage() {
       </header>
 
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" style={{ background: '#fff', borderBottom: '1px solid #ececec', padding: '10px 24px', fontSize: '13px' }}>
+      <nav aria-label="Breadcrumb" style={{ background: '#fff', borderBottom: '1px solid #ececec', padding: '10px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373', flexWrap: 'wrap' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <ArrowLeft size={13} /> Página Inicial
@@ -242,7 +242,7 @@ export default function PlanejamentoTributarioPage() {
         >
           {/* Cabeçalho do Artigo */}
           <header style={{ borderBottom: '1px solid #efefef', paddingBottom: '32px', marginBottom: '36px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', marginBottom: '16px', fontSize: '13px', color: '#666' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', marginBottom: '16px', fontSize: '14.5px', color: '#666' }}>
               <span
                 style={{
                   background: '#600000',
@@ -250,7 +250,7 @@ export default function PlanejamentoTributarioPage() {
                   fontWeight: 700,
                   padding: '4px 12px',
                   borderRadius: '6px',
-                  fontSize: '11.5px',
+                  fontSize: '13.5px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                 }}
@@ -304,10 +304,10 @@ export default function PlanejamentoTributarioPage() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: '15.5px', fontWeight: 700, color: '#111' }}>
                     Por Marcos Cancelier (CRC-PR 062232/O-1) & Mauricio Cielo (CRC-PR 082974/O-7)
                   </div>
-                  <div style={{ fontSize: '12.5px', color: '#666' }}>
+                  <div style={{ fontSize: '14px', color: '#666' }}>
                     Sócios e Responsáveis Técnicos da Privilege Contabilidade e Consultoria · Francisco Beltrão/PR
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export default function PlanejamentoTributarioPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  fontSize: '13px',
+                  fontSize: '14.5px',
                   fontWeight: 600,
                   color: '#600000',
                   textDecoration: 'none',
@@ -343,7 +343,7 @@ export default function PlanejamentoTributarioPage() {
               marginBottom: '40px',
             }}
           >
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#600000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '15.5px', fontWeight: 700, color: '#600000', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileText size={16} /> Neste artigo você vai ler:
             </div>
             <ol style={{ margin: 0, paddingLeft: '20px', display: 'grid', gap: '8px', fontSize: '15px', color: '#333' }}>
@@ -490,7 +490,7 @@ export default function PlanejamentoTributarioPage() {
                   { step: '4', title: 'Parametrização no ERP e Acompanhamento', desc: 'Ajustamos as regras fiscais junto ao seu sistema emissor para que cada nota fiscal já saia com a tributação correta.' },
                 ].map(st => (
                   <div key={st.step} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                    <span style={{ background: '#600000', color: '#fff', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
+                    <span style={{ background: '#600000', color: '#fff', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '15.5px', flexShrink: 0 }}>
                       {st.step}
                     </span>
                     <div>
@@ -630,14 +630,14 @@ export default function PlanejamentoTributarioPage() {
                 }}
               >
                 <div>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#600000', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#600000', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     {card.tag}
                   </span>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '8px 0 0 0', lineHeight: 1.4, color: '#111' }}>
                     {card.title}
                   </h3>
                 </div>
-                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#600000', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#600000', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   Ler guia completo <ArrowRight size={14} />
                 </span>
               </Link>
@@ -647,7 +647,7 @@ export default function PlanejamentoTributarioPage() {
       </main>
 
       {/* Footer com NAP Text e Telefone Clicável */}
-      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
+      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />

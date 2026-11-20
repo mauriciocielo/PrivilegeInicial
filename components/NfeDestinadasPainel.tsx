@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { instrumentSerif as serif } from '../app/fonts';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
   AlertCircle, CheckCircle2, Clock, ShieldCheck, FileText, ArrowUpDown, ChevronRight,
@@ -749,19 +748,19 @@ export default function NfeDestinadasPainel() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
                 Módulo SEFAZ • NF-e Mercadorias (Destinadas & Emitidas)
               </div>
-              <h3 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: '0 0 6px', lineHeight: 1.1 }}>
+              <h3 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', color: '#000', margin: '0 0 6px', lineHeight: 1.1 }}>
                 Escolha a empresa para consultar NF-e
               </h3>
-              <p style={{ fontSize: 14, color: '#525252', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 15.5, color: '#525252', margin: 0, lineHeight: 1.5 }}>
                 Consulte notas destinadas (compras), notas emitidas (vendas), realize manifestação do destinatário e baixe XMLs e DANFEs.
               </p>
             </div>
             <button
               className="btn"
-              style={{ background: '#600000', color: '#fff', padding: '10px 18px', borderRadius: 8, fontWeight: 500, fontSize: 13.5, border: 'none' }}
+              style={{ background: '#600000', color: '#fff', padding: '10px 18px', borderRadius: 8, fontWeight: 500, fontSize: 15, border: 'none' }}
               onClick={() => setShowCadastrarCnpjModal(true)}
             >
               + Cadastrar CNPJ
@@ -788,7 +787,7 @@ export default function NfeDestinadasPainel() {
 
           <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid #e5e5e5', borderRadius: 14 }}>
             {empresasFiltradas.length === 0 ? (
-              <div style={{ padding: '32px 20px', textAlign: 'center', color: '#525252', fontSize: 13.5 }}>
+              <div style={{ padding: '32px 20px', textAlign: 'center', color: '#525252', fontSize: 15 }}>
                 {carregandoEmpresas ? 'Carregando empresas...' : 'Nenhuma empresa encontrada com os filtros informados.'}
               </div>
             ) : (
@@ -813,12 +812,12 @@ export default function NfeDestinadasPainel() {
                       }}
                     >
                       <td>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.razaoSocial}</div>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: '#171717' }}>{emp.razaoSocial}</div>
                         {emp.nomeFantasia && emp.nomeFantasia !== emp.razaoSocial && (
-                          <div style={{ fontSize: 11.5, color: '#525252' }}>{emp.nomeFantasia}</div>
+                          <div style={{ fontSize: 13.5, color: '#525252' }}>{emp.nomeFantasia}</div>
                         )}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
                       <td>
                         {emp.certificado === 'propria' ? (
                           <span className="badge badge-green">A1 Próprio</span>
@@ -828,12 +827,12 @@ export default function NfeDestinadasPainel() {
                           <span className="badge" style={{ background: '#fef2f2', color: '#991b1b' }}>Sem Certificado</span>
                         )}
                       </td>
-                      <td style={{ fontSize: 13, color: '#171717', fontWeight: 600 }}>{emp.totalNotas}</td>
+                      <td style={{ fontSize: 14.5, color: '#171717', fontWeight: 600 }}>{emp.totalNotas}</td>
                       <td style={{ textAlign: 'right' }}>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
-                          style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '5px 12px' }}
+                          style={{ background: '#600000', borderColor: '#600000', fontSize: 14, padding: '5px 12px' }}
                           onClick={ev => {
                             ev.stopPropagation();
                             setEmpresaIdSelecionada(emp.id);
@@ -875,15 +874,15 @@ export default function NfeDestinadasPainel() {
         }}
       >
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
             SEFAZ NACIONAL • NF-E MERCADORIAS (DESTINADAS E EMITIDAS)
           </div>
-          <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
+          <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', color: '#000', margin: 0, lineHeight: 1.05 }}>
             Notas Fiscais Destinadas
           </h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 14, color: '#171717', fontWeight: 600 }}>
+            <div style={{ fontSize: 15.5, color: '#171717', fontWeight: 600 }}>
               {empresaAtual?.razaoSocial || empresaAtual?.nomeFantasia}
               {empresaAtual?.cnpj ? <span style={{ fontWeight: 400, color: '#525252' }}>{` · CNPJ ${formatCnpj(empresaAtual.cnpj)}`}</span> : ''}
             </div>
@@ -903,7 +902,7 @@ export default function NfeDestinadasPainel() {
                 color: '#171717',
                 borderRadius: 99,
                 padding: '3px 11px',
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -916,7 +915,7 @@ export default function NfeDestinadasPainel() {
         <div className="header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 15 }}
             onClick={() => setShowCadastrarCnpjModal(true)}
           >
             + Cadastrar CNPJ
@@ -924,7 +923,7 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 15 }}
             onClick={() => setEmpresaCertificadoModal(empresaAtual)}
             disabled={!empresaAtual}
           >
@@ -933,7 +932,7 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', borderRadius: 8, fontWeight: 600, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             onClick={handleConsultarSefaz}
             disabled={consultandoSefaz || !empresaAtual}
             title="Consulta no WebService da SEFAZ novas notas destinadas e emitidas via Distribuição DFe"
@@ -944,7 +943,7 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             onClick={() => handleExportar(null)}
             disabled={exportando || !empresaAtual || notas.length === 0}
           >
@@ -953,7 +952,7 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 15 }}
             onClick={() => setShowImportarModal(true)}
             disabled={!empresaAtual}
           >
@@ -962,7 +961,7 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 13.5 }}
+            style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontWeight: 500, fontSize: 15 }}
             onClick={() => setShowDifalModal(true)}
             disabled={!empresaAtual}
           >
@@ -971,11 +970,11 @@ export default function NfeDestinadasPainel() {
 
           <button
             className="btn btn-secondary"
-            style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 8, fontWeight: 600, fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 8, fontWeight: 600, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             onClick={() => setShowCndModal(true)}
             title="Gerar Relatório de Situação Fiscal Federal (SITFIS / CND)"
           >
-            🏛️ Situação Federal
+            Situação Federal
           </button>
         </div>
       </div>
@@ -994,7 +993,7 @@ export default function NfeDestinadasPainel() {
               borderRadius: 12,
               padding: '12px 18px',
               marginBottom: 24,
-              fontSize: 13.5,
+              fontSize: 15,
               color: '#525252',
               display: 'flex',
               alignItems: 'center',
@@ -1017,14 +1016,14 @@ export default function NfeDestinadasPainel() {
                 {monitorAtual?.apenasNoturno ? ' (somente no período noturno 22h–05h)' : ' (contínuo 24h)'}.
               </span>
               {monitorAtual?.ultimaConsultaEm && (
-                <span style={{ fontSize: 12, color: '#6b7280' }}>
+                <span style={{ fontSize: 14, color: '#6b7280' }}>
                   Última sincronização SEFAZ: {new Date(monitorAtual.ultimaConsultaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.
                 </span>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#374151', cursor: 'pointer' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#374151', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={monitorAtual?.ativo !== false}
@@ -1034,7 +1033,7 @@ export default function NfeDestinadasPainel() {
                 <span>Auto-Monitor</span>
               </label>
 
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#374151', cursor: 'pointer' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#374151', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={monitorAtual?.apenasNoturno ?? false}
@@ -1068,18 +1067,18 @@ export default function NfeDestinadasPainel() {
             <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 280 }}>
               <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <strong style={{ fontSize: 14, color: '#92400e', display: 'block', marginBottom: 2 }}>
+                <strong style={{ fontSize: 15.5, color: '#92400e', display: 'block', marginBottom: 2 }}>
                   Aviso da SEFAZ: Conflito de NSU / Consumo Indevido (Rejeição 656)
                 </strong>
-                <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                <p style={{ margin: 0, fontSize: 14.5, color: '#78350f', lineHeight: 1.45 }}>
                   {monitorAtual.ultimaMensagem || 'A SEFAZ exige que a consulta siga o último NSU distribuído.'}
                   {monitorAtual.ultNsu && monitorAtual.maxNsu && (
                     <span style={{ display: 'block', marginTop: 4, fontWeight: 500 }}>
                       Ponteiro do sistema: <strong>{monitorAtual.ultNsu}</strong> · Maior NSU na SEFAZ: <strong>{monitorAtual.maxNsu}</strong>
                     </span>
                   )}
-                  <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#92400e' }}>
-                    💡 Dica: Outro software (como o ERP do posto ou sistema contábil) consultou com este certificado e avançou os NSUs. Aguarde o término do bloqueio de 1 hora da SEFAZ. Você também pode importar os XMLs pelo botão acima.
+                  <span style={{ display: 'block', marginTop: 4, fontSize: 14, color: '#92400e' }}>
+                    Dica: Outro software (como o ERP do posto ou sistema contábil) consultou com este certificado e avançou os NSUs. Aguarde o término do bloqueio de 1 hora da SEFAZ. Você também pode importar os XMLs pelo botão acima.
                   </span>
                 </p>
               </div>
@@ -1094,7 +1093,7 @@ export default function NfeDestinadasPainel() {
                   background: '#ffffff',
                   border: '1px solid #f59e0b',
                   color: '#b45309',
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   padding: '6px 14px',
                   borderRadius: 8,
@@ -1128,13 +1127,13 @@ export default function NfeDestinadasPainel() {
               justifyContent: 'space-between',
             }}
           >
-            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>
+            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13.5, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>
               Notas Recebidas (Compras)
             </span>
-            <div className={serif.className} style={{ fontSize: 38, fontWeight: 400, margin: '8px 0 4px', lineHeight: 1 }}>
+            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', margin: '8px 0 4px', lineHeight: 1 }}>
               {fmt.currency(totais.valorRecebidas)}
             </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            <div style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.7)' }}>
               {totais.qtdRecebidas} nota(s) destinadas de fornecedores
             </div>
           </div>
@@ -1151,13 +1150,13 @@ export default function NfeDestinadasPainel() {
               justifyContent: 'space-between',
             }}
           >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <span style={{ color: '#525252', fontSize: 13.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               Notas Emitidas (Vendas)
             </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
               {fmt.currency(totais.valorEmitidas)}
             </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
+            <div style={{ fontSize: 14.5, color: '#525252' }}>
               {totais.qtdEmitidas} nota(s) faturadas pelo CNPJ
             </div>
           </div>
@@ -1174,13 +1173,13 @@ export default function NfeDestinadasPainel() {
               justifyContent: 'space-between',
             }}
           >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <span style={{ color: '#525252', fontSize: 13.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               Com XML Completo
             </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
               {totais.comXmlCount}
             </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
+            <div style={{ fontSize: 14.5, color: '#525252' }}>
               {totais.apenasResumo > 0 ? `${totais.apenasResumo} em formato de resumo SEFAZ` : 'Todos com arquivo XML baixado'}
             </div>
           </div>
@@ -1197,13 +1196,13 @@ export default function NfeDestinadasPainel() {
               justifyContent: 'space-between',
             }}
           >
-            <span style={{ color: '#525252', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <span style={{ color: '#525252', fontSize: 13.5, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               Total Movimentado
             </span>
-            <div className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
+            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '8px 0 4px', lineHeight: 1 }}>
               {fmt.currency(totais.valorTotal)}
             </div>
-            <div style={{ fontSize: 13, color: '#525252' }}>
+            <div style={{ fontSize: 14.5, color: '#525252' }}>
               {totais.quantidade} documento(s) fiscal(is) no período
             </div>
           </div>
@@ -1234,7 +1233,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -1250,7 +1249,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -1266,7 +1265,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -1282,7 +1281,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -1302,7 +1301,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -1317,7 +1316,7 @@ export default function NfeDestinadasPainel() {
                   style={{
                     background: '#fef3c7',
                     color: '#92400e',
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: 700,
                     padding: '1px 6px',
                     borderRadius: 99,
@@ -1338,7 +1337,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -1354,7 +1353,7 @@ export default function NfeDestinadasPainel() {
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -1371,14 +1370,14 @@ export default function NfeDestinadasPainel() {
           {abaPrincipal !== 'carteira' && abaPrincipal !== 'certificados' && abaPrincipal !== 'grafico' && abaPrincipal !== 'logs' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#525252', fontWeight: 600 }}>Mês:</span>
+                <span style={{ fontSize: 14, color: '#525252', fontWeight: 600 }}>Mês:</span>
                 <input
                   type="month"
                   value={mesFiltro}
                   onChange={e => { setMesFiltro(e.target.value); setDataInicio(''); setDataFim(''); }}
                   style={{
                     padding: '6px 10px',
-                    fontSize: 13,
+                    fontSize: 14.5,
                     border: '1px solid #d4d4d8',
                     borderRadius: 8,
                     background: '#fff',
@@ -1392,7 +1391,7 @@ export default function NfeDestinadasPainel() {
                   type="button"
                   onClick={() => { setMesFiltro(''); setDataInicio(''); setDataFim(''); setBusca(''); setSituacaoFiltro(''); }}
                   style={{
-                    fontSize: 12,
+                    fontSize: 14,
                     color: '#600000',
                     background: 'transparent',
                     border: 'none',
@@ -1435,7 +1434,7 @@ export default function NfeDestinadasPainel() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  fontSize: 12.5,
+                  fontSize: 14,
                   padding: '9px 14px',
                   background: mostrarGraficoInline ? '#600000' : '#ffffff',
                   color: mostrarGraficoInline ? '#ffffff' : '#374151',
@@ -1477,7 +1476,7 @@ export default function NfeDestinadasPainel() {
               >
                 {[
                   { key: 'todas', label: `Todas (${notas.filter(n => abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida')).length})` },
-                  ...(totais.totalCte > 0 ? [{ key: 'cte', label: `🚚 CT-e Fretes (${totais.totalCte})` }] : []),
+                  ...(totais.totalCte > 0 ? [{ key: 'cte', label: `CT-e Fretes (${totais.totalCte})` }] : []),
                   { key: 'xml', label: `Com XML (${notas.filter(n => n.possuiXml && (abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida'))).length})` },
                   { key: 'resumo', label: `Em Resumo (${notas.filter(n => !n.possuiXml && (abaPrincipal === 'todas' || (abaPrincipal === 'recebidas' ? n.papel !== 'emitida' : n.papel === 'emitida'))).length})` },
                   { key: 'cancelada', label: 'Canceladas' },
@@ -1494,7 +1493,7 @@ export default function NfeDestinadasPainel() {
                         border: 'none',
                         padding: '8px 18px',
                         borderRadius: 99,
-                        fontSize: 13,
+                        fontSize: 14.5,
                         fontWeight: 600,
                         cursor: 'pointer',
                         boxShadow: ativo ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
@@ -1523,7 +1522,7 @@ export default function NfeDestinadasPainel() {
                   borderRadius: 14,
                 }}
               >
-                <span style={{ fontSize: 13.5, color: '#171717' }}>
+                <span style={{ fontSize: 15, color: '#171717' }}>
                   <strong>{selecionadas.size}</strong> nota(s) selecionada(s) —{' '}
                   <strong>{fmt.currency(valorSelecionadas)}</strong>
                 </span>
@@ -1532,7 +1531,7 @@ export default function NfeDestinadasPainel() {
                   <select
                     className="form-control"
                     aria-label="Formato da exportação"
-                    style={{ width: 'auto', fontSize: 13, padding: '7px 10px' }}
+                    style={{ width: 'auto', fontSize: 14.5, padding: '7px 10px' }}
                     value={formatoExportacao}
                     onChange={e => setFormatoExportacao(e.target.value as any)}
                     disabled={exportando}
@@ -1545,7 +1544,7 @@ export default function NfeDestinadasPainel() {
 
                   <button
                     className="btn btn-secondary"
-                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontSize: 14.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     onClick={() => handleExportar(Array.from(selecionadas))}
                     disabled={exportando}
                   >
@@ -1556,7 +1555,7 @@ export default function NfeDestinadasPainel() {
                   {idsParaCiencia.length > 0 && (
                     <button
                       className="btn"
-                      style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 16px', fontSize: 13 }}
+                      style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 16px', fontSize: 14.5 }}
                       onClick={() => handleDarCiencia(idsParaCiencia)}
                       disabled={manifestando}
                     >
@@ -1566,7 +1565,7 @@ export default function NfeDestinadasPainel() {
 
                   <button
                     className="btn btn-secondary"
-                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 13 }}
+                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 14.5 }}
                     onClick={() => setSelecionadas(new Set())}
                   >
                     Limpar seleção
@@ -1659,10 +1658,10 @@ export default function NfeDestinadasPainel() {
                       <tr>
                         <td colSpan={9}>
                           <div style={{ padding: '56px 24px', textAlign: 'center' }}>
-                            <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
+                            <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', marginBottom: 6 }}>
                               Nenhuma nota fiscal encontrada neste filtro
                             </h3>
-                            <p style={{ fontSize: 14, color: '#525252', margin: 0 }}>
+                            <p style={{ fontSize: 15.5, color: '#525252', margin: 0 }}>
                               Clique em &quot;Consultar SEFAZ Agora&quot; no topo ou ajuste o filtro de data e busca.
                             </p>
                           </div>
@@ -1685,21 +1684,21 @@ export default function NfeDestinadasPainel() {
                                 onChange={() => alternarSelecao(n.id)}
                               />
                             </td>
-                            <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
+                            <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: '#171717' }}>
                               {n.numero || '—'} {n.serie ? `(Série ${n.serie})` : ''}
                               {n.chaveAcesso?.slice(20, 22) === '57' && (
-                                <span style={{ marginLeft: 6, fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                <span style={{ marginLeft: 6, fontSize: 12.5, background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
                                   CT-e
                                 </span>
                               )}
                             </td>
-                            <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>
+                            <td style={{ fontSize: 14.5, whiteSpace: 'nowrap', color: '#525252' }}>
                               {formatData(n.dataEmissao)}
                             </td>
                             <td>
-                              <div style={{ fontWeight: 600, color: '#171717', fontSize: 13.5 }}>{contraparteNome}</div>
+                              <div style={{ fontWeight: 600, color: '#171717', fontSize: 15 }}>{contraparteNome}</div>
                               {contraparteDoc && (
-                                <div style={{ fontSize: 11.5, fontFamily: 'monospace', color: '#6b7280' }}>
+                                <div style={{ fontSize: 13.5, fontFamily: 'monospace', color: '#6b7280' }}>
                                   {formatCnpj(contraparteDoc)}
                                 </div>
                               )}
@@ -1731,7 +1730,7 @@ export default function NfeDestinadasPainel() {
                                 <span className="badge badge-yellow">{n.situacao}</span>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
+                            <td style={{ textAlign: 'right', fontWeight: 700, fontSize: 15, color: '#171717' }}>
                               {fmt.currency(n.valorNf)}
                             </td>
                             <td style={{ textAlign: 'right' }}>
@@ -1741,7 +1740,7 @@ export default function NfeDestinadasPainel() {
                                     type="button"
                                     onClick={() => manifestarNota(n.chaveAcesso, '210210')}
                                     className="btn btn-secondary btn-sm"
-                                    style={{ background: '#fdfdfd', border: '1px solid #d4d4d8', fontSize: 11.5, padding: '3px 8px', color: '#1d4ed8' }}
+                                    style={{ background: '#fdfdfd', border: '1px solid #d4d4d8', fontSize: 13.5, padding: '3px 8px', color: '#1d4ed8' }}
                                     title="Dar Ciência da Operação para liberar XML completo"
                                   >
                                     Ciência
@@ -1754,7 +1753,7 @@ export default function NfeDestinadasPainel() {
                                       type="button"
                                       onClick={() => handleBaixarXml(n.id, n.numero)}
                                       className="btn btn-secondary btn-sm"
-                                      style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 11.5, padding: '3px 8px' }}
+                                      style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 13.5, padding: '3px 8px' }}
                                       title="Baixar arquivo XML"
                                     >
                                       XML
@@ -1763,21 +1762,21 @@ export default function NfeDestinadasPainel() {
                                       type="button"
                                       onClick={() => handleAbrirPdf(n.id)}
                                       className="btn btn-secondary btn-sm"
-                                      style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 11.5, padding: '3px 8px' }}
+                                      style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 13.5, padding: '3px 8px' }}
                                       title="Visualizar ou Imprimir DANFE (PDF)"
                                     >
                                       PDF
                                     </button>
                                   </>
                                 ) : (
-                                  <span style={{ fontSize: 11, color: '#9ca3af' }}>Só Resumo</span>
+                                  <span style={{ fontSize: 13, color: '#9ca3af' }}>Só Resumo</span>
                                 )}
 
                                 <button
                                   type="button"
                                   onClick={() => setNotaDetalhe(n)}
                                   className="btn btn-secondary btn-sm"
-                                  style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 11.5, padding: '3px 8px' }}
+                                  style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 13.5, padding: '3px 8px' }}
                                   title="Ver detalhes da nota e chave de acesso"
                                 >
                                   Ver
@@ -1825,14 +1824,14 @@ export default function NfeDestinadasPainel() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#600000' }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000' }}>
                     Gestão Centralizada de Segurança ICP-Brasil
                   </span>
                 </div>
-                <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', margin: '0 0 4px' }}>
+                <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '0 0 4px' }}>
                   Controle de Certificados Digitais A1 & Procurações
                 </h3>
-                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                <p style={{ fontSize: 14.5, color: '#525252', margin: 0 }}>
                   Monitore o ciclo de vida, expiração e cobertura de certificados A1 criptografados no cofre para NF-e e NFS-e Nacional.
                 </p>
               </div>
@@ -1842,7 +1841,7 @@ export default function NfeDestinadasPainel() {
                   type="button"
                   onClick={exportarRelatorioCertificadosCsv}
                   className="btn btn-secondary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '7px 14px' }}
                   title="Baixar planilha CSV com a listagem completa de certificados e validades"
                 >
                   <Download size={14} /> Exportar Relatório CSV
@@ -1851,7 +1850,7 @@ export default function NfeDestinadasPainel() {
                   type="button"
                   onClick={() => setShowCadastrarCnpjModal(true)}
                   className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px', background: '#600000', borderColor: '#600000' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '7px 14px', background: '#600000', borderColor: '#600000' }}
                 >
                   <Building2 size={14} /> + Cadastrar CNPJs
                 </button>
@@ -1862,52 +1861,52 @@ export default function NfeDestinadasPainel() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 22 }}>
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Com Certificado A1 no Cofre</span>
+                  <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>Com Certificado A1 no Cofre</span>
                   <ShieldCheck size={16} color="#16a34a" />
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>
                   {totaisCertificados.comA1}
                 </div>
-                <span style={{ fontSize: 11, color: '#16a34a' }}>
+                <span style={{ fontSize: 13, color: '#16a34a' }}>
                   Criptografia AES-256-GCM ativa
                 </span>
               </div>
 
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Com Procuração Eletrônica</span>
+                  <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>Com Procuração Eletrônica</span>
                   <FileText size={16} color="#2563eb" />
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>
                   {totaisCertificados.comProcuracao}
                 </div>
-                <span style={{ fontSize: 11, color: '#2563eb' }}>
+                <span style={{ fontSize: 13, color: '#2563eb' }}>
                   Via Certificado da Matriz / Escritório
                 </span>
               </div>
 
               <div style={{ background: totaisCertificados.vencendo30d > 0 ? '#fffbeb' : '#f8fafc', border: `1px solid ${totaisCertificados.vencendo30d > 0 ? '#fde68a' : '#e2e8f0'}`, borderRadius: 12, padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b', fontWeight: 600 }}>Vencendo em até 30 Dias</span>
+                  <span style={{ fontSize: 14, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b', fontWeight: 600 }}>Vencendo em até 30 Dias</span>
                   <Clock size={16} color={totaisCertificados.vencendo30d > 0 ? '#d97706' : '#94a3b8'} />
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#0f172a' }}>
                   {totaisCertificados.vencendo30d}
                 </div>
-                <span style={{ fontSize: 11, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b' }}>
+                <span style={{ fontSize: 13, color: totaisCertificados.vencendo30d > 0 ? '#b45309' : '#64748b' }}>
                   {totaisCertificados.vencendo30d > 0 ? 'Atenção para renovação imediata' : 'Nenhum certificado expirando breve'}
                 </span>
               </div>
 
               <div style={{ background: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#fef2f2' : '#f8fafc', border: `1px solid ${(totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#fecaca' : '#e2e8f0'}`, borderRadius: 12, padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b', fontWeight: 600 }}>Vencidos ou Pendentes</span>
+                  <span style={{ fontSize: 14, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b', fontWeight: 600 }}>Vencidos ou Pendentes</span>
                   <AlertCircle size={16} color={(totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#dc2626' : '#94a3b8'} />
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#0f172a' }}>
                   {totaisCertificados.vencidos + totaisCertificados.semCert}
                 </div>
-                <span style={{ fontSize: 11, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b' }}>
+                <span style={{ fontSize: 13, color: (totaisCertificados.vencidos > 0 || totaisCertificados.semCert > 0) ? '#b91c1c' : '#64748b' }}>
                   {totaisCertificados.vencidos > 0 ? `${totaisCertificados.vencidos} vencido(s) • ${totaisCertificados.semCert} sem certificado` : `${totaisCertificados.semCert} sem certificado`}
                 </span>
               </div>
@@ -1922,7 +1921,7 @@ export default function NfeDestinadasPainel() {
                   onClick={() => setFiltroCertificadoStatus('todos')}
                   style={{
                     padding: '6px 12px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 20,
                     border: '1px solid',
@@ -1939,7 +1938,7 @@ export default function NfeDestinadasPainel() {
                   onClick={() => setFiltroCertificadoStatus('validos')}
                   style={{
                     padding: '6px 12px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 20,
                     border: '1px solid',
@@ -1956,7 +1955,7 @@ export default function NfeDestinadasPainel() {
                   onClick={() => setFiltroCertificadoStatus('vencendo')}
                   style={{
                     padding: '6px 12px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 20,
                     border: '1px solid',
@@ -1966,7 +1965,7 @@ export default function NfeDestinadasPainel() {
                     cursor: 'pointer',
                   }}
                 >
-                  ⚠️ Vencendo em 30d ({totaisCertificados.vencendo30d})
+                  Vencendo em 30 dias ({totaisCertificados.vencendo30d})
                 </button>
                 {totaisCertificados.vencidos > 0 && (
                   <button
@@ -1974,7 +1973,7 @@ export default function NfeDestinadasPainel() {
                     onClick={() => setFiltroCertificadoStatus('vencidos')}
                     style={{
                       padding: '6px 12px',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       borderRadius: 20,
                       border: '1px solid',
@@ -1984,7 +1983,7 @@ export default function NfeDestinadasPainel() {
                       cursor: 'pointer',
                     }}
                   >
-                    ⛔ Vencidos ({totaisCertificados.vencidos})
+                    Vencidos ({totaisCertificados.vencidos})
                   </button>
                 )}
                 <button
@@ -1992,7 +1991,7 @@ export default function NfeDestinadasPainel() {
                   onClick={() => setFiltroCertificadoStatus('procuracao')}
                   style={{
                     padding: '6px 12px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 20,
                     border: '1px solid',
@@ -2009,7 +2008,7 @@ export default function NfeDestinadasPainel() {
                   onClick={() => setFiltroCertificadoStatus('sem_cert')}
                   style={{
                     padding: '6px 12px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     borderRadius: 20,
                     border: '1px solid',
@@ -2043,7 +2042,7 @@ export default function NfeDestinadasPainel() {
                     value={buscaCertificadoTexto}
                     onChange={(e) => setBuscaCertificadoTexto(e.target.value)}
                     placeholder="Filtrar por empresa, CNPJ ou titular..."
-                    style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12.5, width: '100%' }}
+                    style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 14, width: '100%' }}
                   />
                   {buscaCertificadoTexto && (
                     <button
@@ -2061,7 +2060,7 @@ export default function NfeDestinadasPainel() {
                   onChange={(e: any) => setOrdemCertificado(e.target.value)}
                   style={{
                     padding: '7px 10px',
-                    fontSize: 12.5,
+                    fontSize: 14,
                     border: '1px solid #e5e5e5',
                     borderRadius: 10,
                     background: '#ffffff',
@@ -2080,7 +2079,7 @@ export default function NfeDestinadasPainel() {
 
             {/* Tabela de Controle de Certificados */}
             <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-              <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.5 }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                     <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>Empresa</th>
@@ -2108,32 +2107,32 @@ export default function NfeDestinadasPainel() {
                       if (dtValidade && diasRestantes !== null) {
                         if (diasRestantes < 0) {
                           statusBadge = (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 600, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}>
                               <AlertCircle size={12} /> Expirado há {Math.abs(diasRestantes)}d
                             </span>
                           );
                         } else if (diasRestantes <= 30) {
                           statusBadge = (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 600, background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>
                               <Clock size={12} /> Vence em {diasRestantes}d
                             </span>
                           );
                         } else {
                           statusBadge = (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 600, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
                               <CheckCircle2 size={12} /> Válido ({diasRestantes}d)
                             </span>
                           );
                         }
                       } else if (emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa') {
                         statusBadge = (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 600, background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}>
                             <FileText size={12} /> Procuração Ativa
                           </span>
                         );
                       } else {
                         statusBadge = (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600, background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 600, background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1' }}>
                             Pendente
                           </span>
                         );
@@ -2143,7 +2142,7 @@ export default function NfeDestinadasPainel() {
                         <tr key={emp.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '12px 16px' }}>
                             <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{emp.razaoSocial}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#64748b' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: '#64748b' }}>
                               <span>CNPJ: {emp.cnpj}</span>
                               <button
                                 type="button"
@@ -2163,26 +2162,26 @@ export default function NfeDestinadasPainel() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <ShieldCheck size={15} color="#16a34a" />
                                 <div>
-                                  <div style={{ fontWeight: 600, color: '#166534', fontSize: 12 }}>A1 no Cofre Seguro</div>
-                                  <div style={{ fontSize: 11, color: '#64748b' }}>Criptografia AES-256</div>
+                                  <div style={{ fontWeight: 600, color: '#166534', fontSize: 14 }}>A1 no Cofre Seguro</div>
+                                  <div style={{ fontSize: 13, color: '#64748b' }}>Criptografia AES-256</div>
                                 </div>
                               </div>
                             ) : emp.certificado === 'escritorio' || emp.procuracaoStatus === 'ativa' ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <FileText size={15} color="#2563eb" />
                                 <div>
-                                  <div style={{ fontWeight: 600, color: '#1e40af', fontSize: 12 }}>Procuração Eletrônica</div>
-                                  <div style={{ fontSize: 11, color: '#64748b' }}>Certificado do Escritório</div>
+                                  <div style={{ fontWeight: 600, color: '#1e40af', fontSize: 14 }}>Procuração Eletrônica</div>
+                                  <div style={{ fontSize: 13, color: '#64748b' }}>Certificado do Escritório</div>
                                 </div>
                               </div>
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <AlertCircle size={15} color="#94a3b8" />
-                                <span style={{ fontSize: 12, color: '#64748b' }}>Sem certificado</span>
+                                <span style={{ fontSize: 14, color: '#64748b' }}>Sem certificado</span>
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '12px 16px', fontSize: 12, color: '#334155' }}>
+                          <td style={{ padding: '12px 16px', fontSize: 14, color: '#334155' }}>
                             {emp.certTitular ? (
                               <span title={emp.certTitular} style={{ display: 'block', maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {emp.certTitular}
@@ -2191,7 +2190,7 @@ export default function NfeDestinadasPainel() {
                               <span style={{ color: '#94a3b8' }}>—</span>
                             )}
                           </td>
-                          <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                          <td style={{ padding: '12px 16px', fontSize: 14 }}>
                             {dtValidade ? (
                               <div>
                                 <span style={{ fontWeight: 500, color: '#0f172a' }}>{dtValidade.toLocaleDateString('pt-BR')}</span>
@@ -2209,7 +2208,7 @@ export default function NfeDestinadasPainel() {
                                 type="button"
                                 onClick={() => setEmpresaCertificadoModal(emp)}
                                 className="btn btn-secondary btn-sm"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '4px 8px' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13.5, padding: '4px 8px' }}
                               >
                                 <KeyRound size={12} /> {emp.certValidoAte ? 'Trocar A1' : 'Subir A1'}
                               </button>
@@ -2220,7 +2219,7 @@ export default function NfeDestinadasPainel() {
                                   setAbaPrincipal('recebidas');
                                 }}
                                 className="btn btn-secondary btn-sm"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, padding: '4px 8px' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13.5, padding: '4px 8px' }}
                               >
                                 Ver Notas <ChevronRight size={12} />
                               </button>
@@ -2257,10 +2256,10 @@ export default function NfeDestinadasPainel() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 14 }}>
               <div>
-                <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', margin: '0 0 4px' }}>
+                <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '0 0 4px' }}>
                   Carteira de Clientes & Empresas Monitoradas
                 </h3>
-                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                <p style={{ fontSize: 14.5, color: '#525252', margin: 0 }}>
                   Acompanhe a situação do certificado A1, procuração eletrônica e auto-monitoramento de todas as empresas cadastradas.
                 </p>
               </div>
@@ -2286,7 +2285,7 @@ export default function NfeDestinadasPainel() {
 
                 <button
                   className="btn"
-                  style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500 }}
+                  style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 14.5, fontWeight: 500 }}
                   onClick={() => setShowCadastrarCnpjModal(true)}
                 >
                   + Cadastrar CNPJ
@@ -2311,12 +2310,12 @@ export default function NfeDestinadasPainel() {
                   {empresasFiltradas.map(emp => (
                     <tr key={emp.id}>
                       <td>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.razaoSocial}</div>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: '#171717' }}>{emp.razaoSocial}</div>
                         {emp.nomeFantasia && emp.nomeFantasia !== emp.razaoSocial && (
-                          <div style={{ fontSize: 11.5, color: '#525252' }}>{emp.nomeFantasia}</div>
+                          <div style={{ fontSize: 13.5, color: '#525252' }}>{emp.nomeFantasia}</div>
                         )}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
                       <td>
                         {emp.certificado === 'propria' ? (
                           <span className="badge badge-green">A1 Próprio ({formatData(emp.certValidoAte)})</span>
@@ -2327,7 +2326,7 @@ export default function NfeDestinadasPainel() {
                         )}
                       </td>
                       <td>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5 }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
                           <input
                             type="checkbox"
                             checked={emp.monitor?.ativo !== false}
@@ -2338,7 +2337,7 @@ export default function NfeDestinadasPainel() {
                         </label>
                       </td>
                       <td>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12.5 }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
                           <input
                             type="checkbox"
                             checked={emp.monitor?.apenasNoturno ?? false}
@@ -2348,13 +2347,13 @@ export default function NfeDestinadasPainel() {
                           <span>{emp.monitor?.apenasNoturno ? '22h–05h' : '24h'}</span>
                         </label>
                       </td>
-                      <td style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.totalNotas}</td>
+                      <td style={{ fontWeight: 600, fontSize: 15, color: '#171717' }}>{emp.totalNotas}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '4px 10px' }}
+                            style={{ background: '#600000', borderColor: '#600000', fontSize: 14, padding: '4px 10px' }}
                             onClick={() => {
                               setEmpresaIdSelecionada(emp.id);
                               sessionStorage.setItem('cf_nfe_empresa_id', emp.id);
@@ -2367,7 +2366,7 @@ export default function NfeDestinadasPainel() {
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 12, padding: '4px 8px' }}
+                            style={{ fontSize: 14, padding: '4px 8px' }}
                             onClick={() => setEmpresaCertificadoModal(emp)}
                           >
                             Certificado
@@ -2393,10 +2392,10 @@ export default function NfeDestinadasPainel() {
           <div className="modal" style={{ maxWidth: 640, width: '95%', background: '#ffffff', borderRadius: 16, padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafafa' }}>
               <div>
-                <h3 className={serif.className} style={{ fontSize: 24, fontWeight: 400, color: '#111827', margin: 0 }}>
+                <h3 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: '#111827', margin: 0 }}>
                   NF-e {notaDetalhe.numero || 'Sem número'} {notaDetalhe.serie ? `(Série ${notaDetalhe.serie})` : ''}
                 </h3>
-                <span style={{ fontSize: 12, color: '#525252' }}>
+                <span style={{ fontSize: 14, color: '#525252' }}>
                   Detalhes do Documento Fiscal Eletrônico
                 </span>
               </div>
@@ -2413,7 +2412,7 @@ export default function NfeDestinadasPainel() {
             <div style={{ padding: 24 }}>
               {/* Chave de Acesso */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '.05em' }}>
                   Chave de Acesso (44 dígitos)
                 </label>
                 <div style={{
@@ -2421,13 +2420,13 @@ export default function NfeDestinadasPainel() {
                   background: '#f9fafb', padding: '10px 14px', borderRadius: 8,
                   border: '1px solid #e5e5e5', marginTop: 4
                 }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#111827', letterSpacing: '.03em', wordBreak: 'break-all' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 14.5, color: '#111827', letterSpacing: '.03em', wordBreak: 'break-all' }}>
                     {formatChave(notaDetalhe.chaveAcesso)}
                   </span>
                   <button
                     onClick={() => handleCopiarChave(notaDetalhe.chaveAcesso)}
                     className="btn btn-secondary btn-sm"
-                    style={{ marginLeft: 10, padding: '4px 8px', fontSize: 12 }}
+                    style={{ marginLeft: 10, padding: '4px 8px', fontSize: 14 }}
                     title="Copiar chave"
                   >
                     {copiadoChave ? <Check size={13} color="#16a34a" /> : <Copy size={13} />}
@@ -2438,25 +2437,25 @@ export default function NfeDestinadasPainel() {
               {/* Informações da Nota */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Emitente (Fornecedor)</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginTop: 2 }}>{notaDetalhe.emitenteNome}</div>
-                  <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#6b7280' }}>CNPJ: {formatCnpj(notaDetalhe.emitenteCnpj)}</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Emitente (Fornecedor)</div>
+                  <div style={{ fontSize: 15.5, fontWeight: 600, color: '#111827', marginTop: 2 }}>{notaDetalhe.emitenteNome}</div>
+                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: '#6b7280' }}>CNPJ: {formatCnpj(notaDetalhe.emitenteCnpj)}</div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Valor Total da NF</div>
-                  <div className={serif.className} style={{ fontSize: 28, fontWeight: 400, color: '#16a34a', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Valor Total da NF</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#16a34a', marginTop: 2 }}>
                     {fmt.currency(notaDetalhe.valorNf)}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Data de Emissão</div>
-                  <div style={{ fontSize: 13.5, color: '#111827', marginTop: 2 }}>{formatData(notaDetalhe.dataEmissao)}</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Data de Emissão</div>
+                  <div style={{ fontSize: 15, color: '#111827', marginTop: 2 }}>{formatData(notaDetalhe.dataEmissao)}</div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Situação SEFAZ</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Situação SEFAZ</div>
                   <div style={{ marginTop: 2 }}>
                     {notaDetalhe.situacao === 'autorizada' ? (
                       <span className="badge badge-green">Autorizada</span>
@@ -2477,7 +2476,7 @@ export default function NfeDestinadasPainel() {
                       type="button"
                       onClick={() => handleBaixarXml(notaDetalhe.id, notaDetalhe.numero)}
                       className="btn btn-secondary"
-                      style={{ fontSize: 13 }}
+                      style={{ fontSize: 14.5 }}
                     >
                       <Download size={13} style={{ marginRight: 6 }} /> Baixar XML
                     </button>
@@ -2485,7 +2484,7 @@ export default function NfeDestinadasPainel() {
                       type="button"
                       onClick={() => handleAbrirPdf(notaDetalhe.id)}
                       className="btn btn-secondary"
-                      style={{ fontSize: 13 }}
+                      style={{ fontSize: 14.5 }}
                     >
                       <FileText size={13} style={{ marginRight: 6 }} /> Visualizar DANFE (PDF)
                     </button>
@@ -2499,7 +2498,7 @@ export default function NfeDestinadasPainel() {
                         setNotaDetalhe(null);
                       }}
                       className="btn"
-                      style={{ background: '#600000', color: '#fff', fontSize: 13 }}
+                      style={{ background: '#600000', color: '#fff', fontSize: 14.5 }}
                     >
                       Dar Ciência da Operação
                     </button>
@@ -2510,7 +2509,7 @@ export default function NfeDestinadasPainel() {
                   type="button"
                   onClick={() => setNotaDetalhe(null)}
                   className="btn btn-secondary"
-                  style={{ fontSize: 13 }}
+                  style={{ fontSize: 14.5 }}
                 >
                   Fechar
                 </button>
@@ -2616,13 +2615,13 @@ export default function NfeDestinadasPainel() {
               }}
             >
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#600000', marginBottom: 4 }}>
                   Módulo Fiscal • Carteira SEFAZ
                 </div>
-                <h3 className={serif.className} style={{ fontSize: 28, fontWeight: 400, color: '#000', margin: '0 0 4px', lineHeight: 1.1 }}>
+                <h3 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#000', margin: '0 0 4px', lineHeight: 1.1 }}>
                   Escolha a Empresa para Operar NF-e
                 </h3>
-                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                <p style={{ fontSize: 14.5, color: '#525252', margin: 0 }}>
                   Selecione qualquer cliente cadastrado para consultar notas destinadas (compras), emitidas (vendas) e manifestação.
                 </p>
               </div>
@@ -2662,20 +2661,20 @@ export default function NfeDestinadasPainel() {
                   placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."
                   value={buscaModalEmpresa}
                   onChange={e => setBuscaModalEmpresa(e.target.value)}
-                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: 13.5 }}
+                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: 15 }}
                   autoFocus
                 />
                 {buscaModalEmpresa && (
                   <button
                     type="button"
                     onClick={() => setBuscaModalEmpresa('')}
-                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 12 }}
+                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 14 }}
                   >
                     Limpar
                   </button>
                 )}
               </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: '#71717a', display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ marginTop: 8, fontSize: 14, color: '#71717a', display: 'flex', justifyContent: 'space-between' }}>
                 <span>
                   {empresasModalFiltradas.length} empresa(s) encontrada(s)
                 </span>
@@ -2690,18 +2689,18 @@ export default function NfeDestinadasPainel() {
             {/* Lista / Tabela de Empresas */}
             <div style={{ padding: '0 28px', overflowY: 'auto', flex: 1, maxHeight: 420 }}>
               {empresasModalFiltradas.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#525252', fontSize: 13.5 }}>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#525252', fontSize: 15 }}>
                   Nenhuma empresa encontrada com os termos digitados.
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1, borderBottom: '1px solid #e5e5e5' }}>
                     <tr>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Empresa</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>CNPJ</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Certificado</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Notas</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: 11.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Ação</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 13.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Empresa</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 13.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>CNPJ</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 13.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Certificado</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: 13.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Notas</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'right', fontSize: 13.5, fontWeight: 600, color: '#525252', textTransform: 'uppercase' }}>Ação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2724,26 +2723,26 @@ export default function NfeDestinadasPainel() {
                         >
                           <td style={{ padding: '12px 8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{emp.razaoSocial}</span>
-                              {isAtual && <span className="badge badge-green" style={{ fontSize: 10, padding: '2px 6px' }}>Atual</span>}
+                              <span style={{ fontWeight: 600, fontSize: 15, color: '#171717' }}>{emp.razaoSocial}</span>
+                              {isAtual && <span className="badge badge-green" style={{ fontSize: 12.5, padding: '2px 6px' }}>Atual</span>}
                             </div>
                             {emp.nomeFantasia && emp.nomeFantasia !== emp.razaoSocial && (
-                              <div style={{ fontSize: 11.5, color: '#525252' }}>{emp.nomeFantasia}</div>
+                              <div style={{ fontSize: 13.5, color: '#525252' }}>{emp.nomeFantasia}</div>
                             )}
                           </td>
-                          <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: 12, color: '#525252' }}>
+                          <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>
                             {formatCnpj(emp.cnpj)}
                           </td>
                           <td style={{ padding: '12px 8px' }}>
                             {emp.certificado === 'propria' ? (
-                              <span className="badge badge-green" style={{ fontSize: 11 }}>A1 Próprio</span>
+                              <span className="badge badge-green" style={{ fontSize: 13 }}>A1 Próprio</span>
                             ) : emp.certificado === 'escritorio' ? (
-                              <span className="badge badge-green" style={{ fontSize: 11 }}>Procuração</span>
+                              <span className="badge badge-green" style={{ fontSize: 13 }}>Procuração</span>
                             ) : (
-                              <span className="badge" style={{ background: '#fef2f2', color: '#991b1b', fontSize: 11 }}>Sem Certificado</span>
+                              <span className="badge" style={{ background: '#fef2f2', color: '#991b1b', fontSize: 13 }}>Sem Certificado</span>
                             )}
                           </td>
-                          <td style={{ padding: '12px 8px', fontSize: 13, color: '#171717', fontWeight: 600 }}>
+                          <td style={{ padding: '12px 8px', fontSize: 14.5, color: '#171717', fontWeight: 600 }}>
                             {emp.totalNotas}
                           </td>
                           <td style={{ padding: '12px 8px', textAlign: 'right' }}>
@@ -2753,7 +2752,7 @@ export default function NfeDestinadasPainel() {
                               style={{
                                 background: isAtual ? '#15803d' : '#600000',
                                 borderColor: isAtual ? '#15803d' : '#600000',
-                                fontSize: 12,
+                                fontSize: 14,
                                 padding: '4px 12px',
                               }}
                               onClick={ev => {
@@ -2789,7 +2788,7 @@ export default function NfeDestinadasPainel() {
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 13 }}
+                style={{ background: '#fff', border: '1px solid #e5e5e5', fontSize: 14.5 }}
                 onClick={() => {
                   setShowTrocarEmpresaModal(false);
                   setShowCadastrarCnpjModal(true);
@@ -2801,7 +2800,7 @@ export default function NfeDestinadasPainel() {
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ background: '#fff', border: '1px solid #d4d4d8', fontSize: 13 }}
+                style={{ background: '#fff', border: '1px solid #d4d4d8', fontSize: 14.5 }}
                 onClick={() => setShowTrocarEmpresaModal(false)}
               >
                 Fechar

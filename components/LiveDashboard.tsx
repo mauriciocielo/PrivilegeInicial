@@ -81,11 +81,11 @@ export default function LiveDashboard() {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="dash-badge badge-g">● Fluxo Positivo</span>
-        <span className="dash-badge badge-r">⚠ 3 Venc. Essa Semana</span>
+        <span className="dash-badge badge-r">3 Venc. Essa Semana</span>
       </div>
       <div style={{ marginTop: 16, padding: '12px 14px', background: '#F8FAFC', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#64748b' }}>Próx. Obrigação: DCTF</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#600000' }}>15/08/2026</span>
+        <span style={{ fontSize: 14, color: '#64748b' }}>Próx. Obrigação: DCTF</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#600000' }}>15/08/2026</span>
       </div>
     </div>
   );

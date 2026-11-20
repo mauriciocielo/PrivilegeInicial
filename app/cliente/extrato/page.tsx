@@ -146,17 +146,17 @@ export default function ClienteExtrato() {
                   const port = portadores.find(p => p.id === l.portadorId);
                   return (
                     <tr key={l.id}>
-                      <td style={{ fontSize:12, color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{fmt.date(l.data)}</td>
+                      <td style={{ fontSize: 14, color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{fmt.date(l.data)}</td>
                       <td style={{ fontWeight:500 }}>
                         <div>{l.descricao}</div>
                         {l.observacao && (
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
                             {l.observacao}
                           </div>
                         )}
                       </td>
-                      <td style={{ fontSize:12, color:'var(--text-secondary)' }}>{pc?.descricao || '-'}</td>
-                      <td style={{ fontSize:12 }}>{port?.nome || '-'}</td>
+                      <td style={{ fontSize: 14, color:'var(--text-secondary)' }}>{pc?.descricao || '-'}</td>
+                      <td style={{ fontSize: 14 }}>{port?.nome || '-'}</td>
                       <td><span className={`badge ${l.status==='realizado'?'badge-blue':'badge-yellow'}`}>{l.status==='realizado'?'Realizado':'Previsto'}</span></td>
                       <td style={{ textAlign:'right', fontWeight:700, color:l.tipo==='receita'?'var(--green)':'var(--red)', whiteSpace:'nowrap' }}>
                         {l.tipo==='receita'?'+':'-'}{fmt.currency(l.valor)}

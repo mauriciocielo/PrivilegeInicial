@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { plusJakartaSans as fontMain } from './fonts';
+// Inter: desenhada para tela, mais legível em textos pequenos, tabelas e valores.
+import { inter as fontMain } from './fonts';
 import Script from 'next/script';
 import './globals.css';
 import { Toaster } from 'sonner';

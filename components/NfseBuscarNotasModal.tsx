@@ -66,13 +66,13 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !buscando && onFechar()}>
+    <div className="modal-overlay nfse-ui" onClick={e => e.target === e.currentTarget && !buscando && onFechar()}>
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
-          <h2 className="modal-title">📥 Buscar notas e serviços tomados do portal</h2>
+          <h2 className="modal-title">Buscar notas e serviços tomados do portal</h2>
           <button className="modal-close" onClick={onFechar} disabled={buscando}>✕</button>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+        <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 14 }}>
           Traz do Ambiente de Dados Nacional (ADN) tanto as <strong>notas emitidas</strong> quanto os <strong>serviços tomados</strong> por <strong>{empresaNome}</strong>. Só lê documentos reais de produção, com XML e PDF oficiais disponíveis para download.
         </div>
         <div className="form-group">
@@ -84,18 +84,18 @@ export default function NfseBuscarNotasModal({ empresaId, empresaNome, onFechar,
             <option value={12}>Últimos 12 meses</option>
           </select>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 10, cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)', marginTop: 10, cursor: 'pointer' }}>
           <input type="checkbox" checked={reiniciar} onChange={e => setReiniciar(e.target.checked)} disabled={buscando} />
           Reler desde o início do lote no ADN (recomendado para capturar serviços tomados de períodos já consultados)
         </label>
         {(buscando || resultado) && (
-          <div style={{ fontSize: 13, marginTop: 8 }}>
+          <div style={{ fontSize: 14.5, marginTop: 8 }}>
             {buscando ? `⏳ Lendo o portal... ${criadas} nota(s) trazida(s) até agora.` : resultado}
           </div>
         )}
         <div className="form-actions" style={{ marginTop: 20 }}>
           <button className="btn btn-secondary" onClick={onFechar} disabled={buscando}>Fechar</button>
-          <button className="btn btn-primary" onClick={buscar} disabled={buscando}>{buscando ? '⏳ Buscando...' : '📥 Buscar'}</button>
+          <button className="btn btn-primary" onClick={buscar} disabled={buscando}>{buscando ? 'Buscando...' : 'Buscar'}</button>
         </div>
       </div>
     </div>

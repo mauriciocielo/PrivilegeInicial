@@ -255,7 +255,7 @@ Regras:
               <span style={{ fontSize: 22 }}>🧠</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{ehFiscal ? 'Privilege Copilot Fiscal' : 'Privilege Copilot 360º'}</h3>
-                <span style={{ fontSize: 11, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'Analisa Dash, Relatórios & Site'}</span>
+                <span style={{ fontSize: 13, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'Analisa Dash, Relatórios & Site'}</span>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -269,7 +269,7 @@ Regras:
                   border: '1px solid rgba(255,255,255,0.28)',
                   borderRadius: 8,
                   padding: '3px 6px',
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 600,
                   outline: 'none',
                 }}
@@ -306,13 +306,13 @@ Regras:
                   borderBottomRightRadius: m.sender === 'user' ? 0 : 12,
                   borderBottomLeftRadius: m.sender === 'ai' ? 0 : 12,
                   border: m.sender === 'ai' ? '1px solid var(--border-light)' : 'none',
-                  fontSize: 13,
+                  fontSize: 14.5,
                   lineHeight: '1.5',
                   whiteSpace: 'pre-line' 
                 }}>
                   {m.text}
                 </div>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start' }}>{m.timestamp}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4, alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start' }}>{m.timestamp}</span>
               </div>
             ))}
             {loading && (
@@ -328,9 +328,9 @@ Regras:
           {/* Quick Prompts (ai-chat-widget) */}
           <div style={{ padding: '8px 12px', background: 'var(--bg-card2)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
-              { label: '📊 Analisar esta tela', prompt: 'Analise os dados, KPIs e tabelas visíveis nesta tela atual e me dê os principais insights.' },
-              { label: '⚠️ Gargalos', prompt: 'Quais os principais gargalos ou riscos que você identifica nos números atuais?' },
-              { label: '🚀 Plano de Ação', prompt: 'Com base nesta tela e nos indicadores da empresa, sugira 3 ações práticas imediatas.' },
+              { label: 'Analisar esta tela', prompt: 'Analise os dados, KPIs e tabelas visíveis nesta tela atual e me dê os principais insights.' },
+              { label: 'Gargalos', prompt: 'Quais os principais gargalos ou riscos que você identifica nos números atuais?' },
+              { label: 'Plano de Ação', prompt: 'Com base nesta tela e nos indicadores da empresa, sugira 3 ações práticas imediatas.' },
             ].map(chip => (
               <button
                 key={chip.label}
@@ -338,7 +338,7 @@ Regras:
                 disabled={loading}
                 onClick={() => sendMessage(chip.prompt)}
                 style={{
-                  fontSize: 11,
+                  fontSize: 13,
                   padding: '4px 9px',
                   borderRadius: 999,
                   border: '1px solid var(--border)',
@@ -368,7 +368,7 @@ Regras:
                 border: '1px solid var(--border)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: 13,
+                fontSize: 14.5,
                 outline: 'none'
               }}
               disabled={loading}

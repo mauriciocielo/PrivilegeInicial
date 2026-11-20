@@ -99,7 +99,7 @@ export default function ContabilidadeAgronegocioPage() {
                 gap: '8px',
                 color: '#525252',
                 textDecoration: 'none',
-                fontSize: '14px',
+                fontSize: '15.5px',
                 fontWeight: 500,
                 padding: '8px 14px',
                 borderRadius: '8px',
@@ -119,7 +119,7 @@ export default function ContabilidadeAgronegocioPage() {
                 borderRadius: '8px',
                 textDecoration: 'none',
                 fontWeight: 600,
-                fontSize: '14px',
+                fontSize: '15.5px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -132,7 +132,7 @@ export default function ContabilidadeAgronegocioPage() {
       </header>
 
       {/* Breadcrumb */}
-      <nav style={{ background: '#f5f5f7', borderBottom: '1px solid #eaeaea', padding: '12px 24px', fontSize: '13px' }}>
+      <nav style={{ background: '#f5f5f7', borderBottom: '1px solid #eaeaea', padding: '12px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none' }}>Início</Link>
           <ChevronRight size={14} />
@@ -143,7 +143,7 @@ export default function ContabilidadeAgronegocioPage() {
       {/* Hero do Serviço */}
       <main style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '48px 24px 80px', flex: 1 }}>
         <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 48px' }}>
-          <span style={{ color: '#600000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
+          <span style={{ color: '#600000', fontSize: '14.5px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
             Agronegócio & Produtores Rurais
           </span>
           <h1 style={{ fontSize: '44px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 12px 0', color: '#111' }}>
@@ -329,7 +329,7 @@ export default function ContabilidadeAgronegocioPage() {
       </main>
 
       {/* Footer com NAP Text e Telefone Clicável */}
-      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
+      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />

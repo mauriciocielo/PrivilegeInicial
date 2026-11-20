@@ -89,8 +89,8 @@ const PARAMETROS_INICIAIS: NfseParametros = {
 };
 
 const secaoStyle = { background: 'var(--bg-card2)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border-light)' };
-const tituloStyle = { fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: 0.5 };
-const ajudaStyle = { fontSize: 11, color: 'var(--text-muted)', marginTop: 4 };
+const tituloStyle = { fontSize: 14, fontWeight: 700, color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: 0.5 };
+const ajudaStyle = { fontSize: 13, color: 'var(--text-muted)', marginTop: 4 };
 
 function lerArquivoBase64(arquivo: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -219,21 +219,21 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
   const certificado = config?.certificado;
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onFechar()}>
+    <div className="modal-overlay nfse-ui" onClick={e => e.target === e.currentTarget && onFechar()}>
       <div className="modal modal-lg" style={{ maxWidth: 760, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
-          <h2 className="modal-title">⚙️ Configuração do Emissor Nacional</h2>
+          <h2 className="modal-title">Configuração do Emissor Nacional</h2>
           <button className="modal-close" onClick={onFechar}>✕</button>
         </div>
 
         {config && !config.cofreConfigurado && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14.5 }}>
             O servidor ainda não tem a variável <code>NFSE_CERT_KEY</code>. Sem ela o certificado não pode ser guardado.
           </div>
         )}
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>🔐 Certificado usado na emissão</div>
+          <div style={tituloStyle}>Certificado usado na emissão</div>
           <div className="form-group" style={{ marginBottom: 10 }}>
             <select className="form-control" value={p.usarProcuracao ? 'procuracao' : 'proprio'} onChange={e => set('usarProcuracao', e.target.value === 'procuracao')}>
               <option value="procuracao">Certificado do contador, por procuração</option>
@@ -241,7 +241,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
             </select>
           </div>
           {p.usarProcuracao ? (
-            <div style={{ fontSize: 13 }}>
+            <div style={{ fontSize: 14.5 }}>
               {config?.escritorio ? (
                 <>
                   <strong>{config.escritorio.titular}</strong><br />
@@ -252,7 +252,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
           ) : (
             <>
               {certificado && (
-                <div style={{ fontSize: 13, marginBottom: 10 }}>
+                <div style={{ fontSize: 14.5, marginBottom: 10 }}>
                   <strong>{certificado.titular}</strong><br />
                   <span style={{ color: 'var(--text-muted)' }}>
                     Válido até {certificado.validoAte ? new Date(certificado.validoAte).toLocaleDateString('pt-BR') : '—'}
@@ -262,7 +262,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{certificado ? 'Substituir certificado (.pfx)' : 'Arquivo do certificado (.pfx) *'}</label>
-                  <input type="file" accept=".pfx,.p12" style={{ fontSize: 12 }} onChange={e => setArquivo(e.target.files?.[0] || null)} />
+                  <input type="file" accept=".pfx,.p12" style={{ fontSize: 14 }} onChange={e => setArquivo(e.target.files?.[0] || null)} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Senha do certificado</label>
@@ -275,9 +275,9 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
         </div>
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>🏢 Prestador</div>
+          <div style={tituloStyle}>Prestador</div>
           {cnpj && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, fontSize: 14.5 }}>
               <span>CNPJ <strong>{cnpj}</strong></span>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => preencherPeloCnpj(true)} disabled={buscandoCnpj}>
                 {buscandoCnpj ? 'Consultando...' : 'Preencher pelo CNPJ'}
@@ -322,31 +322,21 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
                   </select>
                 </div>
                 <div className="form-group">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>Alíquota do Simples Nacional (%) *</label>
+                  <label className="form-label">Alíquota do Simples (%) *</label>
+                  {/* Botão ao lado da caixa (e não no rótulo), para o campo alinhar com os vizinhos. */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="number" step="0.01" min="0" className="form-control" style={{ flex: 1, minWidth: 0 }} value={p.pTotTribSN ?? ''} onChange={e => set('pTotTribSN', num(e.target.value))} />
                     <button
                       type="button"
+                      className="btn btn-secondary"
                       onClick={buscarAliquotaSerpro}
                       disabled={buscandoSerpro}
-                      style={{
-                        background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        cursor: buscandoSerpro ? 'not-allowed' : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
+                      style={{ flexShrink: 0, whiteSpace: 'nowrap', cursor: buscandoSerpro ? 'not-allowed' : 'pointer' }}
                       title="Busca a alíquota oficial apurada na Receita Federal via Integra Contador (SERPRO)"
                     >
-                      {buscandoSerpro ? 'Buscando...' : '⚡ Buscar no SERPRO'}
+                      {buscandoSerpro ? 'Buscando...' : 'Buscar no SERPRO'}
                     </button>
                   </div>
-                  <input type="number" step="0.01" min="0" className="form-control" value={p.pTotTribSN ?? ''} onChange={e => set('pTotTribSN', num(e.target.value))} />
                 </div>
               </>
             )}
@@ -367,14 +357,14 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               </div>
             </div>
           )}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14.5 }}>
             <input type="checkbox" checked={p.convenioAtivo} onChange={e => set('convenioAtivo', e.target.checked)} />
             Município com convênio ativo no Sistema Nacional (a alíquota vem da parametrização municipal)
           </label>
         </div>
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>⚙️ Serviço padrão e numeração</div>
+          <div style={tituloStyle}>Serviço padrão e numeração</div>
           <NfseServicoPicker
             cnaes={cnaes}
             cTribNac={p.cTribNacPadrao || ''}
@@ -409,16 +399,16 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               <input type="number" min="1" className="form-control" value={p.proximoNDpsHomologacao} onChange={e => set('proximoNDpsHomologacao', Number(e.target.value))} />
             </div>
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div className="form-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <label className="form-label" style={{ marginBottom: 0 }}>Próxima DPS (produção)</label>
                 <button
                   type="button"
                   onClick={sincronizarOficial}
                   disabled={sincronizandoOficial}
-                  style={{ background: 'transparent', border: 'none', color: '#16a34a', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                  style={{ background: 'transparent', border: 'none', color: '#16a34a', fontSize: 13, cursor: 'pointer', fontWeight: 600, padding: 0 }}
                   title="Busca o último número emitido no portal da Receita Federal e ajusta a sequência"
                 >
-                  {sincronizandoOficial ? 'Consultando...' : '🔄 Puxar da base oficial'}
+                  {sincronizandoOficial ? 'Consultando...' : 'Puxar da base oficial'}
                 </button>
               </div>
               <input type="number" min="1" className="form-control" value={p.proximoNDpsProducao} onChange={e => set('proximoNDpsProducao', Number(e.target.value))} />
@@ -428,7 +418,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
         </div>
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>🧾 PIS/COFINS e IBS/CBS</div>
+          <div style={tituloStyle}>PIS/COFINS e IBS/CBS</div>
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">CST PIS/COFINS</label>
@@ -500,7 +490,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
         </div>
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>✂️ Quando há retenção de tributos</div>
+          <div style={tituloStyle}>Quando há retenção de tributos</div>
           <NfseRegrasRetencao
             regras={p.regrasRetencao || []}
             mei={p.opSimpNac === 2}
@@ -511,7 +501,7 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
 
         <div className="form-actions" style={{ marginTop: 16 }}>
           <button className="btn btn-secondary" onClick={onFechar}>Cancelar</button>
-          <button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? '⏳ Salvando...' : '✓ Salvar Configuração'}</button>
+          <button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : '✓ Salvar Configuração'}</button>
         </div>
       </div>
     </div>

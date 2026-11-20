@@ -88,7 +88,7 @@ export default function ContatoPage() {
                 gap: '8px',
                 color: '#525252',
                 textDecoration: 'none',
-                fontSize: '14px',
+                fontSize: '15.5px',
                 fontWeight: 500,
                 padding: '8px 14px',
                 borderRadius: '8px',
@@ -108,7 +108,7 @@ export default function ContatoPage() {
                 borderRadius: '8px',
                 textDecoration: 'none',
                 fontWeight: 600,
-                fontSize: '14px',
+                fontSize: '15.5px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -121,7 +121,7 @@ export default function ContatoPage() {
       </header>
 
       {/* Breadcrumb */}
-      <nav style={{ background: '#f5f5f7', borderBottom: '1px solid #eaeaea', padding: '12px 24px', fontSize: '13px' }}>
+      <nav style={{ background: '#f5f5f7', borderBottom: '1px solid #eaeaea', padding: '12px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px', color: '#737373' }}>
           <Link href="/" style={{ color: '#525252', textDecoration: 'none' }}>Início</Link>
           <ChevronRight size={14} />
@@ -132,7 +132,7 @@ export default function ContatoPage() {
       {/* Conteúdo Principal */}
       <main style={{ maxWidth: '1040px', width: '100%', margin: '0 auto', padding: '48px 24px 80px', flex: 1 }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', margin: '0 auto 48px' }}>
-          <span style={{ color: '#600000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
+          <span style={{ color: '#600000', fontSize: '14.5px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '12px' }}>
             Atendimento em Francisco Beltrão e Todo o Brasil
           </span>
           <h1 style={{ fontSize: '42px', lineHeight: 1.15, fontWeight: 800, margin: '0 0 18px 0', color: '#111' }}>
@@ -148,7 +148,7 @@ export default function ContatoPage() {
           <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Phone size={28} color="#600000" />
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#111' }}>Telefone Fixo & Celular</h2>
-            <p style={{ fontSize: '14px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '15.5px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
               Clique para ligar diretamente para o nosso escritório:
             </p>
             <a
@@ -162,7 +162,7 @@ export default function ContatoPage() {
           <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <MessageCircle size={28} color="#600000" />
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#111' }}>WhatsApp Direto</h2>
-            <p style={{ fontSize: '14px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '15.5px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
               Atendimento rápido com nossos consultores e contadores:
             </p>
             <a
@@ -178,12 +178,12 @@ export default function ContatoPage() {
           <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Mail size={28} color="#600000" />
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#111' }}>E-mail Corporativo</h2>
-            <p style={{ fontSize: '14px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '15.5px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
               Envie propostas, documentos fiscais ou solicitações:
             </p>
             <a
               href="mailto:contato@privilegecontabilidade.cnt.br"
-              style={{ fontSize: '14px', fontWeight: 700, color: '#600000', textDecoration: 'none', marginTop: 'auto', wordBreak: 'break-all' }}
+              style={{ fontSize: '15.5px', fontWeight: 700, color: '#600000', textDecoration: 'none', marginTop: 'auto', wordBreak: 'break-all' }}
             >
               contato@privilegecontabilidade.cnt.br
             </a>
@@ -192,11 +192,11 @@ export default function ContatoPage() {
           <div style={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: '20px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Clock size={28} color="#600000" />
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#111' }}>Horário e Endereço</h2>
-            <p style={{ fontSize: '14px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '15.5px', color: '#525252', margin: 0, lineHeight: 1.5 }}>
               Rua Pará, 127, Sala 03 – Centro<br />
               Francisco Beltrão – PR, CEP 85601-290
             </p>
-            <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#111', marginTop: 'auto' }}>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginTop: 'auto' }}>
               Segunda a Sexta: 08h às 18h
             </span>
           </div>
@@ -223,7 +223,7 @@ export default function ContatoPage() {
                 padding: '10px 18px',
                 borderRadius: '10px',
                 fontWeight: 600,
-                fontSize: '14px',
+                fontSize: '15.5px',
                 textDecoration: 'none',
                 border: '1px solid #e5e5e5',
                 display: 'inline-flex',
@@ -296,14 +296,14 @@ export default function ContatoPage() {
               </div>
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#111' }}>Marcos Cancelier</h3>
-                <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#600000', marginBottom: '6px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#600000', marginBottom: '6px' }}>
                   Sócio-Diretor · CRC-PR 062232/O-1
                 </div>
                 <a
                   href="https://instagram.com/marcos.cancelier"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: '13px', color: '#525252', textDecoration: 'none' }}
+                  style={{ fontSize: '14.5px', color: '#525252', textDecoration: 'none' }}
                 >
                   @marcos.cancelier ↗
                 </a>
@@ -323,14 +323,14 @@ export default function ContatoPage() {
               </div>
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#111' }}>Mauricio Cielo</h3>
-                <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#600000', marginBottom: '6px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#600000', marginBottom: '6px' }}>
                   Sócio-Administrador · CRC-PR 082974/O-7
                 </div>
                 <a
                   href="https://instagram.com/mauricio.cielo"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: '13px', color: '#525252', textDecoration: 'none' }}
+                  style={{ fontSize: '14.5px', color: '#525252', textDecoration: 'none' }}
                 >
                   @mauricio.cielo ↗
                 </a>
@@ -341,7 +341,7 @@ export default function ContatoPage() {
       </main>
 
       {/* Footer com NAP Text e Links Clicáveis */}
-      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
+      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />

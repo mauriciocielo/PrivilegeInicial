@@ -81,8 +81,8 @@ export default function CentrosCustoPage() {
 
       <div className="page-body">
         <div className="card" style={{ marginBottom: 24, padding: 20, borderLeft: '4px solid var(--accent)' }}>
-           <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>💡 Como usar Centros de Custo (Unidades de Negócio)</h4>
-           <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+           <h4 style={{ fontSize: 15.5, fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Como usar Centros de Custo (Unidades de Negócio)</h4>
+           <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
              Crie <strong>Fazendas</strong> (ex: Fazenda Boa Esperança), <strong>Culturas/Safras</strong> (ex: Safra Soja 2025/2026), <strong>Projetos</strong> ou <strong>Filiais</strong>. Ao lançar uma despesa, você poderá vinculá-la a estes Centros independentemente da Categoria normal do Plano de Contas, gerando um grau altíssimo de precisão gerencial.
            </div>
         </div>
@@ -167,7 +167,7 @@ export default function CentrosCustoPage() {
 
               <div className="modal-footer" style={{ gridColumn: 'span 12' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">💾 Salvar Alterações</button>
+                <button type="submit" className="btn btn-primary">Salvar Alterações</button>
               </div>
             </form>
           </div>

@@ -139,7 +139,8 @@ html {
 }
 
 body {
-  font-family: 'Inter', 'Montserrat', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
   background: var(--bg-base);
   color: var(--text-primary);
   min-height: 100vh;
@@ -218,7 +219,7 @@ body {
 }
 
 .sidebar-logo .logo-sub {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text-sidebar);
   margin-top: 1px;
   letter-spacing: 0.5px;
@@ -241,7 +242,7 @@ body {
 }
 
 .sidebar-empresa label {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text-sidebar);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -253,7 +254,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-sidebar-title);
-  font-size: 14px;
+  font-size: 15.5px;
   font-family: inherit;
   cursor: pointer;
   outline: none;
@@ -288,7 +289,7 @@ body {
 }
 
 .nav-section-label {
-  font-size: 13px !important;
+  font-size: 14.5px !important;
   font-weight: 500;
   color: var(--text-sidebar);
   padding: 6px 12px;
@@ -360,7 +361,7 @@ body {
   transition: background 0.15s ease, color 0.15s ease;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 500;
   margin: 0;
   border: none;
@@ -424,7 +425,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: #fff;
   flex-shrink: 0;
   border: 1px solid rgba(255,255,255,0.16);
@@ -436,13 +437,13 @@ body {
 }
 
 .user-info .user-name {
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
   color: rgba(255,255,255,0.9);
 }
 
 .user-info .user-role {
-  font-size: 10.5px;
+  font-size: 13px;
   color: rgba(255,255,255,0.35);
   margin-top: 1px;
 }
@@ -485,16 +486,16 @@ body {
 }
 
 .page-title {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 32px;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1.08;
 }
 
 .page-subtitle {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 400;
   color: var(--text-secondary) !important;
   margin-top: 4px;
@@ -531,11 +532,11 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-.quick-tabs .btn { flex-shrink: 0; font-size: 12.5px; }
+.quick-tabs .btn { flex-shrink: 0; font-size: 14px; }
 
 .filters-bar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: minmax(280px, 1.4fr) repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -585,16 +586,16 @@ body {
 }
 
 .card-title {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 22px;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .card-subtitle {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--text-secondary);
   margin-top: 2px;
 }
@@ -660,7 +661,7 @@ body {
 }
 
 .kpi-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -668,9 +669,9 @@ body {
 }
 
 .kpi-value {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 32px;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
   color: var(--text-primary);
   margin-top: 6px;
   line-height: 1.08;
@@ -717,7 +718,7 @@ body {
 }
 
 .stat-label {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -725,9 +726,9 @@ body {
 }
 
 .stat-value {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 34px !important;
-  font-weight: 400 !important;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 28px !important;
+  font-weight: 700 !important;
   color: var(--text-primary);
   margin-top: 6px;
   line-height: 1.05;
@@ -735,7 +736,7 @@ body {
 }
 
 .stat-change {
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 8px;
   display: flex;
   align-items: center;
@@ -763,7 +764,7 @@ body {
   gap: 6px;
   padding: 9px 18px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
@@ -859,7 +860,7 @@ body {
   background: var(--accent-dark);
 }
 
-.btn-sm  { padding: 6px 12px; font-size: 12.5px; gap: 5px; border-radius: 7px; }
+.btn-sm  { padding: 6px 12px; font-size: 14px; gap: 5px; border-radius: 7px; }
 .btn-lg  { padding: 12px 24px; font-size: 14.5px; gap: 8px; border-radius: 10px; }
 .btn-icon { padding: 7px; }
 
@@ -877,7 +878,7 @@ body {
 
 .form-label {
   display: block;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 5px;
@@ -891,7 +892,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--text-primary);
   font-family: inherit;
   outline: none;
@@ -950,6 +951,45 @@ textarea.form-input {
   gap: 14px;
 }
 
+/* Rótulo com botão ao lado (ex.: "Buscar no SERPRO"): quebra em vez de espremer o texto. */
+.form-label-row {
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.form-label-row > .form-label,
+.form-label-row > label {
+  margin-bottom: 0 !important;
+}
+
+/* Alinhamento dos campos lado a lado. Cada item da linha ocupa 4 linhas da grade
+   (rótulo, caixa, dica, espaçamento) e os grupos comuns compartilham essas linhas com
+   os vizinhos (subgrid): se um rótulo quebra em duas linhas, todas as caixas continuam
+   começando na mesma altura, e uma dica abaixo de uma caixa não empurra as outras.
+   Grupos sem rótulo no topo ou com mais de 3 filhos seguem o fluxo normal.
+   Não se aplica a .form-row com display flex inline. */
+.form-row:not([style*="flex"]) {
+  row-gap: 0;
+}
+.form-row:not([style*="flex"]) > * {
+  grid-row: span 4;
+}
+.form-row:not([style*="flex"]) > .form-group:has(> label:first-child, > .form-label:first-child, > .form-label-row:first-child):not(:has(> :nth-child(4))) {
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+}
+.form-row:not([style*="flex"]) > .form-group:has(> label:first-child, > .form-label:first-child, > .form-label-row:first-child):not(:has(> :nth-child(4)))::after {
+  content: "";
+  grid-row: 4;
+  height: 14px;
+}
+.form-row:not([style*="flex"]) > .form-group > label:first-child,
+.form-row:not([style*="flex"]) > .form-group > .form-label:first-child,
+.form-row:not([style*="flex"]) > .form-group > .form-label-row:first-child {
+  align-self: end;
+}
+
 .form-actions {
   display: flex;
   gap: 10px;
@@ -994,7 +1034,7 @@ thead tr {
 
 thead th {
   padding: 11px 14px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
   text-align: left;
@@ -1024,7 +1064,7 @@ tbody tr:hover {
 
 tbody td {
   padding: 12px 14px;
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--text-primary);
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
@@ -1039,7 +1079,7 @@ tbody td {
   gap: 4px;
   padding: 3px 9px;
   border-radius: 100px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1px;
   border: 1px solid transparent;
@@ -1107,10 +1147,18 @@ tbody td {
   border-bottom: 1px solid var(--border-light);
 }
 
+/* Cabeçalho fixo dentro do modal: cobre também o respiro superior (padding do .modal),
+   senão o conteúdo rolado aparece por cima do título. */
+.modal > .modal-header[style*="sticky"] {
+  top: -28px !important;
+  margin-top: -28px;
+  padding-top: 28px;
+}
+
 .modal-title {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 24px;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
@@ -1156,7 +1204,7 @@ tbody td {
 
 .tab {
   padding: 8px 18px;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 500;
   color: #666666;
   cursor: pointer;
@@ -1209,7 +1257,7 @@ tbody td {
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14.5px;
   font-family: inherit;
   outline: none;
   flex: 1;
@@ -1227,7 +1275,7 @@ tbody td {
   gap: 10px;
   padding: 12px 16px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 14.5px;
   margin-bottom: 14px;
   line-height: 1.5;
   border: 1px solid transparent;
@@ -1261,7 +1309,7 @@ tbody td {
   margin-bottom: 6px;
 }
 
-.empty-state p { font-size: 13px; line-height: 1.5; }
+.empty-state p { font-size: 14.5px; line-height: 1.5; }
 
 /* ============================================================
    CHARTS
@@ -1288,8 +1336,8 @@ tbody td {
 }
 
 .upload-icon { font-size: 40px; margin-bottom: 12px; display: block; }
-.upload-text { font-size: 14px; color: var(--text-secondary); }
-.upload-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.upload-text { font-size: 15.5px; color: var(--text-secondary); }
+.upload-hint { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
 
 /* ============================================================
    PROGRESS
@@ -1355,7 +1403,7 @@ tbody td {
   background: #0f1117;
   border-radius: 7px;
   padding: 5px 10px;
-  font-size: 11px;
+  font-size: 13px;
   color: #fff;
   white-space: nowrap;
   pointer-events: none;
@@ -1374,7 +1422,7 @@ tbody td {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-muted);
   margin-bottom: 4px;
 }
@@ -1431,7 +1479,7 @@ tbody td {
 }
 
 .login-sub {
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--text-muted);
   text-align: center;
   margin-top: 4px;
@@ -1443,7 +1491,7 @@ tbody td {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-top: 12px;
   line-height: 1.5;
@@ -1576,7 +1624,7 @@ tbody td {
 }
 
 @media (max-width: 640px) {
-  html { font-size: 14px; }
+  html { font-size: 15.5px; }
   .container { padding: 0 16px; }
   .card { padding: 18px; }
   .stat-grid { grid-template-columns: 1fr; }
@@ -1642,8 +1690,8 @@ tbody td {
 }
 
 .stat-card .stat-value {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 700;
   color: #000000;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -1755,8 +1803,8 @@ tbody td {
   -webkit-text-fill-color: currentColor !important;
   background-clip: initial !important;
   color: #000000;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-weight: 400 !important;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 700 !important;
   letter-spacing: -0.02em;
 }
 
@@ -1777,8 +1825,8 @@ tbody td {
   -webkit-text-fill-color: currentColor !important;
   background-clip: initial !important;
   color: #000000;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-weight: 400 !important;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 700 !important;
 }
 .ai-insights-title svg {
   color: var(--accent);
@@ -1906,7 +1954,7 @@ tbody td {
     width: 100%;
   }
 
-  .header-actions .btn { font-size: 11.5px; padding: 7px 11px; flex: 1 1 calc(50% - 6px); justify-content: center; }
+  .header-actions .btn { font-size: 13.5px; padding: 7px 11px; flex: 1 1 calc(50% - 6px); justify-content: center; }
   .header-actions > div { flex: 1 1 calc(50% - 6px); }
   .header-actions > div > .btn { width: 100%; }
 
@@ -2031,7 +2079,7 @@ tbody td {
   .stat-grid { grid-template-columns: 1fr; }
   .page-body { padding: 10px 8px; }
   .card { padding: 12px; border-radius: var(--radius-sm); }
-  .btn { font-size: 12px; padding: 7px 12px; }
+  .btn { font-size: 14px; padding: 7px 12px; }
   .page-title { font-size: 15px; }
   .stat-value { font-size: 20px; }
 }
@@ -2103,7 +2151,7 @@ table th {
 }
 
 .table-wrap table th {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2451,4 +2499,64 @@ table th {
   body:has(.print-report-only) .print-report-only { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
   .card { border: 1px solid #ccc; box-shadow: none; background: #fff !important; color: #000 !important; }
   body { background: #fff !important; color: #000 !important; }
+}
+/* ============================================================
+   EMISSÃO DE NOTAS (NFS-e) — tipografia mais legível
+   Escopo: elementos com .nfse-ui (painel NfsePainel e seus modais).
+   Não altera o restante do sistema nem a pré-visualização do DANFSE.
+   ============================================================ */
+.nfse-ui {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+.nfse-ui :is(h1, h2, h3, h4, .modal-title, button, input, select, textarea, .btn, .badge, table) {
+  font-family: inherit;
+}
+.nfse-ui .nfse-doc-container,
+.nfse-ui .nfse-doc-container * { font-family: Arial, sans-serif; }
+
+.nfse-ui .modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.nfse-ui .form-group { margin-bottom: 18px; }
+.nfse-ui .form-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 6px;
+}
+.nfse-ui .form-control,
+.nfse-ui .form-input {
+  font-size: 15px;
+  padding: 10px 13px;
+  min-height: 42px;
+}
+.nfse-ui textarea.form-control { line-height: 1.55; }
+.nfse-ui .form-control::placeholder { color: #8a8880; }
+
+.nfse-ui .btn    { font-size: 14.5px; font-weight: 600; }
+.nfse-ui .btn-sm { font-size: 13.5px; padding: 7px 13px; }
+.nfse-ui .badge  { font-size: 12.5px; padding: 4px 10px; }
+
+.nfse-ui thead th,
+.nfse-ui .table-wrap thead th,
+.nfse-ui .table-wrap table th {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #52504a;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.nfse-ui tbody td {
+  font-size: 14.5px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }

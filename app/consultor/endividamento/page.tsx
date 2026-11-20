@@ -199,12 +199,12 @@ export default function EndividamentoPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">🏦 Endividamento & Empréstimos</div>
+          <div className="page-title">Endividamento & Empréstimos</div>
           <div className="page-subtitle">Controle de saldos devedores mensais e previsão de caixa</div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => { setAjusteForm({ id: '', mes: new Date().toISOString().slice(0,7), saldo: 0 }); setShowAjusteModal(true); }}>
-            📊 Ajustar Saldo Mensal
+            Ajustar Saldo Mensal
           </button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Empréstimo</button>
         </div>
@@ -243,21 +243,21 @@ export default function EndividamentoPage() {
                     </svg>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
                     {chartData.map((d, i) => (
-                        <div key={i} style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{d.label}</div>
+                        <div key={i} style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>{d.label}</div>
                     ))}
                     </div>
                 </div>
             </div>
 
             <div className="card" style={{ padding: 16 }}>
-                <h3 style={{ margin: '0 0 12px 0', fontSize: 13, color: 'var(--text-secondary)' }}>🗓️ Projeção de Encargos</h3>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: 14.5, color: 'var(--text-secondary)' }}>Projeção de Encargos</h3>
                 <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {projecaoCalendario.map((p, idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px', backgroundColor: 'var(--bg-base)', borderRadius: 4 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700 }}>{p.label}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>{p.label}</div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)' }}>{fmt.currency(p.totalExigido)}</div>
-                                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{p.contratosAtivos} contrato(s) ativos</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)' }}>{fmt.currency(p.totalExigido)}</div>
+                                <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{p.contratosAtivos} contrato(s) ativos</div>
                             </div>
                         </div>
                     ))}
@@ -294,22 +294,22 @@ export default function EndividamentoPage() {
                   <tr key={e.id}>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{e.banco}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{e.conta || '-'}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{e.conta || '-'}</div>
                     </td>
                     <td>
                       <div style={{ fontWeight: 500 }}>{e.contrato}</div>
-                      {e.descricaoContrato && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{e.descricaoContrato}</div>}
+                      {e.descricaoContrato && <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{e.descricaoContrato}</div>}
                     </td>
                     <td>
                       <div>{e.taxa}% {e.taxaTipo === 'aa' ? 'a.a.' : 'a.m.'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{e.indexador || 'Pré-fixado'}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{e.indexador || 'Pré-fixado'}</div>
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className="badge badge-gray">{e.parcelasFaltantes}</span>
                     </td>
                     <td style={{ fontWeight: 500, color: 'var(--red)' }}>{fmt.currency(e.parcela)}</td>
                     <td style={{ fontWeight: 600, color: 'var(--red)' }}>{fmt.currency(e.valorAPagar)}</td>
-                    <td style={{ fontSize: 12 }}>{e.garantia || '-'}</td>
+                    <td style={{ fontSize: 14 }}>{e.garantia || '-'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(e)}>✏️</button>
@@ -464,7 +464,7 @@ export default function EndividamentoPage() {
               </div>
             </div>
             
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>* Ao preencher o saldo inicial e as parcelas, o sistema usará o Ajuste Mensal para preencher a tabela de evolução do contrato automaticamente.</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>* Ao preencher o saldo inicial e as parcelas, o sistema usará o Ajuste Mensal para preencher a tabela de evolução do contrato automaticamente.</div>
 
             <div className="form-actions" style={{ marginTop: 24 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
@@ -482,7 +482,7 @@ export default function EndividamentoPage() {
               <button className="modal-close" onClick={() => setShowAjusteModal(false)}>✕</button>
             </div>
 
-            <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
+            <div style={{ marginBottom: 16, fontSize: 14.5, color: 'var(--text-secondary)' }}>
                 Ao invés de informar pagamentos avulsos, basta inserir o valor do <strong>saldo devedor fornecido pelo extrato do banco</strong> no fim do mês para alimentar a curva de análise. O Saldo Devedor também será espelhado automaticamente no Balanço Patrimonial!
             </div>
 

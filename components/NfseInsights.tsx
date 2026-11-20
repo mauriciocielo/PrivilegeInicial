@@ -10,7 +10,6 @@ import {
   Building2, ReceiptText, Coins, ShieldCheck, FileWarning, RefreshCw,
   ChevronDown, ChevronUp, ArrowRight, BrainCircuit, Lightbulb, type LucideIcon
 } from 'lucide-react';
-import { instrumentSerif as serif } from '../app/fonts';
 
 export interface NfseInsightItem {
   id: string;
@@ -314,7 +313,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                 style={{
                   background: '#fef2f2',
                   color: '#991b1b',
-                  fontSize: 10,
+                  fontSize: 12.5,
                   fontWeight: 700,
                   textTransform: 'uppercase',
                   padding: '2px 8px',
@@ -324,15 +323,15 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               >
                 Inteligência Fiscal IA
               </span>
-              <span style={{ fontSize: 11, color: '#6b7280' }}>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>
                 {insightsDeterministas.length} diagnóstico(s) identificado(s)
               </span>
             </div>
             <h2
-              className={serif.className}
               style={{
                 fontSize: 22,
-                fontWeight: 400,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
                 color: '#111827',
                 margin: '2px 0 0',
                 lineHeight: 1.1,
@@ -354,7 +353,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               border: 'none',
               padding: '8px 16px',
               borderRadius: 10,
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
@@ -377,7 +376,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                 border: '1px solid #e5e7eb',
                 padding: '8px 14px',
                 borderRadius: 10,
-                fontSize: 12.5,
+                fontSize: 14,
                 fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -462,14 +461,14 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                         >
                           <Icone size={15} />
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 700, color: '#111827' }}>
                           {item.titulo}
                         </span>
                       </div>
                       {item.badge && (
                         <span
                           style={{
-                            fontSize: 10,
+                            fontSize: 12.5,
                             fontWeight: 700,
                             padding: '2px 7px',
                             borderRadius: 99,
@@ -482,7 +481,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                         </span>
                       )}
                     </div>
-                    <p style={{ margin: 0, fontSize: 12.5, color: '#4b5563', lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: 14, color: '#4b5563', lineHeight: 1.5 }}>
                       {item.descricao}
                     </p>
                   </div>
@@ -497,7 +496,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                           border: 'none',
                           padding: 0,
                           color: '#600000',
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 600,
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -529,7 +528,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <BrainCircuit size={18} color="#a5b4fc" />
-                  <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c7d2fe' }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c7d2fe' }}>
                     Parecer do Auditor Fiscal IA (Gemini 2.5 Flash)
                   </span>
                 </div>
@@ -541,7 +540,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                     border: 'none',
                     color: '#94a3b8',
                     cursor: 'pointer',
-                    fontSize: 12,
+                    fontSize: 14,
                   }}
                 >
                   ✕ Fechar
@@ -549,7 +548,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               </div>
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14.5,
                   lineHeight: 1.6,
                   color: '#e2e8f0',
                   whiteSpace: 'pre-line',

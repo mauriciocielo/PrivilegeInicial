@@ -313,7 +313,7 @@ export default function BalancoPatrimonialPage() {
     return (
       <div key={grupo} style={{ marginBottom: 18 }}>
         <div style={{
-          fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+          fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
           color: 'var(--text-primary)', background: 'var(--bg-hover)', padding: '8px 12px', borderRadius: 6, marginBottom: 4
         }}>
           {GRUPO_LABELS[grupo]}
@@ -324,7 +324,7 @@ export default function BalancoPatrimonialPage() {
           return (
             <div key={sub || '__root__'} style={{ marginBottom: 4 }}>
               {sub && (
-                <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', padding: '6px 12px 2px' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-secondary)', padding: '6px 12px 2px' }}>
                   {sub}
                 </div>
               )}
@@ -332,8 +332,8 @@ export default function BalancoPatrimonialPage() {
                 <tbody>
                   {rows.map(conta => (
                     <tr key={conta.id}>
-                      <td style={{ fontSize: 11.5, color: 'var(--text-muted)', width: 70, padding: '4px 8px' }}>{conta.codigo}</td>
-                      <td style={{ fontSize: 13, padding: '4px 8px' }}>{conta.descricao}</td>
+                      <td style={{ fontSize: 13.5, color: 'var(--text-muted)', width: 70, padding: '4px 8px' }}>{conta.codigo}</td>
+                      <td style={{ fontSize: 14.5, padding: '4px 8px' }}>{conta.descricao}</td>
                       <td style={{ width: 170, padding: '4px 8px' }}>
                         <input
                           type="number"
@@ -360,7 +360,7 @@ export default function BalancoPatrimonialPage() {
                     <td colSpan={4} style={{ padding: '2px 8px 8px' }}>
                       <button
                         className="btn btn-ghost btn-sm"
-                        style={{ fontSize: 11.5 }}
+                        style={{ fontSize: 13.5 }}
                         onClick={() => openAddConta(grupo, sub || undefined)}
                       >
                         ＋ Adicionar conta{sub ? ` em ${sub}` : ''}
@@ -374,7 +374,7 @@ export default function BalancoPatrimonialPage() {
         })}
 
         <div style={{
-          display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700,
+          display: 'flex', justifyContent: 'space-between', fontSize: 14.5, fontWeight: 700,
           borderTop: '1px solid var(--border)', padding: '8px 12px', marginTop: 4
         }}>
           <span>Total {GRUPO_LABELS[grupo]}</span>
@@ -400,13 +400,13 @@ export default function BalancoPatrimonialPage() {
             style={{ width: 170 }}
           />
           <button className="btn btn-primary" style={{ backgroundColor: 'var(--amber)', color: '#000' }} onClick={handleAutoFill}>
-             ✨ Auto-Preencher
+             Auto-Preencher
           </button>
           <button className="btn btn-secondary" onClick={handleExportPdf} disabled={exportando || !empresaId}>
-            {exportando ? '⏳ Gerando...' : '📄 PDF'}
+            {exportando ? 'Gerando...' : 'PDF'}
           </button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving || !empresaId}>
-            {saving ? '⏳ Salvando...' : balancoId ? '💾 Atualizar' : '💾 Salvar'}
+            {saving ? 'Salvando...' : balancoId ? 'Atualizar' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -446,7 +446,7 @@ export default function BalancoPatrimonialPage() {
             <div style={{ padding: 16 }}>
               {GRUPOS_ATIVO.map(renderGrupo)}
               <div style={{
-                display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 800,
+                display: 'flex', justifyContent: 'space-between', fontSize: 15.5, fontWeight: 800,
                 background: 'var(--bg-hover)', padding: '10px 12px', borderRadius: 6, marginTop: 8
               }}>
                 <span>TOTAL DO ATIVO</span>
@@ -462,7 +462,7 @@ export default function BalancoPatrimonialPage() {
             <div style={{ padding: 16 }}>
               {GRUPOS_PASSIVO.map(renderGrupo)}
               <div style={{
-                display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 800,
+                display: 'flex', justifyContent: 'space-between', fontSize: 15.5, fontWeight: 800,
                 background: 'var(--bg-hover)', padding: '10px 12px', borderRadius: 6, marginTop: 8
               }}>
                 <span>TOTAL PASSIVO + PATRIMÔNIO LÍQUIDO</span>

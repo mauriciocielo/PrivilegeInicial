@@ -98,6 +98,9 @@ export async function POST(request: Request) {
     const valorDeducoes = Math.max(0, Math.round((Number(n.valorDeducoes) || 0) * 100) / 100);
     const aliquotaIss = Number(n.aliquotaIss) || 0;
     const issRetido = n.issRetido === true;
+    if (valorDeducoes > valorServicos) {
+      return NextResponse.json({ error: 'A dedução não pode ser maior que o valor do serviço.' }, { status: 400 });
+    }
     const retido = (v: unknown) => Math.max(0, Math.round((Number(v) || 0) * 100) / 100);
     const retencao = { irrf: retido(n.valorIr), pis: retido(n.valorPis), cofins: retido(n.valorCofins), csll: retido(n.valorCsll), cp: retido(n.valorInss) };
     let cTribNac = apenasDigitos(texto(n.codigoServico));

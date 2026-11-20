@@ -213,15 +213,15 @@ export default function AuditoriaPage() {
                 const label = ACTION_LABEL[log.action] || log.action;
                 return (
                   <tr key={log.id}>
-                    <td style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                       <strong>{fmt.date(log.timestamp.split('T')[0])}</strong>
                       {hora ? ` • ${hora}` : ''}
                     </td>
-                    <td style={{ fontWeight: 600, fontSize: 13 }}>{log.userName || 'Sistema'}</td>
+                    <td style={{ fontWeight: 600, fontSize: 14.5 }}>{log.userName || 'Sistema'}</td>
                     <td>
                       <StatusBadge tone={tone}>{label}</StatusBadge>
                     </td>
-                    <td style={{ fontSize: 13, color: 'var(--text-primary)' }}>{log.details}</td>
+                    <td style={{ fontSize: 14.5, color: 'var(--text-primary)' }}>{log.details}</td>
                   </tr>
                 );
               })}

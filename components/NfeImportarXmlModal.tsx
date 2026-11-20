@@ -76,7 +76,7 @@ export default function NfeImportarXmlModal({ empresaId, empresaNome, onClose, o
               <h2 className="modal-title" style={{ margin: 0, fontSize: 18 }}>
                 Importar XMLs de NF-e
               </h2>
-              <span style={{ fontSize: 12.5, color: '#6b7280' }}>
+              <span style={{ fontSize: 14, color: '#6b7280' }}>
                 {empresaNome} • Importe notas emitidas ou recebidas via arquivo XML
               </span>
             </div>
@@ -98,10 +98,10 @@ export default function NfeImportarXmlModal({ empresaId, empresaNome, onClose, o
             }}
           >
             <UploadCloud size={36} color="#64748b" style={{ margin: '0 auto 8px' }} />
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#1e293b' }}>
+            <div style={{ fontSize: 15.5, fontWeight: 500, color: '#1e293b' }}>
               Clique para selecionar ou arraste arquivos .xml aqui
             </div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+            <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
               Suporta notas fiscais emitidas (vendas) ou recebidas (compras)
             </div>
             <input
@@ -116,18 +116,18 @@ export default function NfeImportarXmlModal({ empresaId, empresaNome, onClose, o
 
           {arquivos.length > 0 && (
             <div style={{ marginTop: 14, maxHeight: 180, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, padding: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
                 <span>{arquivos.length} arquivo(s) selecionado(s):</span>
                 <button
                   type="button"
                   onClick={() => setArquivos([])}
-                  style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: 11, cursor: 'pointer' }}
+                  style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: 13, cursor: 'pointer' }}
                 >
                   Limpar todos
                 </button>
               </div>
               {arquivos.map((a, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', fontSize: 12, color: '#475569', borderBottom: '1px solid #f1f5f9' }}>
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', fontSize: 14, color: '#475569', borderBottom: '1px solid #f1f5f9' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <FileCode size={13} color="#2563eb" /> {a.name}
                   </span>

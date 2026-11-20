@@ -205,13 +205,13 @@ export default function NfeMonitorLogsPainel({
             <Activity size={20} />
           </div>
           <div>
-            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
               Monitor Automático
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginTop: 2 }}>
               Ativo (a cada 10 min)
             </div>
-            <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: '#16a34a', marginTop: 2 }}>
               NF-e, CT-e e NFS-e automáticas
             </div>
           </div>
@@ -244,13 +244,13 @@ export default function NfeMonitorLogsPainel({
             {totalErros24h > 0 ? <AlertTriangle size={20} /> : <CheckCircle2 size={20} />}
           </div>
           <div>
-            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
               Erros nas últimas 24h
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, color: totalErros24h > 0 ? '#dc2626' : '#16a34a', marginTop: 2 }}>
               {totalErros24h} {totalErros24h === 1 ? 'ocorrência' : 'ocorrências'}
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
               {totalErros24h > 0 ? 'Exige atenção nos certificados/SEFAZ' : 'Tudo operando normalmente'}
             </div>
           </div>
@@ -283,13 +283,13 @@ export default function NfeMonitorLogsPainel({
             {ehHorarioNoturno ? <Moon size={20} /> : <Sun size={20} />}
           </div>
           <div>
-            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
               Janela Noturna SEFAZ
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginTop: 2 }}>
               {ehHorarioNoturno ? 'Janela Ativa (21h às 07h)' : 'Horário Diurno'}
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
               NFS-e roda 24/7 a qualquer hora
             </div>
           </div>
@@ -312,12 +312,12 @@ export default function NfeMonitorLogsPainel({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: '#4b5563', fontWeight: 600 }}>Tipo:</span>
+            <span style={{ fontSize: 14, color: '#4b5563', fontWeight: 600 }}>Tipo:</span>
             <select
               value={filtroTipo}
               onChange={e => setFiltroTipo(e.target.value)}
               style={{
-                fontSize: 12,
+                fontSize: 14,
                 padding: '6px 10px',
                 borderRadius: 8,
                 border: '1px solid #d1d5db',
@@ -335,12 +335,12 @@ export default function NfeMonitorLogsPainel({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: '#4b5563', fontWeight: 600 }}>Status:</span>
+            <span style={{ fontSize: 14, color: '#4b5563', fontWeight: 600 }}>Status:</span>
             <select
               value={filtroStatus}
               onChange={e => setFiltroStatus(e.target.value)}
               style={{
-                fontSize: 12,
+                fontSize: 14,
                 padding: '6px 10px',
                 borderRadius: 8,
                 border: '1px solid #d1d5db',
@@ -360,7 +360,7 @@ export default function NfeMonitorLogsPainel({
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 12,
+              fontSize: 14,
               color: apenasErros ? '#dc2626' : '#4b5563',
               fontWeight: 600,
               cursor: 'pointer',
@@ -389,7 +389,7 @@ export default function NfeMonitorLogsPainel({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               color: '#374151',
               background: '#f9fafb',
@@ -412,7 +412,7 @@ export default function NfeMonitorLogsPainel({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               color: '#ffffff',
               background: '#600000',
@@ -436,7 +436,7 @@ export default function NfeMonitorLogsPainel({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               color: '#111827',
               background: '#fff',
@@ -447,7 +447,7 @@ export default function NfeMonitorLogsPainel({
             }}
             title="Liga o monitoramento de TODAS as empresas com certificado (modo noturno) e força uma consulta agora"
           >
-            🌙 Ativar todas c/ certificado + consultar
+            Ativar todas c/ certificado + consultar
           </button>
 
           <button
@@ -457,7 +457,7 @@ export default function NfeMonitorLogsPainel({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
-              fontSize: 12,
+              fontSize: 14,
               color: '#9ca3af',
               background: 'transparent',
               border: 'none',
@@ -485,21 +485,21 @@ export default function NfeMonitorLogsPainel({
         {carregando && logs.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
             <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: '#600000' }} />
-            <div style={{ fontSize: 13 }}>Carregando histórico do monitor fiscal...</div>
+            <div style={{ fontSize: 14.5 }}>Carregando histórico do monitor fiscal...</div>
           </div>
         ) : logs.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
             <CheckCircle2 size={32} style={{ margin: '0 auto 10px', color: '#16a34a' }} />
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>Nenhum log encontrado para os filtros selecionados.</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 600, color: '#374151' }}>Nenhum log encontrado para os filtros selecionados.</div>
+            <div style={{ fontSize: 14, color: '#9ca3af', marginTop: 4 }}>
               As consultas automáticas e manuais aparecerão aqui assim que forem executadas.
             </div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14.5 }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#4b5563', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#4b5563', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <th style={{ padding: '12px 16px' }}>Data / Hora</th>
                   <th style={{ padding: '12px 16px' }}>Tipo</th>
                   <th style={{ padding: '12px 16px' }}>Empresa</th>
@@ -525,7 +525,7 @@ export default function NfeMonitorLogsPainel({
                         transition: 'background 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#6b7280', fontSize: 12 }}>
+                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#6b7280', fontSize: 14 }}>
                         {formatDataHora(log.createdAt)}
                       </td>
                       <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
@@ -537,7 +537,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#fef3c7',
                               color: '#92400e',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -553,7 +553,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#ede9fe',
                               color: '#6d28d9',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -569,7 +569,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#e0f2fe',
                               color: '#0369a1',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -582,7 +582,7 @@ export default function NfeMonitorLogsPainel({
                             style={{
                               background: '#f3f4f6',
                               color: '#374151',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 600,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -597,7 +597,7 @@ export default function NfeMonitorLogsPainel({
                           {log.empresaNome}
                         </div>
                         {log.empresaCnpj && (
-                          <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'monospace' }}>
+                          <div style={{ fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }}>
                             {formatCnpj(log.empresaCnpj)}
                           </div>
                         )}
@@ -611,7 +611,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#fee2e2',
                               color: '#991b1b',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -627,7 +627,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#fef3c7',
                               color: '#92400e',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -643,7 +643,7 @@ export default function NfeMonitorLogsPainel({
                               gap: 4,
                               background: '#f0fdf4',
                               color: '#166534',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 6,
@@ -660,7 +660,7 @@ export default function NfeMonitorLogsPainel({
                               style={{
                                 background: '#f3f4f6',
                                 color: '#1f2937',
-                                fontSize: 10,
+                                fontSize: 12.5,
                                 fontWeight: 700,
                                 padding: '1px 5px',
                                 borderRadius: 4,
@@ -670,7 +670,7 @@ export default function NfeMonitorLogsPainel({
                               cStat {log.cStat}
                             </span>
                           )}
-                          <span style={{ fontSize: 12, color: isErro ? '#b91c1c' : '#374151' }}>
+                          <span style={{ fontSize: 14, color: isErro ? '#b91c1c' : '#374151' }}>
                             {log.mensagem}
                           </span>
                         </div>
@@ -682,7 +682,7 @@ export default function NfeMonitorLogsPainel({
                               color: '#f9fafb',
                               padding: 10,
                               borderRadius: 6,
-                              fontSize: 11,
+                              fontSize: 13,
                               fontFamily: 'monospace',
                               whiteSpace: 'pre-wrap',
                               maxHeight: 180,
@@ -700,7 +700,7 @@ export default function NfeMonitorLogsPainel({
                               background: '#dcfce7',
                               color: '#15803d',
                               fontWeight: 700,
-                              fontSize: 11,
+                              fontSize: 13,
                               padding: '2px 8px',
                               borderRadius: 99,
                             }}
@@ -708,7 +708,7 @@ export default function NfeMonitorLogsPainel({
                             +{log.novas}
                           </span>
                         ) : (
-                          <span style={{ color: '#9ca3af', fontSize: 11 }}>0</span>
+                          <span style={{ color: '#9ca3af', fontSize: 13 }}>0</span>
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>

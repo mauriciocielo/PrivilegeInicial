@@ -65,7 +65,7 @@ export default function TermosPage() {
                 gap: '8px',
                 color: '#525252',
                 textDecoration: 'none',
-                fontSize: '14px',
+                fontSize: '15.5px',
                 fontWeight: 500,
                 padding: '8px 14px',
                 borderRadius: '8px',
@@ -84,7 +84,7 @@ export default function TermosPage() {
                 borderRadius: '8px',
                 textDecoration: 'none',
                 fontWeight: 600,
-                fontSize: '14px',
+                fontSize: '15.5px',
               }}
             >
               Área do Cliente
@@ -97,7 +97,7 @@ export default function TermosPage() {
       <main style={{ maxWidth: '860px', width: '100%', margin: '0 auto', padding: '48px 24px 80px', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#600000', marginBottom: '12px' }}>
           <FileText size={24} />
-          <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '14.5px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Segurança Jurídica & Diretrizes Contratuais
           </span>
         </div>
@@ -105,7 +105,7 @@ export default function TermosPage() {
         <h1 style={{ fontSize: '38px', lineHeight: 1.2, fontWeight: 800, margin: '0 0 12px 0', color: '#111' }}>
           Termos e Condições Gerais de Uso
         </h1>
-        <p style={{ color: '#737373', fontSize: '14px', marginBottom: '36px' }}>
+        <p style={{ color: '#737373', fontSize: '15.5px', marginBottom: '36px' }}>
           Última atualização: 21 de outubro de 2026 · Versão 2.1
         </p>
 
@@ -180,7 +180,7 @@ export default function TermosPage() {
             <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#111', margin: '0 0 12px 0' }}>
               Dúvidas ou Esclarecimentos
             </h2>
-            <div style={{ display: 'grid', gap: '8px', fontSize: '14px' }}>
+            <div style={{ display: 'grid', gap: '8px', fontSize: '15.5px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={16} color="#600000" />
                 <span><strong>E-mail:</strong> <a href="mailto:contato@privilegecontabilidade.cnt.br" style={{ color: '#600000', textDecoration: 'none', fontWeight: 600 }}>contato@privilegecontabilidade.cnt.br</a></span>
@@ -199,7 +199,7 @@ export default function TermosPage() {
       </main>
 
       {/* Footer com NAP Text */}
-      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '13px' }}>
+      <footer style={{ borderTop: '1px solid #e5e5e5', background: '#111', color: '#a3a3a3', padding: '36px 24px', fontSize: '14.5px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <strong style={{ color: '#fff' }}>Privilege Contabilidade e Consultoria</strong> · Privilege Consultoria Ltda (CNPJ 58.033.979/0001-84)<br />

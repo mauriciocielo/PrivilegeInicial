@@ -170,13 +170,13 @@ export default function ImobilizadoPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">🏗️ Ativo Imobilizado</div>
+          <div className="page-title">Ativo Imobilizado</div>
           <div className="page-subtitle">Controle de bens, patrimônios e depreciação acumulada</div>
         </div>
         <div className="header-actions">
           <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
-          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>📥 Importar planilha</button>
+          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>Importar planilha</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Bem</button>
         </div>
       </div>
@@ -230,9 +230,9 @@ export default function ImobilizadoPage() {
                   <tr key={i.id}>
                     <td style={{ fontWeight: 600 }}>{i.nome}</td>
                     <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.quantidade ?? 1}</td>
-                    <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{fmt.date(i.dataAquisicao)}</td>
+                    <td style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>{fmt.date(i.dataAquisicao)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.taxaDepreciacao}% a.a.</td>
-                    <td style={{ textAlign: 'right', fontSize: 13 }}>{i.mesesUso} meses</td>
+                    <td style={{ textAlign: 'right', fontSize: 14.5 }}>{i.mesesUso} meses</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--blue)' }}>{fmt.currency(i.valorAquisicao)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--orange)' }}>{fmt.currency(i.depAcumulada)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--green)' }}>{fmt.currency(i.valorAtual)}</td>
@@ -282,7 +282,7 @@ export default function ImobilizadoPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-muted)' }}>
               Lembretes de Taxas Anuais: Veículos (20%), Computadores (20%), Máquinas (10%), Móveis (10%), Imóveis (4%), Terrenos (0%).
             </div>
 

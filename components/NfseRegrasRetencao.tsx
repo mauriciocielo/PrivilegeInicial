@@ -26,11 +26,11 @@ export default function NfseRegrasRetencao({ regras, mei, simples, onChange }: P
 
   return (
     <div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
         A regra preenche as retenções ao criar a nota, e você pode ajustar nota a nota. A regra de um serviço específico tem prioridade sobre a geral. Sem regra aplicável, a nota sai sem retenção.
       </div>
-      {mei && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>MEI não pode informar tributos federais nem sofrer retenção de ISS: regras não se aplicam.</div>}
-      {simples && !mei && <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 10 }}>Em empresa do Simples, confirme com a contabilidade quais retenções federais valem antes de ativar uma regra.</div>}
+      {mei && <div style={{ fontSize: 14, color: 'var(--red)', marginBottom: 10 }}>MEI não pode informar tributos federais nem sofrer retenção de ISS: regras não se aplicam.</div>}
+      {simples && !mei && <div style={{ fontSize: 14, color: '#f59e0b', marginBottom: 10 }}>Em empresa do Simples, confirme com a contabilidade quais retenções federais valem antes de ativar uma regra.</div>}
 
       {regras.map(r => (
         <div key={r.id} style={{ border: '1px solid var(--border-light)', borderRadius: 8, padding: 12, marginBottom: 10 }}>
@@ -67,23 +67,23 @@ export default function NfseRegrasRetencao({ regras, mei, simples, onChange }: P
             ))}
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14.5, cursor: 'pointer' }}>
               <input type="checkbox" checked={r.issRetido} onChange={e => alterar(r.id, { issRetido: e.target.checked })} />
               Reter ISS
             </label>
             {r.issRetido && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14.5 }}>
                 Alíquota do ISS (%)
                 <input type="number" min="0" max="100" step="0.01" className="form-control" style={{ width: 90 }} value={r.aliquotaIss ?? ''}
                   onChange={e => alterar(r.id, { aliquotaIss: e.target.value === '' ? null : Number(e.target.value) })} />
               </label>
             )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14.5, cursor: 'pointer' }}>
               <input type="checkbox" checked={r.ativa} onChange={e => alterar(r.id, { ativa: e.target.checked })} />
               Ativa
             </label>
-            <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 'auto', fontSize: 11, padding: '4px 8px' }}
-              onClick={() => onChange(regras.filter(x => x.id !== r.id))}>🗑️ Remover</button>
+            <button type="button" className="btn btn-danger btn-sm" style={{ marginLeft: 'auto', fontSize: 13, padding: '4px 8px' }}
+              onClick={() => onChange(regras.filter(x => x.id !== r.id))}>Remover</button>
           </div>
         </div>
       ))}

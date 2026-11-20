@@ -2183,14 +2183,14 @@ export default function WhatsAppPage() {
                     border: 'none',
                     borderRadius: 99,
                     padding: '4px 10px',
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                     cursor: 'pointer',
                     background: selectedLine === '1' ? 'var(--accent)' : 'transparent',
                     color: selectedLine === '1' ? '#ffffff' : 'var(--text-secondary)',
                   }}
                 >
-                  📱 Número 1
+                  Número 1
                 </button>
                 <button
                   type="button"
@@ -2199,14 +2199,14 @@ export default function WhatsAppPage() {
                     border: 'none',
                     borderRadius: 99,
                     padding: '4px 10px',
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                     cursor: 'pointer',
                     background: selectedLine === '2' ? '#16a34a' : 'transparent',
                     color: selectedLine === '2' ? '#ffffff' : 'var(--text-secondary)',
                   }}
                 >
-                  📱 Número 2
+                  Número 2
                 </button>
               </div>
               <button
@@ -2218,7 +2218,7 @@ export default function WhatsAppPage() {
                   if (next) playNotificationSound(true);
                 }}
                 className="wa-btn wa-btn-secondary"
-                style={{ padding: '4px 10px', fontSize: 11.5 }}
+                style={{ padding: '4px 10px', fontSize: 13.5 }}
                 title={soundEnabled ? 'Som de notificação ativo (clique para silenciar)' : 'Som silenciado (clique para ativar e testar)'}
               >
                 {soundEnabled ? <Volume2 size={14} color="var(--green)" /> : <VolumeX size={14} color="var(--text-muted)" />}
@@ -2312,7 +2312,7 @@ export default function WhatsAppPage() {
                       type="button"
                       onClick={handleCloseAllOpenTickets}
                       className="wa-btn wa-btn-secondary"
-                      style={{ padding: '5px 9px', fontSize: 11 }}
+                      style={{ padding: '5px 9px', fontSize: 13 }}
                       title="Encerrar todos os chamados abertos para limpar a fila"
                     >
                       <Check size={13} /> Limpar Fila
@@ -2323,7 +2323,7 @@ export default function WhatsAppPage() {
                     onClick={handleSyncChats}
                     disabled={syncingChats}
                     className="wa-btn wa-btn-secondary"
-                    style={{ padding: '5px 9px', fontSize: 11 }}
+                    style={{ padding: '5px 9px', fontSize: 13 }}
                     title="Sincronizar conversas e unificar contatos duplicados"
                   >
                     <RefreshCw size={12} className={syncingChats ? 'animate-spin' : ''} /> {syncingChats ? 'Sinc...' : 'Sincronizar'}
@@ -2332,7 +2332,7 @@ export default function WhatsAppPage() {
                     type="button"
                     onClick={() => setIsNewChatModalOpen(true)}
                     className="wa-btn wa-btn-primary"
-                    style={{ padding: '5px 10px', fontSize: 11 }}
+                    style={{ padding: '5px 10px', fontSize: 13 }}
                   >
                     <Plus size={13} /> Novo
                   </button>
@@ -2355,13 +2355,13 @@ export default function WhatsAppPage() {
                   onClick={() => setChatFilter('abertos')}
                   className={`wa-filter-chip ${chatFilter === 'abertos' ? 'active' : ''}`}
                 >
-                  🟢 Abertos ({openChatsCount})
+                  Abertos ({openChatsCount})
                 </button>
                 <button
                   onClick={() => setChatFilter('encerrados')}
                   className={`wa-filter-chip ${chatFilter === 'encerrados' ? 'active' : ''}`}
                 >
-                  ✅ Fechados ({closedChatsCount})
+                  Fechados ({closedChatsCount})
                 </button>
                 <button
                   onClick={() => setChatFilter('followup')}
@@ -2372,13 +2372,13 @@ export default function WhatsAppPage() {
                       : {}
                   }
                 >
-                  ⏰ Follow-up ({pendingFollowups})
+                  Follow-up ({pendingFollowups})
                 </button>
                 <button
                   onClick={() => setChatFilter('triagem')}
                   className={`wa-filter-chip ${chatFilter === 'triagem' ? 'active' : ''}`}
                 >
-                  📋 Aguardando Humano
+                  Aguardando Humano
                 </button>
                 <button
                   onClick={() => setChatFilter('unreads')}
@@ -2397,14 +2397,14 @@ export default function WhatsAppPage() {
 
             <div className="wa-chat-list">
               {filteredChats.length === 0 ? (
-                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14.5 }}>
                   {chatFilter === 'abertos' ? (
                     <>
                       <Check size={28} color="var(--green)" style={{ margin: '0 auto 8px' }} />
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                         Fila limpa! Nenhum chamado em aberto.
                       </div>
-                      <div style={{ fontSize: 12, marginTop: 4 }}>
+                      <div style={{ fontSize: 14, marginTop: 4 }}>
                         Novas mensagens recebidas abrirão o chamado automaticamente, ou consulte a aba{' '}
                         <button
                           type="button"
@@ -2530,7 +2530,7 @@ export default function WhatsAppPage() {
                                     fontWeight: 700,
                                   }}
                                 >
-                                  📋 Triado
+                                  Triado
                                 </span>
                               ) : isBotPaused ? (
                                 <span className="wa-tag humano">Humano</span>
@@ -2596,7 +2596,7 @@ export default function WhatsAppPage() {
                           border: '1px solid var(--border, #e5e5e5)',
                           background: 'var(--bg-card, #ffffff)',
                           color: '#600000',
-                          fontSize: 12.5,
+                          fontSize: 14,
                           fontWeight: 600,
                           cursor: 'pointer',
                         }}
@@ -2655,7 +2655,7 @@ export default function WhatsAppPage() {
                             handleUpdateCrmStage(selectedChat.id, e.target.value as CrmStage)
                           }
                           style={{
-                            fontSize: 11,
+                            fontSize: 13,
                             padding: '2px 6px',
                             borderRadius: 6,
                             border: '1px solid var(--border)',
@@ -2680,7 +2680,7 @@ export default function WhatsAppPage() {
                       type="button"
                       onClick={() => handleOpenFollowupModal(selectedChat, false)}
                       className="wa-btn wa-btn-secondary"
-                      style={{ padding: '6px 11px', fontSize: 11.5 }}
+                      style={{ padding: '6px 11px', fontSize: 13.5 }}
                     >
                       <Calendar size={13} /> Follow-up
                     </button>
@@ -2692,7 +2692,7 @@ export default function WhatsAppPage() {
                         className="wa-btn wa-btn-secondary"
                         style={{
                           padding: '6px 11px',
-                          fontSize: 11.5,
+                          fontSize: 13.5,
                           borderColor: 'var(--blue)',
                           color: 'var(--blue)',
                         }}
@@ -2704,7 +2704,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleCloseTicket(selectedChat.id)}
                         className="wa-btn wa-btn-green"
-                        style={{ padding: '6px 12px', fontSize: 11.5 }}
+                        style={{ padding: '6px 12px', fontSize: 13.5 }}
                         title="Encerra este chamado e limpa da fila de abertos"
                       >
                         <Check size={14} /> Encerrar Chamado
@@ -2717,7 +2717,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleResumeBot(selectedChat.id)}
                         className="wa-btn wa-btn-secondary"
-                        style={{ padding: '6px 10px', fontSize: 11.5 }}
+                        style={{ padding: '6px 10px', fontSize: 13.5 }}
                       >
                         <Play size={13} /> Reativar Bot
                       </button>
@@ -2728,7 +2728,7 @@ export default function WhatsAppPage() {
                         className="wa-btn wa-btn-secondary"
                         style={{
                           padding: '6px 10px',
-                          fontSize: 11.5,
+                          fontSize: 13.5,
                           borderColor: 'var(--yellow)',
                           color: 'var(--yellow)',
                         }}
@@ -2745,7 +2745,7 @@ export default function WhatsAppPage() {
                           toast.success(`Protocolo ${selectedChat.protocol_number} copiado!`);
                         }}
                         className="wa-btn wa-btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: 11, fontFamily: 'monospace' }}
+                        style={{ padding: '4px 8px', fontSize: 13, fontFamily: 'monospace' }}
                         title="Clique para copiar o número do protocolo"
                       >
                         🎫 {selectedChat.protocol_number}
@@ -2756,20 +2756,20 @@ export default function WhatsAppPage() {
                       type="button"
                       onClick={() => openProtocolModalForChat(selectedChat)}
                       className="wa-btn wa-btn-secondary"
-                      style={{ padding: '5px 9px', fontSize: 11.5 }}
+                      style={{ padding: '5px 9px', fontSize: 13.5 }}
                       title="Gerar ou salvar protocolo deste atendimento"
                     >
-                      🎫 Protocolo
+                      Protocolo
                     </button>
 
                     <button
                       type="button"
                       onClick={() => openAgendaModalForChat(selectedChat)}
                       className="wa-btn wa-btn-secondary"
-                      style={{ padding: '5px 9px', fontSize: 11.5 }}
+                      style={{ padding: '5px 9px', fontSize: 13.5 }}
                       title="Criar tarefa na Agenda para esta demanda"
                     >
-                      📅 Agenda
+                      Agenda
                     </button>
 
                     <button
@@ -2789,7 +2789,7 @@ export default function WhatsAppPage() {
                   <div className="wa-followup-banner">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                       <Clock size={15} color="var(--yellow)" style={{ flexShrink: 0 }} />
-                      <div style={{ fontSize: 12, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, minWidth: 0 }}>
                         <strong>Follow-up agendado:</strong>{' '}
                         {new Date(selectedChat.followup_date).toLocaleString('pt-BR', {
                           day: '2-digit',
@@ -2802,7 +2802,7 @@ export default function WhatsAppPage() {
                           <span
                             style={{
                               marginLeft: 6,
-                              fontSize: 10.5,
+                              fontSize: 13,
                               padding: '1px 6px',
                               borderRadius: 4,
                               background: 'rgba(21,128,61,0.12)',
@@ -2810,7 +2810,7 @@ export default function WhatsAppPage() {
                               fontWeight: 700,
                             }}
                           >
-                            ⚡ Envio Automático
+                            Envio Automático
                           </span>
                         )}
                       </div>
@@ -2820,7 +2820,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleSendFollowupNow(selectedChat.id)}
                         className="wa-btn wa-btn-primary"
-                        style={{ padding: '4px 9px', fontSize: 11 }}
+                        style={{ padding: '4px 9px', fontSize: 13 }}
                         title="Disparar mensagem de Follow-up agora no WhatsApp"
                       >
                         <Send size={11} /> Enviar Agora
@@ -2829,7 +2829,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleOpenFollowupModal(selectedChat, false)}
                         className="wa-btn wa-btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: 11 }}
+                        style={{ padding: '4px 8px', fontSize: 13 }}
                       >
                         Editar
                       </button>
@@ -2837,7 +2837,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleCompleteFollowup(selectedChat.id)}
                         className="wa-btn wa-btn-green"
-                        style={{ padding: '4px 8px', fontSize: 11 }}
+                        style={{ padding: '4px 8px', fontSize: 13 }}
                       >
                         ✓ Concluir
                       </button>
@@ -2853,7 +2853,7 @@ export default function WhatsAppPage() {
                         <FileText size={14} /> Ficha de Atendimento (Triagem Concluída pelo Robô)
                       </span>
                       <span className="wa-tag" style={{ background: 'rgba(180, 83, 9, 0.15)', color: 'var(--yellow)', fontWeight: 700 }}>
-                        👤 Pronto para Atendimento Humano
+                        Pronto para Atendimento Humano
                       </span>
                     </div>
                     <div className="wa-triage-text">
@@ -2864,7 +2864,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleResumeBot(selectedChat.id)}
                         className="wa-btn wa-btn-secondary"
-                        style={{ fontSize: 11, padding: '4px 10px' }}
+                        style={{ fontSize: 13, padding: '4px 10px' }}
                         title="Reativa o robô automático para continuar respondendo"
                       >
                         Devolver ao Robô
@@ -2873,15 +2873,15 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => handleOpenFollowupModal(selectedChat, true)}
                         className="wa-btn wa-btn-secondary"
-                        style={{ fontSize: 11, padding: '4px 10px' }}
+                        style={{ fontSize: 13, padding: '4px 10px' }}
                       >
-                        ⏰ Encerrar + Follow-up
+                        Encerrar + Follow-up
                       </button>
                       <button
                         type="button"
                         onClick={() => handleCloseTicket(selectedChat.id, 'Triagem atendida e encerrada')}
                         className="wa-btn wa-btn-primary"
-                        style={{ fontSize: 11, padding: '4px 10px' }}
+                        style={{ fontSize: 13, padding: '4px 10px' }}
                         title="Encerra o chamado e limpa da fila"
                       >
                         ✓ Encerrar Chamado
@@ -2894,8 +2894,8 @@ export default function WhatsAppPage() {
                   {messages.length === 0 ? (
                     <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)' }}>
                       <MessageSquare size={36} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
-                      <p style={{ margin: 0, fontSize: 14 }}>Nenhuma mensagem trocada ainda.</p>
-                      <p style={{ margin: '4px 0 0', fontSize: 12 }}>Digite abaixo para iniciar o atendimento.</p>
+                      <p style={{ margin: 0, fontSize: 15.5 }}>Nenhuma mensagem trocada ainda.</p>
+                      <p style={{ margin: '4px 0 0', fontSize: 14 }}>Digite abaixo para iniciar o atendimento.</p>
                     </div>
                   ) : (
                     messages.map((msg, idx) => {
@@ -2977,7 +2977,7 @@ export default function WhatsAppPage() {
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div
                                       style={{
-                                        fontSize: 12.5,
+                                        fontSize: 14,
                                         fontWeight: 600,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
@@ -2986,7 +2986,7 @@ export default function WhatsAppPage() {
                                     >
                                       {msg.file_name || msg.text || 'Documento'}
                                     </div>
-                                    <div style={{ fontSize: 10.5, opacity: 0.8 }}>
+                                    <div style={{ fontSize: 13, opacity: 0.8 }}>
                                       Clique para baixar o arquivo
                                     </div>
                                   </div>
@@ -3014,7 +3014,7 @@ export default function WhatsAppPage() {
                                       background: 'rgba(0,0,0,0.18)',
                                       color: 'inherit',
                                       padding: '6px 8px',
-                                      fontSize: 13,
+                                      fontSize: 14.5,
                                       fontFamily: 'inherit',
                                       resize: 'vertical',
                                     }}
@@ -3032,7 +3032,7 @@ export default function WhatsAppPage() {
                                         border: '1px solid rgba(255,255,255,0.3)',
                                         background: 'transparent',
                                         color: 'inherit',
-                                        fontSize: 11,
+                                        fontSize: 13,
                                         cursor: 'pointer',
                                       }}
                                     >
@@ -3048,7 +3048,7 @@ export default function WhatsAppPage() {
                                         border: 'none',
                                         background: '#ffffff',
                                         color: '#111827',
-                                        fontSize: 11,
+                                        fontSize: 13,
                                         fontWeight: 700,
                                         cursor: 'pointer',
                                       }}
@@ -3144,7 +3144,7 @@ export default function WhatsAppPage() {
                                 background: 'transparent',
                                 border: 'none',
                                 color: 'var(--accent)',
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: 600,
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -3168,7 +3168,7 @@ export default function WhatsAppPage() {
                 {/* Respostas Rápidas */}
                 {config?.quick_replies && config.quick_replies.length > 0 && (
                   <div className="wa-quick-replies-bar">
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Zap size={13} color="var(--yellow)" /> Respostas Rápidas:
                     </span>
                     {config.quick_replies.map(qr => (
@@ -3237,7 +3237,7 @@ export default function WhatsAppPage() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div
                           style={{
-                            fontSize: 12.5,
+                            fontSize: 14,
                             fontWeight: 700,
                             color: 'var(--text-primary)',
                             whiteSpace: 'nowrap',
@@ -3245,12 +3245,12 @@ export default function WhatsAppPage() {
                             textOverflow: 'ellipsis',
                           }}
                         >
-                          {pendingAttachment.mediaType === 'image' && '📷 Imagem pronta para envio: '}
-                          {pendingAttachment.mediaType === 'document' && '📄 Documento pronto para envio: '}
-                          {pendingAttachment.mediaType === 'audio' && '🎤 Áudio gravado (ouça para conferir): '}
+                          {pendingAttachment.mediaType === 'image' && 'Imagem pronta para envio: '}
+                          {pendingAttachment.mediaType === 'document' && 'Documento pronto para envio: '}
+                          {pendingAttachment.mediaType === 'audio' && 'Áudio gravado (ouça para conferir): '}
                           {pendingAttachment.fileName}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                           {pendingAttachment.fileSize && (
                             <span>{(pendingAttachment.fileSize / 1024).toFixed(1)} KB</span>
                           )}
@@ -3267,7 +3267,7 @@ export default function WhatsAppPage() {
                           target="_blank"
                           rel="noreferrer"
                           className="wa-btn wa-btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: 11, textDecoration: 'none' }}
+                          style={{ padding: '5px 10px', fontSize: 13, textDecoration: 'none' }}
                         >
                           <ExternalLink size={12} /> Abrir / Conferir
                         </a>
@@ -3276,7 +3276,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => setPendingAttachment(null)}
                         className="wa-btn wa-btn-danger"
-                        style={{ padding: '5px 10px', fontSize: 11 }}
+                        style={{ padding: '5px 10px', fontSize: 13 }}
                         title="Remover anexo"
                       >
                         ✕ Remover
@@ -3301,7 +3301,7 @@ export default function WhatsAppPage() {
                           type="button"
                           onClick={cancelAudioRecording}
                           className="wa-btn wa-btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: 12 }}
+                          style={{ padding: '4px 10px', fontSize: 14 }}
                         >
                           Cancelar
                         </button>
@@ -3309,7 +3309,7 @@ export default function WhatsAppPage() {
                           type="button"
                           onClick={finishAndSendAudio}
                           className="wa-btn wa-btn-green"
-                          style={{ padding: '4px 12px', fontSize: 12 }}
+                          style={{ padding: '4px 12px', fontSize: 14 }}
                         >
                           <Check size={13} /> Concluir e Conferir Áudio
                         </button>
@@ -3369,7 +3369,7 @@ export default function WhatsAppPage() {
               <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <MessageSquare size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
                 <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)' }}>Nenhuma conversa selecionada</h3>
-                <p style={{ margin: '4px 0 0', fontSize: 13 }}>Selecione um contato na lista à esquerda para conversar ao vivo.</p>
+                <p style={{ margin: '4px 0 0', fontSize: 14.5 }}>Selecione um contato na lista à esquerda para conversar ao vivo.</p>
               </div>
             )}
           </div>
@@ -3402,8 +3402,8 @@ export default function WhatsAppPage() {
                       <p className="leo-agent-sub">
                         Atende no WhatsApp ao vivo 24h ·{' '}
                         {config?.reply_audio_on_audio !== false
-                          ? '🎤 Responde áudio com áudio direto'
-                          : '💬 Responde em texto'}
+                          ? 'Responde áudio com áudio direto'
+                          : 'Responde em texto'}
                       </p>
                     </div>
                   </>
@@ -3425,7 +3425,7 @@ export default function WhatsAppPage() {
                 }}
                 style={{
                   padding: '6px 10px',
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   borderRadius: 8,
                   border: '1px solid var(--border)',
@@ -3453,7 +3453,7 @@ export default function WhatsAppPage() {
                   setIsNewAssistantOpen(true);
                 }}
                 className="wa-btn wa-btn-secondary"
-                style={{ padding: '6px 10px', fontSize: 11.5 }}
+                style={{ padding: '6px 10px', fontSize: 13.5 }}
               >
                 <Plus size={13} /> Criar Assistente
               </button>
@@ -3462,7 +3462,7 @@ export default function WhatsAppPage() {
                 type="button"
                 onClick={() => handleSaveConfig({ bot_enabled: !config?.bot_enabled })}
                 className={`wa-btn ${config?.bot_enabled ? 'wa-btn-green' : 'wa-btn-secondary'}`}
-                style={{ padding: '6px 12px', fontSize: 12 }}
+                style={{ padding: '6px 12px', fontSize: 14 }}
               >
                 <Power size={13} /> {config?.bot_enabled ? 'Robô Ligado' : 'Robô Pausado'}
               </button>
@@ -3664,13 +3664,13 @@ export default function WhatsAppPage() {
                         onChange={handleFileUpload}
                         style={{ display: 'none' }}
                       />
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                         Adicione um documento
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                         PDF, DOCX, planilha, HTML ou texto · até 4,5 MB
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', maxWidth: 480, lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 480, lineHeight: 1.4 }}>
                         Cada documento lê até ~100 KB de texto. Um arquivo TXT, MD ou CSV maior que isso é dividido sozinho em partes, que aparecem como &ldquo;(parte 1 de N)&rdquo;.
                       </div>
                       <button
@@ -3685,7 +3685,7 @@ export default function WhatsAppPage() {
 
                     {/* Buscar uma página do seu site */}
                     <form onSubmit={handleScrapeSite} className="leo-site-box">
-                      <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                         Ou busque uma página do seu site
                       </label>
                       <div style={{ display: 'flex', gap: 10 }}>
@@ -3700,7 +3700,7 @@ export default function WhatsAppPage() {
                           {scrapingSite ? 'Lendo...' : 'Buscar página'}
                         </button>
                       </div>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                         Leio o texto da página e guardo como documento. Páginas que pedem login, ou que montam o conteúdo no navegador, podem vir vazias.
                       </span>
                     </form>
@@ -3720,9 +3720,9 @@ export default function WhatsAppPage() {
                         marginBottom: 10,
                       }}
                     >
-                      <div style={{ fontSize: 12 }}>
-                        <strong>🧠 Aprendizado Automático com Todas as Mensagens</strong>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      <div style={{ fontSize: 14 }}>
+                        <strong>Aprendizado Automático com Todas as Mensagens</strong>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                           Analisa todas as conversas do histórico para aprender perguntas e respostas reais da equipe.
                         </div>
                       </div>
@@ -3749,7 +3749,7 @@ export default function WhatsAppPage() {
                           }
                         }}
                         className="leo-btn-green"
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 14 }}
                       >
                         <Sparkles size={13} /> Aprender com Todas as Conversas
                       </button>
@@ -3780,7 +3780,7 @@ export default function WhatsAppPage() {
                               <div style={{ minWidth: 0 }}>
                                 <div
                                   style={{
-                                    fontSize: 13,
+                                    fontSize: 14.5,
                                     fontWeight: 600,
                                     color: 'var(--text-primary)',
                                     whiteSpace: 'nowrap',
@@ -3791,7 +3791,7 @@ export default function WhatsAppPage() {
                                   {doc.question}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                                  <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                                  <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                                     privilegecontabilidade.cnt.br · 32 trechos
                                   </span>
                                   <span className="leo-pill-ready">Pronto</span>
@@ -3822,7 +3822,7 @@ export default function WhatsAppPage() {
                         ))}
                     </div>
 
-                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                       O agente consulta esses documentos sozinho quando o cliente pergunta. Não precisa citar nada no prompt.
                     </span>
                   </div>
@@ -3831,7 +3831,7 @@ export default function WhatsAppPage() {
                   <div className="leo-panel-card">
                     <div>
                       <h4 className="leo-panel-title">O que ele aprendeu</h4>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '6px 0 0' }}>
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '6px 0 0' }}>
                         <strong style={{ color: 'var(--text-primary)' }}>Como o agente aprende:</strong> Quando o agente te chama e você responde o cliente, ele aprende com a sua resposta.
                       </p>
                     </div>
@@ -3864,7 +3864,7 @@ export default function WhatsAppPage() {
                           background: 'transparent',
                           border: 'none',
                           color: learnMode === 'desligado' ? 'var(--red)' : 'var(--text-muted)',
-                          fontSize: 12,
+                          fontSize: 14,
                           cursor: 'pointer',
                           padding: 0,
                           textDecoration: 'underline',
@@ -3877,14 +3877,14 @@ export default function WhatsAppPage() {
                     {/* Lista do que ele já aprendeu */}
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                           Ensinado no teste e no atendimento ({lessons.filter(l => l.topic !== 'Site / Documento').length})
                         </span>
                         <button
                           type="button"
                           onClick={() => setIsTeachModalOpen(true)}
                           className="leo-btn-green"
-                          style={{ padding: '5px 12px', fontSize: 11.5 }}
+                          style={{ padding: '5px 12px', fontSize: 13.5 }}
                         >
                           + Ensinar nova resposta
                         </button>
@@ -3906,7 +3906,7 @@ export default function WhatsAppPage() {
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>
+                              <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
                                 {lesson.topic} · Usada {lesson.usage_count}x
                               </span>
                               <button
@@ -3917,10 +3917,10 @@ export default function WhatsAppPage() {
                                 <Trash2 size={13} />
                               </button>
                             </div>
-                            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                            <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                               <strong>Pergunta do cliente:</strong> {lesson.question}
                             </div>
-                            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
+                            <div style={{ fontSize: 14.5, color: 'var(--text-primary)', fontWeight: 600 }}>
                               <strong>Resposta do dono:</strong> {lesson.answer}
                             </div>
                           </div>
@@ -3940,7 +3940,7 @@ export default function WhatsAppPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div>
-                        <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                        <label style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                           Nome do Atendente Virtual
                         </label>
                         <input
@@ -3956,7 +3956,7 @@ export default function WhatsAppPage() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                        <label style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                           Mensagem de Boas-Vindas (quando o cliente manda &ldquo;Oi&rdquo; / &ldquo;Olá&rdquo;)
                         </label>
                         <textarea
@@ -3972,7 +3972,7 @@ export default function WhatsAppPage() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                        <label style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                           Sobre o negócio e diretrizes de fala (escrito pelo dono)
                         </label>
                         <textarea
@@ -4056,7 +4056,7 @@ export default function WhatsAppPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <div>
                       <h4 className="leo-panel-title">Áudio Direto, Voz & Assistentes (Léo / Clara / Novos)</h4>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
                         Configure para o assistente ouvir áudios do cliente e responder com nota de voz real direto no WhatsApp.
                       </p>
                     </div>
@@ -4067,10 +4067,10 @@ export default function WhatsAppPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <label className="leo-indexed-item" style={{ cursor: 'pointer', borderColor: config?.reply_audio_on_audio !== false ? 'var(--green)' : undefined }}>
                       <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          🎤 Enviar áudio direto quando o cliente responder com áudio
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Enviar áudio direto quando o cliente responder com áudio
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                        <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                           O sistema transcreve o áudio do cliente, gera a resposta do Léo/Clara e envia uma nota de voz (PTT) direto no WhatsApp.
                         </div>
                       </div>
@@ -4085,10 +4085,10 @@ export default function WhatsAppPage() {
 
                     <label className="leo-indexed-item" style={{ cursor: 'pointer' }}>
                       <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                          🔊 Sempre responder com áudio (mesmo quando o cliente mandar texto)
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Sempre responder com áudio (mesmo quando o cliente mandar texto)
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                        <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                           Se ativado, todas as respostas do assistente ativo serão enviadas em formato de áudio no WhatsApp.
                         </div>
                       </div>
@@ -4103,10 +4103,10 @@ export default function WhatsAppPage() {
 
                     <label className="leo-indexed-item" style={{ cursor: 'pointer' }}>
                       <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                           Analisar fotos, comprovantes e documentos PDF/XML
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                        <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                           Identifica imagens e arquivos anexados na conversa
                         </div>
                       </div>
@@ -4122,10 +4122,10 @@ export default function WhatsAppPage() {
                   <div className="leo-site-box" style={{ marginTop: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                       <div>
-                        <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>
-                          🤖 Assistentes de Voz & Atendimento Disponíveis
+                        <strong style={{ fontSize: 14.5, color: 'var(--text-primary)' }}>
+                          Assistentes de Voz & Atendimento Disponíveis
                         </strong>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                        <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                           Alterne entre o Léo (voz masculina), a Clara (voz feminina) ou crie uma nova assistente exclusiva.
                         </div>
                       </div>
@@ -4133,7 +4133,7 @@ export default function WhatsAppPage() {
                         type="button"
                         onClick={() => setIsNewAssistantOpen(v => !v)}
                         className="leo-btn-green"
-                        style={{ padding: '6px 12px', fontSize: 11.5 }}
+                        style={{ padding: '6px 12px', fontSize: 13.5 }}
                       >
                         <Plus size={13} /> {isNewAssistantOpen ? 'Fechar Formulário' : 'Criar Nova Assistente'}
                       </button>
@@ -4154,7 +4154,7 @@ export default function WhatsAppPage() {
                       >
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                           <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                            <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 4 }}>
                               Nome da Assistente / Assistente:
                             </label>
                             <input
@@ -4168,7 +4168,7 @@ export default function WhatsAppPage() {
                             />
                           </div>
                           <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                            <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 4 }}>
                               Voz (Gênero):
                             </label>
                             <select
@@ -4177,20 +4177,20 @@ export default function WhatsAppPage() {
                               style={{
                                 width: '100%',
                                 padding: '8px 10px',
-                                fontSize: 12.5,
+                                fontSize: 14,
                                 borderRadius: 8,
                                 border: '1px solid var(--border)',
                                 background: 'var(--bg-card)',
                               }}
                             >
-                              <option value="female">👩 Voz Feminina (PT-BR / Nova)</option>
-                              <option value="male">👨 Voz Masculina (PT-BR / Onyx)</option>
+                              <option value="female">Voz Feminina (PT-BR / Nova)</option>
+                              <option value="male">Voz Masculina (PT-BR / Onyx)</option>
                             </select>
                           </div>
                         </div>
 
                         <div>
-                          <label style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 4 }}>
                             Especialidade / Função:
                           </label>
                           <input
@@ -4203,7 +4203,7 @@ export default function WhatsAppPage() {
                         </div>
 
                         <div>
-                          <label style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                          <label style={{ fontSize: 13, fontWeight: 700, display: 'block', marginBottom: 4 }}>
                             Personalidade / Instrução Extra (opcional):
                           </label>
                           <textarea
@@ -4217,7 +4217,7 @@ export default function WhatsAppPage() {
                         </div>
 
                         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={newAstReplyAudioOnAudio}
@@ -4225,7 +4225,7 @@ export default function WhatsAppPage() {
                             />
                             Responder áudios com áudio direto
                           </label>
-                          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={newAstAlwaysAudio}
@@ -4240,7 +4240,7 @@ export default function WhatsAppPage() {
                             type="button"
                             onClick={() => setIsNewAssistantOpen(false)}
                             className="wa-btn wa-btn-secondary"
-                            style={{ fontSize: 12 }}
+                            style={{ fontSize: 14 }}
                           >
                             Cancelar
                           </button>
@@ -4300,7 +4300,7 @@ export default function WhatsAppPage() {
                               )}
                             </div>
                             <div className="leo-mode-card-desc">{ast.role}</div>
-                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                               🎤 {ast.replyAudioOnAudio ? 'Áudio → Áudio direto ativo' : 'Apenas texto'}
                               {ast.alwaysReplyAudio ? ' · Sempre áudio' : ''}
                             </div>
@@ -4340,10 +4340,10 @@ export default function WhatsAppPage() {
 
                   <label className="leo-indexed-item" style={{ cursor: 'pointer' }}>
                     <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                         Mostrar &ldquo;Digitando...&rdquo; no WhatsApp antes de responder
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                         Torna a experiência mais natural e próxima para o cliente
                       </div>
                     </div>
@@ -4363,11 +4363,11 @@ export default function WhatsAppPage() {
                     <h4 className="leo-panel-title">Quando você assume (Pausa da IA e transbordo)</h4>
                     {savedBadge && <span className="leo-pill-ready">✓ Salvo na hora</span>}
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
                     Quando um consultor envia uma mensagem para o cliente ou quando o Léo conclui a triagem, o robô pausa automaticamente para não interromper.
                   </p>
                   <div>
-                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                    <label style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
                       Tempo de pausa automática do Léo quando humano assume (minutos):
                     </label>
                     <div style={{ display: 'flex', gap: 10 }}>
@@ -4388,10 +4388,10 @@ export default function WhatsAppPage() {
                     </div>
                   </div>
                   <div className="leo-site-box">
-                    <strong style={{ fontSize: 12, color: 'var(--accent)' }}>
+                    <strong style={{ fontSize: 14, color: 'var(--accent)' }}>
                       Regra de transferência do Léo:
                     </strong>
-                    <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+                    <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>
                       Quando não souber ou após coletar o <strong>nome</strong> e <strong>o que o cliente procura</strong>, o Léo avisa que vai chamar alguém da equipe que responde por aqui mesmo (sem prometer tempo de resposta).
                     </span>
                   </div>
@@ -4417,7 +4417,7 @@ export default function WhatsAppPage() {
                               </span>
                             ))}
                           </div>
-                          <div style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>{rule.resposta}</div>
+                          <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>{rule.resposta}</div>
                         </div>
                         <button
                           type="button"
@@ -4431,7 +4431,7 @@ export default function WhatsAppPage() {
                   </div>
 
                   <form onSubmit={handleAddRule} className="leo-site-box">
-                    <strong style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+                    <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>
                       + Adicionar novo gatilho de venda ou resposta rápida
                     </strong>
                     <input
@@ -4449,7 +4449,7 @@ export default function WhatsAppPage() {
                       className="leo-input-dark"
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <label style={{ fontSize: 14, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <input
                           type="checkbox"
                           checked={newPausarBot}
@@ -4476,14 +4476,14 @@ export default function WhatsAppPage() {
                   {/* 1. Conectar Claude (Anthropic MCP) */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                      <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
-                        🟣 1. Conectar ao Claude (Claude Desktop / Claude Web MCP)
+                      <label style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)' }}>
+                        1. Conectar ao Claude (Claude Desktop / Claude Web MCP)
                       </label>
                       <span className="wa-tag" style={{ background: 'rgba(96,0,0,0.08)', color: 'var(--accent)' }}>
                         Protocolo JSON-RPC 2.0 (lharries/whatsapp-mcp)
                       </span>
                     </div>
-                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', margin: 0 }}>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0 }}>
                       Permite ao Claude ler conversas, enviar mensagens no WhatsApp, agendar follow-ups e consultar dados fiscais em tempo real.
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -4517,7 +4517,7 @@ export default function WhatsAppPage() {
                           alert('JSON do claude_desktop_config.json copiado! Cole nas configurações de Developer do Claude.');
                         }}
                         className="wa-btn wa-btn-secondary"
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 14 }}
                       >
                         <Copy size={13} /> Copiar Config Claude Desktop
                       </button>
@@ -4527,14 +4527,14 @@ export default function WhatsAppPage() {
                   {/* 2. Conectar ChatGPT (OpenAI Custom GPT Actions) */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                      <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>
-                        🟢 2. Conectar ao ChatGPT (OpenAI GPT Actions / OpenAPI 3.1)
+                      <label style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--green)' }}>
+                        2. Conectar ao ChatGPT (OpenAI GPT Actions / OpenAPI 3.1)
                       </label>
                       <span className="wa-tag" style={{ background: 'rgba(21,128,61,0.1)', color: 'var(--green)' }}>
                         OpenAPI 3.1.0 Schema
                       </span>
                     </div>
-                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', margin: 0 }}>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0 }}>
                       No ChatGPT, acesse <strong>Explore GPTs → Create → Configure → Actions → Import from URL</strong> e cole o endereço abaixo para conectar o ChatGPT ao seu WhatsApp:
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -4560,14 +4560,14 @@ export default function WhatsAppPage() {
                   {/* 3. Conectar Gemini (Google Gemini CLI / Antigravity MCP) */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                      <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)' }}>
-                        🔵 3. Conectar ao Gemini (Gemini CLI / Antigravity / MCP)
+                      <label style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--blue)' }}>
+                        3. Conectar ao Gemini (Gemini CLI / Antigravity / MCP)
                       </label>
                       <span className="wa-tag" style={{ background: 'rgba(37,99,235,0.1)', color: 'var(--blue)' }}>
                         MCP HTTP / JSON-RPC 2.0
                       </span>
                     </div>
-                    <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', margin: 0 }}>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0 }}>
                       Conecte o Google Gemini via MCP (no <strong>Gemini CLI</strong>, <strong>Antigravity</strong> ou clientes compatíveis com <code>mcpServers</code>) para ler conversas, responder clientes e gerenciar o WhatsApp.
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -4600,7 +4600,7 @@ export default function WhatsAppPage() {
                           toast.success('JSON do ~/.gemini/settings.json copiado!');
                         }}
                         className="wa-btn wa-btn-secondary"
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 14 }}
                       >
                         <Copy size={13} /> Copiar Config Gemini (JSON)
                       </button>
@@ -4611,7 +4611,7 @@ export default function WhatsAppPage() {
                           toast.success('Comando gemini mcp add copiado!');
                         }}
                         className="wa-btn wa-btn-secondary"
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 14 }}
                       >
                         <Copy size={13} /> Copiar Comando CLI
                       </button>
@@ -4627,7 +4627,7 @@ export default function WhatsAppPage() {
                         gap: 8,
                       }}
                     >
-                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                         Configurar Servidor MCP Externo da Gemini (opcional)
                       </label>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -4683,8 +4683,8 @@ export default function WhatsAppPage() {
 
                   {/* 4. Webhook */}
                   <div className="leo-site-box">
-                    <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      🔗 4. Webhook de Recebimento em Tempo Real
+                    <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      4. Webhook de Recebimento em Tempo Real
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input type="text" readOnly value={webhookUrl} className="leo-input-dark" />
@@ -4706,7 +4706,7 @@ export default function WhatsAppPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <div>
                       <h4 className="leo-panel-title">Conectar Inteligência Artificial: Claude, ChatGPT e Gemini</h4>
-                      <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                      <p style={{ margin: '3px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
                         Escolha qual IA comanda o assistente Léo e conecte suas chaves da Anthropic (Claude), OpenAI (ChatGPT) ou Google Gemini.
                       </p>
                     </div>
@@ -4715,7 +4715,7 @@ export default function WhatsAppPage() {
 
                   {/* Seleção do Provedor Ativo (Claude vs ChatGPT vs Gemini) */}
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 8 }}>
+                    <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 8 }}>
                       1. Escolha o Motor de IA Principal do Assistente Léo:
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
@@ -4723,7 +4723,7 @@ export default function WhatsAppPage() {
                         onClick={() => handleSaveConfig({ ai_provider: 'groq' })}
                         className={`leo-mode-card ${(!config?.ai_provider || config?.ai_provider === 'groq') ? 'selected' : ''}`}
                       >
-                        <div className="leo-mode-card-title">⚡ Groq (padrão, gratuito)</div>
+                        <div className="leo-mode-card-title">Groq (padrão, gratuito)</div>
                         <div className="leo-mode-card-desc">
                           GPT-OSS e Qwen na cota gratuita da Groq. É sempre tentada primeiro; os demais motores entram só como contingência.
                         </div>
@@ -4733,7 +4733,7 @@ export default function WhatsAppPage() {
                         onClick={() => handleSaveConfig({ ai_provider: 'ollama' })}
                         className={`leo-mode-card ${config?.ai_provider === 'ollama' ? 'selected' : ''}`}
                       >
-                        <div className="leo-mode-card-title">🦙 Ollama</div>
+                        <div className="leo-mode-card-title">Ollama</div>
                         <div className="leo-mode-card-desc">
                           Servidor Ollama próprio (OLLAMA_BASE_URL). Usado quando houver um endereço configurado.
                         </div>
@@ -4748,7 +4748,7 @@ export default function WhatsAppPage() {
                         }
                         className={`leo-mode-card ${config?.ai_provider === 'claude' ? 'selected' : ''}`}
                       >
-                        <div className="leo-mode-card-title">🟣 Claude (Anthropic)</div>
+                        <div className="leo-mode-card-title">Claude (Anthropic)</div>
                         <div className="leo-mode-card-desc">
                           Claude 3.5 / 3.7 Sonnet & Haiku. Excelente escrita natural, empatia e raciocínio contábil.
                         </div>
@@ -4763,7 +4763,7 @@ export default function WhatsAppPage() {
                         }
                         className={`leo-mode-card ${config?.ai_provider === 'openai' ? 'selected' : ''}`}
                       >
-                        <div className="leo-mode-card-title">🟢 ChatGPT (OpenAI)</div>
+                        <div className="leo-mode-card-title">ChatGPT (OpenAI)</div>
                         <div className="leo-mode-card-desc">
                           GPT-4o e GPT-4o-mini. Respostas comerciais rápidas, objetivas e estruturadas.
                         </div>
@@ -4778,7 +4778,7 @@ export default function WhatsAppPage() {
                         }
                         className={`leo-mode-card ${config?.ai_provider === 'gemini' ? 'selected' : ''}`}
                       >
-                        <div className="leo-mode-card-title">🔵 Google Gemini</div>
+                        <div className="leo-mode-card-title">Google Gemini</div>
                         <div className="leo-mode-card-desc">
                           Gemini 2.5 Flash & Pro. Alta velocidade e integração nativa com o ecossistema Google.
                         </div>
@@ -4789,8 +4789,8 @@ export default function WhatsAppPage() {
                   {/* Card 1: Chave API Claude (Anthropic) */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        🟣 Chave de API do Claude (Anthropic API Key)
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Chave de API do Claude (Anthropic API Key)
                       </label>
                       <span
                         className="wa-tag"
@@ -4824,7 +4824,7 @@ export default function WhatsAppPage() {
                             ai_model: e.target.value,
                           })
                         }
-                        style={{ padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                        style={{ padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                       >
                         <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet (Recomendado)</option>
                         <option value="claude-3-7-sonnet-latest">Claude 3.7 Sonnet</option>
@@ -4848,8 +4848,8 @@ export default function WhatsAppPage() {
                   {/* Card 2: Chave API ChatGPT (OpenAI) */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        🟢 Chave de API do ChatGPT (OpenAI API Key)
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Chave de API do ChatGPT (OpenAI API Key)
                       </label>
                       <span
                         className="wa-tag"
@@ -4883,7 +4883,7 @@ export default function WhatsAppPage() {
                             ai_model: e.target.value,
                           })
                         }
-                        style={{ padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                        style={{ padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                       >
                         <option value="gpt-4o-mini">GPT-4o Mini (Rápido & Econômico)</option>
                         <option value="gpt-4o">GPT-4o (Completo)</option>
@@ -4906,8 +4906,8 @@ export default function WhatsAppPage() {
                   {/* Card 3: Chave API Google Gemini */}
                   <div className="leo-site-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        🔵 Chave de API do Google Gemini (Google AI Studio)
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Chave de API do Google Gemini (Google AI Studio)
                       </label>
                       <span
                         className="wa-tag"
@@ -4941,7 +4941,7 @@ export default function WhatsAppPage() {
                             ai_model: e.target.value,
                           })
                         }
-                        style={{ padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                        style={{ padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                       >
                         <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                         <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
@@ -4968,7 +4968,7 @@ export default function WhatsAppPage() {
                       disabled={testingAiProvider}
                       onClick={() => handleTestAiConnection()}
                       className="wa-btn wa-btn-secondary"
-                      style={{ fontSize: 12 }}
+                      style={{ fontSize: 14 }}
                     >
                       <Zap size={14} color="var(--yellow)" />{' '}
                       {testingAiProvider
@@ -4977,7 +4977,7 @@ export default function WhatsAppPage() {
                     </button>
 
                     {aiTestResult && (
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
                         {aiTestResult}
                       </div>
                     )}
@@ -4991,7 +4991,7 @@ export default function WhatsAppPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <div>
                       <h4 className="leo-panel-title">Configurar com sua IA (Claude, ChatGPT ou Gemini)</h4>
-                      <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                      <p style={{ margin: '3px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
                         Peça ao Claude, ao ChatGPT ou digite abaixo para ajustar o comportamento e ensinar novas regras ao Léo.
                       </p>
                     </div>
@@ -5001,10 +5001,10 @@ export default function WhatsAppPage() {
                   {/* Atalhos para abrir/copiar instruções para Claude e ChatGPT */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="leo-site-box">
-                      <strong style={{ fontSize: 12.5, color: 'var(--accent)' }}>
-                        🟣 Configurar usando o Claude (Anthropic)
+                      <strong style={{ fontSize: 14, color: 'var(--accent)' }}>
+                        Configurar usando o Claude (Anthropic)
                       </strong>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                         Copie o prompt-base do Léo com o conector MCP para colar no Claude e pedir novos ajustes.
                       </span>
                       <button
@@ -5022,10 +5022,10 @@ export default function WhatsAppPage() {
                     </div>
 
                     <div className="leo-site-box">
-                      <strong style={{ fontSize: 12.5, color: 'var(--green)' }}>
-                        🟢 Configurar usando o ChatGPT (OpenAI)
+                      <strong style={{ fontSize: 14, color: 'var(--green)' }}>
+                        Configurar usando o ChatGPT (OpenAI)
                       </strong>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                         Copie o contexto + Schema OpenAPI para montar ou treinar o atendente junto com o ChatGPT.
                       </span>
                       <button
@@ -5044,7 +5044,7 @@ export default function WhatsAppPage() {
                   </div>
 
                   <form onSubmit={handleApplyAiConfig} className="leo-site-box">
-                    <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>
+                    <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
                       Ou digite diretamente uma instrução para aplicar no Léo agora:
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -5062,7 +5062,7 @@ export default function WhatsAppPage() {
                   </form>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    <label style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600 }}>
                       Prompt completo e regras literais do Léo:
                     </label>
                     <textarea
@@ -5070,10 +5070,10 @@ export default function WhatsAppPage() {
                       value={config?.bot_prompt || ''}
                       onChange={e => setConfig(prev => (prev ? { ...prev, bot_prompt: e.target.value } : null))}
                       className="leo-input-dark"
-                      style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }}
+                      style={{ width: '100%', fontFamily: 'monospace', fontSize: 14, lineHeight: 1.5 }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                         Regras de Serviços Profissionais ativas: Discrição, sem parecer técnico, sem prometer prazo.
                       </span>
                       <button
@@ -5097,11 +5097,11 @@ export default function WhatsAppPage() {
                     <Bot size={15} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                       Testar Assistente Léo
                     </div>
-                    <div style={{ fontSize: 10.5, color: 'var(--green)', fontWeight: 600 }}>
-                      ⚡ Responde na hora, sem o ritmo da conversa
+                    <div style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>
+                      Responde na hora, sem o ritmo da conversa
                     </div>
                   </div>
                 </div>
@@ -5113,7 +5113,7 @@ export default function WhatsAppPage() {
                     setSimTriageState(null);
                   }}
                   className="wa-btn wa-btn-secondary"
-                  style={{ padding: '4px 10px', fontSize: 11 }}
+                  style={{ padding: '4px 10px', fontSize: 13 }}
                 >
                   Recomeçar
                 </button>
@@ -5137,10 +5137,10 @@ export default function WhatsAppPage() {
                     >
                       <MessageSquare size={20} />
                     </div>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                       Envie uma mensagem para começar
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                    <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>
                       Teste como o agente Léo responderá
                     </div>
                   </div>
@@ -5161,7 +5161,7 @@ export default function WhatsAppPage() {
                             maxWidth: '88%',
                             padding: '10px 14px',
                             borderRadius: 14,
-                            fontSize: 12.5,
+                            fontSize: 14,
                             lineHeight: 1.45,
                             background: m.from === 'user' ? 'var(--accent)' : 'var(--bg-card)',
                             color: m.from === 'user' ? '#ffffff' : 'var(--text-primary)',
@@ -5181,14 +5181,14 @@ export default function WhatsAppPage() {
                               background: 'transparent',
                               border: 'none',
                               color: 'var(--accent)',
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 600,
                               cursor: 'pointer',
                               marginTop: 4,
                               padding: '2px 4px',
                             }}
                           >
-                            ✏️ Ensinar resposta melhor
+                            Ensinar resposta melhor
                           </button>
                         )}
                       </div>
@@ -5196,7 +5196,7 @@ export default function WhatsAppPage() {
                   })
                 )}
                 {simLoading && (
-                  <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--accent)', fontWeight: 600 }}>
                     Léo está respondendo...
                   </div>
                 )}
@@ -5227,7 +5227,7 @@ export default function WhatsAppPage() {
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div
                         style={{
-                          fontSize: 11.5,
+                          fontSize: 13.5,
                           fontWeight: 700,
                           color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
@@ -5237,7 +5237,7 @@ export default function WhatsAppPage() {
                       >
                         {simPendingFile.fileName}
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
                         Pronto para conferência antes de enviar
                       </div>
                     </div>
@@ -5246,7 +5246,7 @@ export default function WhatsAppPage() {
                     type="button"
                     onClick={() => setSimPendingFile(null)}
                     className="wa-btn wa-btn-danger"
-                    style={{ padding: '3px 7px', fontSize: 10.5 }}
+                    style={{ padding: '3px 7px', fontSize: 13 }}
                   >
                     ✕
                   </button>
@@ -5332,7 +5332,7 @@ export default function WhatsAppPage() {
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Calendar size={18} color="var(--yellow)" /> Central de Follow-up & Retorno Programado
                 </h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                <p style={{ margin: '3px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
                   Acompanhe os clientes agendados, dispare mensagens de retorno no WhatsApp com 1 clique ou configure o envio automático.
                 </p>
               </div>
@@ -5344,14 +5344,14 @@ export default function WhatsAppPage() {
                     onClick={() => setFollowupFilter('pendentes')}
                     className={`wa-filter-chip ${followupFilter === 'pendentes' ? 'active' : ''}`}
                   >
-                    ⏰ Pendentes ({activeFollowupsList.length})
+                    Pendentes ({activeFollowupsList.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFollowupFilter('atrasados')}
                     className={`wa-filter-chip ${followupFilter === 'atrasados' ? 'active' : ''}`}
                   >
-                    🔴 Para Hoje / Vencidos (
+                    Para Hoje / Vencidos (
                     {
                       activeFollowupsList.filter(
                         c => c.followup_date && new Date(c.followup_date) <= new Date()
@@ -5364,7 +5364,7 @@ export default function WhatsAppPage() {
                     onClick={() => setFollowupFilter('concluidos')}
                     className={`wa-filter-chip ${followupFilter === 'concluidos' ? 'active' : ''}`}
                   >
-                    ✅ Concluídos (
+                    Concluídos (
                     {chats.filter(c => c.followup_status === 'concluido').length})
                   </button>
                   <button
@@ -5380,7 +5380,7 @@ export default function WhatsAppPage() {
                   type="button"
                   onClick={() => handleOpenFollowupModal(selectedChat || chats[0], false)}
                   className="wa-btn wa-btn-primary"
-                  style={{ fontSize: 12, padding: '7px 14px' }}
+                  style={{ fontSize: 14, padding: '7px 14px' }}
                 >
                   <Plus size={14} /> Novo Follow-up
                 </button>
@@ -5417,7 +5417,7 @@ export default function WhatsAppPage() {
                       borderRadius: 12,
                       border: '1px dashed var(--border)',
                       color: 'var(--text-muted)',
-                      fontSize: 13,
+                      fontSize: 14.5,
                     }}
                   >
                     Nenhum follow-up encontrado neste filtro. Clique em <strong>+ Novo Follow-up</strong> para agendar um retorno.
@@ -5448,10 +5448,10 @@ export default function WhatsAppPage() {
                               />
                             </div>
                             <div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                              <div style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                                 {item.name}
                               </div>
-                              <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                              <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                                 {item.phone} · {item.crm_stage}
                               </div>
                             </div>
@@ -5460,30 +5460,30 @@ export default function WhatsAppPage() {
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {isDone ? (
                               <span className="wa-tag" style={{ background: 'rgba(21,128,61,0.12)', color: 'var(--green)' }}>
-                                ✅ Concluído
+                                Concluído
                               </span>
                             ) : isSent ? (
                               <span className="wa-tag" style={{ background: 'rgba(29,78,216,0.12)', color: 'var(--blue)' }}>
-                                📤 Mensagem Enviada
+                                Mensagem Enviada
                               </span>
                             ) : isOverdue ? (
                               <span className="wa-tag" style={{ background: 'rgba(185,28,28,0.12)', color: 'var(--red)', fontWeight: 700 }}>
-                                🔴 Vencido / Hoje
+                                Vencido / Hoje
                               </span>
                             ) : (
                               <span className="wa-tag" style={{ background: 'rgba(180,83,9,0.12)', color: 'var(--yellow)', fontWeight: 700 }}>
-                                ⏰ Agendado
+                                Agendado
                               </span>
                             )}
                             {item.followup_auto_send && !isDone && (
                               <span className="wa-tag" style={{ background: 'rgba(21,128,61,0.12)', color: 'var(--green)' }}>
-                                ⚡ Auto
+                                Auto
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div style={{ fontSize: 12.5, color: 'var(--text-primary)', marginTop: 8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 8 }}>
                           <div>
                             <strong>Data/Hora:</strong>{' '}
                             {new Date(item.followup_date!).toLocaleString('pt-BR', {
@@ -5506,7 +5506,7 @@ export default function WhatsAppPage() {
                                 padding: '6px 10px',
                                 background: 'var(--bg-card2)',
                                 borderRadius: 8,
-                                fontSize: 11.5,
+                                fontSize: 13.5,
                                 color: 'var(--text-secondary)',
                                 borderLeft: '3px solid var(--accent)',
                               }}
@@ -5533,7 +5533,7 @@ export default function WhatsAppPage() {
                               type="button"
                               onClick={() => handleSendFollowupNow(item.id)}
                               className="wa-btn wa-btn-primary"
-                              style={{ padding: '5px 10px', fontSize: 11.5 }}
+                              style={{ padding: '5px 10px', fontSize: 13.5 }}
                             >
                               <Send size={12} /> Disparar no WhatsApp
                             </button>
@@ -5542,7 +5542,7 @@ export default function WhatsAppPage() {
                                 type="button"
                                 onClick={() => handleCompleteFollowup(item.id)}
                                 className="wa-btn wa-btn-green"
-                                style={{ padding: '5px 10px', fontSize: 11.5 }}
+                                style={{ padding: '5px 10px', fontSize: 13.5 }}
                               >
                                 <Check size={12} /> Concluir
                               </button>
@@ -5551,7 +5551,7 @@ export default function WhatsAppPage() {
                               type="button"
                               onClick={() => handleOpenFollowupModal(item, false)}
                               className="wa-btn wa-btn-secondary"
-                              style={{ padding: '5px 10px', fontSize: 11.5 }}
+                              style={{ padding: '5px 10px', fontSize: 13.5 }}
                             >
                               Editar
                             </button>
@@ -5567,7 +5567,7 @@ export default function WhatsAppPage() {
                               background: 'transparent',
                               border: 'none',
                               color: 'var(--accent)',
-                              fontSize: 11.5,
+                              fontSize: 13.5,
                               fontWeight: 700,
                               cursor: 'pointer',
                             }}
@@ -5600,7 +5600,7 @@ export default function WhatsAppPage() {
                 <div key={col.id} className="crm-column">
                   <div className="crm-col-header">
                     <span>{col.title}</span>
-                    <span style={{ fontSize: 11, background: 'var(--border)', padding: '2px 8px', borderRadius: 10 }}>
+                    <span style={{ fontSize: 13, background: 'var(--border)', padding: '2px 8px', borderRadius: 10 }}>
                       {colChats.length}
                     </span>
                   </div>
@@ -5617,12 +5617,12 @@ export default function WhatsAppPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div className="crm-card-title">{chat.name}</div>
                         {chat.ticket_status === 'encerrado' && (
-                          <span style={{ fontSize: 9.5, color: 'var(--green)', fontWeight: 700 }}>
+                          <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
                             ✓ Encerrado
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{chat.phone}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{chat.phone}</div>
 
                       {chat.crm_value > 0 && (
                         <div className="crm-card-val">
@@ -5649,14 +5649,14 @@ export default function WhatsAppPage() {
                           onClick={() => handleOpenFollowupModal(chat, false)}
                           className="wa-mini-action-btn"
                         >
-                          ⏰ Follow-up
+                          Follow-up
                         </button>
                         <span
                           onClick={() => {
                             selectChat(chat);
                             setActiveTab('inbox');
                           }}
-                          style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
+                          style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
                         >
                           Abrir Chat →
                         </span>
@@ -5686,19 +5686,19 @@ export default function WhatsAppPage() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
                     Nova Campanha de Transmissão em Massa
                   </h2>
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)' }}>
                     Disparo cadenciado inteligente com intervalo randômico e simulação de digitação humana
                   </p>
                 </div>
               </div>
               <span className="wa-tag" style={{ background: 'rgba(21,128,61,0.12)', color: 'var(--green)', fontWeight: 700 }}>
-                🛡️ Proteção Anti-Ban Ativa
+                Proteção Anti-Ban Ativa
               </span>
             </div>
 
             {/* 1. Nome da Campanha */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 4 }}>
                 1. Nome da Campanha:
               </label>
               <input
@@ -5707,14 +5707,14 @@ export default function WhatsAppPage() {
                 value={campName}
                 onChange={e => setCampName(e.target.value)}
                 required
-                style={{ width: '100%', padding: '9px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                style={{ width: '100%', padding: '9px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
               />
             </div>
 
             {/* 2. Seleção de Destinatários */}
             <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 700 }}>
+                <label style={{ fontSize: 14, fontWeight: 700 }}>
                   2. Selecionar Contatos do WhatsApp / CRM ({campSelectedChatIds.length} selecionados):
                 </label>
 
@@ -5722,7 +5722,7 @@ export default function WhatsAppPage() {
                   <select
                     value={campStageFilter}
                     onChange={e => setCampStageFilter(e.target.value)}
-                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{ fontSize: 13, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                   >
                     <option value="todos">Todos os Estágios ({chats.length})</option>
                     <option value="lead">Apenas Leads</option>
@@ -5780,7 +5780,7 @@ export default function WhatsAppPage() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 8,
-                          fontSize: 12,
+                          fontSize: 14,
                           padding: '5px 8px',
                           borderRadius: 6,
                           cursor: 'pointer',
@@ -5803,14 +5803,14 @@ export default function WhatsAppPage() {
                           <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {c.name}
                           </div>
-                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{c.phone}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{c.phone}</div>
                         </div>
                       </label>
                     );
                   })}
               </div>
 
-              <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                 Ou cole uma lista adicional de números/contatos (1 por linha — Ex: <code>Empresa Alfa, 46999998888</code>):
               </label>
               <textarea
@@ -5818,7 +5818,7 @@ export default function WhatsAppPage() {
                 placeholder={'Auto Posto Alvorada, 46999112233\n Construtora Horizonte, 46999445566'}
                 value={campManualNumbers}
                 onChange={e => setCampManualNumbers(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                style={{ width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
               />
               {(() => {
                 const alreadySentSet = new Set<string>();
@@ -5870,7 +5870,7 @@ export default function WhatsAppPage() {
                       marginTop: 6,
                       padding: '7px 10px',
                       borderRadius: 6,
-                      fontSize: 11.5,
+                      fontSize: 13.5,
                       background: alreadyCount > 0 ? 'rgba(234, 179, 8, 0.12)' : 'rgba(22, 163, 74, 0.08)',
                       border: `1px solid ${alreadyCount > 0 ? 'rgba(234, 179, 8, 0.35)' : 'rgba(22, 163, 74, 0.25)'}`,
                       color: 'var(--text-primary)',
@@ -5891,7 +5891,7 @@ export default function WhatsAppPage() {
             {/* 3. Mensagem com Variáveis & Spintax Anti-Ban */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 700 }}>
+                <label style={{ fontSize: 14, fontWeight: 700 }}>
                   3. Mensagem Personalizada (com Variáveis e Spintax Anti-Ban):
                 </label>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -5906,7 +5906,7 @@ export default function WhatsAppPage() {
                       type="button"
                       onClick={() => setCampMessage(prev => `${prev} ${v.token}`)}
                       className="wa-qr-chip"
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: 13 }}
                     >
                       {v.label}
                     </button>
@@ -5918,23 +5918,23 @@ export default function WhatsAppPage() {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {[
                   {
-                    label: '🎯 Frio A: Planejamento 2027',
+                    label: 'Frio A: Planejamento 2027',
                     text: '{Olá|Oi|Tudo bem}, *{primeiro_nome}*! {saudacao}! Aqui é o Léo, da Privilege Consultoria de Francisco Beltrão.\n\nEstamos apoiando empresas da região na montagem do Planejamento Estratégico e Financeiro para 2027. Vocês já definiram as metas de caixa e vendas para o ano novo ou ainda estão fechando este ano?',
                   },
                   {
-                    label: '💰 Frio B: Margem, Caixa & Impostos',
+                    label: 'Frio B: Margem, Caixa & Impostos',
                     text: '{Bom dia|Olá|Tudo bem}, *{primeiro_nome}*! {saudacao}! Sou o Léo, assistente da Privilege Contabilidade e Consultoria.\n\nEstamos conversando com empresários locais sobre proteção de margem de lucro e revisão tributária para 2027. Hoje o foco maior de vocês para o próximo ano é melhorar o caixa, reduzir impostos ou acelerar o comercial?',
                   },
                   {
-                    label: '🚀 Frio C: Gestão 360º',
+                    label: 'Frio C: Gestão 360º',
                     text: '{Oi|Olá|Tudo certo}, *{primeiro_nome}*! Aqui é o Léo, da Privilege Consultoria Empresarial aqui de Beltrão.\n\nAtuamos ajudando empresas a alinharem Financeiro, Comercial e Gestão de Pessoas para crescerem com lucro em 2027. Com quem eu consigo falar rapidamente sobre a gestão estratégica da empresa de vocês?',
                   },
                   {
-                    label: '🔄 Repescagem Lead Frio',
+                    label: 'Repescagem Lead Frio',
                     text: '{Oi|Olá}, *{primeiro_nome}*! Imagino que a rotina aí esteja corrida.\n\nMuitos empresários comentam que já têm contador, mas vale lembrar que nossa Consultoria 360º e Planejamento 2027 atuam de forma totalmente separada da contabilidade atual. Faz sentido trocarmos uma ideia rápida sobre isso?',
                   },
                   {
-                    label: '📅 Lembrete Fiscal / Documentos',
+                    label: 'Lembrete Fiscal / Documentos',
                     text: '{Olá|Oi}, *{primeiro_nome}*! {saudacao}!\n\nPassando pela *Privilege Contabilidade* para lembrar do envio dos documentos e extratos do fechamento mensal. Caso já tenha enviado, pode desconsiderar! Qualquer dúvida estamos à disposição.',
                   },
                 ].map(tpl => (
@@ -5954,7 +5954,7 @@ export default function WhatsAppPage() {
                 value={campMessage}
                 onChange={e => setCampMessage(e.target.value)}
                 required
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13, borderRadius: 10, border: '1px solid var(--border)', lineHeight: 1.5 }}
+                style={{ width: '100%', padding: '10px 12px', fontSize: 14.5, borderRadius: 10, border: '1px solid var(--border)', lineHeight: 1.5 }}
               />
 
               {/* Anexo opcional para a campanha */}
@@ -5971,12 +5971,12 @@ export default function WhatsAppPage() {
                     type="button"
                     onClick={() => campFileRef.current?.click()}
                     className="wa-btn wa-btn-secondary"
-                    style={{ fontSize: 11.5, padding: '6px 12px' }}
+                    style={{ fontSize: 13.5, padding: '6px 12px' }}
                   >
                     <Paperclip size={13} /> Anexar Imagem ou PDF na Campanha
                   </button>
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                   Dica: O uso de <code>{'{primeiro_nome}'}</code> e <code>{'{Olá|Oi}'}</code> torna cada mensagem única!
                 </span>
               </div>
@@ -5995,10 +5995,10 @@ export default function WhatsAppPage() {
                       </div>
                     )}
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        📎 Arquivo anexado para conferência: {campFileName}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Arquivo anexado para conferência: {campFileName}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                         Confira o arquivo antes de iniciar a transmissão em massa.
                       </div>
                     </div>
@@ -6010,7 +6010,7 @@ export default function WhatsAppPage() {
                       target="_blank"
                       rel="noreferrer"
                       className="wa-btn wa-btn-secondary"
-                      style={{ padding: '4px 9px', fontSize: 11, textDecoration: 'none' }}
+                      style={{ padding: '4px 9px', fontSize: 13, textDecoration: 'none' }}
                     >
                       <ExternalLink size={12} /> Conferir
                     </a>
@@ -6022,7 +6022,7 @@ export default function WhatsAppPage() {
                         setCampMediaType('text');
                       }}
                       className="wa-btn wa-btn-danger"
-                      style={{ padding: '4px 9px', fontSize: 11 }}
+                      style={{ padding: '4px 9px', fontSize: 13 }}
                     >
                       ✕ Remover
                     </button>
@@ -6036,7 +6036,7 @@ export default function WhatsAppPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ShieldCheck size={18} color="var(--green)" />
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>
                     4. Temporizador Inteligente Anti-Banimento (Proteção do Chip)
                   </span>
                 </div>
@@ -6047,28 +6047,28 @@ export default function WhatsAppPage() {
                     onClick={() => applySafetyPreset('ultra')}
                     className={`wa-filter-chip ${campSafetyPreset === 'ultra' ? 'active' : ''}`}
                   >
-                    🛡️ Ultra Seguro (20s–45s)
+                    Ultra Seguro (20s–45s)
                   </button>
                   <button
                     type="button"
                     onClick={() => applySafetyPreset('equilibrado')}
                     className={`wa-filter-chip ${campSafetyPreset === 'equilibrado' ? 'active' : ''}`}
                   >
-                    ⚖️ Equilibrado (12s–25s)
+                    Equilibrado (12s–25s)
                   </button>
                   <button
                     type="button"
                     onClick={() => applySafetyPreset('rapido')}
                     className={`wa-filter-chip ${campSafetyPreset === 'rapido' ? 'active' : ''}`}
                   >
-                    ⚡ Rápido (6s–14s)
+                    Rápido (6s–14s)
                   </button>
                 </div>
               </div>
 
               <div className="antiban-inputs-grid">
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Intervalo Mínimo (seg):
                   </label>
                   <input
@@ -6077,11 +6077,11 @@ export default function WhatsAppPage() {
                     max={300}
                     value={campMinDelay}
                     onChange={e => setCampMinDelay(Number(e.target.value))}
-                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{ width: '100%', padding: '7px 10px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Intervalo Máximo (seg):
                   </label>
                   <input
@@ -6090,11 +6090,11 @@ export default function WhatsAppPage() {
                     max={600}
                     value={campMaxDelay}
                     onChange={e => setCampMaxDelay(Number(e.target.value))}
-                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{ width: '100%', padding: '7px 10px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Pausa a cada (Lote):
                   </label>
                   <input
@@ -6103,11 +6103,11 @@ export default function WhatsAppPage() {
                     max={200}
                     value={campBatchSize}
                     onChange={e => setCampBatchSize(Number(e.target.value))}
-                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{ width: '100%', padding: '7px 10px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Descanso do Lote (seg):
                   </label>
                   <input
@@ -6116,13 +6116,13 @@ export default function WhatsAppPage() {
                     max={1800}
                     value={campBatchCooldown}
                     onChange={e => setCampBatchCooldown(Number(e.target.value))}
-                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{ width: '100%', padding: '7px 10px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={campSimulateTyping}
@@ -6131,7 +6131,7 @@ export default function WhatsAppPage() {
                   <span>✍️ <strong>Simular &ldquo;Digitando...&rdquo;</strong> por 3 a 5 segundos antes de cada mensagem</span>
                 </label>
 
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={campPersonalizeGreeting}
@@ -6140,7 +6140,7 @@ export default function WhatsAppPage() {
                   <span>🔀 <strong>Hash Anti-Spam Único:</strong> variar saudação e caracteres invisíveis em cada mensagem</span>
                 </label>
 
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={campCloseTicketAfterSend}
@@ -6149,7 +6149,7 @@ export default function WhatsAppPage() {
                   <span>🧹 <strong>Fila Limpa:</strong> manter o chamado encerrado após o envio (só abre na fila se o cliente responder)</span>
                 </label>
 
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={campAiRewrite}
@@ -6158,7 +6158,7 @@ export default function WhatsAppPage() {
                   <span>✨ <strong>Reescrita Única por IA (Leads Frios Anti-Spam):</strong> reescrever cada mensagem com Gemini/Claude variando sinônimos e estrutura para zero bloqueio</span>
                 </label>
 
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={campSkipAlreadySent}
@@ -6174,7 +6174,7 @@ export default function WhatsAppPage() {
                 type="submit"
                 disabled={creatingCampaign}
                 className="wa-btn wa-btn-primary"
-                style={{ padding: '10px 20px', fontSize: 13 }}
+                style={{ padding: '10px 20px', fontSize: 14.5 }}
               >
                 <Send size={15} />{' '}
                 {creatingCampaign
@@ -6195,7 +6195,7 @@ export default function WhatsAppPage() {
                   type="button"
                   onClick={loadCampaigns}
                   className="wa-btn wa-btn-secondary"
-                  style={{ padding: '5px 10px', fontSize: 11 }}
+                  style={{ padding: '5px 10px', fontSize: 13 }}
                 >
                   <RefreshCw size={12} /> Atualizar
                 </button>
@@ -6210,7 +6210,7 @@ export default function WhatsAppPage() {
                     borderRadius: 12,
                     border: '1px dashed var(--border)',
                     color: 'var(--text-muted)',
-                    fontSize: 13,
+                    fontSize: 14.5,
                   }}
                 >
                   Nenhuma campanha disparada ainda. Configure sua lista ao lado e clique em <strong>Iniciar Transmissão</strong>.
@@ -6229,10 +6229,10 @@ export default function WhatsAppPage() {
                       <div key={camp.id} className="campaign-card-item">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                           <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <div style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                               {camp.name}
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                               Delay: {camp.anti_ban_config?.minDelaySec || 15}s a{' '}
                               {camp.anti_ban_config?.maxDelaySec || 35}s · Lote:{' '}
                               {camp.anti_ban_config?.batchSize || 20} msgs
@@ -6261,22 +6261,22 @@ export default function WhatsAppPage() {
                               fontWeight: 700,
                             }}
                           >
-                            {isRunning && '🟢 Disparando...'}
-                            {isPaused && '⏸️ Pausada'}
-                            {camp.status === 'concluida' && '✅ Concluída'}
-                            {camp.status === 'cancelada' && '⏹️ Cancelada'}
-                            {camp.status === 'rascunho' && '📝 Rascunho'}
+                            {isRunning && 'Disparando...'}
+                            {isPaused && 'Pausada'}
+                            {camp.status === 'concluida' && 'Concluída'}
+                            {camp.status === 'cancelada' && 'Cancelada'}
+                            {camp.status === 'rascunho' && 'Rascunho'}
                           </span>
                         </div>
 
                         {/* Barra de Progresso */}
                         <div style={{ marginTop: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
                             <span>
                               Enviados: <strong>{camp.sent_count}</strong> de <strong>{camp.total_count}</strong>
                               {' · '}
                               <span style={{ color: '#2563eb', fontWeight: 600 }}>
-                                👁️ Visualizados: {camp.read_count ?? (Array.isArray(camp.recipients) ? camp.recipients.filter((r: any) => r.deliveryStatus === 'visualizado').length : 0)}
+                                Visualizados: {camp.read_count ?? (Array.isArray(camp.recipients) ? camp.recipients.filter((r: any) => r.deliveryStatus === 'visualizado').length : 0)}
                               </span>
                               {camp.failed_count > 0 ? ` · ${camp.failed_count} falhas` : ''}
                             </span>
@@ -6299,7 +6299,7 @@ export default function WhatsAppPage() {
                               borderRadius: 8,
                               background: 'var(--bg-card2)',
                               border: '1px solid var(--border)',
-                              fontSize: 11.5,
+                              fontSize: 13.5,
                               color: 'var(--text-secondary)',
                             }}
                           >
@@ -6315,7 +6315,7 @@ export default function WhatsAppPage() {
                                 type="button"
                                 onClick={() => handleCampaignAction(camp.id, 'pause')}
                                 className="wa-btn wa-btn-secondary"
-                                style={{ padding: '4px 10px', fontSize: 11 }}
+                                style={{ padding: '4px 10px', fontSize: 13 }}
                               >
                                 <Pause size={12} /> Pausar
                               </button>
@@ -6325,7 +6325,7 @@ export default function WhatsAppPage() {
                                 type="button"
                                 onClick={() => handleCampaignAction(camp.id, 'start')}
                                 className="wa-btn wa-btn-green"
-                                style={{ padding: '4px 10px', fontSize: 11 }}
+                                style={{ padding: '4px 10px', fontSize: 13 }}
                               >
                                 <Play size={12} /> Retomar Envio
                               </button>
@@ -6335,7 +6335,7 @@ export default function WhatsAppPage() {
                                 type="button"
                                 onClick={() => handleCampaignAction(camp.id, 'cancel')}
                                 className="wa-btn wa-btn-danger"
-                                style={{ padding: '4px 10px', fontSize: 11 }}
+                                style={{ padding: '4px 10px', fontSize: 13 }}
                               >
                                 Cancelar
                               </button>
@@ -6344,7 +6344,7 @@ export default function WhatsAppPage() {
                               type="button"
                               onClick={() => handleCampaignAction(camp.id, 'delete')}
                               className="wa-btn wa-btn-secondary"
-                              style={{ padding: '4px 8px', fontSize: 11, color: 'var(--red)' }}
+                              style={{ padding: '4px 8px', fontSize: 13, color: 'var(--red)' }}
                               title="Excluir campanha"
                             >
                               <Trash2 size={12} />
@@ -6360,7 +6360,7 @@ export default function WhatsAppPage() {
                               background: 'transparent',
                               border: 'none',
                               color: 'var(--accent)',
-                              fontSize: 11.5,
+                              fontSize: 13.5,
                               fontWeight: 700,
                               cursor: 'pointer',
                             }}
@@ -6396,7 +6396,7 @@ export default function WhatsAppPage() {
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     gap: 8,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     padding: '5px 8px',
                                     borderRadius: 6,
                                     background: 'var(--bg-card2)',
@@ -6405,7 +6405,7 @@ export default function WhatsAppPage() {
                                   <div style={{ minWidth: 0 }}>
                                     <strong>{rec.name}</strong> ({rec.phone})
                                     {rec.error && (
-                                      <div style={{ fontSize: 10.5, color: 'var(--red)', marginTop: 1 }}>
+                                      <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 1 }}>
                                         {rec.error}
                                       </div>
                                     )}
@@ -6423,14 +6423,14 @@ export default function WhatsAppPage() {
                                               : 'var(--text-muted)',
                                       }}
                                     >
-                                      {isRead && '👁️ Visualizado ✓✓'}
+                                      {isRead && 'Visualizado ✓✓'}
                                       {!isRead && isDelivered && '✓✓ Entregue'}
                                       {!isRead && !isDelivered && isSent && '✓ Enviado'}
-                                      {rec.status === 'pendente' && '⏳ Na fila'}
-                                      {isFail && '❌ Falha'}
+                                      {rec.status === 'pendente' && 'Na fila'}
+                                      {isFail && 'Falha'}
                                     </span>
                                     {(rec.readAt || rec.sentAt) && (
-                                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                      <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
                                         {rec.readAt
                                           ? `Lido ${new Date(rec.readAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
                                           : `Env ${new Date(rec.sentAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
@@ -6458,10 +6458,10 @@ export default function WhatsAppPage() {
       {activeTab === 'qrcode' && (
         <div className="wa-qr-grid">
           <div className="wa-card" style={{ textAlign: 'center' }}>
-            <h2 style={{ fontFamily: 'Instrument Serif', fontSize: 24, margin: '0 0 6px' }}>
+            <h2 style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px' }}>
               Conexão WhatsApp Web via QR Code
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 auto 16px', maxWidth: 400 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: '0 auto 16px', maxWidth: 400 }}>
               Código criptográfico autêntico do WhatsApp Multi-Device. Aponte a câmera do WhatsApp para conectar imediatamente.
             </p>
 
@@ -6479,7 +6479,7 @@ export default function WhatsAppPage() {
                 <h3 style={{ margin: 0, fontSize: 18, color: 'var(--green)', fontWeight: 700 }}>
                   WhatsApp Conectado com Sucesso!
                 </h3>
-                <p style={{ fontSize: 14, fontWeight: 600, margin: '6px 0 0', color: 'var(--text-primary)' }}>
+                <p style={{ fontSize: 15.5, fontWeight: 600, margin: '6px 0 0', color: 'var(--text-primary)' }}>
                   {config.phone_number || '+55 (46) 99123-4567'}
                 </p>
                 <button
@@ -6496,7 +6496,7 @@ export default function WhatsAppPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={config.qr_code} alt="QR Code WhatsApp" className="wa-qr-img" />
                 ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 14.5 }}>
                     <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 8px', color: 'var(--accent)' }} />
                     Gerando QR Code oficial...
                   </div>
@@ -6522,7 +6522,7 @@ export default function WhatsAppPage() {
               <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Phone size={16} color="var(--green)" /> Passo a Passo para Parear
               </h3>
-              <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13.5, lineHeight: 1.8, color: 'var(--text-secondary)' }}>
+              <ol style={{ paddingLeft: 20, margin: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-secondary)' }}>
                 <li>Abra o aplicativo do WhatsApp no smartphone corporativo.</li>
                 <li>Toque em <strong>Configurações</strong> ou nos <strong>três pontos</strong> no canto superior.</li>
                 <li>Selecione <strong>Aparelhos Conectados</strong> e clique em <strong>Conectar um Aparelho</strong>.</li>
@@ -6536,7 +6536,7 @@ export default function WhatsAppPage() {
                 <ExternalLink size={16} color="var(--blue)" /> Integração Aberta (GitHub Baileys / Evolution API)
               </h3>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   URL do Webhook para Recebimento em Tempo Real
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -6547,7 +6547,7 @@ export default function WhatsAppPage() {
                     style={{
                       flex: 1,
                       padding: '8px 12px',
-                      fontSize: 12,
+                      fontSize: 14,
                       fontFamily: 'monospace',
                       borderRadius: 8,
                       border: '1px solid var(--border)',
@@ -6562,7 +6562,7 @@ export default function WhatsAppPage() {
                       setTimeout(() => setCopiedWebhook(false), 2000);
                     }}
                     className="wa-btn wa-btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: 12 }}
+                    style={{ padding: '6px 12px', fontSize: 14 }}
                   >
                     {copiedWebhook ? <Check size={14} color="var(--green)" /> : <Copy size={14} />}
                     {copiedWebhook ? 'Copiado!' : 'Copiar'}
@@ -6572,7 +6572,7 @@ export default function WhatsAppPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                     URL da API
                   </label>
                   <input
@@ -6582,11 +6582,11 @@ export default function WhatsAppPage() {
                       setConfig(prev => (prev ? { ...prev, api_url: e.target.value } : null))
                     }
                     placeholder="https://api.evolution-api.com"
-                    style={{ width: '100%', padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card2)' }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card2)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                     Instância
                   </label>
                   <input
@@ -6596,7 +6596,7 @@ export default function WhatsAppPage() {
                       setConfig(prev => (prev ? { ...prev, instance_name: e.target.value } : null))
                     }
                     placeholder="privilege"
-                    style={{ width: '100%', padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card2)' }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card2)' }}
                   />
                 </div>
               </div>
@@ -6647,7 +6647,7 @@ export default function WhatsAppPage() {
 
             <form onSubmit={handleCreateNewChat} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, display: 'block', marginBottom: 4 }}>
                   WhatsApp / Celular com DDD:
                 </label>
                 <input
@@ -6656,12 +6656,12 @@ export default function WhatsAppPage() {
                   value={newChatPhone}
                   onChange={e => setNewChatPhone(e.target.value)}
                   required
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, display: 'block', marginBottom: 4 }}>
                   Nome da Empresa / Cliente:
                 </label>
                 <input
@@ -6669,7 +6669,7 @@ export default function WhatsAppPage() {
                   placeholder="Ex: Auto Posto Alvorada"
                   value={newChatName}
                   onChange={e => setNewChatName(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
@@ -6720,19 +6720,19 @@ export default function WhatsAppPage() {
               </button>
             </div>
 
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
               Ensine a resposta oficial da Privilege Contabilidade. O robô memoriza e usa essa resposta para sempre.
             </p>
 
             <form onSubmit={handleTeachSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Tópico:
                 </label>
                 <select
                   value={newKbTopic}
                   onChange={e => setNewKbTopic(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', fontSize: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
                 >
                   <option value="Tributário / Fiscal">Tributário / Fiscal</option>
                   <option value="Honorários / Financeiro">Honorários / Financeiro</option>
@@ -6744,7 +6744,7 @@ export default function WhatsAppPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Pergunta do Cliente:
                 </label>
                 <input
@@ -6752,12 +6752,12 @@ export default function WhatsAppPage() {
                   value={newKbQuestion}
                   onChange={e => setNewKbQuestion(e.target.value)}
                   required
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Resposta que o Robô deve Dar:
                 </label>
                 <textarea
@@ -6766,7 +6766,7 @@ export default function WhatsAppPage() {
                   onChange={e => setNewKbAnswer(e.target.value)}
                   placeholder="Escreva a resposta correta..."
                   required
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
@@ -6823,7 +6823,7 @@ export default function WhatsAppPage() {
             <form onSubmit={handleSaveFollowup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Escolha de cliente */}
               <div>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Cliente / Conversa:
                 </label>
                 <select
@@ -6841,7 +6841,7 @@ export default function WhatsAppPage() {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    fontSize: 13,
+                    fontSize: 14.5,
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--bg-card)',
@@ -6857,7 +6857,7 @@ export default function WhatsAppPage() {
 
               {/* Atalhos rápidos de data/hora */}
               <div>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                   Atalhos Rápidos de Tempo:
                 </label>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -6881,7 +6881,7 @@ export default function WhatsAppPage() {
                   ))}
                 </div>
 
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Data e Horário Exato do Retorno:
                 </label>
                 <input
@@ -6889,13 +6889,13 @@ export default function WhatsAppPage() {
                   value={followupDate}
                   onChange={e => setFollowupDate(e.target.value)}
                   required
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
               {/* Pauta interna */}
               <div>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   Motivo / Pauta Interna do Retorno:
                 </label>
                 <input
@@ -6903,36 +6903,36 @@ export default function WhatsAppPage() {
                   placeholder="Ex: Retorno sobre proposta de Consultoria 360º ou cobrança de documentos..."
                   value={followupNote}
                   onChange={e => setFollowupNote(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
               {/* Templates e Mensagem de WhatsApp */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)' }}>
+                  <label style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)' }}>
                     Mensagem de Follow-up para o WhatsApp:
                   </label>
-                  <span style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 600 }}>
+                  <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
                     Modelos prontos:
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                   {[
                     {
-                      label: '💼 Retorno Comercial',
+                      label: 'Retorno Comercial',
                       text: `Olá, ${(chats.find(c => c.id === followupTargetChatId)?.name || 'tudo bem')}! 😊 Passando para saber se conseguiu avaliar nossa conversa sobre a consultoria empresarial da Privilege. Ficou alguma dúvida em que eu possa te ajudar?`,
                     },
                     {
-                      label: '📄 Lembrar Documentos',
+                      label: 'Lembrar Documentos',
                       text: `Olá, ${(chats.find(c => c.id === followupTargetChatId)?.name || 'tudo bem')}! Tudo bem? Passando para lembrar do envio da documentação pendente para darmos andamento por aqui.`,
                     },
                     {
-                      label: '📊 Abertura / CNPJ',
+                      label: 'Abertura / CNPJ',
                       text: `Olá, ${(chats.find(c => c.id === followupTargetChatId)?.name || 'tudo bem')}! Passando para acompanhar o processo de abertura do seu CNPJ com a equipe da Privilege Contabilidade. Podemos avançar com os próximos passos?`,
                     },
                     {
-                      label: '🤝 Pós-Atendimento',
+                      label: 'Pós-Atendimento',
                       text: `Olá, ${(chats.find(c => c.id === followupTargetChatId)?.name || 'tudo bem')}! Passando para confirmar se deu tudo certo com a sua solicitação ou se precisa de mais algum suporte da nossa equipe.`,
                     },
                   ].map(tpl => (
@@ -6951,7 +6951,7 @@ export default function WhatsAppPage() {
                   placeholder="Mensagem que será enviada no WhatsApp do cliente..."
                   value={followupMessage}
                   onChange={e => setFollowupMessage(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1px solid var(--border)' }}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 14.5, borderRadius: 8, border: '1px solid var(--border)' }}
                 />
               </div>
 
@@ -6967,22 +6967,22 @@ export default function WhatsAppPage() {
                   gap: 8,
                 }}
               >
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600 }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600 }}>
                   <input
                     type="checkbox"
                     checked={followupAutoSend}
                     onChange={e => setFollowupAutoSend(e.target.checked)}
                   />
-                  <span>⚡ Disparar esta mensagem automaticamente no WhatsApp ao chegar na data/hora</span>
+                  <span>Disparar esta mensagem automaticamente no WhatsApp ao chegar na data/hora</span>
                 </label>
 
-                <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={closeTicketOnFollowup}
                     onChange={e => setCloseTicketOnFollowup(e.target.checked)}
                   />
-                  <span>🧹 Encerrar o chamado atual agora para deixar a fila de abertos limpa até o retorno</span>
+                  <span>Encerrar o chamado atual agora para deixar a fila de abertos limpa até o retorno</span>
                 </label>
               </div>
 
@@ -6996,7 +6996,7 @@ export default function WhatsAppPage() {
                     )
                   }
                   className="wa-btn wa-btn-green"
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 14 }}
                 >
                   <Send size={13} /> Disparar no WhatsApp Agora
                 </button>
@@ -7023,12 +7023,12 @@ export default function WhatsAppPage() {
         <div className="wa-modal-overlay" onClick={() => !agendaSaving && setIsAgendaModalOpen(false)}>
           <div className="wa-modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>📅 Criar Tarefa na Agenda</h3>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Criar Tarefa na Agenda</h3>
               <button
                 type="button"
                 onClick={() => setIsAgendaModalOpen(false)}
                 className="wa-btn wa-btn-secondary"
-                style={{ padding: '4px 8px', fontSize: 12 }}
+                style={{ padding: '4px 8px', fontSize: 14 }}
               >
                 ✕
               </button>
@@ -7089,12 +7089,12 @@ export default function WhatsAppPage() {
         <div className="wa-modal-overlay" onClick={() => !protocolSaving && setIsProtocolModalOpen(false)}>
           <div className="wa-modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🎫 Protocolo de Atendimento</h3>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Protocolo de Atendimento</h3>
               <button
                 type="button"
                 onClick={() => setIsProtocolModalOpen(false)}
                 className="wa-btn wa-btn-secondary"
-                style={{ padding: '4px 8px', fontSize: 12 }}
+                style={{ padding: '4px 8px', fontSize: 14 }}
               >
                 ✕
               </button>
@@ -7107,7 +7107,7 @@ export default function WhatsAppPage() {
                   borderRadius: 8,
                   background: 'var(--bg-card2)',
                   border: '1px solid var(--border)',
-                  fontSize: 12,
+                  fontSize: 14,
                 }}
               >
                 Protocolo atual: <strong style={{ fontFamily: 'monospace' }}>{selectedChat.protocol_number}</strong>
@@ -7135,7 +7135,7 @@ export default function WhatsAppPage() {
                   placeholder="Resumo do que foi tratado e resolvido..."
                 />
               </div>
-              <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={protocolSendToClient}

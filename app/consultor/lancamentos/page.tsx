@@ -1064,7 +1064,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               >
                 <button
                   className="btn btn-ghost btn-sm"
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 14, padding: '8px 12px' }}
                   onClick={() => { handleExportToExcel(); setShowExportMenu(false); }}
                 >
                   <FileSpreadsheet size={13} /> Baixar Excel (.xlsx)
@@ -1072,14 +1072,14 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
                 <button
                   className="btn btn-ghost btn-sm"
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 14, padding: '8px 12px' }}
                   onClick={() => { handleExportCsvDuvidosos(); setShowExportMenu(false); }}
                 >
                   <AlertTriangle size={13} /> Exportar Duvidosos (CSV)
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
-                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 12, padding: '8px 12px' }}
+                  style={{ justifyContent: 'flex-start', width: '100%', fontSize: 14, padding: '8px 12px' }}
                   onClick={() => { handlePrintDuvidosos(); setShowExportMenu(false); }}
                 >
                   <Printer size={13} /> Imprimir Duvidosos (PDF)
@@ -1101,21 +1101,21 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
           <button
             className={`btn ${(!filtros.status && !filtros.tipo) ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
+            style={{ fontSize: 14 }}
             onClick={() => setFiltros(f => ({ ...f, status: '', tipo: '' }))}
           >
             <ListFilter size={13} /> Todos os Lançamentos
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'receita') ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
+            style={{ fontSize: 14 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'receita' }))}
           >
             <Wallet size={13} /> Contas a Receber (Pendentes)
           </button>
           <button
             className={`btn ${(filtros.status === 'previsto' && filtros.tipo === 'despesa') ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 12.5 }}
+            style={{ fontSize: 14 }}
             onClick={() => setFiltros(f => ({ ...f, status: 'previsto', tipo: 'despesa' }))}
           >
             <Receipt size={13} /> Contas a Pagar (Pendentes)
@@ -1218,7 +1218,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', paddingBottom: '8px' }}>
               <input type="checkbox" id="check-semplano" checked={filtros.semPlano} onChange={e => setFiltros(f => ({ ...f, semPlano: e.target.checked }))} />
-              <label htmlFor="check-semplano" style={{ fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <label htmlFor="check-semplano" style={{ fontSize: 14.5, color: 'var(--text-secondary)', userSelect: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <AlertTriangle size={12} color="var(--yellow)" /> Ver Sem Plano ({filtered.filter(l => l.planoContaId !== 'transf' && (!l.planoContaId || !planoContas.some(pc => pc.id === l.planoContaId))).length})
               </label>
             </div>
@@ -1313,7 +1313,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <td style={{ textAlign: 'center' }}>
                         <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
                       {/* Descrição - Double Click to Edit */}
                       <td style={{ fontWeight: 500, maxWidth: 200, padding: 0 }}>
                         {inlineEditRowId === l.id && inlineEditField === 'descricao' ? (
@@ -1326,7 +1326,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               onBlur={() => saveInlineEdit(l, 'descricao', inlineValue)}
                               onKeyDown={e => handleTurboNav(e, 'descricao', inlineValue)}
                               autoFocus
-                              style={{ width: '100%', padding: '4px 8px', fontSize: '13px' }}
+                              style={{ width: '100%', padding: '4px 8px', fontSize: '14.5px' }}
                             />
                           </div>
                         ) : (
@@ -1346,13 +1346,13 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                                   href={`/api/lancamentos/attachment?id=${l.id}`}
                                   download={l.attachmentName}
                                   title={`Anexo: ${l.attachmentName}`}
-                                  style={{ textDecoration: 'none', fontSize: 14 }}
+                                  style={{ textDecoration: 'none', fontSize: 15.5 }}
                                   onClick={e => e.stopPropagation()}
                                 >📎</a>
                               )}
                             </div>
                             {l.observacao && (
-                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
+                              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 'normal' }}>
                                 {l.observacao}
                               </div>
                             )}
@@ -1361,9 +1361,9 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       </td>
 
                       {/* Plano de Contas - Single Click to Edit */}
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: 0 }}>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)', padding: 0 }}>
                         {l.planoContaId === 'transf' ? (
-                          <div style={{ padding: '8px 14px', color: 'var(--accent)', fontStyle: 'italic', fontSize: 11 }}>⇄ Transf.</div>
+                          <div style={{ padding: '8px 14px', color: 'var(--accent)', fontStyle: 'italic', fontSize: 13 }}>⇄ Transf.</div>
                         ) : inlineEditRowId === l.id && inlineEditField === 'planoContaId' ? (
                           <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <input
@@ -1373,7 +1373,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               onChange={e => setInlineSearch(e.target.value)}
                               onKeyDown={e => handleTurboNav(e, 'planoContaId', inlineValue)}
                               autoFocus
-                              style={{ padding: '4px', fontSize: '11px', height: '24px' }}
+                              style={{ padding: '4px', fontSize: '13px', height: '24px' }}
                             />
                             <select
                               className="form-control form-control-sm"
@@ -1384,7 +1384,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               }}
                               onKeyDown={e => handleTurboNav(e, 'planoContaId', inlineValue)}
                               size={4}
-                              style={{ width: '100%', padding: '2px 4px', fontSize: '11px', maxHeight: '100px' }}
+                              style={{ width: '100%', padding: '2px 4px', fontSize: '13px', maxHeight: '100px' }}
                             >
                               <option value="">-- Sem Categoria --</option>
                               {planoContas.filter(p => {
@@ -1416,7 +1416,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       </td>
 
                       {/* Portador - Single Click to Edit */}
-                      <td style={{ fontSize: 12, padding: 0 }}>
+                      <td style={{ fontSize: 14, padding: 0 }}>
                         {inlineEditRowId === l.id && inlineEditField === 'portadorId' ? (
                           <div style={{ padding: '4px' }}>
                             <select
@@ -1429,7 +1429,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               onBlur={cancelInlineEdit}
                               onKeyDown={e => handleTurboNav(e, 'portadorId', inlineValue)}
                               autoFocus
-                              style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
+                              style={{ width: '100%', padding: '2px 4px', fontSize: '14px' }}
                             >
                               {portadores.map(p => (
                                 <option key={p.id} value={p.id}>{p.nome}</option>
@@ -1450,7 +1450,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                           </div>
                         )}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
                       <td><span className={`badge ${l.status === 'realizado' ? 'badge-blue' : 'badge-yellow'}`}>{l.status === 'realizado' ? 'Realizado' : 'Previsto'}</span></td>
                       <td><span className={`badge ${l.origem === 'ofx' ? 'badge-purple' : 'badge-gray'}`}>{l.origem === 'ofx' ? 'OFX' : 'Manual'}</span></td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: (l.tipo === 'receita' && pc && pc.descricao.trim().startsWith('( - )')) ? 'var(--red)' : l.tipo === 'receita' ? 'var(--green)' : 'var(--red)', whiteSpace: 'nowrap' }}>
@@ -1470,10 +1470,10 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                           {l.status === 'previsto' && l.tipo === 'receita' && activeCompany?.bancoBoleto === 'c6' && (
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 11, background: '#000', color: '#fff', border: 'none', marginRight: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              style={{ padding: '4px 8px', fontSize: 13, background: '#000', color: '#fff', border: 'none', marginRight: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                               onClick={() => handleOpenC6Boleto(l)}
                             >
-                              🖤 Boleto C6
+                              Boleto C6
                             </button>
                           )}
                           <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
@@ -1494,7 +1494,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
 
           {filtered.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                 Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, filtered.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong>
                 {selectedIds.length > 0 && ` · ${selectedIds.length} selecionados`}
               </div>
@@ -1503,7 +1503,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   className="form-control form-control-sm"
                   value={pageSize}
                   onChange={e => setPageSize(Number(e.target.value))}
-                  style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                  style={{ width: 'auto', padding: '5px 8px', fontSize: 14 }}
                   title="Itens por página"
                 >
                   {[25, 50, 100, 200].map(n => <option key={n} value={n}>{n} / página</option>)}
@@ -1515,7 +1515,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} title="Página anterior">
                     <ChevronLeft size={14} />
                   </button>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
                     Página {pageSafe} de {totalPages}
                   </span>
                   <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} title="Próxima página">
@@ -1667,18 +1667,18 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                     checked={form.isRecorrente || false}
                     onChange={e => setForm(f => ({ ...f, isRecorrente: e.target.checked, parcelas: e.target.checked ? 12 : undefined }))}
                   />
-                  🔄 Lançamento Recorrente (Criar parcelas futuras)
+                  Lançamento Recorrente (Criar parcelas futuras)
                 </label>
                 {form.isRecorrente && (
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
-                      <label className="form-label" style={{ fontSize: 11 }}>Frequência</label>
+                      <label className="form-label" style={{ fontSize: 13 }}>Frequência</label>
                       <select className="form-control form-control-sm" disabled>
                         <option>Mensal</option>
                       </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label className="form-label" style={{ fontSize: 11 }}>Total de Meses</label>
+                      <label className="form-label" style={{ fontSize: 13 }}>Total de Meses</label>
                       <input 
                         type="number" 
                         min={2} 
@@ -1696,8 +1696,8 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             <div className="form-group">
               <label className="form-label">Anexo (Opcional)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="file" onChange={handleFileChange} style={{ fontSize: 12 }} />
-                {form.attachmentName && <span style={{ fontSize: 12, color: 'var(--green)' }}>✓ {form.attachmentName}</span>}
+                <input type="file" onChange={handleFileChange} style={{ fontSize: 14 }} />
+                {form.attachmentName && <span style={{ fontSize: 14, color: 'var(--green)' }}>✓ {form.attachmentName}</span>}
               </div>
             </div>
 
@@ -1715,15 +1715,15 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
           <div className="modal modal-lg" style={{ maxWidth: '650px', padding: '24px' }}>
             <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', marginBottom: '16px' }}>
               <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>{bulkMode === 'transferir' ? '⇄ Transferir em Lote' : '🔄 Ações em Lote'}</span>
-                <span className="badge badge-purple" style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '12px' }}>
+                <span>{bulkMode === 'transferir' ? '⇄ Transferir em Lote' : 'Ações em Lote'}</span>
+                <span className="badge badge-purple" style={{ fontSize: '13px', padding: '4px 8px', borderRadius: '12px' }}>
                   {selectedIds.length} selecionados
                 </span>
               </h2>
               <button className="modal-close" onClick={() => { setShowReclassModal(false); setSelectedIds([]); }}>✕</button>
             </div>
 
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
+            <p style={{ fontSize: '14.5px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
               {bulkMode === 'transferir'
                 ? `Mover o saldo de ${selectedIds.length} lançamentos para outro portador criando uma transferência correspondente.`
                 : `Alterar categoria ou portador de ${selectedIds.length} lançamentos simultaneamente.`}
@@ -1737,11 +1737,11 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               padding: '12px', 
               marginBottom: '20px' 
             }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>📋 Lançamentos selecionados para alteração:</span>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Lançamentos selecionados para alteração:</span>
                 <span style={{ color: 'var(--accent)', fontWeight: 800 }}>{selectedLancamentosList.length} itens</span>
               </div>
-              <div style={{ maxHeight: '110px', overflowY: 'auto', fontSize: '11.5px', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+              <div style={{ maxHeight: '110px', overflowY: 'auto', fontSize: '13.5px', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
                 {selectedLancamentosList.map(l => {
                   const port = portadores.find(p => p.id === l.portadorId)?.nome || '-';
                   return (
@@ -1762,7 +1762,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 padding: '12px 14px', 
                 background: 'rgba(59, 130, 246, 0.08)', 
                 borderRadius: '8px', 
-                fontSize: '12.5px', 
+                fontSize: '14px', 
                 color: 'var(--text-secondary)', 
                 marginBottom: '20px', 
                 border: '1px solid rgba(59, 130, 246, 0.2)', 
@@ -1773,16 +1773,16 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </div>
             ) : (
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>🏷️</span> Nova Categoria (Opcional)
                 </label>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <input
-                    placeholder="🔍 Digite para filtrar categorias..."
+                    placeholder="Digite para filtrar categorias..."
                     className="form-control form-control-sm"
                     value={reclassContaSearch}
                     onChange={e => setReclassContaSearch(e.target.value)}
-                    style={{ fontSize: '12px' }}
+                    style={{ fontSize: '14px' }}
                   />
                   <select 
                     className="form-control" 
@@ -1791,7 +1791,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                     size={4} 
                     style={{ 
                       maxHeight: '120px', 
-                      fontSize: '12px',
+                      fontSize: '14px',
                       border: '1px solid var(--border)',
                       borderRadius: '6px',
                       background: 'var(--bg-card)'
@@ -1807,14 +1807,14 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             )}
 
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label className="form-label" style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>💳</span> {bulkMode === 'transferir' ? 'Portador Destino *' : 'Novo Portador (Opcional)'}
               </label>
               <select 
                 className="form-control" 
                 value={reclassPortadorId} 
                 onChange={e => setReclassPortadorId(e.target.value)}
-                style={{ fontSize: '12.5px' }}
+                style={{ fontSize: '14px' }}
               >
                 <option value="">{bulkMode === 'transferir' ? 'Selecione o destino...' : 'Manter portador original'}</option>
                 {portadores.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -1825,7 +1825,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               <button 
                 className="btn btn-secondary" 
                 onClick={() => { setShowReclassModal(false); setSelectedIds([]); }}
-                style={{ padding: '8px 16px', fontSize: '12.5px' }}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
               >
                 Cancelar
               </button>
@@ -1834,12 +1834,12 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 onClick={handleBulkReclassify}
                 style={{ 
                   padding: '8px 20px', 
-                  fontSize: '12.5px',
+                  fontSize: '14px',
                   background: bulkMode === 'transferir' ? 'var(--primary-color)' : 'var(--accent)',
                   borderColor: bulkMode === 'transferir' ? 'var(--primary-color)' : 'var(--accent)'
                 }}
               >
-                {bulkMode === 'transferir' ? '🔄 Realizar Transferências' : '⚡ Executar Alterações'}
+                {bulkMode === 'transferir' ? 'Realizar Transferências' : 'Executar Alterações'}
               </button>
             </div>
           </div>
@@ -1865,9 +1865,9 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   onChange={e => e.target.files?.[0] && handleCardFile(e.target.files[0])}
                 />
                 <button className="btn btn-secondary" onClick={() => document.getElementById('card-file-input')?.click()}>
-                  {cardFileName ? '📎 Alterar Arquivo' : '📂 Selecionar Arquivo (CSV/Excel)'}
+                  {cardFileName ? 'Alterar Arquivo' : 'Selecionar Arquivo (CSV/Excel)'}
                 </button>
-                {cardFileName && <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>{cardFileName}</span>}
+                {cardFileName && <span style={{ fontSize: 14.5, color: 'var(--accent)', fontWeight: 600 }}>{cardFileName}</span>}
               </div>
 
               {cardImportRows.length > 0 && (
@@ -1894,7 +1894,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               const rec = cardImportRows.filter(r => r.tipo === 'receita');
               const desp = cardImportRows.filter(r => r.tipo === 'despesa');
               return (
-                <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 12, fontSize: 12.5, fontWeight: 600 }}>
+                <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
                   <span style={{ color: 'var(--green, #16a34a)' }}>↑ {rec.length} receita(s): {fmt.currency(soma(rec))}</span>
                   <span style={{ color: 'var(--red, #dc2626)' }}>↓ {desp.length} despesa(s): {fmt.currency(soma(desp))}</span>
                   <span style={{ color: 'var(--text-muted)' }}>Clique no tipo de cada linha para corrigir, se preciso.</span>
@@ -1920,15 +1920,15 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                   ) : cardImportRows.map(row => (
                     <tr key={row.id}>
                       <td><input type="checkbox" checked={cardSelectedIds.includes(row.id)} onChange={() => toggleCardImportRow(row.id)} /></td>
-                      <td style={{ fontSize: 12 }}>{fmt.date(row.data)}</td>
-                      <td style={{ fontSize: 12, fontWeight: 500 }}>{row.descricao}</td>
+                      <td style={{ fontSize: 14 }}>{fmt.date(row.data)}</td>
+                      <td style={{ fontSize: 14, fontWeight: 500 }}>{row.descricao}</td>
                       <td>
                         <button
                           type="button"
                           onClick={() => toggleCardRowTipo(row.id)}
                           title="Clique para alternar entre Receita e Despesa"
                           style={{
-                            fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                            fontSize: 13, fontWeight: 700, padding: '3px 9px', borderRadius: 6, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
                             background: row.tipo === 'receita' ? 'var(--green-bg, #dcfce7)' : 'var(--red-bg, #fee2e2)',
                             color: row.tipo === 'receita' ? 'var(--green, #16a34a)' : 'var(--red, #dc2626)',
                           }}
@@ -1960,7 +1960,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
             <div className="form-actions" style={{ marginTop: 20 }}>
               <button className="btn btn-secondary" onClick={() => setShowCardImportModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleCardImport} disabled={cardImporting || cardSelectedIds.length === 0}>
-                {cardImporting ? '⏳ Importando...' : `Importar ${cardSelectedIds.length} Selecionados`}
+                {cardImporting ? 'Importando...' : `Importar ${cardSelectedIds.length} Selecionados`}
               </button>
             </div>
           </div>
@@ -2002,7 +2002,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 <span style={{ fontSize: 20 }}>🖤</span> Emissão de Boleto C6 Bank
               </h2>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary" style={{ background: '#000', borderColor: '#000' }} onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
+                <button className="btn btn-primary" style={{ background: '#000', borderColor: '#000' }} onClick={() => window.print()}>Imprimir / Salvar PDF</button>
                 <button className="modal-close" onClick={() => setShowC6BoletoModal(false)}>✕</button>
               </div>
             </div>
@@ -2018,7 +2018,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 15px', fontSize: 18, fontWeight: 900 }}>
                   336-7
                 </div>
-                <div style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>
+                <div style={{ flex: 1, textAlign: 'right', fontSize: 14.5, fontWeight: 900, fontFamily: 'monospace' }}>
                   33690.00004 98765.432104 00000.456008 1 980100000{Math.floor(c6BoletoLanc.valor).toString().padStart(4, '0')}
                 </div>
               </div>
@@ -2026,88 +2026,88 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               {/* Row 1 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Local de Pagamento</div>
-                  <div style={{ fontSize: 10 }}>PAGÁVEL EM QUALQUER AGÊNCIA BANCÁRIA OU VIA PIX C6</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Local de Pagamento</div>
+                  <div style={{ fontSize: 12.5 }}>PAGÁVEL EM QUALQUER AGÊNCIA BANCÁRIA OU VIA PIX C6</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
-                  <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>{fmt.date(c6BoletoLanc.data)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Vencimento</div>
+                  <div style={{ fontSize: 13, fontWeight: 'bold', textAlign: 'right' }}>{fmt.date(c6BoletoLanc.data)}</div>
                 </div>
               </div>
 
               {/* Row 2 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
-                  <div style={{ fontSize: 10, fontWeight: 'bold' }}>{activeCompany?.razaoSocial} — CNPJ: {activeCompany?.cnpj}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Beneficiário</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 'bold' }}>{activeCompany?.razaoSocial} — CNPJ: {activeCompany?.cnpj}</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Código do Beneficiário</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>0001 / 951357-8</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Agência / Código do Beneficiário</div>
+                  <div style={{ fontSize: 12.5, textAlign: 'right' }}>0001 / 951357-8</div>
                 </div>
               </div>
 
               {/* Row 3 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data do Documento</div>
-                  <div style={{ fontSize: 10 }}>{new Date(c6BoletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Data do Documento</div>
+                  <div style={{ fontSize: 12.5 }}>{new Date(c6BoletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Número do Documento</div>
-                  <div style={{ fontSize: 10 }}>{c6BoletoLanc.numeroDocumento || c6BoletoLanc.id.slice(0, 8).toUpperCase()}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Número do Documento</div>
+                  <div style={{ fontSize: 12.5 }}>{c6BoletoLanc.numeroDocumento || c6BoletoLanc.id.slice(0, 8).toUpperCase()}</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie Doc.</div>
-                  <div style={{ fontSize: 10 }}>DM</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Espécie Doc.</div>
+                  <div style={{ fontSize: 12.5 }}>DM</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Aceite</div>
-                  <div style={{ fontSize: 10 }}>N</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Aceite</div>
+                  <div style={{ fontSize: 12.5 }}>N</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data Processamento</div>
-                  <div style={{ fontSize: 10 }}>{new Date(c6BoletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Data Processamento</div>
+                  <div style={{ fontSize: 12.5 }}>{new Date(c6BoletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>01/98765432-1</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Nosso Número</div>
+                  <div style={{ fontSize: 12.5, textAlign: 'right' }}>01/98765432-1</div>
                 </div>
               </div>
 
               {/* Row 4 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Uso do Banco</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Uso do Banco</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Carteira</div>
-                  <div style={{ fontSize: 10 }}>01 (C6 COB)</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Carteira</div>
+                  <div style={{ fontSize: 12.5 }}>01 (C6 COB)</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie</div>
-                  <div style={{ fontSize: 10 }}>R$</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Espécie</div>
+                  <div style={{ fontSize: 12.5 }}>R$</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Quantidade</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Quantidade</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Valor</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Valor</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
-                  <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(c6BoletoLanc.valor)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>(=) Valor do Documento</div>
+                  <div style={{ fontSize: 13, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(c6BoletoLanc.valor)}</div>
                 </div>
               </div>
 
               {/* Row 5 Instructions & Details */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 6, minHeight: 120 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Instruções (Texto de responsabilidade do Beneficiário)</div>
-                  <div style={{ fontSize: 10, marginTop: 5, lineHeight: '14px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Instruções (Texto de responsabilidade do Beneficiário)</div>
+                  <div style={{ fontSize: 12.5, marginTop: 5, lineHeight: '14px' }}>
                     • COBRANÇA REFERENTE A DUPLICATA MERCANTIL DE SERVIÇOS / MERCADORIAS.<br />
                     • APÓS O VENCIMENTO COBRAR MORA DE R$ 1,50 AO DIA E MULTA DE 2,0%.<br />
                     • SAC CONSTITUINTE: 0800 666 2000 — C6 BANK.<br />
@@ -2117,28 +2117,28 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Desconto / Abatimento</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(-) Desconto / Abatimento</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Outras Deduções</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(-) Outras Deduções</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(+) Mora / Multa</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(+) Mora / Multa</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4 }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor Cobrado</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(=) Valor Cobrado</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                 </div>
               </div>
 
               {/* Row 6 Payer info */}
               <div style={{ padding: 6, borderBottom: '1px solid #000' }}>
-                <div style={{ fontSize: 8, fontWeight: 'bold' }}>Pagador</div>
-                <div style={{ fontSize: 10, lineHeight: '14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 'bold' }}>Pagador</div>
+                <div style={{ fontSize: 12.5, lineHeight: '14px' }}>
                   <strong>SACADO GERAL / CLIENTE PARCEIRO LTDA</strong><br />
                   CNPJ: 00.000.000/0001-00 — IE: ISENTO<br />
                   RUA DO COMÉRCIO, 100 — CENTRO — Caxias do Sul — RS
@@ -2148,7 +2148,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               {/* Barcode & Pix Code Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, padding: '0 10px' }}>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 5 }}>Ficha de Compensação (C6 Bank Barcode System)</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 'bold', marginBottom: 5 }}>Ficha de Compensação (C6 Bank Barcode System)</div>
                   {/* Simulated Barcode */}
                   <div style={{ display: 'flex', height: 45, width: 420, alignItems: 'stretch' }}>
                     {Array.from({ length: 55 }).map((_, idx) => {
@@ -2169,7 +2169,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 </div>
 
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>PIX C6 BANK:</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>PIX C6 BANK:</div>
                   {/* Pix QR Code simulation */}
                   <div style={{ width: 80, height: 80, border: '2px solid #000', padding: 3, display: 'flex', flexWrap: 'wrap', background: '#fff' }}>
                     {Array.from({ length: 64 }).map((_, idx) => {
@@ -2186,7 +2186,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       );
                     })}
                   </div>
-                  <div style={{ fontSize: 7, fontWeight: 'bold', color: '#000' }}>PIX COBRANÇA</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000' }}>PIX COBRANÇA</div>
                 </div>
               </div>
             </div>
@@ -2223,15 +2223,15 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
                 Lançamentos Pendentes de Classificação (Duvidosos)
               </h1>
-              <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>
+              <p style={{ fontSize: '14.5px', margin: 0, fontWeight: 600 }}>
                 {activeCompany?.razaoSocial} • CNPJ {activeCompany?.cnpj}
               </p>
-              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0 0' }}>
                 Gerado em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
               </p>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #000' }}>
                   <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #000' }}>Data</th>
@@ -2249,7 +2249,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                       <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
                       <td style={{ padding: '8px', fontWeight: 500 }}>
                         {l.descricao}
-                        {l.observacao && <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>{l.observacao}</div>}
+                        {l.observacao && <div style={{ fontSize: '12.5px', color: '#555', marginTop: '2px' }}>{l.observacao}</div>}
                       </td>
                       <td style={{ padding: '8px' }}>{port}</td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: l.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
@@ -2262,7 +2262,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
               </tbody>
             </table>
 
-            <div style={{ marginTop: '50px', fontSize: '11px', color: '#555', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+            <div style={{ marginTop: '50px', fontSize: '13px', color: '#555', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
               <strong>Instruções para o Cliente:</strong> Por favor, verifique as transações acima listadas e preencha a última coluna indicando a finalidade de cada lançamento (Ex: "Fornecedor X", "Recebimento Cliente Y", "Aluguel", etc.) para que possamos realizar a classificação contábil adequada no sistema.
             </div>
           </div>

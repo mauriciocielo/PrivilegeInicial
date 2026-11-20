@@ -35,7 +35,7 @@ export default function BenchmarkingPage() {
           </div>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>Benchmarking Cloud & Big Data</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Análise Competitiva de Setor vs. Padrões Fechados de Mercado.</p>
+            <p style={{ fontSize: 15.5, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Análise Competitiva de Setor vs. Padrões Fechados de Mercado.</p>
           </div>
         </div>
       </div>
@@ -52,12 +52,12 @@ export default function BenchmarkingPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
         {metricas.map((m, idx) => (
           <div key={idx} className="glass-card" style={{ padding: 24, position: 'relative', overflow: 'hidden' }}>
-             <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 24, paddingRight: 40, lineHeight: 1.4 }}>{m.label}</h3>
+             <h3 style={{ fontSize: 15.5, fontWeight: 800, marginBottom: 24, paddingRight: 40, lineHeight: 1.4 }}>{m.label}</h3>
              
              <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-secondary)' }}>A Empresa ({empresa.nomeFantasia})</span>
-                   <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>{m.local}%</span>
+                   <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-secondary)' }}>A Empresa ({empresa.nomeFantasia})</span>
+                   <span style={{ fontSize: 15.5, fontWeight: 900, color: 'var(--text-primary)' }}>{m.local}%</span>
                 </div>
                 <div style={{ height: 16, background: 'var(--border-light)', borderRadius: 8, overflow: 'hidden' }}>
                    <div style={{ height: '100%', width: `${Math.min(m.local, 100)}%`, background: 'var(--accent)', borderRadius: 8 }} />
@@ -66,8 +66,8 @@ export default function BenchmarkingPage() {
 
              <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>Média do Mercado (Big Data)</span>
-                   <span style={{ fontSize: 14, fontWeight: 900, color: '#6b7280' }}>{m.mercado}%</span>
+                   <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-muted)' }}>Média do Mercado (Big Data)</span>
+                   <span style={{ fontSize: 15.5, fontWeight: 900, color: '#6b7280' }}>{m.mercado}%</span>
                 </div>
                 <div style={{ height: 12, background: 'var(--border-light)', borderRadius: 6, overflow: 'hidden' }}>
                    <div style={{ height: '100%', width: `${Math.min(m.mercado, 100)}%`, background: '#9ca3af', borderRadius: 6 }} />
@@ -78,7 +78,7 @@ export default function BenchmarkingPage() {
                marginTop: 20, 
                padding: 12, 
                borderRadius: 8, 
-               fontSize: 12, 
+               fontSize: 14, 
                fontWeight: 700,
                background: m.status === 'bad' ? 'rgba(239, 68, 68, 0.1)' : m.status === 'good' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
                color: m.status === 'bad' ? '#dc2626' : m.status === 'good' ? '#059669' : '#b45309'

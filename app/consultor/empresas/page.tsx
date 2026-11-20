@@ -17,40 +17,40 @@ interface ApiKeyResumo {
 }
 
 const AVAILABLE_SCREENS = [
-  { label: '📊 Dashboard', route: '/consultor/dashboard' },
-  { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
-  { label: '💡 Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
-  { label: '🔍 Diagnóstico 360º', route: '/consultor/diagnostico-360' },
-  { label: '🧭 Perfil Comportamental', route: '/consultor/perfil-disc' },
-  { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
-  { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
-  { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
-  { label: '🧠 Inteligência Financeira', route: '/consultor/inteligencia' },
-  { label: '📝 Lançamentos', route: '/consultor/lancamentos' },
-  { label: '📂 Importar OFX', route: '/consultor/importar-ofx' },
-  { label: '⚖️ Endividamento', route: '/consultor/endividamento' },
-  { label: '🎯 Indicadores', route: '/consultor/indicadores' },
-  { label: '💰 Orçamento', route: '/consultor/orcamento' },
-  { label: '👥 Clientes / Fornecedores', route: '/consultor/clientes' },
-  { label: '💸 Contas a Pagar', route: '/consultor/contas-pagar' },
-  { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
-  { label: '🧾 NFS-e', route: '/consultor/nfse' },
-  { label: '📥 NF-e Destinadas', route: '/consultor/nfe-destinadas' },
-  { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
-  { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
-  { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
-  { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
-  { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
-  { label: '🏢 Empresas', route: '/consultor/empresas' },
-  { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
-  { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
-  { label: '🏷️ Centros de Custo', route: '/consultor/centros-custo' },
-  { label: '📝 Atas de Atendimento', route: '/consultor/atas' },
-  { label: '🏦 Portadores / Contas', route: '/consultor/portadores' },
-  { label: '🔒 Segurança & Auditoria', route: '/consultor/configuracoes-avancadas' },
-  { label: '📈 Relatórios', route: '/consultor/relatorios' },
-  { label: '🚚 Logística', route: '/consultor/logistica' },
-  { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
+  { label: 'Dashboard', route: '/consultor/dashboard' },
+  { label: 'Radar Administrativo', route: '/consultor/administrativo' },
+  { label: 'Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
+  { label: 'Diagnóstico 360º', route: '/consultor/diagnostico-360' },
+  { label: 'Perfil Comportamental', route: '/consultor/perfil-disc' },
+  { label: 'Atividades e Tempos', route: '/consultor/atividades' },
+  { label: 'Agenda Semanal', route: '/consultor/agenda' },
+  { label: 'Apresentação Cliente', route: '/consultor/apresentacao' },
+  { label: 'Inteligência Financeira', route: '/consultor/inteligencia' },
+  { label: 'Lançamentos', route: '/consultor/lancamentos' },
+  { label: 'Importar OFX', route: '/consultor/importar-ofx' },
+  { label: 'Endividamento', route: '/consultor/endividamento' },
+  { label: 'Indicadores', route: '/consultor/indicadores' },
+  { label: 'Orçamento', route: '/consultor/orcamento' },
+  { label: 'Clientes / Fornecedores', route: '/consultor/clientes' },
+  { label: 'Contas a Pagar', route: '/consultor/contas-pagar' },
+  { label: 'Contas a Receber', route: '/consultor/contas-receber' },
+  { label: 'NFS-e', route: '/consultor/nfse' },
+  { label: 'NF-e Destinadas', route: '/consultor/nfe-destinadas' },
+  { label: 'APIs Open Finance', route: '/consultor/open-finance' },
+  { label: 'Políticas Financeiras', route: '/consultor/politicas' },
+  { label: 'Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: 'Projeção de Caixa', route: '/consultor/projecao-caixa' },
+  { label: 'Ecossistema BPO (IA)', route: '/consultor/bpo' },
+  { label: 'Empresas', route: '/consultor/empresas' },
+  { label: 'Usuários e Permissões', route: '/consultor/usuarios' },
+  { label: 'Plano de Contas', route: '/consultor/plano-de-contas' },
+  { label: 'Centros de Custo', route: '/consultor/centros-custo' },
+  { label: 'Atas de Atendimento', route: '/consultor/atas' },
+  { label: 'Portadores / Contas', route: '/consultor/portadores' },
+  { label: 'Segurança & Auditoria', route: '/consultor/configuracoes-avancadas' },
+  { label: 'Relatórios', route: '/consultor/relatorios' },
+  { label: 'Logística', route: '/consultor/logistica' },
+  { label: 'Painel Condomínio', route: '/consultor/condominio' },
 ];
 
 export default function EmpresasPage() {
@@ -339,7 +339,7 @@ ${result.portadoresAdded} portadores criados`);
           <div className="page-subtitle">{list.length} empresas cadastradas</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={() => setShowPlanoModal(true)}>📋 Criar Plano Padrão</button>
+          <button className="btn btn-secondary" onClick={() => setShowPlanoModal(true)}>Criar Plano Padrão</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Empresa</button>
         </div>
       </div>
@@ -375,30 +375,30 @@ ${result.portadoresAdded} portadores criados`);
                         {e.logoData ? (
                           <img src={e.logoData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/empresas/file?id=${e.id}&type=logo` : e.logoData} alt="Logo" style={{ maxHeight: 24, maxWidth: 48, objectFit: 'contain', borderRadius: 4 }} />
                         ) : (
-                          <div style={{ width: 24, height: 24, background: 'var(--bg-hover)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🏢</div>
+                          <div style={{ width: 24, height: 24, background: 'var(--bg-hover)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5 }}>🏢</div>
                         )}
                         <div>
                           <div>{e.razaoSocial}</div>
                           {e.bancoBoleto === 'c6' && (
-                            <span className="badge badge-gray" style={{ fontSize: 9, padding: '2px 6px', background: '#000', color: '#fff', display: 'inline-block', marginTop: 4 }}>🖤 C6 Bank Boletos</span>
+                            <span className="badge badge-gray" style={{ fontSize: 11.5, padding: '2px 6px', background: '#000', color: '#fff', display: 'inline-block', marginTop: 4 }}>C6 Bank Boletos</span>
                           )}
                         </div>
                       </div>
                     </td>
                     <td>{e.nomeFantasia}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.cnpj}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{e.cnpj}</td>
                     <td>{e.responsavel || '-'}</td>
                     <td>{e.atividade ? <span className="badge badge-blue">{e.atividade}</span> : '-'}</td>
                     <td>
                       {e.tipo === 'cooperativa' ? (
-                        <span className="badge" style={{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)', fontSize: 10 }}>🤝 Cooperativa</span>
+                        <span className="badge" style={{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)', fontSize: 12.5 }}>Cooperativa</span>
                       ) : e.tipo === 'condominio' ? (
-                        <span className="badge badge-gray" style={{ fontSize: 10 }}>🏘️ Condomínio</span>
+                        <span className="badge badge-gray" style={{ fontSize: 12.5 }}>Condomínio</span>
                       ) : (
-                        <span className="badge" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', fontSize: 10 }}>🏢 Empresa</span>
+                        <span className="badge" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', fontSize: 12.5 }}>Empresa</span>
                       )}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{e.email}</td>
+                    <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{e.email}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                         {!planosMap[e.id] && (
@@ -410,7 +410,7 @@ ${result.portadoresAdded} portadores criados`);
                               background: 'rgba(245,158,11,0.15)',
                               color: '#f59e0b',
                               border: '1px solid rgba(245,158,11,0.4)',
-                              fontSize: 10,
+                              fontSize: 12.5,
                               padding: '3px 7px',
                               fontWeight: 700,
                               display: 'flex',
@@ -419,7 +419,7 @@ ${result.portadoresAdded} portadores criados`);
                               whiteSpace: 'nowrap'
                             }}
                           >
-                            ⚠️ Importar Plano
+                            Importar Plano
                           </button>
                         )}
                         <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(e)}>✏️</button>
@@ -470,8 +470,8 @@ ${result.portadoresAdded} portadores criados`);
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="form-control" placeholder="Apenas números (14 dígitos)" value={form.cnpj || ''} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} />
                   {!edit && (
-                    <button type="button" className="btn btn-secondary" onClick={fetchCnpjData} disabled={fetchingCnpj} style={{ padding: '8px 12px', fontSize: 12 }}>
-                      {fetchingCnpj ? '⏳' : '🔍 Buscar Receita'}
+                    <button type="button" className="btn btn-secondary" onClick={fetchCnpjData} disabled={fetchingCnpj} style={{ padding: '8px 12px', fontSize: 14 }}>
+                      {fetchingCnpj ? '⏳' : 'Buscar Receita'}
                     </button>
                   )}
                 </div>
@@ -489,9 +489,9 @@ ${result.portadoresAdded} portadores criados`);
               <div className="form-group">
                 <label className="form-label">Tipo de Gestão</label>
                 <select className="form-control" value={form.tipo || 'empresa'} onChange={e => setForm(f => ({ ...f, tipo: e.target.value as Empresa['tipo'] }))}>
-                  <option value="empresa">🏢 Empresa Tradicional</option>
-                  <option value="condominio">🏘️ Condomínio</option>
-                  <option value="cooperativa">🤝 Cooperativa</option>
+                  <option value="empresa">Empresa Tradicional</option>
+                  <option value="condominio">Condomínio</option>
+                  <option value="cooperativa">Cooperativa</option>
                 </select>
               </div>
             </div>
@@ -547,17 +547,17 @@ ${result.portadoresAdded} portadores criados`);
 
             {/* Políticas e Diretrizes Estratégicas (PDFs) */}
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border-light)', paddingTop: 16 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas e Diretrizes Estratégicas (PDF)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas e Diretrizes Estratégicas (PDF)</h3>
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', columnGap: 16 }}>
                 
                 {/* Política Contas a Receber */}
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11.5 }}>Contas a Receber</label>
+                  <label className="form-label" style={{ fontSize: 13.5 }}>Contas a Receber</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <input 
                       type="file" 
                       accept="application/pdf" 
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: 13 }}
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -570,7 +570,7 @@ ${result.portadoresAdded} portadores criados`);
                       }}
                     />
                     {form.politicaReceberName && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
                         <a 
                           href={form.politicaReceberData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaReceberData ? `/api/empresas/policy?id=${form.id}&type=receber` : `data:application/pdf;base64,${form.politicaReceberData}`} 
                           download={form.politicaReceberName}
@@ -594,12 +594,12 @@ ${result.portadoresAdded} portadores criados`);
 
                 {/* Política Compras */}
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11.5 }}>Compras / Suprimentos</label>
+                  <label className="form-label" style={{ fontSize: 13.5 }}>Compras / Suprimentos</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <input 
                       type="file" 
                       accept="application/pdf" 
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: 13 }}
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -612,7 +612,7 @@ ${result.portadoresAdded} portadores criados`);
                       }}
                     />
                     {form.politicaComprasName && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
                         <a 
                           href={form.politicaComprasData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaComprasData ? `/api/empresas/policy?id=${form.id}&type=compras` : `data:application/pdf;base64,${form.politicaComprasData}`} 
                           download={form.politicaComprasName}
@@ -636,12 +636,12 @@ ${result.portadoresAdded} portadores criados`);
 
                 {/* Política Cobrança */}
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11.5 }}>Cobrança / Crédito</label>
+                  <label className="form-label" style={{ fontSize: 13.5 }}>Cobrança / Crédito</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <input 
                       type="file" 
                       accept="application/pdf" 
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: 13 }}
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -654,7 +654,7 @@ ${result.portadoresAdded} portadores criados`);
                       }}
                     />
                     {form.politicaCobrancaName && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
                         <a 
                           href={form.politicaCobrancaData === '__PRUNED_IN_LOCAL_STAGE__' || !form.politicaCobrancaData ? `/api/empresas/policy?id=${form.id}&type=cobranca` : `data:application/pdf;base64,${form.politicaCobrancaData}`} 
                           download={form.politicaCobrancaName}
@@ -697,7 +697,7 @@ ${result.portadoresAdded} portadores criados`);
                         border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`, 
                         cursor: isDashboard ? 'not-allowed' : 'pointer', 
                         background: checked ? 'var(--accent-glow)' : 'transparent', 
-                        fontSize: 12, 
+                        fontSize: 14, 
                         color: checked ? 'var(--accent-light)' : 'var(--text-secondary)',
                         opacity: isDashboard ? 0.7 : 1
                       }}
@@ -718,38 +718,38 @@ ${result.portadoresAdded} portadores criados`);
             {edit && (
               <div className="form-group" style={{ marginTop: 16 }}>
                 <label className="form-label" style={{ fontWeight: 600 }}>
-                  🔌 Integração via API (Contas a Pagar/Receber)
+                  Integração via API (Contas a Pagar/Receber)
                 </label>
                 <div style={{ padding: 14, background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
                     O ERP desta empresa usa essas chaves para lançar sacados e contas a pagar/receber
                     direto no sistema. Documentação dos endpoints (POST /api/v1/sacados,
                     /api/v1/contas-receber, /api/v1/contas-pagar) disponível com o time técnico.
                   </div>
 
                   <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border-light)' }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>
                       Destino dos títulos no fluxo clássico
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.6 }}>
                       Todo título lançado pela API também aparece em Contas a Receber/Pagar,
                       pronto para dar baixa manual ou conciliar via Importar OFX — igual a um
                       lançamento normal. Para isso, informe o plano de conta e o portador padrão
                       que serão usados nesses lançamentos.
                     </div>
                     {carregandoConfigLancamento ? (
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Carregando...</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando...</div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                         <div style={{ flex: 1, minWidth: 160 }}>
-                          <label className="form-label" style={{ fontSize: 11 }}>Plano de conta padrão</label>
+                          <label className="form-label" style={{ fontSize: 13 }}>Plano de conta padrão</label>
                           <select className="form-control form-control-sm" value={planoContaPadraoId} onChange={e => setPlanoContaPadraoId(e.target.value)}>
                             <option value="">— selecione —</option>
                             {planosDaEmpresa.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>)}
                           </select>
                         </div>
                         <div style={{ flex: 1, minWidth: 160 }}>
-                          <label className="form-label" style={{ fontSize: 11 }}>Portador padrão</label>
+                          <label className="form-label" style={{ fontSize: 13 }}>Portador padrão</label>
                           <select className="form-control form-control-sm" value={portadorPadraoId} onChange={e => setPortadorPadraoId(e.target.value)}>
                             <option value="">— selecione —</option>
                             {portadoresDaEmpresa.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -761,8 +761,8 @@ ${result.portadoresAdded} portadores criados`);
                       </div>
                     )}
                     {!carregandoConfigLancamento && (!planoContaPadraoId || !portadorPadraoId) && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--yellow)' }}>
-                        ⚠️ Sem os dois configurados, os títulos da API ficam só na tela "Contas via ERP" (não aparecem em Contas a Receber/Pagar).
+                      <div style={{ marginTop: 8, fontSize: 13, color: 'var(--yellow)' }}>
+                        Sem os dois configurados, os títulos da API ficam só na tela "Contas via ERP" (não aparecem em Contas a Receber/Pagar).
                       </div>
                     )}
                   </div>
@@ -772,12 +772,12 @@ ${result.portadoresAdded} portadores criados`);
                       marginBottom: 14, padding: 12, background: 'var(--yellow-bg)',
                       border: '1px solid var(--yellow)', borderRadius: 'var(--radius-sm)',
                     }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, color: 'var(--text-primary)' }}>
-                        ⚠️ Copie agora — este token não será mostrado novamente
+                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6, color: 'var(--text-primary)' }}>
+                        Copie agora — este token não será mostrado novamente
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <code style={{
-                          flex: 1, fontSize: 11.5, padding: '8px 10px', background: 'var(--bg-card)',
+                          flex: 1, fontSize: 13.5, padding: '8px 10px', background: 'var(--bg-card)',
                           borderRadius: 6, wordBreak: 'break-all', border: '1px solid var(--border-light)',
                         }}>
                           {novoTokenGerado}
@@ -787,13 +787,13 @@ ${result.portadoresAdded} portadores criados`);
                           className="btn btn-secondary btn-sm"
                           onClick={() => { navigator.clipboard.writeText(novoTokenGerado); toast.success('Token copiado.'); }}
                         >
-                          📋 Copiar
+                          Copiar
                         </button>
                       </div>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
-                        style={{ marginTop: 8, padding: '2px 8px', fontSize: 11 }}
+                        style={{ marginTop: 8, padding: '2px 8px', fontSize: 13 }}
                         onClick={() => setNovoTokenGerado(null)}
                       >
                         Entendi, já salvei
@@ -802,9 +802,9 @@ ${result.portadoresAdded} portadores criados`);
                   )}
 
                   {loadingApiKeys ? (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Carregando chaves...</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando chaves...</div>
                   ) : apiKeys.length === 0 ? (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>
                       Nenhuma chave gerada para esta empresa ainda.
                     </div>
                   ) : (
@@ -812,19 +812,19 @@ ${result.portadoresAdded} portadores criados`);
                       {apiKeys.map(k => (
                         <div key={k.id} style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '8px 10px', borderBottom: '1px solid var(--border-light)', fontSize: 12,
+                          padding: '8px 10px', borderBottom: '1px solid var(--border-light)', fontSize: 14,
                         }}>
                           <div>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                               {k.nome} {!k.ativo && <span style={{ color: 'var(--red)', fontWeight: 500 }}>(revogada)</span>}
                             </div>
-                            <div style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 11 }}>
+                            <div style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 13 }}>
                               {k.prefixo}.•••••••• · criada {new Date(k.createdAt).toLocaleDateString('pt-BR')}
                               {k.ultimoUsoEm && ` · último uso ${new Date(k.ultimoUsoEm).toLocaleDateString('pt-BR')}`}
                             </div>
                           </div>
                           {k.ativo && (
-                            <button type="button" className="btn btn-danger btn-sm" style={{ padding: '3px 8px', fontSize: 11 }}
+                            <button type="button" className="btn btn-danger btn-sm" style={{ padding: '3px 8px', fontSize: 13 }}
                               onClick={() => revogarChave(k.id)}>
                               Revogar
                             </button>
@@ -836,7 +836,7 @@ ${result.portadoresAdded} portadores criados`);
 
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input
-                      className="form-control" style={{ fontSize: 12 }}
+                      className="form-control" style={{ fontSize: 14 }}
                       placeholder="Nome da chave (ex: Integração Omie)"
                       value={nomeNovaChave}
                       onChange={e => setNomeNovaChave(e.target.value)}
@@ -876,11 +876,11 @@ ${result.portadoresAdded} portadores criados`);
               {planoEmpresaId && (() => {
                 const emp = list.find(p => p.id === planoEmpresaId);
                 return emp?.atividade ? (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 6 }}>
                     A conta principal de receita e de custo variável já vem pronta para <strong>{emp.atividade}</strong> (campo "Atividade" do cadastro).
                   </div>
                 ) : (
-                  <div style={{ fontSize: 11.5, color: 'var(--yellow)', marginTop: 6 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--yellow)', marginTop: 6 }}>
                     Esta empresa não tem "Atividade" definida no cadastro — o plano sai com os nomes genéricos de serviço. Edite o cadastro antes para Comércio/Indústria terem as contas certas.
                   </div>
                 );

@@ -133,7 +133,7 @@ export default function PortadoresPage() {
                 <div className={`stat-icon ${saldo >= 0 ? 'green' : 'red'}`}>💳</div>
                 <div className="stat-label">{p.nome}</div>
                 <div className="stat-value" style={{ fontSize: 18, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(saldo)}</div>
-                <div className="stat-change" style={{ color: 'var(--text-muted)', fontSize: 11 }}>{TIPO_LABELS[p.tipo]}</div>
+                <div className="stat-change" style={{ color: 'var(--text-muted)', fontSize: 13 }}>{TIPO_LABELS[p.tipo]}</div>
               </div>
             );
           })}
@@ -161,11 +161,11 @@ export default function PortadoresPage() {
                     <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                       <td style={{ fontWeight: 600 }}>{p.nome}</td>
                       <td><span className="badge badge-gray">{TIPO_LABELS[p.tipo]}</span></td>
-                      <td style={{ fontSize: 12 }}>{p.banco || '-'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                      <td style={{ fontSize: 14 }}>{p.banco || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                         {p.agencia ? `${p.agencia} / ${p.conta}` : '-'}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt.currency(p.saldoInicial)} ({fmt.date(p.saldoInicialData || '')})</td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 14.5 }}>{fmt.currency(p.saldoInicial)} ({fmt.date(p.saldoInicialData || '')})</td>
                       <td style={{ fontWeight: 700, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(saldo)}</td>
                       <td>
                         <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span>
@@ -255,7 +255,7 @@ export default function PortadoresPage() {
                           style={{
                             padding: '8px 12px',
                             cursor: 'pointer',
-                            fontSize: '12.5px',
+                            fontSize: '14px',
                             borderBottom: '1px solid var(--border-light, #e2e8f0)',
                             display: 'flex',
                             gap: '8px',

@@ -159,13 +159,13 @@ export default function MarketingOrcamentoCalendarioPage() {
             type="button"
             onClick={() => setBudgets(prev => [...prev, { id: `b_${Date.now()}`, channel: 'Novo Canal', budget: 0, leads: 0, revenue: 0 }])}
             className="btn btn-secondary"
-            style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}
           >
             <Plus size={14} /> Adicionar Canal
           </button>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Canal / Ação</th>
@@ -183,11 +183,11 @@ export default function MarketingOrcamentoCalendarioPage() {
                 const roi = b.budget > 0 ? ((b.revenue - b.budget) / b.budget) * 100 : 0;
                 return (
                   <tr key={b.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: 6 }}><input className="form-control" style={{ fontSize: 12 }} value={b.channel} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, channel: e.target.value } : x)))} /></td>
-                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 120, fontSize: 12 }} value={b.budget} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, budget: Number(e.target.value) } : x)))} /></td>
-                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 80, fontSize: 12 }} value={b.leads} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, leads: Number(e.target.value) } : x)))} /></td>
+                    <td style={{ padding: 6 }}><input className="form-control" style={{ fontSize: 14 }} value={b.channel} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, channel: e.target.value } : x)))} /></td>
+                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 120, fontSize: 14 }} value={b.budget} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, budget: Number(e.target.value) } : x)))} /></td>
+                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 80, fontSize: 14 }} value={b.leads} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, leads: Number(e.target.value) } : x)))} /></td>
                     <td style={{ padding: 6, fontWeight: 700 }}>{fmtBRL(cpl)}</td>
-                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 125, fontSize: 12 }} value={b.revenue} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, revenue: Number(e.target.value) } : x)))} /></td>
+                    <td style={{ padding: 6 }}><input type="number" className="form-control" style={{ width: 125, fontSize: 14 }} value={b.revenue} onChange={e => setBudgets(prev => prev.map((x, i) => (i === idx ? { ...x, revenue: Number(e.target.value) } : x)))} /></td>
                     <td style={{ padding: 6, fontWeight: 800, color: roi >= 0 ? '#16a34a' : '#dc2626' }}>{roi.toFixed(0)}%</td>
                     <td style={{ padding: 6 }}>
                       <button type="button" onClick={() => setBudgets(prev => prev.filter((_, i) => i !== idx))} className="btn btn-secondary" style={{ padding: '5px 8px', color: '#dc2626' }}>
@@ -212,13 +212,13 @@ export default function MarketingOrcamentoCalendarioPage() {
             type="button"
             onClick={() => setCalendar(prev => [...prev, { id: `c_${Date.now()}`, date: new Date().toISOString().slice(0, 10), title: 'Novo Evento / Produção', format: 'Vídeos e Fotos', owner: 'Marketing', status: 'planejado' }])}
             className="btn btn-secondary"
-            style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}
           >
             <Plus size={14} /> Adicionar Evento
           </button>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Data</th>
@@ -232,15 +232,15 @@ export default function MarketingOrcamentoCalendarioPage() {
             <tbody>
               {calendar.map((c, idx) => (
                 <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: 6 }}><input type="date" className="form-control" style={{ width: 135, fontSize: 12 }} value={c.date} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)))} /></td>
-                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 250, fontSize: 12, fontWeight: 700 }} value={c.title} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)))} /></td>
-                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 12 }} value={c.format} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, format: e.target.value } : x)))} /></td>
-                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 12 }} value={c.owner} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, owner: e.target.value } : x)))} /></td>
+                  <td style={{ padding: 6 }}><input type="date" className="form-control" style={{ width: 135, fontSize: 14 }} value={c.date} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)))} /></td>
+                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 250, fontSize: 14, fontWeight: 700 }} value={c.title} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)))} /></td>
+                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 14 }} value={c.format} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, format: e.target.value } : x)))} /></td>
+                  <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 14 }} value={c.owner} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, owner: e.target.value } : x)))} /></td>
                   <td style={{ padding: 6 }}>
-                    <select className="form-control" style={{ width: 125, fontSize: 12 }} value={c.status} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, status: e.target.value as any } : x)))}>
-                      <option value="planejado">📅 Planejado</option>
-                      <option value="producao">🎬 Em Produção</option>
-                      <option value="publicado">✅ Publicado</option>
+                    <select className="form-control" style={{ width: 125, fontSize: 14 }} value={c.status} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, status: e.target.value as any } : x)))}>
+                      <option value="planejado">Planejado</option>
+                      <option value="producao">Em Produção</option>
+                      <option value="publicado">Publicado</option>
                     </select>
                   </td>
                   <td style={{ padding: 6 }}>

@@ -113,7 +113,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       <Sidebar role="cliente" />
       <main className="main-content">
         {acessoNfse.carregando || (acessoNfse.liberado && !authorized) || (!acessoNfse.liberado && pathname === ROTA_NFSE) ? (
-          <div className="page-body" style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)' }}>⏳ Carregando...</div>
+          <div className="page-body" style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)' }}>Carregando...</div>
         ) : authorized ? (
           children
         ) : (

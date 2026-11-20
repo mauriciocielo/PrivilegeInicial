@@ -185,13 +185,13 @@ export default function CurvaAbcPage() {
                 {processing ? (
                   <div>
                     <div className="spinner-sm" style={{ margin: '0 auto 10px' }} />
-                    <p style={{ fontSize: 13 }}>Processando arquivo...</p>
+                    <p style={{ fontSize: 14.5 }}>Processando arquivo...</p>
                   </div>
                 ) : (
                   <>
                     <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
-                    <p style={{ fontSize: 13, fontWeight: 600 }}>Arraste um arquivo ou clique para selecionar</p>
-                    <p style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>
+                    <p style={{ fontSize: 14.5, fontWeight: 600 }}>Arraste um arquivo ou clique para selecionar</p>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 4 }}>
                       Formatos aceitos: .xlsx, .xls, .csv, .txt, .pdf — com nome (cliente/produto) e valor faturado
                     </p>
                   </>
@@ -229,12 +229,12 @@ export default function CurvaAbcPage() {
                   />
                 </div>
               </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 12px' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '8px 0 12px' }}>
                 O restante (acima de {formConfig.percentualB}%) é classificado como C. Padrão usual: 80% / 95%.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-secondary btn-sm" onClick={handleSaveConfig} disabled={!empresaId}>💾 Salvar</button>
-                <button className="btn btn-ghost btn-sm" onClick={handleReclassificar} disabled={!curvaAtual}>🔄 Reclassificar curva atual</button>
+                <button className="btn btn-secondary btn-sm" onClick={handleSaveConfig} disabled={!empresaId}>Salvar</button>
+                <button className="btn btn-ghost btn-sm" onClick={handleReclassificar} disabled={!curvaAtual}>Reclassificar curva atual</button>
               </div>
             </div>
           </div>

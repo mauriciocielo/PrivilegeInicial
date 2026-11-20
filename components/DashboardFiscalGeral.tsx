@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { instrumentSerif as serif } from '../app/fonts';
 import {
   ShieldCheck, FileText, Activity, Building2, Play, RefreshCw,
   Plus, CheckCircle2, AlertTriangle, XCircle, Truck, Inbox,
@@ -82,13 +81,54 @@ function CartaoKpi({ onClick, children }: { onClick: () => void; children: React
   );
 }
 
-/** Esqueleto de carregamento para o número do KPI, no lugar do traço. */
-function Skeleton({ width = 56 }: { width?: number }) {
+/** Número principal do KPI. Sem dados, mostra um traço discreto em vez de caixa cinza. */
+function ValorKpi({ valor, complemento, carregando }: { valor: string | null; complemento?: string; carregando: boolean }) {
   return (
-    <span
-      className="animate-pulse"
-      style={{ display: 'inline-block', width, height: 26, borderRadius: 6, background: '#e5e7eb', marginTop: 8 }}
-    />
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14, minHeight: 40 }}>
+      <span style={{ fontSize: 34, fontWeight: 700, color: valor === null ? '#9ca3af' : '#111827', letterSpacing: '-0.02em', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+        {valor ?? (carregando ? '…' : '—')}
+      </span>
+      {complemento && <span style={{ fontSize: 15, color: '#6b7280' }}>{complemento}</span>}
+    </div>
+  );
+}
+
+const TONS_SELO = {
+  neutro: { background: '#f3f4f6', color: '#374151' },
+  ok: { background: '#f0fdf4', color: '#15803d' },
+  erro: { background: '#fef2f2', color: '#b91c1c' },
+  alerta: { background: '#fffbeb', color: '#b45309' },
+};
+
+/** Título do cartão com selo opcional à direita. */
+function CabecalhoKpi({ titulo, selo, tom = 'neutro' }: { titulo: string; selo?: string; tom?: keyof typeof TONS_SELO }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>{titulo}</span>
+      {selo && (
+        <span style={{ ...TONS_SELO[tom], fontSize: 14, fontWeight: 600, padding: '3px 10px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+          {selo}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function LegendaKpi({ cor = '#6b7280', children }: { cor?: string; children: ReactNode }) {
+  return <div style={{ fontSize: 15.5, color: cor, fontWeight: 500, marginTop: 4 }}>{children}</div>;
+}
+
+/** Rodapé do cartão: três mini-indicadores (valor em cima, rótulo embaixo), sem ícones. */
+function RodapeKpi({ itens }: { itens: { valor: ReactNode; rotulo: string; cor?: string }[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${itens.length}, 1fr)`, gap: 8, marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #f0f0f0' }}>
+      {itens.map(item => (
+        <div key={item.rotulo} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: item.cor || '#111827', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{item.valor}</span>
+          <span style={{ fontSize: 14, color: '#6b7280' }}>{item.rotulo}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -151,7 +191,7 @@ export default function DashboardFiscalGeral() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="nfse-ui" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Top Header Card */}
       <div
         style={{
@@ -173,39 +213,37 @@ export default function DashboardFiscalGeral() {
               style={{
                 background: '#600000',
                 color: '#ffffff',
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                padding: '3px 10px',
+                letterSpacing: '0.01em',
+                padding: '4px 12px',
                 borderRadius: 99,
               }}
             >
               {isCliente ? 'Dashboard Fiscal • Documentos & CNDs' : 'Dashboard 2 • Torre de Controle Fiscal'}
             </span>
             {resumo?.ehHorarioNoturno ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#c4b5fd' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#c4b5fd' }}>
                 <Moon size={12} /> Janela Noturna SEFAZ Ativa
               </span>
             ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#fde68a' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#fde68a' }}>
                 <Sun size={12} /> Horário Diurno (NFS-e 24/7)
               </span>
             )}
           </div>
           <h1
-            className={serif.className}
             style={{
-              fontSize: 34,
-              fontWeight: 400,
-              margin: '0 0 4px 0',
+              fontSize: 30,
+              fontWeight: 700,
+              margin: '6px 0 6px 0',
               letterSpacing: '-0.02em',
               lineHeight: 1.1,
             }}
           >
             {isCliente ? 'Painel Fiscal: Notas Fiscais & CNDs' : 'Monitoramento de Notas Fiscais & CNDs de Todos os Clientes'}
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>
+          <p style={{ margin: 0, fontSize: 15.5, color: '#d1d5db', lineHeight: 1.5 }}>
             {isCliente
               ? 'Visão consolidada de NF-e (Mercadorias), CT-e (Fretes), NFS-e (Serviços) e certidões negativas da sua empresa.'
               : 'Visão consolidada de NF-e, CT-e, NFS-e, certidões negativas e auditoria contínua da carteira.'}
@@ -226,7 +264,7 @@ export default function DashboardFiscalGeral() {
               border: '1px solid rgba(255,255,255,0.15)',
               padding: '12px 22px',
               borderRadius: 12,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: executandoLote ? 'wait' : 'pointer',
               boxShadow: '0 4px 12px rgba(96,0,0,0.3)',
@@ -250,7 +288,7 @@ export default function DashboardFiscalGeral() {
                 border: '1px solid rgba(255,255,255,0.2)',
                 padding: '12px 18px',
                 borderRadius: 12,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 500,
                 cursor: 'pointer',
               }}
@@ -272,7 +310,7 @@ export default function DashboardFiscalGeral() {
               border: '1px solid rgba(255,255,255,0.2)',
               padding: '12px 18px',
               borderRadius: 12,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 500,
               cursor: 'pointer',
             }}
@@ -294,7 +332,7 @@ export default function DashboardFiscalGeral() {
               border: '1px solid rgba(167,139,250,0.4)',
               padding: '12px 18px',
               borderRadius: 12,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -325,7 +363,7 @@ export default function DashboardFiscalGeral() {
               <RefreshCw size={15} className={carregandoResumo ? 'animate-spin' : ''} />
             </button>
             {horaAtualizacao && (
-              <span style={{ fontSize: 9.5, color: '#9ca3af' }}>{horaAtualizacao}</span>
+              <span style={{ fontSize: 12, color: '#9ca3af' }}>{horaAtualizacao}</span>
             )}
           </div>
         </div>
@@ -335,202 +373,88 @@ export default function DashboardFiscalGeral() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
           gap: 16,
         }}
       >
         {/* Card 1: Notas Fiscais */}
         <CartaoKpi onClick={() => setAbaAtiva('notas')}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
-                Todas as Notas Fiscais
-              </span>
-              <span
-                style={{
-                  background: '#f3f4f6',
-                  color: '#111827',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 99,
-                }}
-              >
-                Carteira Consolidada
-              </span>
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {resumo ? (resumo.notas.totalGeral).toLocaleString('pt-BR') : <Skeleton />}
-            </div>
-            <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 2 }}>
-              {valorFormatado(resumo?.notas.valorTotal)} movimentados
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: '1px solid #f3f4f6',
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: '#6b7280',
-            }}
-          >
-            <span>📦 {resumo?.notas.totalNfe || 0} NF-e</span>
-            <span>🚚 {resumo?.notas.totalCte || 0} CT-e</span>
-            <span>📑 {resumo?.notas.totalNfse || 0} NFS-e</span>
-          </div>
+          <CabecalhoKpi titulo="Notas fiscais" selo="Carteira consolidada" />
+          <ValorKpi valor={resumo ? resumo.notas.totalGeral.toLocaleString('pt-BR') : null} carregando={carregandoResumo} />
+          <LegendaKpi cor="#15803d">{valorFormatado(resumo?.notas.valorTotal)} movimentados</LegendaKpi>
+          <RodapeKpi
+            itens={[
+              { valor: resumo?.notas.totalNfe || 0, rotulo: 'NF-e' },
+              { valor: resumo?.notas.totalCte || 0, rotulo: 'CT-e' },
+              { valor: resumo?.notas.totalNfse || 0, rotulo: 'NFS-e' },
+            ]}
+          />
         </CartaoKpi>
 
         {/* Card 2: CNDs & Situação Fiscal */}
         <CartaoKpi onClick={() => setAbaAtiva('cnd')}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
-                Conformidade Fiscal & CNDs
-              </span>
-              <span
-                style={{
-                  background: (resumo?.cnds.comPendencias || 0) > 0 ? '#fef2f2' : '#f0fdf4',
-                  color: (resumo?.cnds.comPendencias || 0) > 0 ? '#dc2626' : '#16a34a',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 99,
-                }}
-              >
-                {(resumo?.cnds.comPendencias || 0) > 0 ? `${resumo?.cnds.comPendencias} com débito` : '100% Regulares'}
-              </span>
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {!resumo ? <Skeleton /> : <>{resumo.cnds.semPendencias || 0}{' '}
-              <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>
-                / {resumo.totalEmpresas || 0} empresas
-              </span></>}
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-              Certidões Negativas Federais / Estaduais
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: '1px solid #f3f4f6',
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: '#6b7280',
-            }}
-          >
-            <span style={{ color: '#16a34a' }}>✓ {resumo?.cnds.semPendencias || 0} Sem débito</span>
-            <span style={{ color: '#0284c7' }}>⚖ {resumo?.cnds.comEfeito || 0} Suspensos</span>
-            <span style={{ color: '#dc2626' }}>✗ {resumo?.cnds.comPendencias || 0} Débitos</span>
-          </div>
+          <CabecalhoKpi
+            titulo="Conformidade fiscal"
+            selo={(resumo?.cnds.comPendencias || 0) > 0 ? `${resumo?.cnds.comPendencias} com débito` : '100% regulares'}
+            tom={(resumo?.cnds.comPendencias || 0) > 0 ? 'erro' : 'ok'}
+          />
+          <ValorKpi
+            valor={resumo ? String(resumo.cnds.semPendencias || 0) : null}
+            complemento={resumo ? `de ${resumo.totalEmpresas || 0} empresas` : undefined}
+            carregando={carregandoResumo}
+          />
+          <LegendaKpi>Certidões negativas federais e estaduais</LegendaKpi>
+          <RodapeKpi
+            itens={[
+              { valor: resumo?.cnds.semPendencias || 0, rotulo: 'Sem débito', cor: '#15803d' },
+              { valor: resumo?.cnds.comEfeito || 0, rotulo: 'Suspensos', cor: '#0369a1' },
+              { valor: resumo?.cnds.comPendencias || 0, rotulo: 'Com débito', cor: '#b91c1c' },
+            ]}
+          />
         </CartaoKpi>
 
         {/* Card 3: Certificados Digitais A1 */}
         <CartaoKpi onClick={() => setAbaAtiva('execucao')}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
-                Certificados A1 no Cofre
-              </span>
-              {(resumo?.certificados.vencendo30d || 0) > 0 && (
-                <span
-                  style={{
-                    background: '#fef3c7',
-                    color: '#b45309',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 99,
-                  }}
-                >
-                  {resumo?.certificados.vencendo30d} vencendo
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {!resumo ? <Skeleton /> : <>{resumo.certificados.comCertificado || 0}{' '}
-              <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>
-                com A1 ativo
-              </span></>}
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-              {resumo?.certificados.comProcuracao || 0} operam com procuração eletrônica
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: '1px solid #f3f4f6',
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: '#6b7280',
-            }}
-          >
-            <span>🔒 AES-256 Cofre</span>
-            <span style={{ color: (resumo?.certificados.vencidos || 0) > 0 ? '#dc2626' : '#6b7280' }}>
-              {resumo?.certificados.vencidos || 0} expirados
-            </span>
-            <span>{resumo?.certificados.semCertificado || 0} sem A1</span>
-          </div>
+          <CabecalhoKpi
+            titulo="Certificados A1"
+            selo={(resumo?.certificados.vencendo30d || 0) > 0 ? `${resumo?.certificados.vencendo30d} vencendo` : undefined}
+            tom="alerta"
+          />
+          <ValorKpi
+            valor={resumo ? String(resumo.certificados.comCertificado || 0) : null}
+            complemento={resumo ? 'ativos' : undefined}
+            carregando={carregandoResumo}
+          />
+          <LegendaKpi>{resumo?.certificados.comProcuracao || 0} operam com procuração eletrônica</LegendaKpi>
+          <RodapeKpi
+            itens={[
+              { valor: resumo?.certificados.vencidos || 0, rotulo: 'Expirados', cor: (resumo?.certificados.vencidos || 0) > 0 ? '#b91c1c' : undefined },
+              { valor: resumo?.certificados.semCertificado || 0, rotulo: 'Sem A1' },
+              { valor: resumo?.certificados.vencendo30d || 0, rotulo: 'Vencem em 30 dias' },
+            ]}
+          />
         </CartaoKpi>
 
         {/* Card 4: Monitor & Auditoria */}
         <CartaoKpi onClick={() => setAbaAtiva('logs')}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>
-                Monitor em Segundo Plano
-              </span>
-              <span
-                style={{
-                  background: '#f0fdf4',
-                  color: '#16a34a',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 99,
-                }}
-              >
-                A cada 10 min
-              </span>
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginTop: 8 }}>
-              {!resumo ? <Skeleton /> : <>{resumo.monitor.totalAtivos || 0}{' '}
-              <span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>empresas</span></>}
-            </div>
-            <div style={{ fontSize: 12, color: (resumo?.monitor.erros24h || 0) > 0 ? '#dc2626' : '#16a34a', marginTop: 2, fontWeight: 500 }}>
-              {(resumo?.monitor.erros24h || 0) > 0
-                ? `${resumo?.monitor.erros24h} ocorrência(s) nas últimas 24h`
-                : '100% saudável nas últimas 24h'}
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 12,
-              borderTop: '1px solid #f3f4f6',
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: '#6b7280',
-            }}
-          >
-            <span>⏰ Noturno: 21h-07h</span>
-            <span>🌐 NFS-e 24/7</span>
-            <span
-              onClick={() => setAbaAtiva('logs')}
-              style={{ color: '#600000', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Ver Logs →
-            </span>
-          </div>
+          <CabecalhoKpi titulo="Monitor automático" selo="A cada 10 min" tom="ok" />
+          <ValorKpi
+            valor={resumo ? String(resumo.monitor.totalAtivos || 0) : null}
+            complemento={resumo ? 'empresas' : undefined}
+            carregando={carregandoResumo}
+          />
+          <LegendaKpi cor={(resumo?.monitor.erros24h || 0) > 0 ? '#b91c1c' : '#15803d'}>
+            {(resumo?.monitor.erros24h || 0) > 0
+              ? `${resumo?.monitor.erros24h} ocorrência(s) nas últimas 24h`
+              : 'Sem ocorrências nas últimas 24h'}
+          </LegendaKpi>
+          <RodapeKpi
+            itens={[
+              { valor: '21h–07h', rotulo: 'Janela noturna' },
+              { valor: '24/7', rotulo: 'NFS-e' },
+              { valor: 'Ver logs →', rotulo: 'Auditoria', cor: '#600000' },
+            ]}
+          />
         </CartaoKpi>
       </div>
 
@@ -556,7 +480,7 @@ export default function DashboardFiscalGeral() {
               border: 'none',
               padding: '8px 18px',
               borderRadius: 9,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
@@ -577,7 +501,7 @@ export default function DashboardFiscalGeral() {
               border: 'none',
               padding: '8px 18px',
               borderRadius: 9,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
@@ -598,7 +522,7 @@ export default function DashboardFiscalGeral() {
               border: 'none',
               padding: '8px 18px',
               borderRadius: 9,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
@@ -613,7 +537,7 @@ export default function DashboardFiscalGeral() {
                 style={{
                   background: '#fee2e2',
                   color: '#991b1b',
-                  fontSize: 10,
+                  fontSize: 12.5,
                   fontWeight: 700,
                   padding: '1px 6px',
                   borderRadius: 99,
@@ -634,7 +558,7 @@ export default function DashboardFiscalGeral() {
               border: 'none',
               padding: '8px 18px',
               borderRadius: 9,
-              fontSize: 13,
+              fontSize: 14.5,
               fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
@@ -684,7 +608,7 @@ export default function DashboardFiscalGeral() {
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 6px 0' }}>
               Central de Disparo & Sincronização em Segundo Plano
             </h3>
-            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
+            <p style={{ margin: 0, fontSize: 14.5, color: '#6b7280' }}>
               Execute rotinas sob demanda para toda a carteira de empresas e acompanhe os retornos imediatamente.
             </p>
           </div>
@@ -714,7 +638,7 @@ export default function DashboardFiscalGeral() {
                     {isCliente ? 'Sincronização de Documentos' : 'Sincronização Completa (Todas)'}
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 14.5, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
                   {isCliente
                     ? 'Consulta em tempo real a SEFAZ (NF-e Mercadorias e CT-e Fretes) e o ADN Nacional (NFS-e emitidas e tomadas).'
                     : 'Consulta em paralelo a SEFAZ (NF-e Mercadorias e CT-e Fretes) e o ADN Nacional (NFS-e de Serviços emitidas e tomadas).'}
@@ -730,7 +654,7 @@ export default function DashboardFiscalGeral() {
                   border: 'none',
                   padding: '12px 18px',
                   borderRadius: 10,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   fontWeight: 600,
                   cursor: executandoLote ? 'wait' : 'pointer',
                   display: 'inline-flex',
@@ -762,7 +686,7 @@ export default function DashboardFiscalGeral() {
                     {isCliente ? 'Situação Fiscal & CNDs' : 'Varredura de CNDs'}
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 14.5, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
                   {isCliente
                     ? 'Acompanhe e emita certidões negativas de débitos e situação cadastral federal e estadual na Receita Federal.'
                     : 'Atualiza certidões negativas de débitos e situação cadastral federal e estadual na Receita Federal.'}
@@ -780,7 +704,7 @@ export default function DashboardFiscalGeral() {
                   border: 'none',
                   padding: '12px 18px',
                   borderRadius: 10,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -813,7 +737,7 @@ export default function DashboardFiscalGeral() {
                       Cadastro de Todos os Clientes
                     </span>
                   </div>
-                  <p style={{ fontSize: 13, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 14.5, color: '#4b5563', margin: '0 0 16px 0', lineHeight: 1.5 }}>
                     Cadastre novos CNPJs, importe planilhas de clientes ou gerencie certificados digitais A1 da carteira.
                   </p>
                 </div>
@@ -826,7 +750,7 @@ export default function DashboardFiscalGeral() {
                     border: 'none',
                     padding: '12px 18px',
                     borderRadius: 10,
-                    fontSize: 13,
+                    fontSize: 14.5,
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'inline-flex',

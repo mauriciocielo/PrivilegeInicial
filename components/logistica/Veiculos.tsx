@@ -60,7 +60,7 @@ export default function Veiculos() {
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--border-light)', fontSize: 12, textTransform: 'uppercase' }}>
+            <tr style={{ background: 'var(--border-light)', fontSize: 14, textTransform: 'uppercase' }}>
               <th style={{ padding: '12px 16px' }}>Placa</th>
               <th style={{ padding: '12px 16px' }}>Modelo</th>
               <th style={{ padding: '12px 16px' }}>Status</th>
@@ -73,7 +73,7 @@ export default function Veiculos() {
                 <td style={{ padding: '12px 16px', fontWeight: 600 }}>{v.placa}</td>
                 <td style={{ padding: '12px 16px' }}>{v.modelo}</td>
                 <td style={{ padding: '12px 16px' }}>
-                  <span style={{ padding: '4px 8px', borderRadius: 4, background: v.status === 'ativo' ? 'var(--green-bg)' : 'var(--red-bg)', color: v.status === 'ativo' ? 'var(--green)' : 'var(--red)', fontSize: 12 }}>
+                  <span style={{ padding: '4px 8px', borderRadius: 4, background: v.status === 'ativo' ? 'var(--green-bg)' : 'var(--red-bg)', color: v.status === 'ativo' ? 'var(--green)' : 'var(--red)', fontSize: 14 }}>
                     {v.status.toUpperCase()}
                   </span>
                 </td>

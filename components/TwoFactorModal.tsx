@@ -115,7 +115,7 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
         </div>
 
         {error && (
-          <div className="alert alert-danger" style={{ marginBottom: 16, color: '#dc2626', background: '#fef2f2', padding: 12, borderRadius: 8, fontSize: 13 }}>
+          <div className="alert alert-danger" style={{ marginBottom: 16, color: '#dc2626', background: '#fef2f2', padding: 12, borderRadius: 8, fontSize: 14.5 }}>
             ⚠️ {error}
           </div>
         )}
@@ -127,7 +127,7 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green)', fontWeight: 600, marginBottom: 12 }}>
                   <ShieldCheck size={18} /> Verificação em duas etapas ativa
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+                <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 20 }}>
                   Sua conta pede um código do seu aplicativo autenticador a cada login.
                 </p>
                 <div className="form-actions">
@@ -140,13 +140,13 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 12 }}>
                   <ShieldOff size={18} /> Verificação em duas etapas desativada
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+                <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 20 }}>
                   Adicione uma camada extra de segurança exigindo um código do Google Authenticator (ou similar) a cada login.
                 </p>
                 <div className="form-actions">
                   <button className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
                   <button className="btn btn-primary" onClick={startSetup} disabled={loading}>
-                    {loading ? '⏳ Gerando...' : 'Ativar'}
+                    {loading ? 'Gerando...' : 'Ativar'}
                   </button>
                 </div>
               </>
@@ -156,16 +156,16 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
 
         {step === 'setup' && (
           <form onSubmit={confirmSetup}>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 12 }}>
               1. Escaneie o QR code com o Google Authenticator, Authy ou similar.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
               {qrCodeDataUrl && <img src={qrCodeDataUrl} alt="QR Code 2FA" style={{ width: 180, height: 180, background: '#fff', padding: 8, borderRadius: 8 }} />}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20, wordBreak: 'break-all' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20, wordBreak: 'break-all' }}>
               Não consegue escanear? Digite manualmente: <strong>{secret}</strong>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 8 }}>
               2. Digite o código de 6 dígitos gerado pelo app:
             </p>
             <div className="form-group" style={{ marginBottom: 20 }}>
@@ -184,7 +184,7 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? '⏳ Confirmando...' : 'Confirmar e Ativar'}
+                {loading ? 'Confirmando...' : 'Confirmar e Ativar'}
               </button>
             </div>
           </form>
@@ -195,11 +195,11 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green)', fontWeight: 600, marginBottom: 12 }}>
               <ShieldCheck size={18} /> Ativado com sucesso!
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 12 }}>
               Guarde estes códigos de backup em um lugar seguro. Cada um pode ser usado uma vez para entrar caso você perca acesso ao seu app autenticador. Eles não serão mostrados novamente.
             </p>
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontFamily: 'monospace', fontSize: 13,
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontFamily: 'monospace', fontSize: 14.5,
               background: 'var(--bg-card2)', border: '1px solid var(--border-light)', borderRadius: 8, padding: 14, marginBottom: 12
             }}>
               {backupCodes.map(c => <div key={c}>{c}</div>)}
@@ -215,7 +215,7 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
 
         {step === 'disable' && (
           <form onSubmit={confirmDisable}>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 16 }}>
               Confirme sua senha para desativar a verificação em duas etapas.
             </p>
             <div className="form-group" style={{ marginBottom: 20 }}>
@@ -232,7 +232,7 @@ export default function TwoFactorModal({ open, enabled, onClose, onChanged }: Tw
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setStep('status')}>Voltar</button>
               <button type="submit" className="btn btn-danger" disabled={loading}>
-                {loading ? '⏳ Verificando...' : 'Desativar'}
+                {loading ? 'Verificando...' : 'Desativar'}
               </button>
             </div>
           </form>

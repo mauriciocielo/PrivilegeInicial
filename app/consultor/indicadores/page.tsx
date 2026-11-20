@@ -162,7 +162,7 @@ export default function IndicadoresPage() {
             <div className="form-group">
               <label className="form-label">Inadimplência do Mês (%)</label>
               <input type="number" step="0.1" className="form-control" value={form.inadimplencia||0} onChange={e=>setForm(f=>({...f,inadimplencia:Number(e.target.value)}))} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Ex: Se você faturou R$ 100 mil e teve R$ 5 mil inadimplentes, informe 5.0
               </div>
             </div>

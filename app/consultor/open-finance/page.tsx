@@ -666,13 +666,13 @@ export default function OpenFinancePage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20 }}>
             <div style={{ maxWidth: 680 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.18)', color: '#4ade80', padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.18)', color: '#4ade80', padding: '4px 12px', borderRadius: 99, fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
                 ✓ Zero Mensalidade de Agregadores · Conexão Direta mTLS + OpenBanking-Brasil/openapi
               </div>
               <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: '#fff' }}>
                 Extrato Automático Direto nos Portais Gratuitos dos Bancos
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+              <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 15, lineHeight: 1.6, margin: 0 }}>
                 Em vez de pagar hubs intermediários por conta conectada, o sistema utiliza diretamente o{' '}
                 <strong>Certificado Digital ICP-Brasil A1 (e-CNPJ)</strong> que a empresa já possui cadastrado no cofre e as credenciais gratuitas do{' '}
                 <strong>Portal Developers de cada banco (Sicoob, Inter, Sicredi, BB, Cora, C6, Itaú)</strong>, além de suportar o contrato oficial{' '}
@@ -690,29 +690,29 @@ export default function OpenFinancePage() {
                 minWidth: 280,
               }}
             >
-              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>
+              <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>
                 Cofre mTLS da Empresa Ativa
               </div>
               {certStatus.possuiCertificadoA1 ? (
                 <>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#4ade80', marginBottom: 4 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 700, color: '#4ade80', marginBottom: 4 }}>
                     ● Certificado A1 Pronto para Uso
                   </div>
-                  <div style={{ fontSize: 12, color: '#cbd5e1' }}>
+                  <div style={{ fontSize: 14, color: '#cbd5e1' }}>
                     {certStatus.titular || activeCompany?.razaoSocial}
                   </div>
                   {certStatus.validoAte && (
-                    <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>
+                    <div style={{ fontSize: 13.5, color: '#94a3b8', marginTop: 4 }}>
                       Válido até: {new Date(certStatus.validoAte).toLocaleDateString('pt-BR')}
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>
                     ● Certificado A1 não detectado no cofre
                   </div>
-                  <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.45 }}>
                     Você pode usar o <strong>Simulador OpenBanking-Brasil</strong> imediatamente ou enviar o arquivo <code>.pfx</code> / <code>.crt</code> na configuração do banco.
                   </div>
                 </>
@@ -730,7 +730,7 @@ export default function OpenFinancePage() {
               alignItems: 'center',
               gap: 16,
               flexWrap: 'wrap',
-              fontSize: 13,
+              fontSize: 14.5,
             }}
           >
             <span style={{ color: '#cbd5e1', fontWeight: 600 }}>Período de Busca do Extrato:</span>
@@ -765,7 +765,7 @@ export default function OpenFinancePage() {
                 <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Extrato Recebido — {previewBank.name} ({previewTxs.length} transações)
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                   Protocolo: <strong>{previewProtocol}</strong> · Sem duplicidade por FITID
                 </div>
               </div>
@@ -787,7 +787,7 @@ export default function OpenFinancePage() {
                   color: '#1e3a8a',
                   padding: '10px 14px',
                   borderRadius: 10,
-                  fontSize: 12.5,
+                  fontSize: 14,
                   marginBottom: 14,
                 }}
               >
@@ -811,14 +811,14 @@ export default function OpenFinancePage() {
                   {previewTxs.map(tx => (
                     <tr key={tx.fitId}>
                       <td>{tx.date.split('-').reverse().join('/')}</td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{tx.fitId}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{tx.fitId}</td>
                       <td>
                         <span className={`badge ${tx.type === 'CREDIT' ? 'badge-green' : 'badge-red'}`}>
                           {tx.paymentType}
                         </span>
                       </td>
                       <td style={{ fontWeight: 600 }}>{tx.description}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                         {tx.counterpartyName || '-'}
                         {tx.counterpartyDoc ? ` (${tx.counterpartyDoc})` : ''}
                       </td>
@@ -874,7 +874,7 @@ export default function OpenFinancePage() {
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <span
                         style={{
-                          fontSize: 10.5,
+                          fontSize: 13,
                           fontWeight: 700,
                           padding: '3px 8px',
                           borderRadius: 20,
@@ -887,7 +887,7 @@ export default function OpenFinancePage() {
                       {isConfigured && (
                         <span
                           style={{
-                            fontSize: 10.5,
+                            fontSize: 13,
                             fontWeight: 700,
                             padding: '3px 8px',
                             borderRadius: 20,
@@ -902,8 +902,8 @@ export default function OpenFinancePage() {
                   </div>
 
                   <div style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text-primary)' }}>{b.name}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}>{b.authType}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, marginBottom: 16, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}>{b.authType}</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 8, marginBottom: 16, lineHeight: 1.5 }}>
                     Portal oficial: <strong>{b.portalLabel}</strong>
                     {cfg?.lastSyncAt && (
                       <div style={{ marginTop: 6, color: 'var(--green)', fontWeight: 600 }}>
@@ -917,10 +917,10 @@ export default function OpenFinancePage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       className="btn btn-secondary"
-                      style={{ flex: 1, border: '1px solid var(--border)', fontSize: 12.5 }}
+                      style={{ flex: 1, border: '1px solid var(--border)', fontSize: 14 }}
                       onClick={() => openBankConfig(b)}
                     >
-                      ⚙️ Configurar Grátis
+                      Configurar Grátis
                     </button>
                     <button
                       className="btn btn-primary"
@@ -929,12 +929,12 @@ export default function OpenFinancePage() {
                         background: b.color,
                         color: b.color === '#eab308' ? '#111' : '#fff',
                         border: 'none',
-                        fontSize: 12.5,
+                        fontSize: 14,
                       }}
                       disabled={isSyncing}
                       onClick={() => syncBankStatement(b)}
                     >
-                      {isSyncing ? '⏳ Buscando...' : '↻ Puxar Extrato'}
+                      {isSyncing ? 'Buscando...' : '↻ Puxar Extrato'}
                     </button>
                   </div>
                   {b.id === 'sicoob' && (
@@ -946,14 +946,14 @@ export default function OpenFinancePage() {
                         color: '#008a49',
                         border: '1px solid rgba(0, 168, 89, 0.35)',
                         fontWeight: 700,
-                        fontSize: 12.5,
+                        fontSize: 14,
                       }}
                       onClick={() => {
                         setCobResult(null);
                         setShowCobrancaModal(true);
                       }}
                     >
-                      ⚡ Emitir Cobrança Direta via API (Pix QR Code / CobV)
+                      Emitir Cobrança Direta via API (Pix QR Code / CobV)
                     </button>
                   )}
                 </div>
@@ -980,14 +980,14 @@ export default function OpenFinancePage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 900,
-                    fontSize: 14,
+                    fontSize: 15.5,
                   }}
                 >
                   {selectedBank.code}
                 </div>
                 <div>
                   <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{selectedBank.name}</h2>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedBank.authType}</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{selectedBank.authType}</div>
                 </div>
               </div>
               <button className="btn btn-ghost" onClick={() => setSelectedBank(null)}>
@@ -1006,17 +1006,17 @@ export default function OpenFinancePage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong style={{ fontSize: 13 }}>Como obter a credencial gratuita neste banco:</strong>
+                <strong style={{ fontSize: 14.5 }}>Como obter a credencial gratuita neste banco:</strong>
                 <a
                   href={selectedBank.portalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textDecoration: 'none' }}
+                  style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)', textDecoration: 'none' }}
                 >
                   Abrir {selectedBank.portalLabel} ↗
                 </a>
               </div>
-              <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <ol style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 {selectedBank.freeSteps.map((stepText, i) => (
                   <li key={i} style={{ marginBottom: 4 }}>
                     {stepText}
@@ -1036,11 +1036,11 @@ export default function OpenFinancePage() {
                     border: form.ambiente === 'sandbox' ? '2px solid var(--accent)' : '1px solid var(--border)',
                     background: form.ambiente === 'sandbox' ? 'rgba(96,0,0,0.08)' : 'transparent',
                     fontWeight: 700,
-                    fontSize: 12.5,
+                    fontSize: 14,
                   }}
                   onClick={() => setForm(prev => ({ ...prev, ambiente: 'sandbox' }))}
                 >
-                  🧪 Simulador OpenBanking-Brasil (Teste Imediato)
+                  Simulador OpenBanking-Brasil (Teste Imediato)
                 </button>
                 <button
                   type="button"
@@ -1049,11 +1049,11 @@ export default function OpenFinancePage() {
                     border: form.ambiente === 'producao' ? '2px solid var(--green)' : '1px solid var(--border)',
                     background: form.ambiente === 'producao' ? 'var(--green-bg)' : 'transparent',
                     fontWeight: 700,
-                    fontSize: 12.5,
+                    fontSize: 14,
                   }}
                   onClick={() => setForm(prev => ({ ...prev, ambiente: 'producao' }))}
                 >
-                  🔒 Produção Direta (API Oficial mTLS)
+                  Produção Direta (API Oficial mTLS)
                 </button>
               </div>
             </div>
@@ -1065,7 +1065,7 @@ export default function OpenFinancePage() {
                   borderRadius: 10,
                   background: 'rgba(59,130,246,0.08)',
                   border: '1px solid rgba(59,130,246,0.25)',
-                  fontSize: 12.5,
+                  fontSize: 14,
                   color: 'var(--text-secondary)',
                   marginBottom: 18,
                   lineHeight: 1.55,
@@ -1165,7 +1165,7 @@ export default function OpenFinancePage() {
                     marginBottom: 18,
                   }}
                 >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 700, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={form.usarCertificadoEmpresa}
@@ -1178,14 +1178,14 @@ export default function OpenFinancePage() {
                     <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
                       <div className="grid-2" style={{ gap: 10 }}>
                         <div>
-                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                          <label className="form-label" style={{ fontSize: 13.5 }}>
                             Opção A: Arquivo .PFX / .P12
                           </label>
                           <input type="file" accept=".pfx,.p12" className="form-input" onChange={handlePfxUpload} />
-                          {pfxFileName && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>{pfxFileName}</div>}
+                          {pfxFileName && <div style={{ fontSize: 13, color: 'var(--green)', marginTop: 4 }}>{pfxFileName}</div>}
                         </div>
                         <div>
-                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                          <label className="form-label" style={{ fontSize: 13.5 }}>
                             Senha do .PFX
                           </label>
                           <input
@@ -1200,7 +1200,7 @@ export default function OpenFinancePage() {
 
                       <div className="grid-2" style={{ gap: 10 }}>
                         <div>
-                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                          <label className="form-label" style={{ fontSize: 13.5 }}>
                             Opção B: Certificado .CRT / .PEM (Inter/Cora)
                           </label>
                           <input
@@ -1211,7 +1211,7 @@ export default function OpenFinancePage() {
                           />
                         </div>
                         <div>
-                          <label className="form-label" style={{ fontSize: 11.5 }}>
+                          <label className="form-label" style={{ fontSize: 13.5 }}>
                             Chave Privada .KEY (Inter/Cora)
                           </label>
                           <input
@@ -1267,14 +1267,14 @@ export default function OpenFinancePage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 13,
+                    fontSize: 14.5,
                   }}
                 >
                   756
                 </span>
                 <div>
                   <span className="modal-title">Emitir Cobrança Direta — API Sicoob (mTLS)</span>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                     Cooperativa 4342 · Conta 175.204-9 · PRIVILEGE CONSULTORIA LTDA
                   </div>
                 </div>
@@ -1405,7 +1405,7 @@ export default function OpenFinancePage() {
                   />
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, marginBottom: 18, cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, marginBottom: 18, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={cobForm.lancarContasReceber}
@@ -1424,7 +1424,7 @@ export default function OpenFinancePage() {
                     disabled={emittingCobranca}
                     onClick={handleEmitirCobrancaSicoob}
                   >
-                    {emittingCobranca ? '⏳ Gerando Cobrança no Sicoob...' : '⚡ Emitir Cobrança Agora'}
+                    {emittingCobranca ? 'Gerando Cobrança no Sicoob...' : 'Emitir Cobrança Agora'}
                   </button>
                 </div>
               </>
@@ -1461,7 +1461,7 @@ export default function OpenFinancePage() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)' }}>
                       ✓ Boleto Híbrido + Cobrança Pix Emitido no Sicoob ({cobResult.status})
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 2 }}>
                       <strong>TXID BACEN:</strong> <code>{cobResult.txid}</code> · <strong>Valor:</strong> R${' '}
                       {Number(cobResult.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
@@ -1475,7 +1475,7 @@ export default function OpenFinancePage() {
                           toast.success('Linha digitável copiada!');
                         }}
                       >
-                        📋 Copiar Linha Digitável
+                        Copiar Linha Digitável
                       </button>
                     )}
                     {cobResult.brcode && (
@@ -1486,7 +1486,7 @@ export default function OpenFinancePage() {
                           toast.success('Código Pix Copia e Cola copiado!');
                         }}
                       >
-                        ⚡ Copiar Pix Copia e Cola
+                        Copiar Pix Copia e Cola
                       </button>
                     )}
                     <button
@@ -1494,7 +1494,7 @@ export default function OpenFinancePage() {
                       style={{ background: '#003641', border: 'none' }}
                       onClick={() => window.print()}
                     >
-                      🖨️ Imprimir Boleto / Salvar PDF
+                      Imprimir Boleto / Salvar PDF
                     </button>
                   </div>
                 </div>
@@ -1502,16 +1502,16 @@ export default function OpenFinancePage() {
                 {/* Aviso / Status do Registro do Código de Barras na CIP */}
                 <div className="no-print" style={{ marginBottom: 14 }}>
                   {cobResult.boletoRegistradoOnline ? (
-                    <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#065f46' }}>
-                      <strong>✅ Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong>
+                    <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 12px', fontSize: 14, color: '#065f46' }}>
+                      <strong>Código de Barras + QR Code Pix Registrados Online no Sicoob (CIP/Nuclea)!</strong>
                     </div>
                   ) : (
-                    <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#92400e', lineHeight: 1.45 }}>
+                    <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 12px', fontSize: 14, color: '#92400e', lineHeight: 1.45 }}>
                       <div>
-                        <strong>✅ QR Code Pix Oficial: REGISTRADO E ATIVO IMEDIATAMENTE</strong> (TXID: {cobResult.txid}).
+                        <strong>QR Code Pix Oficial: REGISTRADO E ATIVO IMEDIATAMENTE</strong> (TXID: {cobResult.txid}).
                       </div>
                       <div style={{ marginTop: 4 }}>
-                        <strong>⚠️ Código de Barras (CIP):</strong>{' '}
+                        <strong>Código de Barras (CIP):</strong>{' '}
                         {cobResult.motivoCodigoBarrasNaoRegistrado ||
                           "Para que o código de barras também seja registrado online na CIP sem precisar enviar CNAB 240, acesse developers.sicoob.com.br > Aplicativos > (PRIVILEGE CONSULTORIA) > seção APIs e marque também a API 'Cobrança Bancária'."}
                       </div>
@@ -1555,9 +1555,9 @@ export default function OpenFinancePage() {
                       })
                     }
                     className="btn btn-secondary"
-                    style={{ fontSize: 12.5 }}
+                    style={{ fontSize: 14 }}
                   >
-                    📲 Enviar Boleto + Pix no WhatsApp
+                    Enviar Boleto + Pix no WhatsApp
                   </button>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn btn-secondary" onClick={() => setCobResult(null)}>

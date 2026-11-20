@@ -109,7 +109,7 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
 
   return (
     <div style={{ marginBottom: 32 }}>
-      <h3 className="ai-insights-title" style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 7 }}>
+      <h3 className="ai-insights-title" style={{ fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 7 }}>
         <Sparkles size={14} className="pulse-glow" /> Privilege Insights
       </h3>
       <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
@@ -137,10 +137,10 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
                 <Icon size={17} strokeWidth={2.2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 13, letterSpacing: 0.2, marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14.5, letterSpacing: 0.2, marginBottom: 4 }}>
                   {insight.title}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   {insight.desc}
                 </div>
               </div>

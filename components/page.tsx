@@ -59,7 +59,7 @@ export default function AtasClientePage() {
                                         <td style={{ fontWeight: 600 }}>{ata.titulo}</td>
                                         <td>{consultores.find(c => c.id === ata.consultorId)?.name || 'Consultor'}</td>
                                         <td>
-                                            <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>👁️ Visualizar</button>
+                                            <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>Visualizar</button>
                                         </td>
                                     </tr>
                                 ))}

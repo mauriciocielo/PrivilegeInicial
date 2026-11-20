@@ -205,8 +205,8 @@ Documento gerado em caráter contingencial.`);
           <div className="page-subtitle">Rascunhe, gere com IA e documente as estratégias da empresa</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={handlePrint}>🖨️ Imprimir / PDF</button>
-          <button className="btn btn-primary" onClick={handleSave}>💾 Salvar Política</button>
+          <button className="btn btn-secondary" onClick={handlePrint}>Imprimir / PDF</button>
+          <button className="btn btn-primary" onClick={handleSave}>Salvar Política</button>
         </div>
       </div>
 
@@ -253,7 +253,7 @@ Documento gerado em caráter contingencial.`);
                   <span>{POLICY_INFO[activeTab].icon}</span>
                   {POLICY_INFO[activeTab].title}
                 </h3>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
                   {POLICY_INFO[activeTab].description}
                 </p>
               </div>
@@ -266,8 +266,8 @@ Documento gerado em caráter contingencial.`);
                     flex: 1, 
                     width: '100%', 
                     minHeight: '400px', 
-                    fontFamily: 'Courier New, Courier, monospace', 
-                    fontSize: 13, 
+                    fontFamily: 'inherit', 
+                    fontSize: 14.5, 
                     lineHeight: '1.6', 
                     padding: 16, 
                     borderRadius: 8, 
@@ -290,17 +290,17 @@ Documento gerado em caráter contingencial.`);
             <div className="card" style={{ borderColor: 'var(--accent)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ fontSize: 20 }}>🤖</span>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>Privilege AI Copilot</h3>
+                <h3 style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>Privilege AI Copilot</h3>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
                 Forneça tópicos, regras ou orientações específicas. A inteligência artificial irá redigir um documento profissional formal com base na saúde da empresa e nas diretrizes enviadas.
               </p>
 
               <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>Diretrizes da sua política (Opcional)</label>
+                <label className="form-label" style={{ fontSize: 13 }}>Diretrizes da sua política (Opcional)</label>
                 <textarea
                   className="form-control"
-                  style={{ minHeight: '120px', fontSize: 12, resize: 'vertical' }}
+                  style={{ minHeight: '120px', fontSize: 14, resize: 'vertical' }}
                   placeholder="Ex: Quero estabelecer que compras acima de R$ 5.000 precisam de 3 orçamentos e aprovação do diretor financeiro. Prazos de pagamento devem ser de no mínimo 30 dias..."
                   value={aiPrompt}
                   onChange={e => setAiPrompt(e.target.value)}
@@ -313,13 +313,13 @@ Documento gerado em caráter contingencial.`);
                 disabled={loading}
                 style={{ width: '100%', justifyContent: 'center', background: 'var(--accent)' }}
               >
-                {loading ? '⏳ Elaborando Rascunho...' : '✨ Gerar com IA'}
+                {loading ? 'Elaborando Rascunho...' : 'Gerar com IA'}
               </button>
 
               {aiDraft && (
                 <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-light)' }}>
-                  <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>📝 Rascunho Sugerido</span>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Rascunho Sugerido</span>
                     <button className="badge badge-green" onClick={applyDraft} style={{ border: 'none', cursor: 'pointer' }}>
                       ✓ Aplicar no Editor
                     </button>
@@ -332,7 +332,7 @@ Documento gerado em caráter contingencial.`);
                       border: '1px solid var(--border-light)', 
                       borderRadius: 8, 
                       padding: 12, 
-                      fontSize: 11.5, 
+                      fontSize: 13.5, 
                       lineHeight: '1.5',
                       whiteSpace: 'pre-wrap',
                       fontFamily: 'monospace'
@@ -346,8 +346,8 @@ Documento gerado em caráter contingencial.`);
 
             {/* Dicas Rápidas Contábeis */}
             <div className="card">
-              <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>💡 Dicas de Elaboração</h4>
-              <ul style={{ paddingLeft: 16, fontSize: 11, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 8, lineHeight: '1.4' }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Dicas de Elaboração</h4>
+              <ul style={{ paddingLeft: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 8, lineHeight: '1.4' }}>
                 <li><strong>Especificidade:</strong> Adicione valores numéricos exatos para limites de crédito ou alçadas.</li>
                 <li><strong>Prazos:</strong> Alinhe o Prazo Médio de Recebimento (PMR) com o de Pagamento (PMP) para garantir capital de giro saudável.</li>
                 <li><strong>Base de Conhecimento:</strong> Suba manuais corporativos ou diretrizes do banco no Painel Administrativo para a IA incorporar nos rascunhos.</li>
@@ -373,10 +373,10 @@ Documento gerado em caráter contingencial.`);
               <h1 style={{ fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', margin: '0 0 6px 0' }}>
                 {POLICY_INFO[activeTab].title}
               </h1>
-              <p style={{ fontSize: '12px', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+              <p style={{ fontSize: '14px', margin: 0, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
                 {activeCompany?.razaoSocial} • CNPJ {activeCompany?.cnpj}
               </p>
-              <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0 0' }}>
                 Emitido em: {new Date().toLocaleDateString('pt-BR')} • Privilege Consultoria Financeira
               </p>
             </div>
@@ -384,7 +384,7 @@ Documento gerado em caráter contingencial.`);
             {/* Corpo do Documento */}
             <div 
               style={{ 
-                fontSize: '13px', 
+                fontSize: '14.5px', 
                 lineHeight: '1.7', 
                 whiteSpace: 'pre-wrap', 
                 color: '#000',
@@ -398,13 +398,13 @@ Documento gerado em caráter contingencial.`);
             <div style={{ marginTop: 60, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, paddingTop: 30, borderTop: '1px dashed #ccc' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '200px', margin: '0 auto', marginTop: 30 }}></div>
-                <p style={{ fontSize: '11px', fontWeight: 600, margin: '6px 0 0 0' }}>{activeCompany?.responsavel || 'Responsável Legal'}</p>
-                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>Representante Corporativo</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, margin: '6px 0 0 0' }}>{activeCompany?.responsavel || 'Responsável Legal'}</p>
+                <p style={{ fontSize: '12.5px', color: '#666', margin: 0 }}>Representante Corporativo</p>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '200px', margin: '0 auto', marginTop: 30 }}></div>
-                <p style={{ fontSize: '11px', fontWeight: 600, margin: '6px 0 0 0' }}>Privilege Consultoria</p>
-                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>Assessor Financeiro / CFO Adjunto</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, margin: '6px 0 0 0' }}>Privilege Consultoria</p>
+                <p style={{ fontSize: '12.5px', color: '#666', margin: 0 }}>Assessor Financeiro / CFO Adjunto</p>
               </div>
             </div>
 

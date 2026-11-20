@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import {
   store, type NfsE, type Cliente, type Empresa, type Portador, type PlanoConta, uid,
@@ -23,7 +23,6 @@ import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import PaginationBar from './ui/PaginationBar';
 import { TableSkeleton } from './ui';
-import { instrumentSerif as serif } from '../app/fonts';
 
 // Modais e painéis secundários carregados sob demanda (reduz bundle inicial da tela de NFS-e)
 const NfseConfigModal = dynamic(() => import('./NfseConfigModal'), { ssr: false });
@@ -58,7 +57,7 @@ const itemMenuDropdownStyle: React.CSSProperties = {
   border: 'none',
   padding: '9px 14px',
   borderRadius: 8,
-  fontSize: 13,
+  fontSize: 14.5,
   fontWeight: 500,
   color: '#1f2937',
   display: 'flex',
@@ -125,13 +124,53 @@ function CartaoResumoNfse({ rotulo, valor, sub, acento, badge, onClick }: {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{rotulo}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{rotulo}</span>
         {badge && (
-          <span style={{ background: badge.fundo, color: badge.cor, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge.texto}</span>
+          <span style={{ background: badge.fundo, color: badge.cor, fontSize: 12.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{badge.texto}</span>
         )}
       </div>
       <div style={{ fontSize: 26, fontWeight: 700, color: acento || '#111827', lineHeight: 1.1 }}>{valor}</div>
-      <div style={{ fontSize: 12, color: '#6b7280' }}>{sub}</div>
+      <div style={{ fontSize: 14, color: '#6b7280' }}>{sub}</div>
+    </div>
+  );
+}
+
+/**
+ * Grupo opcional do formulário da nota (dedução, ISS retido, retenções federais):
+ * uma caixa de marcação com explicação; os campos só aparecem quando o grupo se aplica.
+ */
+function OpcaoNota({ marcado, onAlterar, titulo, descricao, desabilitado, children }: {
+  marcado: boolean;
+  onAlterar: (marcado: boolean) => void;
+  titulo: string;
+  descricao: string;
+  desabilitado?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <div style={{
+      border: `1px solid ${marcado ? 'var(--accent-border)' : 'var(--border)'}`,
+      background: marcado ? '#fff' : 'transparent',
+      borderRadius: 10,
+      marginBottom: 10,
+      opacity: desabilitado ? 0.6 : 1,
+    }}>
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', cursor: desabilitado ? 'not-allowed' : 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={marcado}
+          disabled={desabilitado}
+          onChange={e => onAlterar(e.target.checked)}
+          style={{ marginTop: 3, width: 17, height: 17, accentColor: '#600000', flexShrink: 0 }}
+        />
+        <span>
+          <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{titulo}</span>
+          <span style={{ display: 'block', fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>{descricao}</span>
+        </span>
+      </label>
+      {marcado && children && (
+        <div style={{ padding: '0 14px 12px 41px' }}>{children}</div>
+      )}
     </div>
   );
 }
@@ -214,6 +253,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const [percentuaisRetencao, setPercentuaisRetencao] = useState<ValoresRetidos>(SEM_RETENCAO);
   // Depois que a pessoa mexe nas retenções da nota, a regra não sobrescreve mais.
   const [retencaoManual, setRetencaoManual] = useState(false);
+  // Grupos opcionais abertos pela pessoa. Também abrem sozinhos quando já há valor
+  // (rascunho editado, nota copiada ou regra de retenção aplicada).
+  const [deducaoAberta, setDeducaoAberta] = useState(false);
+  const [retFederalAberta, setRetFederalAberta] = useState(false);
   const [regraAplicada, setRegraAplicada] = useState('');
   // Null enquanto a pessoa não digitar: vale o valor salvo na configuração do emissor.
   const [aliquotaSimplesDigitada, setAliquotaSimplesDigitada] = useState<string | null>(null);
@@ -558,6 +601,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const issRetidoForm = !!form.issRetido;
   const retidosForm = calcularRetidos(valorForm, percentuaisRetencao);
   const estimativa = estimarValoresNota(valorForm, aliquotaForm, issRetidoForm, totalRetidoFederal(retidosForm), deducoesForm);
+  const temDeducao = deducaoAberta || deducoesForm > 0;
+  const temRetFederal = retFederalAberta || Object.values(percentuaisRetencao).some(p => Number(p) > 0);
+
+  useEffect(() => {
+    if (modalMode === null) { setDeducaoAberta(false); setRetFederalAberta(false); }
+  }, [modalMode]);
   const financeiroForm: FinanceiroNota = {
     gerarContaReceber: !!form.gerarContaReceber,
     emitirBoletoSicoob: !!form.emitirBoletoSicoob,
@@ -969,6 +1018,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     if (!form.discriminacao?.trim()) { toast.error('Preencha a descrição do serviço.'); return; }
     if (!form.tomadorCnpjCpf || !form.tomadorRazaoSocial) { toast.error('Preencha os dados do tomador.'); return; }
     if (!valorForm) { toast.error('Informe o valor do serviço.'); return; }
+    if (deducoesForm > valorForm) { toast.error('A dedução não pode ser maior que o valor do serviço.'); return; }
     const exigeObra = servicoExigeObra(form.codigoServico);
     if (emitir && exigeObra) {
       const temCno = !!(form.obraCodigo || '').trim();
@@ -1606,7 +1656,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   }, [empresasDisponiveis, buscaEmpresaRapida]);
 
   if (!empresaId) return (
-    <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%' }}>
+    <div className="page-body nfse-ui" style={{ background: '#fdfdfd', minHeight: '100%' }}>
       <div
         style={{
           maxWidth: 780,
@@ -1620,10 +1670,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       >
         {modoCliente ? (
           <>
-            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
               Emissor Nacional
             </div>
-            <h3 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#000', margin: '0 0 18px' }}>
+            <h3 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#000', margin: '0 0 18px' }}>
               Carregando dados da empresa...
             </h3>
             <TableSkeleton rows={5} cols={6} />
@@ -1632,19 +1682,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
                   Módulo Independente • Emissor Nacional NFS-e
                 </div>
-                <h3 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#000', margin: '0 0 6px', lineHeight: 1.1 }}>
+                <h3 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#000', margin: '0 0 6px', lineHeight: 1.1 }}>
                   Escolha a empresa para operar NFS-e
                 </h3>
-                <p style={{ fontSize: 14, color: '#525252', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 15.5, color: '#525252', margin: 0, lineHeight: 1.5 }}>
                   Esta tela é independente da empresa selecionada no restante do sistema. Escolha abaixo qualquer cliente ou emissor por procuração.
                 </p>
               </div>
               <button
                 className="btn"
-                style={{ background: '#600000', color: '#fff', padding: '10px 18px', borderRadius: 8, fontWeight: 500, fontSize: 13.5, border: 'none' }}
+                style={{ background: '#600000', color: '#fff', padding: '10px 18px', borderRadius: 8, fontWeight: 500, fontSize: 15, border: 'none' }}
                 onClick={() => setShowEmissoresModal(true)}
               >
                 Gerenciar Procurações ({empresasDisponiveis.filter(e => e.nfseConfig?.procuracaoStatus === 'ativa').length || empresasDisponiveis.length})
@@ -1671,7 +1721,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
             <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e5e5e5', borderRadius: 14 }}>
               {emissoresAtivos.length === 0 ? (
-                <div style={{ padding: '32px 20px', textAlign: 'center', color: '#525252', fontSize: 13.5 }}>
+                <div style={{ padding: '32px 20px', textAlign: 'center', color: '#525252', fontSize: 15 }}>
                   Nenhuma empresa encontrada. Clique em <strong>Gerenciar Procurações</strong> para importar ou verificar CNPJs.
                 </div>
               ) : (
@@ -1688,12 +1738,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     {emissoresAtivos.slice(0, 80).map(e => (
                       <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => selecionarEmissorProprio(e)}>
                         <td>
-                          <div style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>{e.razaoSocial}</div>
+                          <div style={{ fontWeight: 600, fontSize: 15, color: '#171717' }}>{e.razaoSocial}</div>
                           {e.nomeFantasia && e.nomeFantasia !== e.razaoSocial && (
-                            <div style={{ fontSize: 11.5, color: '#525252' }}>{e.nomeFantasia}</div>
+                            <div style={{ fontSize: 13.5, color: '#525252' }}>{e.nomeFantasia}</div>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
+                        <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
                         <td>
                           {e.nfseConfig?.procuracaoStatus === 'ativa' ? (
                             <span className="badge badge-green">Procuração ativa</span>
@@ -1705,7 +1755,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            style={{ background: '#600000', borderColor: '#600000', fontSize: 12, padding: '5px 12px' }}
+                            style={{ background: '#600000', borderColor: '#600000', fontSize: 14, padding: '5px 12px' }}
                             onClick={ev => { ev.stopPropagation(); selecionarEmissorProprio(e); }}
                           >
                             Selecionar
@@ -1730,7 +1780,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           `background: var(--bg-base) !important` (fundo branco), o que deixaria o texto
           claro invisível. Replicamos o layout (flex + sticky) inline. */}
       <div
-        className="nfse-hero-header"
+        className="nfse-hero-header nfse-ui"
         style={{
           background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -1751,7 +1801,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               style={{
                 background: '#600000',
                 color: '#fff',
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -1762,16 +1812,16 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               Sefin Nacional • NFS-e
             </span>
             {emProducao ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#86efac', fontWeight: 600 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#86efac', fontWeight: 600 }}>
                 <CheckCircle2 size={12} /> Produção Oficial
               </span>
             ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#fde68a', fontWeight: 600 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#fde68a', fontWeight: 600 }}>
                 <AlertTriangle size={12} /> Ambiente de Testes
               </span>
             )}
           </div>
-          <h1 className={serif.className} style={{ fontSize: 34, fontWeight: 400, color: '#fff', margin: 0, lineHeight: 1.05, letterSpacing: '-0.01em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#fff', margin: 0, lineHeight: 1.05 }}>
             Notas Fiscais de Serviço
           </h1>
           {modoCliente && acessoCliente.empresas.length > 1 ? (
@@ -1793,7 +1843,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             </select>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 600 }}>
+              <div style={{ fontSize: 15.5, color: '#e5e7eb', fontWeight: 600 }}>
                 {empresa?.razaoSocial || empresa?.nomeFantasia}
                 {empresa?.cnpj ? <span style={{ fontWeight: 400, color: '#9ca3af' }}>{` · CNPJ ${formatarCnpj(empresa.cnpj)}`}</span> : ''}
               </div>
@@ -1810,7 +1860,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     color: '#fff',
                     borderRadius: 99,
                     padding: '3px 11px',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -1834,7 +1884,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               borderRadius: 10,
               padding: '10px 20px',
               fontWeight: 600,
-              fontSize: 13.5,
+              fontSize: 15,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
@@ -1856,7 +1906,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               color: '#fff',
               borderRadius: 10,
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 14.5,
               padding: '10px 16px',
               display: 'inline-flex',
               alignItems: 'center',
@@ -1881,7 +1931,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               color: '#a7f3d0',
               borderRadius: 10,
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 14.5,
               padding: '10px 16px',
               display: 'inline-flex',
               alignItems: 'center',
@@ -1904,7 +1954,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               color: '#fff',
               borderRadius: 10,
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 14.5,
               padding: '10px 16px',
               display: 'inline-flex',
               alignItems: 'center',
@@ -1930,7 +1980,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               borderRadius: 10,
               padding: '10px 16px',
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 14.5,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
@@ -1954,7 +2004,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 borderRadius: 10,
                 padding: '10px 14px',
                 fontWeight: 600,
-                fontSize: 13,
+                fontSize: 14.5,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
@@ -2062,7 +2112,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         </div>
       </div>
 
-      <div className="page-body" style={{ background: '#fdfdfd', minHeight: '100%' }}>
+      <div className="page-body nfse-ui" style={{ background: '#fdfdfd', minHeight: '100%' }}>
         {/* Faixa de Situação da Integração — sóbria e direta */}
         {erroConfig ? (
           <div
@@ -2073,7 +2123,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               borderRadius: 12,
               padding: '12px 18px',
               marginBottom: 20,
-              fontSize: 13.5,
+              fontSize: 15,
               color: '#7f1d1d',
             }}
           >
@@ -2088,7 +2138,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               borderRadius: 14,
               padding: '14px 20px',
               marginBottom: 20,
-              fontSize: 13.5,
+              fontSize: 15,
               color: '#525252',
               display: 'flex',
               alignItems: 'center',
@@ -2103,7 +2153,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 {emProducao ? 'Ambiente de Produção (com validade fiscal)' : 'Produção Restrita (ambiente de testes, sem valor fiscal)'}
               </strong>
               {emProducao && (
-                <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
+                <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, fontSize: 13.5, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
                   Próxima DPS Oficial: #{parametros?.proximoNDpsProducao || 1}
                 </span>
               )}
@@ -2220,7 +2270,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -2236,7 +2286,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: 9,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -2247,11 +2297,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Mês:</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#525252' }}>Mês:</span>
               <input
                 type="month"
                 className="form-control"
-                style={{ width: 155, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                style={{ width: 155, padding: '6px 10px', fontSize: 14, height: 34 }}
                 value={mesFiltro}
                 onChange={e => {
                   setMesFiltro(e.target.value);
@@ -2263,22 +2313,22 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>De:</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#525252' }}>De:</span>
               <input
                 type="date"
                 className="form-control"
-                style={{ width: 140, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                style={{ width: 140, padding: '6px 10px', fontSize: 14, height: 34 }}
                 value={dataInicioFiltro}
                 onChange={e => {
                   setDataInicioFiltro(e.target.value);
                   if (e.target.value) setMesFiltro('');
                 }}
               />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Até:</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#525252' }}>Até:</span>
               <input
                 type="date"
                 className="form-control"
-                style={{ width: 140, padding: '6px 10px', fontSize: 12.5, height: 34 }}
+                style={{ width: 140, padding: '6px 10px', fontSize: 14, height: 34 }}
                 value={dataFimFiltro}
                 onChange={e => {
                   setDataFimFiltro(e.target.value);
@@ -2290,7 +2340,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                style={{ fontSize: 12, padding: '5px 10px', height: 34 }}
+                style={{ fontSize: 14, padding: '5px 10px', height: 34 }}
                 onClick={() => {
                   setMesFiltro('');
                   setDataInicioFiltro('');
@@ -2373,7 +2423,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     border: 'none',
                     padding: '8px 18px',
                     borderRadius: 99,
-                    fontSize: 13,
+                    fontSize: 14.5,
                     fontWeight: 600,
                     cursor: 'pointer',
                     boxShadow: ativo ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
@@ -2402,7 +2452,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               borderRadius: 14,
             }}
           >
-            <span style={{ fontSize: 13.5, color: '#171717' }}>
+            <span style={{ fontSize: 15, color: '#171717' }}>
               <strong>{notasSelecionadas.length}</strong> nota(s) selecionada(s) —{' '}
               <strong>{fmt.currency(notasSelecionadas.reduce((soma, n) => soma + n.valorServicos, 0))}</strong>
             </span>
@@ -2412,7 +2462,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <select
                     className="form-control"
                     aria-label="Formato da exportação"
-                    style={{ width: 'auto', fontSize: 13, padding: '7px 10px' }}
+                    style={{ width: 'auto', fontSize: 14.5, padding: '7px 10px' }}
                     value={formatoExportacao}
                     onChange={e => setFormatoExportacao(e.target.value as typeof formatoExportacao)}
                     disabled={exportando}
@@ -2424,7 +2474,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   </select>
                   <button
                     className="btn btn-secondary"
-                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 8, fontSize: 14.5, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     onClick={handleExportarSelecionadas}
                     disabled={exportando || !!progressoLote}
                   >
@@ -2436,7 +2486,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               {excluiveisSelecionadas.length > 0 && (
                 <button
                   className="btn btn-secondary"
-                  style={{ background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}
+                  style={{ background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 8, fontSize: 14.5 }}
                   onClick={() => handleExcluirSemChave(excluiveisSelecionadas)}
                   disabled={!!transmitindoId || !!progressoLote}
                 >
@@ -2446,7 +2496,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               {rascunhosSelecionados.length > 0 && (
                 <button
                   className="btn"
-                  style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 18px', fontSize: 13 }}
+                  style={{ background: '#600000', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, padding: '8px 18px', fontSize: 14.5 }}
                   onClick={handleTransmitirLote}
                   disabled={!!transmitindoId || !!progressoLote}
                 >
@@ -2458,7 +2508,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             </div>
             <button
               className="btn btn-secondary"
-              style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 13 }}
+              style={{ background: '#fff', border: '1px solid #e5e5e5', color: '#525252', borderRadius: 8, fontSize: 14.5 }}
               onClick={() => setSelecionadas(new Set())}
               disabled={!!progressoLote}
             >
@@ -2536,12 +2586,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <tr>
                     <td colSpan={9}>
                       <div style={{ padding: '56px 24px', textAlign: 'center' }}>
-                        <h3 className={serif.className} style={{ fontSize: 26, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
+                        <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', marginBottom: 6 }}>
                           {papelFiltro === 'tomadas'
                             ? 'Nenhum serviço tomado encontrado neste período'
                             : 'Nenhuma nota fiscal emitida encontrada neste período'}
                         </h3>
-                        <p style={{ fontSize: 14, color: '#525252', margin: 0 }}>
+                        <p style={{ fontSize: 15.5, color: '#525252', margin: 0 }}>
                           {papelFiltro === 'tomadas'
                             ? 'Clique em "Buscar Emitidas / Tomadas" no topo para sincronizar os serviços tomados no ADN Nacional.'
                             : 'Crie uma nota manual, busque notas no portal nacional ou ajuste o filtro de período.'}
@@ -2565,36 +2615,36 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             onChange={() => alternarSelecao(n.id)}
                           />
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13.5, color: '#171717' }}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: '#171717' }}>
                           {n.status === 'rascunho' ? <span style={{ color: '#9ca3af' }}>—</span> : n.numero}
                         </td>
-                        <td style={{ fontSize: 13, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
+                        <td style={{ fontSize: 14.5, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
                         <td>
-                          <div style={{ fontWeight: 600, color: '#171717', fontSize: 13.5 }}>{nomeContraparte}</div>
-                          <div style={{ fontSize: 11.5, color: '#525252', fontFamily: 'monospace' }}>{docContraparte}</div>
+                          <div style={{ fontWeight: 600, color: '#171717', fontSize: 15 }}>{nomeContraparte}</div>
+                          <div style={{ fontSize: 13.5, color: '#525252', fontFamily: 'monospace' }}>{docContraparte}</div>
                         </td>
-                        <td style={{ fontSize: 12.5, color: '#525252', maxWidth: 240 }}>
+                        <td style={{ fontSize: 14, color: '#525252', maxWidth: 240 }}>
                           <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>
-                          <div style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
+                          <div style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
                         </td>
-                        <td style={{ fontSize: 13, color: '#525252' }}>{n.dataCompetencia}</td>
+                        <td style={{ fontSize: 14.5, color: '#525252' }}>{n.dataCompetencia}</td>
                         <td>
                           {statusBadge(n)}
                           {n.chaveAcesso && n.ambiente === 'homologacao' && (
-                            <div style={{ fontSize: 10.5, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
+                            <div style={{ fontSize: 13, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
                           )}
                           {n.gerarContaReceber && (
-                            <div style={{ fontSize: 10.5, color: '#525252', marginTop: 3 }}>
+                            <div style={{ fontSize: 13, color: '#525252', marginTop: 3 }}>
                               {n.lancamentoId ? 'Conta a receber gerada' : 'Gera conta a receber'}
                             </div>
                           )}
                           {n.status === 'rascunho' && n.ultimoErro && (() => {
                             const diag = diagnosticarErroNfse(n.ultimoErro);
                             return (
-                              <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 4, maxWidth: 260 }}>
+                              <div style={{ fontSize: 13, color: '#b91c1c', marginTop: 4, maxWidth: 260 }}>
                                 <div>{n.ultimoErro}</div>
                                 {diag && (
-                                  <div style={{ marginTop: 4, padding: '5px 8px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 10.5 }}>
+                                  <div style={{ marginTop: 4, padding: '5px 8px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 13 }}>
                                     <div><strong>Como resolver:</strong> {diag.dica}</div>
                                     <button
                                       type="button"
@@ -2615,12 +2665,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                         border: '1px solid #d97706',
                                         background: '#ffffff',
                                         color: '#b45309',
-                                        fontSize: 10.5,
+                                        fontSize: 13,
                                         fontWeight: 700,
                                         cursor: 'pointer',
                                       }}
                                     >
-                                      ⚡ {diag.acaoLabel}
+                                      {diag.acaoLabel}
                                     </button>
                                   </div>
                                 )}
@@ -2628,14 +2678,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             );
                           })()}
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13.5, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
+                        <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 15, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
                           {fmt.currency(n.valorLiquido)}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                              style={{ fontSize: 14, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
                               onClick={() => { setViewItem(n); setModalMode('ver'); }}
                             >
                               Ver
@@ -2644,7 +2694,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                               <>
                                 <a
                                   className="btn btn-secondary btn-sm"
-                                  style={{ fontSize: 11.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  style={{ fontSize: 13.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                   href={`/api/nfse/${n.id}/danfse?baixar=1`}
                                   title="Baixar DANFSe em PDF"
                                 >
@@ -2652,7 +2702,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 </a>
                                 <a
                                   className="btn btn-secondary btn-sm"
-                                  style={{ fontSize: 11.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  style={{ fontSize: 13.5, padding: '5px 8px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                   href={`/api/nfse/${n.id}/xml`}
                                   download
                                   title="Baixar XML Oficial"
@@ -2665,14 +2715,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                               <>
                                 <button
                                   className="btn btn-secondary btn-sm"
-                                  style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
+                                  style={{ fontSize: 14, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6 }}
                                   onClick={() => abrirEdicao(n)}
                                 >
                                   Editar
                                 </button>
                                 <button
                                   className="btn btn-secondary btn-sm"
-                                  style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
+                                  style={{ fontSize: 14, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
                                   onClick={() => handleExcluirSemChave([n])}
                                   disabled={!!transmitindoId || !!progressoLote}
                                 >
@@ -2680,7 +2730,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 </button>
                                 <button
                                   className="btn btn-sm"
-                                  style={{ fontSize: 12, padding: '5px 12px', background: '#600000', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500 }}
+                                  style={{ fontSize: 14, padding: '5px 12px', background: '#600000', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 500 }}
                                   onClick={() => handleTransmitir(n)}
                                   disabled={!!transmitindoId}
                                 >
@@ -2692,7 +2742,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                               <button
                                 className="btn btn-secondary btn-sm"
                                 style={{
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   padding: '5px 10px',
                                   background: n.cobrancaBrcode ? 'rgba(0, 168, 89, 0.12)' : '#fff',
                                   border: '1px solid #00a859',
@@ -2703,13 +2753,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 onClick={() => abrirModalCobrancaNfse(n, false)}
                                 title="Emitir ou visualizar Boleto / Cobrança Pix Sicoob vinculada a esta NFS-e"
                               >
-                                {n.cobrancaBrcode ? '✓ Boleto / Pix' : '💳 Emitir Boleto'}
+                                {n.cobrancaBrcode ? '✓ Boleto / Pix' : 'Emitir Boleto'}
                               </button>
                             )}
                             {!tomada && n.status === 'emitida' && !n.cancelamentoEmAnalise && (
                               <button
                                 className="btn btn-secondary btn-sm"
-                                style={{ fontSize: 12, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
+                                style={{ fontSize: 14, padding: '5px 10px', background: '#fff', border: '1px solid #fca5a5', color: '#b91c1c', borderRadius: 6 }}
                                 onClick={() => abrirCancelamento(n)}
                               >
                                 Cancelar
@@ -2890,13 +2940,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== MODAL EXPORTAR MÊS (XML / PDF) ======================== */}
       {showExportarModal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay nfse-ui">
           <div className="modal" style={{ maxWidth: 520 }}>
             <div className="modal-header">
-              <h2 className="modal-title">📦 Exportar Notas Fiscais (XML e PDF)</h2>
+              <h2 className="modal-title">Exportar Notas Fiscais (XML e PDF)</h2>
               <button className="modal-close" onClick={() => setShowExportarModal(false)} disabled={exportando}>✕</button>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+            <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 16 }}>
               Gera um pacote com os arquivos XML oficiais e/ou DANFSe em PDF de <strong>{empresa?.razaoSocial}</strong> para enviar à contabilidade ou guardar em arquivo.
             </div>
             <div className="form-row">
@@ -2940,7 +2990,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               </select>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 12, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, marginTop: 12, cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={incluirCanceladasExport}
@@ -2960,7 +3010,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 onClick={handleExportarMes}
                 disabled={exportando}
               >
-                {exportando ? '⏳ Gerando arquivos...' : '⬇️ Baixar Exportação'}
+                {exportando ? 'Gerando arquivos...' : '⬇️ Baixar Exportação'}
               </button>
             </div>
           </div>
@@ -3039,7 +3089,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== MODAL NOVA / EDITAR (NÃO FECHA AO CLICAR FORA) ======================== */}
       {modalMode === 'novo' && (
-        <div className="modal-overlay">
+        <div className="modal-overlay nfse-ui">
           <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
               <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : 'Nova nota manual'}</h2>
@@ -3049,10 +3099,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             {form.ultimoErro && (() => {
               const diag = diagnosticarErroNfse(form.ultimoErro);
               return (
-                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 14.5 }}>
                   <div><strong>Última rejeição do Sefin:</strong> {form.ultimoErro}</div>
                   {diag && (
-                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 12 }}>
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 14 }}>
                       <span><strong>Sugestão:</strong> {diag.dica}</span>
                       {diag.acaoTipo === 'zerar_deducao' && (
                         <button
@@ -3067,12 +3117,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             border: 'none',
                             background: '#b45309',
                             color: '#ffffff',
-                            fontSize: 11.5,
+                            fontSize: 13.5,
                             fontWeight: 700,
                             cursor: 'pointer',
                           }}
                         >
-                          ⚡ Zerar dedução agora
+                          Zerar dedução agora
                         </button>
                       )}
                       {diag.acaoTipo === 'abrir_config' && !modoCliente && (
@@ -3085,12 +3135,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             border: 'none',
                             background: '#600000',
                             color: '#ffffff',
-                            fontSize: 11.5,
+                            fontSize: 13.5,
                             fontWeight: 700,
                             cursor: 'pointer',
                           }}
                         >
-                          ⚙ Abrir configuração
+                          Abrir configuração
                         </button>
                       )}
                     </div>
@@ -3101,17 +3151,17 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
             {/* prestador */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#600000', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.6 }}>Prestador</div>
-              <div style={{ fontSize: 13 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#600000', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.6 }}>Prestador</div>
+              <div style={{ fontSize: 14.5 }}>
                 {empresa?.razaoSocial} — {empresa?.cnpj}
                 {parametros?.inscricaoMunicipal ? ` — IM ${parametros.inscricaoMunicipal}` : ''}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>O Sefin usa o nome e o endereço do cadastro nacional.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>O Sefin usa o nome e o endereço do cadastro nacional.</div>
             </div>
 
             {/* tomador */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Tomador (Cliente)</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Tomador (Cliente)</div>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label className="form-label">Selecionar cliente cadastrado</label>
                 <select className="form-control" value={form.clienteId || ''} onChange={e => { if (e.target.value) fillTomador(e.target.value); else setForm(f => ({ ...f, clienteId: undefined })); }}>
@@ -3139,7 +3189,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                       else if (buscandoTomador) { ultimaConsultaTomador.current = ''; setBuscandoTomador(false); }
                     }}
                   />
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                     {buscandoTomador ? 'Consultando o CNPJ...' : 'Com CNPJ, o cadastro e o endereço são preenchidos sozinhos.'}
                   </div>
                 </div>
@@ -3189,12 +3239,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 <div className="form-group">
                   <label className="form-label">Município (código IBGE)</label>
                   <input className="form-control" maxLength={7} value={form.tomadorCodigoMunicipio || ''} onChange={e => setForm(f => ({ ...f, tomadorCodigoMunicipio: e.target.value, tomadorCidade: '', tomadorUf: '' }))} />
-                  {form.tomadorCidade && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{form.tomadorCidade}{form.tomadorUf ? `/${form.tomadorUf}` : ''}</div>}
+                  {form.tomadorCidade && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{form.tomadorCidade}{form.tomadorUf ? `/${form.tomadorUf}` : ''}</div>}
                 </div>
               </div>
-              {origemEndereco && <div style={{ fontSize: 11, color: 'var(--accent)', marginBottom: 4 }}>{origemEndereco}</div>}
+              {origemEndereco && <div style={{ fontSize: 13, color: 'var(--accent)', marginBottom: 4 }}>{origemEndereco}</div>}
               {!enderecoCompleto && (
-                <div style={{ fontSize: 11, color: issRetidoForm ? 'var(--red)' : 'var(--text-muted)' }}>
+                <div style={{ fontSize: 13, color: issRetidoForm ? 'var(--red)' : 'var(--text-muted)' }}>
                   {issRetidoForm
                     ? 'Com ISS retido, logradouro, bairro, CEP e código IBGE são obrigatórios.'
                     : 'O endereço é opcional, mas só vai para a nota se logradouro, bairro, CEP e código IBGE estiverem preenchidos.'}
@@ -3204,7 +3254,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
             {/* serviço */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Serviço</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Serviço</div>
               {(parametros?.servicosConhecidos?.length || 0) > 0 && (
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label className="form-label">Serviços que esta empresa já emitiu</label>
@@ -3238,7 +3288,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <input type="month" className="form-control" max={hojeBrasilia().slice(0, 7)} value={form.dataCompetencia || ''} onChange={e => setForm(f => ({ ...f, dataCompetencia: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="form-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Cód. Tributação Nacional / Municipal *</label>
                     {(parametros?.cTribNacPadrao || parametros?.servicosConhecidos?.[0]?.cTribNac) && (
                       <button
@@ -3248,9 +3298,9 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           setForm(f => ({ ...f, codigoServico: padrao, cTribMun: '' }));
                           toast.success(`Código de tributação ${padrao} preenchido.`);
                         }}
-                        style={{ background: 'none', border: 'none', color: '#600000', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: '#600000', fontSize: 13, cursor: 'pointer', fontWeight: 600, padding: 0 }}
                       >
-                        ⚡ Puxar da empresa
+                        Puxar da empresa
                       </button>
                     )}
                   </div>
@@ -3265,7 +3315,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     }}
                     style={{ marginTop: 4 }}
                   />
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                     Item da LC 116 (ex: 171901). É o mesmo código nacional e municipal.
                   </div>
                 </div>
@@ -3287,7 +3337,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                       setForm(f => ({ ...f, cTribMun: v.slice(0, 3) }));
                     }}
                   />
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                     Se o município usa o código padrão (171901), <strong>deixe em branco</strong>.
                   </div>
                 </div>
@@ -3304,7 +3354,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               </div>
               <div className="form-group">
                 <label className="form-label">Descrição do serviço *</label>
-                <textarea className="form-control" rows={4} maxLength={2000} style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }}
+                <textarea className="form-control" rows={4} maxLength={2000} style={{ resize: 'vertical', fontSize: 15, lineHeight: 1.6 }}
                   placeholder="Descreva os serviços prestados (aparece na NFS-e)..."
                   value={form.discriminacao || ''} onChange={e => setForm(f => ({ ...f, discriminacao: e.target.value }))} />
               </div>
@@ -3340,7 +3390,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: exigeObra ? '#b45309' : '#171717', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: exigeObra ? '#b45309' : '#171717', textTransform: 'uppercase', letterSpacing: 0.6 }}>
                         Dados da Obra (Construção Civil / Terraplanagem)
                       </span>
                       {exigeObra && (
@@ -3390,7 +3440,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 12 }}>
                     No Padrão Nacional da NFS-e, para serviços de obra (ex: <strong>07.02.02</strong>), informe o <strong>Endereço completo da obra</strong> (CEP, logradouro e bairro) <strong>ou</strong> o <strong>Código da Obra (CNO/CEI)</strong>.
                   </div>
 
@@ -3409,7 +3459,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         }}
                       />
                       {buscandoCepObra && (
-                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 2 }}>Buscando CEP...</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Buscando CEP...</div>
                       )}
                     </div>
                     <div className="form-group" style={{ flex: 2 }}>
@@ -3481,29 +3531,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
             {/* valores */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#600000', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Valores e Retenções</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#600000', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Valores e Retenções</div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Valor do serviço (R$) *</label>
                   <input type="number" step="0.01" min="0" className="form-control" value={form.valorServicos ?? ''} onChange={e => setForm(f => ({ ...f, valorServicos: Number(e.target.value) }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Dedução do valor do serviço (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="form-control"
-                    placeholder="0,00"
-                    value={form.valorDeducoes ?? ''}
-                    onChange={e => setForm(f => ({ ...f, valorDeducoes: Number(e.target.value) || 0 }))}
-                  />
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Opcional (ex.: materiais na construção civil). Reduz a base de cálculo do ISSQN quando permitido pelo município.
-                  </div>
-                </div>
-                <div className="form-group">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div className="form-label-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Alíquota ISS (%){aliquotaObrigatoria ? ' *' : ''}</label>
                     {!ehSimples && (
                       <button
@@ -3516,29 +3551,29 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           border: 'none',
                           borderRadius: 4,
                           padding: '3px 8px',
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: 600,
                           cursor: buscandoAliquotaMun ? 'not-allowed' : 'pointer',
                         }}
                         title="Consulta a alíquota oficial de ISS cadastrada pelo município no ADN"
                       >
-                        {buscandoAliquotaMun ? 'Consultando...' : '⚡ Buscar do Município'}
+                        {buscandoAliquotaMun ? 'Consultando...' : 'Buscar do Município'}
                       </button>
                     )}
                   </div>
                   <input type="number" step="any" min="0" className="form-control" value={form.aliquotaIss ?? ''} onChange={e => { setForm(f => ({ ...f, aliquotaIss: Number(e.target.value) })); setInfoAliquotaMun(null); }} />
                   {infoAliquotaMun && !ehSimples && (
-                    <div style={{ fontSize: 11, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
+                    <div style={{ fontSize: 13, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
                       ✓ {infoAliquotaMun}
                     </div>
                   )}
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                     {aliquotaObrigatoria ? 'Enviada na nota: obrigatória neste regime.' : 'Só para estimativa: quem define é a parametrização do município.'}
                   </div>
                 </div>
                 {ehSimples && (
                   <div className="form-group">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div className="form-label-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                       <label className="form-label" style={{ marginBottom: 0 }}>Alíquota do Simples Nacional (%) *</label>
                       <button
                         type="button"
@@ -3550,7 +3585,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           border: 'none',
                           borderRadius: 4,
                           padding: '3px 8px',
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: 600,
                           cursor: buscandoAliquotaSerpro ? 'not-allowed' : 'pointer',
                           display: 'inline-flex',
@@ -3559,7 +3594,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         }}
                         title="Busca a alíquota apurada na Receita Federal via Integra Contador (SERPRO)"
                       >
-                        {buscandoAliquotaSerpro ? 'Buscando no SERPRO...' : '⚡ Buscar no Integra Contador'}
+                        {buscandoAliquotaSerpro ? 'Buscando no SERPRO...' : 'Buscar no Integra Contador'}
                       </button>
                     </div>
                     <input
@@ -3575,11 +3610,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                       }}
                     />
                     {infoAliquotaSerpro && (
-                      <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                      <div style={{ fontSize: 13, color: '#059669', fontWeight: 600, marginTop: 4 }}>
                         ✓ {infoAliquotaSerpro}
                       </div>
                     )}
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                       {modoCliente
                         ? 'Percentual aproximado de tributos informado na nota. Vale para esta emissão.'
                         : 'Percentual aproximado de tributos informado na nota. Fica salvo para as próximas notas desta empresa.'}
@@ -3587,60 +3622,128 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   </div>
                 )}
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
-                <input type="checkbox" checked={issRetidoForm} onChange={e => { setRetencaoManual(true); setRegraAplicada(''); setForm(f => ({ ...f, issRetido: e.target.checked })); }} />
-                <span style={{ fontSize: 13 }}>ISS retido pelo tomador</span>
-              </label>
+              <div style={{ fontSize: 14.5, fontWeight: 600, margin: '4px 0 8px' }}>O que se aplica a esta nota?</div>
+              {regraAplicada && <div style={{ fontSize: 13.5, color: 'var(--accent)', marginBottom: 8 }}>Retenções preenchidas pela regra &quot;{regraAplicada}&quot;. Se alterar algo, a nota fica com o que você definir.</div>}
 
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Tributos federais retidos</div>
-              {regraAplicada && <div style={{ fontSize: 11, color: 'var(--accent)', marginBottom: 6 }}>Preenchido pela regra &quot;{regraAplicada}&quot;. Se alterar um percentual, a nota fica com o valor que você definir.</div>}
-              {parametros?.opSimpNac === 2 ? (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>MEI não informa tributos federais na nota.</div>
-              ) : (
-                <div className="form-row" style={{ marginBottom: 16 }}>
+              <OpcaoNota
+                marcado={temDeducao}
+                onAlterar={marcado => {
+                  setDeducaoAberta(marcado);
+                  if (!marcado) setForm(f => ({ ...f, valorDeducoes: 0 }));
+                }}
+                titulo="Dedução da base de cálculo do ISS"
+                descricao="Ex.: materiais aplicados na construção civil. Só use quando o município permitir."
+              >
+                <div className="form-row">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Valor da dedução (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={valorForm || undefined}
+                      className="form-control"
+                      placeholder="0,00"
+                      autoFocus={deducaoAberta && !deducoesForm}
+                      value={form.valorDeducoes || ''}
+                      onChange={e => setForm(f => ({ ...f, valorDeducoes: Number(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Base de cálculo do ISS</label>
+                    <div className="form-control" style={{ background: 'var(--bg-base)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt.currency(estimativa.valorBaseCalculo)}
+                    </div>
+                  </div>
+                </div>
+                {deducoesForm > valorForm && valorForm > 0 && (
+                  <div style={{ fontSize: 13.5, color: 'var(--red)', marginTop: 6 }}>A dedução não pode ser maior que o valor do serviço.</div>
+                )}
+              </OpcaoNota>
+
+              <OpcaoNota
+                marcado={issRetidoForm}
+                onAlterar={marcado => { setRetencaoManual(true); setRegraAplicada(''); setForm(f => ({ ...f, issRetido: marcado })); }}
+                titulo="ISS retido pelo tomador"
+                descricao="O tomador desconta o ISS do pagamento e recolhe ao município."
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 24px', fontSize: 14.5 }}>
+                  <span>ISS retido: <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt.currency(estimativa.valorIss)}</strong> ({aliquotaForm}%)</span>
+                  {!aliquotaForm && <span style={{ color: 'var(--red)' }}>Informe a alíquota do ISS acima: com retenção ela é obrigatória.</span>}
+                  {!enderecoCompleto && <span style={{ color: 'var(--red)' }}>Complete o endereço do tomador (logradouro, bairro, CEP e código IBGE).</span>}
+                </div>
+              </OpcaoNota>
+
+              <OpcaoNota
+                marcado={parametros?.opSimpNac !== 2 && temRetFederal}
+                desabilitado={parametros?.opSimpNac === 2}
+                onAlterar={marcado => {
+                  setRetFederalAberta(marcado);
+                  if (!marcado) {
+                    setRetencaoManual(true);
+                    setRegraAplicada('');
+                    setPercentuaisRetencao(SEM_RETENCAO);
+                  }
+                }}
+                titulo="Retenção de tributos federais"
+                descricao={parametros?.opSimpNac === 2
+                  ? 'MEI não informa tributos federais na nota.'
+                  : 'IRRF, PIS, COFINS, CSLL e INSS descontados pelo tomador (comum quando o tomador é empresa).'}
+              >
+                <div className="form-row">
                   {TRIBUTOS_RETIDOS.map(t => (
-                    <div className="form-group" key={t.chave}>
+                    <div className="form-group" key={t.chave} style={{ marginBottom: 0 }}>
                       <label className="form-label">{t.nome} (%)</label>
-                      <input type="number" step="0.01" min="0" max="100" className="form-control" value={percentuaisRetencao[t.chave]}
+                      <input type="number" step="0.01" min="0" max="100" className="form-control" value={percentuaisRetencao[t.chave] || ''} placeholder="0"
                         onChange={e => {
                           setRetencaoManual(true);
                           setRegraAplicada('');
-                          setPercentuaisRetencao(p => ({ ...p, [t.chave]: Number(e.target.value) }));
+                          setPercentuaisRetencao(p => ({ ...p, [t.chave]: Number(e.target.value) || 0 }));
                         }} />
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{fmt.currency(retidosForm[t.chave])}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{fmt.currency(retidosForm[t.chave])}</div>
                     </div>
                   ))}
                 </div>
-              )}
+              </OpcaoNota>
+              <div style={{ height: 6 }} />
 
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Valor Bruto</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>Valor Bruto</div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(valorForm)}</div>
                 </div>
                 {deducoesForm > 0 && (
                   <div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Base de Cálculo ISS</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>Base de Cálculo ISS</div>
                     <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(estimativa.valorBaseCalculo)}</div>
-                    <div style={{ fontSize: 10, color: '#b45309' }}>Dedução: -{fmt.currency(deducoesForm)}</div>
+                    <div style={{ fontSize: 12.5, color: '#b45309' }}>Dedução: -{fmt.currency(deducoesForm)}</div>
                   </div>
                 )}
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>ISS estimado ({aliquotaForm}%)</div>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt.currency(estimativa.valorIss)}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                    {issRetidoForm ? 'ISS retido pelo tomador' : 'ISS a recolher pelo prestador'} ({aliquotaForm}%)
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: issRetidoForm ? '#b45309' : undefined }}>
+                    {issRetidoForm ? '-' : ''}{fmt.currency(estimativa.valorIss)}
+                  </div>
                 </div>
+                {totalRetidoFederal(retidosForm) > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>Federais retidos</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#b45309' }}>-{fmt.currency(totalRetidoFederal(retidosForm))}</div>
+                  </div>
+                )}
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700 }}>Líquido estimado</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--green)', fontWeight: 700 }}>Líquido estimado</div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>{fmt.currency(estimativa.valorLiquido)}</div>
-                  {totalRetidoFederal(retidosForm) > 0 && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Federais retidos: {fmt.currency(totalRetidoFederal(retidosForm))}</div>}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Os valores oficiais são os devolvidos pelo Sefin na autorização.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Os valores oficiais são os devolvidos pelo Sefin na autorização.</div>
             </div>
 
             {/* financeiro */}
             <div style={secaoStyle}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Financeiro (opcional)</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#171717', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 }}>Financeiro (opcional)</div>
               <NfseFinanceiroCampos
                 valor={financeiroForm}
                 portadores={portadores}
@@ -3719,7 +3822,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== DANFSe (nota autorizada) ======================== */}
       {modalMode === 'ver' && viewItem?.chaveAcesso && (
-        <div className="modal-overlay">
+        <div className="modal-overlay nfse-ui">
           <div className="modal" style={{ maxWidth: 900, width: '95vw', height: '95vh', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8, flexWrap: 'wrap' }}>
               <h2 className="modal-title" style={{ margin: 0 }}>NFS-e Nº {viewItem.numero}</h2>
@@ -3729,7 +3832,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   style={{ borderColor: '#00a859', color: '#008a49', fontWeight: 700 }}
                   onClick={() => abrirModalCobrancaNfse(viewItem, false)}
                 >
-                  💳 Emitir Boleto / Pix Sicoob
+                  Emitir Boleto / Pix Sicoob
                 </button>
                 <a className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} href={`/api/nfse/${viewItem.id}/danfse?baixar=1`}>Baixar PDF</a>
                 <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>Baixar XML</a>
@@ -3743,7 +3846,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== MODAL VISUALIZAR ======================== */}
       {modalMode === 'ver' && viewItem && !viewItem.chaveAcesso && (
-        <div className="modal-overlay">
+        <div className="modal-overlay nfse-ui">
           <div className="modal nfse-doc-container" style={{ maxWidth: 800, padding: 0, background: '#fff', color: '#000', fontFamily: 'Arial, sans-serif', maxHeight: '95vh', overflowY: 'auto' }}>
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -3925,19 +4028,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== MODAL CANCELAR ======================== */}
       {cancelModal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay nfse-ui">
           <div className="modal" style={{ maxWidth: 500 }}>
             <div className="modal-header">
               <h2 className="modal-title">Cancelar NFS-e Nº {cancelModal.numero}</h2>
               <button className="modal-close" onClick={() => setCancelModal(null)}>✕</button>
             </div>
-            <div style={{ marginBottom: 8, padding: '12px 14px', background: 'var(--bg-card2)', borderRadius: 8, fontSize: 13 }}>
+            <div style={{ marginBottom: 8, padding: '12px 14px', background: 'var(--bg-card2)', borderRadius: 8, fontSize: 14.5 }}>
               <strong>Tomador:</strong> {cancelModal.tomadorRazaoSocial}<br />
               <strong>Valor:</strong> {fmt.currency(cancelModal.valorLiquido)}<br />
               <strong>Emissão:</strong> {fmt.date(cancelModal.dataEmissao)}
             </div>
             {exigeAnalise && (
-              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 13 }}>
+              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 14.5 }}>
                 Este município não aceita cancelamento direto. A nota seguirá válida até o fisco municipal decidir sobre a análise.
               </div>
             )}
@@ -3952,7 +4055,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <div className="form-group" style={{ marginTop: 16 }}>
               <label className="form-label">Motivo / Justificativa do Cancelamento * (obrigatório — 15 a 200 caracteres)</label>
               <textarea className="form-control" rows={3} maxLength={200} value={justificativaCancel} onChange={e => setJustificativaCancel(e.target.value)} placeholder="Informe o motivo do cancelamento (será enviado no evento ao Sefin e no e-mail ao cliente)..." />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 <span>O cliente receberá automaticamente um e-mail informando o cancelamento e o motivo.</span>
                 <span>{justificativaCancel.trim().length}/200</span>
               </div>
@@ -3981,7 +4084,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {/* ======================== MODAL BOLETO / COBRANÇA PIX SICOOB DA NFS-E ======================== */}
       {notaCobrancaModal && (
-        <div className="modal-overlay" onClick={() => setNotaCobrancaModal(null)}>
+        <div className="modal-overlay nfse-ui" onClick={() => setNotaCobrancaModal(null)}>
           <div
             className="modal"
             style={{ maxWidth: 660, maxHeight: '92vh', overflowY: 'auto' }}
@@ -3990,9 +4093,9 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <div className="modal-header">
               <div>
                 <h2 className="modal-title" style={{ margin: 0 }}>
-                  💳 Boleto / Cobrança Pix Sicoob — NFS-e Nº {notaCobrancaModal.numero}
+                  Boleto / Cobrança Pix Sicoob — NFS-e Nº {notaCobrancaModal.numero}
                 </h2>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>
                   Tomador: <strong>{notaCobrancaModal.tomadorRazaoSocial}</strong> ({notaCobrancaModal.tomadorCnpjCpf}) · Valor Líquido:{' '}
                   <strong>{fmt.currency(notaCobrancaModal.valorLiquido || notaCobrancaModal.valorServicos)}</strong>
                 </div>
@@ -4049,7 +4152,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     disabled={emitindoCobrancaNota}
                     onClick={() => emitirCobrancaDaNota(notaCobrancaModal)}
                   >
-                    {emitindoCobrancaNota ? '⏳ Registrando Cobrança no Sicoob...' : '⚡ Emitir Cobrança Sicoob Agora'}
+                    {emitindoCobrancaNota ? 'Registrando Cobrança no Sicoob...' : 'Emitir Cobrança Sicoob Agora'}
                   </button>
                 </div>
               </div>
@@ -4102,7 +4205,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           <div style={{ fontSize: 14.5, fontWeight: 800, color: '#166534' }}>
                             ✓ Boleto Híbrido + Cobrança Pix Sicoob ({resultadoCobrancaNota.status}) — NFS-e Nº {notaCobrancaModal.numero}
                           </div>
-                          <div style={{ fontSize: 12, color: '#15803d', marginTop: 2 }}>
+                          <div style={{ fontSize: 14, color: '#15803d', marginTop: 2 }}>
                             <strong>TXID BACEN:</strong> <code>{resultadoCobrancaNota.txid}</code> · <strong>Valor:</strong>{' '}
                             {fmt.currency(Number(resultadoCobrancaNota.valor))}
                           </div>
@@ -4116,7 +4219,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 toast.success('Linha digitável copiada!');
                               }}
                             >
-                              📋 Copiar Linha Digitável
+                              Copiar Linha Digitável
                             </button>
                           )}
                           {resultadoCobrancaNota.brcode && (
@@ -4127,7 +4230,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 toast.success('Pix Copia e Cola copiado!');
                               }}
                             >
-                              ⚡ Copiar Pix Copia e Cola
+                              Copiar Pix Copia e Cola
                             </button>
                           )}
                           <button
@@ -4135,7 +4238,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             style={{ background: '#003641', borderColor: '#003641' }}
                             onClick={() => window.print()}
                           >
-                            🖨️ Imprimir Boleto / PDF
+                            Imprimir Boleto / PDF
                           </button>
                         </div>
                       </div>
@@ -4201,7 +4304,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             }
                             className="btn btn-secondary btn-sm"
                           >
-                            📲 Enviar no WhatsApp
+                            Enviar no WhatsApp
                           </button>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>

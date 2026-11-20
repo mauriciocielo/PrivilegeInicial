@@ -186,7 +186,7 @@ export default function ClientesPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">👥 Clientes & Fornecedores</div>
+          <div className="page-title">Clientes & Fornecedores</div>
           <div className="page-subtitle">{filtered.length} cadastro(s) encontrado(s)</div>
         </div>
         <div className="header-actions">
@@ -227,7 +227,7 @@ export default function ClientesPage() {
               ← Voltar à Lista
             </button>
             <span style={{ fontWeight: 700, fontSize: 15 }}>
-              📋 Histórico: {selectedCliente.nomeFantasia || selectedCliente.nome}
+              Histórico: {selectedCliente.nomeFantasia || selectedCliente.nome}
             </span>
             {badgeTipo(selectedCliente.tipo)}
           </div>
@@ -271,13 +271,13 @@ export default function ClientesPage() {
                   { label: 'Limite de Crédito', value: selectedCliente.limiteCredito ? fmt.currency(selectedCliente.limiteCredito) : '—' },
                 ].map(({ label, value }) => value ? (
                   <div key={label}>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-                    <div style={{ fontSize: 13, marginTop: 2 }}>{value}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+                    <div style={{ fontSize: 14.5, marginTop: 2 }}>{value}</div>
                   </div>
                 ) : null)}
               </div>
               {selectedCliente.observacao && (
-                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)', borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 6, fontSize: 14, color: 'var(--text-secondary)', borderLeft: '3px solid var(--accent)' }}>
                   💬 {selectedCliente.observacao}
                 </div>
               )}
@@ -285,7 +285,7 @@ export default function ClientesPage() {
 
             {/* Lançamentos vinculados */}
             <div className="card">
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontWeight: 700, fontSize: 14 }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontWeight: 700, fontSize: 15.5 }}>
                 Lançamentos Vinculados ({historicoLancs.length})
               </div>
               <div className="table-wrap">
@@ -310,7 +310,7 @@ export default function ClientesPage() {
                       </td></tr>
                     ) : historicoLancs.map(l => (
                       <tr key={l.id}>
-                        <td style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmt.date(l.data)}</td>
+                        <td style={{ fontSize: 14, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmt.date(l.data)}</td>
                         <td style={{ fontWeight: 500 }}>{l.descricao}</td>
                         <td>{l.tipo === 'receita' ? <span className="badge badge-green">Receita</span> : <span className="badge badge-red">Despesa</span>}</td>
                         <td><span className={`badge ${l.status === 'realizado' ? 'badge-blue' : 'badge-yellow'}`}>{l.status === 'realizado' ? 'Realizado' : 'Previsto'}</span></td>
@@ -346,7 +346,7 @@ export default function ClientesPage() {
                     <option value="ambos">Ambos</option>
                   </select>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14.5, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
                   <input type="checkbox" checked={apenasAtivos} onChange={e => setApenasAtivos(e.target.checked)} />
                   Apenas Ativos
                 </label>
@@ -382,19 +382,19 @@ export default function ClientesPage() {
                         <td>
                           <div style={{ fontWeight: 600 }}>{c.nome}</div>
                           {c.nomeFantasia && c.nomeFantasia !== c.nome && (
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{c.nomeFantasia}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{c.nomeFantasia}</div>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{c.cpfCnpj}</td>
+                        <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{c.cpfCnpj}</td>
                         <td>{badgeTipo(c.tipo)}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           {[c.cidade, c.estado].filter(Boolean).join(' / ') || '—'}
                         </td>
-                        <td style={{ fontSize: 12 }}>
+                        <td style={{ fontSize: 14 }}>
                           <div>{c.contato || '—'}</div>
-                          {c.email && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.email}</div>}
+                          {c.email && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{c.email}</div>}
                         </td>
-                        <td style={{ fontSize: 12, textAlign: 'right' }}>
+                        <td style={{ fontSize: 14, textAlign: 'right' }}>
                           {c.limiteCredito ? fmt.currency(c.limiteCredito) : '—'}
                         </td>
                         <td>
@@ -406,11 +406,11 @@ export default function ClientesPage() {
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => openHistorico(c)}
                               title="Ver histórico de lançamentos"
                             >
-                              📋 Histórico
+                              Histórico
                             </button>
                             <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(c)} title="Editar">✏️</button>
                             <button
@@ -451,7 +451,7 @@ export default function ClientesPage() {
                   style={{ flex: 1, justifyContent: 'center' }}
                   onClick={() => setForm(f => ({ ...f, tipo: t }))}
                 >
-                  {t === 'cliente' ? '👤 Cliente' : t === 'fornecedor' ? '🏭 Fornecedor' : '🔄 Ambos'}
+                  {t === 'cliente' ? 'Cliente' : t === 'fornecedor' ? 'Fornecedor' : 'Ambos'}
                 </button>
               ))}
             </div>
@@ -470,11 +470,11 @@ export default function ClientesPage() {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      style={{ padding: '8px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                      style={{ padding: '8px 12px', fontSize: 14, whiteSpace: 'nowrap' }}
                       onClick={fetchCnpj}
                       disabled={fetchingDoc}
                     >
-                      {fetchingDoc ? '⏳' : '🔍 Buscar CNPJ'}
+                      {fetchingDoc ? '⏳' : 'Buscar CNPJ'}
                     </button>
                   )}
                 </div>

@@ -98,7 +98,7 @@ export default function ReportBoardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
         <button className="btn btn-secondary" onClick={() => router.back()}>← Voltar ao Dashboard</button>
         <button className="btn btn-primary" onClick={handleExportPDF}>
-          🖨️ PDF: Gerar Report Board
+          PDF: Gerar Report Board
         </button>
       </div>
 

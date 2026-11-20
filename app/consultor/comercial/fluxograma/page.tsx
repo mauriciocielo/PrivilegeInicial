@@ -180,7 +180,7 @@ export default function ComercialFluxogramaPage() {
 
       {/* Progresso Geral */}
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 14.5, fontWeight: 700 }}>
           <span>Evolução da Implantação Comercial (180 dias)</span>
           <span style={{ color: 'var(--accent)' }}>
             {stats.done} concluídas · {stats.doing} em andamento · {stats.pct}%
@@ -197,7 +197,7 @@ export default function ComercialFluxogramaPage() {
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
             Processo Comercial Padronizado (7 Etapas)
           </h3>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Clique em uma etapa para editar</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Clique em uma etapa para editar</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: 12 }}>
           {funnel.map((f, idx) => (
@@ -217,18 +217,18 @@ export default function ComercialFluxogramaPage() {
               }}
             >
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 6 }}>{f.step}</div>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 6 }}>{f.step}</div>
                 {editingFunnelIdx === idx ? (
                   <textarea
                     rows={3}
                     className="form-control"
-                    style={{ width: '100%', fontSize: 12, resize: 'none' }}
+                    style={{ width: '100%', fontSize: 14, resize: 'none' }}
                     value={f.objective}
                     onClick={e => e.stopPropagation()}
                     onChange={e => setFunnel(prev => prev.map((x, i) => (i === idx ? { ...x, objective: e.target.value } : x)))}
                   />
                 ) : (
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
                     {f.objective}
                   </p>
                 )}
@@ -236,13 +236,13 @@ export default function ComercialFluxogramaPage() {
               {editingFunnelIdx === idx ? (
                 <input
                   className="form-control"
-                  style={{ width: '100%', fontSize: 11.5, fontWeight: 700 }}
+                  style={{ width: '100%', fontSize: 13.5, fontWeight: 700 }}
                   value={f.conversionTarget}
                   onClick={e => e.stopPropagation()}
                   onChange={e => setFunnel(prev => prev.map((x, i) => (i === idx ? { ...x, conversionTarget: e.target.value } : x)))}
                 />
               ) : (
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', textAlign: 'center' }}>
                   🎯 {f.conversionTarget}
                 </div>
               )}
@@ -257,7 +257,7 @@ export default function ComercialFluxogramaPage() {
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
             Cronograma de Entregas, Políticas &amp; Day Trainings
           </h3>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{milestones.length} etapas cadastradas</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{milestones.length} etapas cadastradas</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -275,7 +275,7 @@ export default function ComercialFluxogramaPage() {
               {milestones.map((m, idx) => (
                 <tr key={m.id}>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
                       {m.windowDays}
                     </span>
                   </td>
@@ -292,7 +292,7 @@ export default function ComercialFluxogramaPage() {
                       style={{
                         padding: '4px 10px',
                         borderRadius: 999,
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         fontWeight: 700,
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
@@ -310,9 +310,9 @@ export default function ComercialFluxogramaPage() {
                             : 'var(--text-secondary)',
                       }}
                     >
-                      <option value="pendente">⏳ Pendente</option>
-                      <option value="em_andamento">🔄 Em Andamento</option>
-                      <option value="concluido">✅ Concluído</option>
+                      <option value="pendente">Pendente</option>
+                      <option value="em_andamento">Em Andamento</option>
+                      <option value="concluido">Concluído</option>
                     </select>
                   </td>
                   <td style={{ color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 280 }}>
@@ -399,9 +399,9 @@ export default function ComercialFluxogramaPage() {
                 value={editingMilestone.status}
                 onChange={e => setEditingMilestone(m => m ? { ...m, status: e.target.value as any } : null)}
               >
-                <option value="pendente">⏳ Pendente</option>
-                <option value="em_andamento">🔄 Em Andamento</option>
-                <option value="concluido">✅ Concluído</option>
+                <option value="pendente">Pendente</option>
+                <option value="em_andamento">Em Andamento</option>
+                <option value="concluido">Concluído</option>
               </select>
             </div>
             <div>

@@ -308,17 +308,17 @@ export default function FinanceiroFluxogramaPage() {
               onClick={() => setModelTab('presencial')}
               className={modelTab === 'presencial' ? 'btn btn-primary' : 'btn btn-secondary'}
             >
-              🏢 Assessoria Presencial (6 Meses)
+              Assessoria Presencial (6 Meses)
             </button>
             <button
               type="button"
               onClick={() => setModelTab('conectado')}
               className={modelTab === 'conectado' ? 'btn btn-primary' : 'btn btn-secondary'}
             >
-              🌐 Assessoria Conectado / Online (3 Meses)
+              Assessoria Conectado / Online (3 Meses)
             </button>
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
             {stats.done} concluídas · {stats.doing} em andamento · {stats.pct}%
           </span>
         </div>
@@ -343,7 +343,7 @@ export default function FinanceiroFluxogramaPage() {
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{m.reuniao}</td>
                     <td>
                       <div style={{ fontWeight: 700, marginBottom: 3 }}>{m.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.entregaveis}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.entregaveis}</div>
                     </td>
                     <td>
                       <button
@@ -435,8 +435,8 @@ export default function FinanceiroFluxogramaPage() {
                   style={{ marginTop: 3 }}
                 />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{w.semana}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>{w.atividade}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14.5 }}>{w.semana}</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 2 }}>{w.atividade}</div>
                 </div>
               </label>
             ))}

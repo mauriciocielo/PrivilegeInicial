@@ -11,89 +11,89 @@ import { ROTA_SOMENTE_FISCAL, ROTA_SOMENTE_WHATSAPP } from '../../../components/
 const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 
 const AVAILABLE_SCREENS = [
-  { label: '📊 Dashboard', route: '/consultor/dashboard' },
-  { label: '🗺️ Radar Administrativo', route: '/consultor/administrativo' },
-  { label: '💡 Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
-  { label: '🔍 Diagnóstico 360º', route: '/consultor/diagnostico-360' },
-  { label: '🧭 Perfil Comportamental', route: '/consultor/perfil-disc' },
-  { label: '⏱️ Atividades e Tempos', route: '/consultor/atividades' },
-  { label: '📅 Agenda Semanal', route: '/consultor/agenda' },
-  { label: '🎬 Apresentação Cliente', route: '/consultor/apresentacao' },
-  { label: '🧠 Inteligência Financeira', route: '/consultor/inteligencia' },
-  { label: '📝 Lançamentos', route: '/consultor/lancamentos' },
-  { label: '📂 Importar OFX', route: '/consultor/importar-ofx' },
-  { label: '⚖️ Endividamento', route: '/consultor/endividamento' },
-  { label: '🎯 Indicadores', route: '/consultor/indicadores' },
-  { label: '💰 Orçamento', route: '/consultor/orcamento' },
-  { label: '👥 Clientes / Fornecedores', route: '/consultor/clientes' },
-  { label: '💸 Contas a Pagar', route: '/consultor/contas-pagar' },
-  { label: '💵 Contas a Receber', route: '/consultor/contas-receber' },
-  { label: '🔌 Contas via ERP', route: '/consultor/contas-erp' },
-  { label: '🧾 NFS-e', route: '/consultor/nfse' },
-  { label: '📥 NF-e Destinadas', route: '/consultor/nfe-destinadas' },
-  { label: '🔎 Comparador de SPED', route: '/consultor/comparador-sped' },
-  { label: '🏦 APIs Open Finance', route: '/consultor/open-finance' },
-  { label: '📋 Políticas Financeiras', route: '/consultor/politicas' },
-  { label: '🏦 Integração C6 Bank', route: '/consultor/integracao-c6' },
-  { label: '🔀 Financeiro — Fluxograma (Presencial & Conectado)', route: '/consultor/financeiro/fluxograma' },
-  { label: '🔮 Projeção de Caixa', route: '/consultor/projecao-caixa' },
-  { label: '🤖 Ecossistema BPO (IA)', route: '/consultor/bpo' },
-  { label: '💬 WhatsApp & Bot IA', route: '/consultor/whatsapp' },
-  { label: '🔀 Comercial — Fluxograma 180 Dias', route: '/consultor/comercial/fluxograma' },
-  { label: '📈 Comercial — Indicadores & Projeções', route: '/consultor/comercial/indicadores' },
-  { label: '👥 Comercial — Equipe & Remuneração', route: '/consultor/comercial/equipe' },
-  { label: '⚔️ Comercial — Concorrência & Estoque', route: '/consultor/comercial/concorrencia-estoque' },
-  { label: '🤝 Comercial — Pós-Venda & CS', route: '/consultor/comercial/pos-venda' },
-  { label: '🔎 Comercial — Garimpador de Leads B2B', route: '/consultor/comercial/garimpo-leads' },
-  { label: '📣 Marketing — Fluxograma & Diagnóstico 360º', route: '/consultor/marketing/fluxograma' },
-  { label: '📋 Marketing — Plano de Ação 5W2H', route: '/consultor/marketing/plano-acao' },
-  { label: '📅 Marketing — Orçamento, Calendário & ROI', route: '/consultor/marketing/orcamento-calendario' },
-  { label: '👥 Pessoas — Fluxograma RH & Cargos', route: '/consultor/pessoas/fluxograma' },
-  { label: '🌳 Pessoas — Organograma & Descritivo', route: '/consultor/pessoas/organograma' },
-  { label: '💰 Pessoas — Cargos, Salários & CLT x PJ', route: '/consultor/pessoas/cargos-salarios' },
-  { label: '😊 Pessoas — Pesquisa de Clima', route: '/consultor/pessoas/clima' },
-  { label: '🎮 Quiz Arena (Kahoot)', route: '/consultor/quiz-game' },
-  { label: '🏢 Empresas', route: '/consultor/empresas' },
-  { label: '👥 Usuários e Permissões', route: '/consultor/usuarios' },
-  { label: '📋 Plano de Contas', route: '/consultor/plano-de-contas' },
-  { label: '🏷️ Centros de Custo', route: '/consultor/centros-custo' },
-  { label: '📝 Atas de Atendimento', route: '/consultor/atas' },
-  { label: '🏦 Portadores / Contas', route: '/consultor/portadores' },
-  { label: '🔒 Segurança & Auditoria', route: '/consultor/configuracoes-avancadas' },
-  { label: '📈 Relatórios', route: '/consultor/relatorios' },
-  { label: '🚚 Logística', route: '/consultor/logistica' },
-  { label: '🏘️ Painel Condomínio', route: '/consultor/condominio' },
+  { label: 'Dashboard', route: '/consultor/dashboard' },
+  { label: 'Radar Administrativo', route: '/consultor/administrativo' },
+  { label: 'Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
+  { label: 'Diagnóstico 360º', route: '/consultor/diagnostico-360' },
+  { label: 'Perfil Comportamental', route: '/consultor/perfil-disc' },
+  { label: 'Atividades e Tempos', route: '/consultor/atividades' },
+  { label: 'Agenda Semanal', route: '/consultor/agenda' },
+  { label: 'Apresentação Cliente', route: '/consultor/apresentacao' },
+  { label: 'Inteligência Financeira', route: '/consultor/inteligencia' },
+  { label: 'Lançamentos', route: '/consultor/lancamentos' },
+  { label: 'Importar OFX', route: '/consultor/importar-ofx' },
+  { label: 'Endividamento', route: '/consultor/endividamento' },
+  { label: 'Indicadores', route: '/consultor/indicadores' },
+  { label: 'Orçamento', route: '/consultor/orcamento' },
+  { label: 'Clientes / Fornecedores', route: '/consultor/clientes' },
+  { label: 'Contas a Pagar', route: '/consultor/contas-pagar' },
+  { label: 'Contas a Receber', route: '/consultor/contas-receber' },
+  { label: 'Contas via ERP', route: '/consultor/contas-erp' },
+  { label: 'NFS-e', route: '/consultor/nfse' },
+  { label: 'NF-e Destinadas', route: '/consultor/nfe-destinadas' },
+  { label: 'Comparador de SPED', route: '/consultor/comparador-sped' },
+  { label: 'APIs Open Finance', route: '/consultor/open-finance' },
+  { label: 'Políticas Financeiras', route: '/consultor/politicas' },
+  { label: 'Integração C6 Bank', route: '/consultor/integracao-c6' },
+  { label: 'Financeiro — Fluxograma (Presencial & Conectado)', route: '/consultor/financeiro/fluxograma' },
+  { label: 'Projeção de Caixa', route: '/consultor/projecao-caixa' },
+  { label: 'Ecossistema BPO (IA)', route: '/consultor/bpo' },
+  { label: 'WhatsApp & Bot IA', route: '/consultor/whatsapp' },
+  { label: 'Comercial — Fluxograma 180 Dias', route: '/consultor/comercial/fluxograma' },
+  { label: 'Comercial — Indicadores & Projeções', route: '/consultor/comercial/indicadores' },
+  { label: 'Comercial — Equipe & Remuneração', route: '/consultor/comercial/equipe' },
+  { label: 'Comercial — Concorrência & Estoque', route: '/consultor/comercial/concorrencia-estoque' },
+  { label: 'Comercial — Pós-Venda & CS', route: '/consultor/comercial/pos-venda' },
+  { label: 'Comercial — Garimpador de Leads B2B', route: '/consultor/comercial/garimpo-leads' },
+  { label: 'Marketing — Fluxograma & Diagnóstico 360º', route: '/consultor/marketing/fluxograma' },
+  { label: 'Marketing — Plano de Ação 5W2H', route: '/consultor/marketing/plano-acao' },
+  { label: 'Marketing — Orçamento, Calendário & ROI', route: '/consultor/marketing/orcamento-calendario' },
+  { label: 'Pessoas — Fluxograma RH & Cargos', route: '/consultor/pessoas/fluxograma' },
+  { label: 'Pessoas — Organograma & Descritivo', route: '/consultor/pessoas/organograma' },
+  { label: 'Pessoas — Cargos, Salários & CLT x PJ', route: '/consultor/pessoas/cargos-salarios' },
+  { label: 'Pessoas — Pesquisa de Clima', route: '/consultor/pessoas/clima' },
+  { label: 'Quiz Arena (Kahoot)', route: '/consultor/quiz-game' },
+  { label: 'Empresas', route: '/consultor/empresas' },
+  { label: 'Usuários e Permissões', route: '/consultor/usuarios' },
+  { label: 'Plano de Contas', route: '/consultor/plano-de-contas' },
+  { label: 'Centros de Custo', route: '/consultor/centros-custo' },
+  { label: 'Atas de Atendimento', route: '/consultor/atas' },
+  { label: 'Portadores / Contas', route: '/consultor/portadores' },
+  { label: 'Segurança & Auditoria', route: '/consultor/configuracoes-avancadas' },
+  { label: 'Relatórios', route: '/consultor/relatorios' },
+  { label: 'Logística', route: '/consultor/logistica' },
+  { label: 'Painel Condomínio', route: '/consultor/condominio' },
 ];
 
 const AVAILABLE_CLIENT_SCREENS = [
-  { label: '📊 Dashboard', route: '/cliente/dashboard' },
-  { label: '🛡️ Dashboard 2 (Fiscal & CNDs)', route: '/cliente/dashboard2' },
-  { label: '🧾 NFS-e / Emissão', route: '/cliente/nfse' },
-  { label: '📅 Agenda', route: '/cliente/agenda' },
-  { label: '🔀 Financeiro — Fluxograma (Presencial & Conectado)', route: '/cliente/financeiro/fluxograma' },
-  { label: '💰 Extrato Detalhado', route: '/cliente/extrato' },
-  { label: '🧠 Inteligência Financeira', route: '/cliente/inteligencia' },
-  { label: '📝 Lançamentos', route: '/cliente/lancamentos' },
-  { label: '📂 Importar OFX', route: '/cliente/importar-ofx' },
-  { label: '🏦 Contas via ERP', route: '/cliente/contas-erp' },
-  { label: '📈 Relatórios', route: '/cliente/relatorios' },
-  { label: '💬 WhatsApp & Bot IA', route: '/cliente/whatsapp' },
-  { label: '🔀 Comercial — Fluxograma 180 Dias', route: '/cliente/comercial/fluxograma' },
-  { label: '📈 Comercial — Indicadores & Projeções', route: '/cliente/comercial/indicadores' },
-  { label: '👥 Comercial — Equipe & Remuneração', route: '/cliente/comercial/equipe' },
-  { label: '⚔️ Comercial — Concorrência & Estoque', route: '/cliente/comercial/concorrencia-estoque' },
-  { label: '🤝 Comercial — Pós-Venda & CS', route: '/cliente/comercial/pos-venda' },
-  { label: '🔎 Comercial — Garimpador de Leads B2B', route: '/cliente/comercial/garimpo-leads' },
-  { label: '📣 Marketing — Fluxograma & Diagnóstico 360º', route: '/cliente/marketing/fluxograma' },
-  { label: '📋 Marketing — Plano de Ação 5W2H', route: '/cliente/marketing/plano-acao' },
-  { label: '📅 Marketing — Orçamento, Calendário & ROI', route: '/cliente/marketing/orcamento-calendario' },
-  { label: '👥 Pessoas — Fluxograma RH & Cargos', route: '/cliente/pessoas/fluxograma' },
-  { label: '🌳 Pessoas — Organograma & Descritivo', route: '/cliente/pessoas/organograma' },
-  { label: '💰 Pessoas — Cargos, Salários & CLT x PJ', route: '/cliente/pessoas/cargos-salarios' },
-  { label: '😊 Pessoas — Pesquisa de Clima', route: '/cliente/pessoas/clima' },
-  { label: '🚚 Módulo Logística', route: '/cliente/logistica' },
-  { label: '📋 Políticas Financeiras', route: '/cliente/politicas' },
-  { label: '📝 Atas de Atendimento', route: '/cliente/atas' },
+  { label: 'Dashboard', route: '/cliente/dashboard' },
+  { label: 'Dashboard 2 (Fiscal & CNDs)', route: '/cliente/dashboard2' },
+  { label: 'NFS-e / Emissão', route: '/cliente/nfse' },
+  { label: 'Agenda', route: '/cliente/agenda' },
+  { label: 'Financeiro — Fluxograma (Presencial & Conectado)', route: '/cliente/financeiro/fluxograma' },
+  { label: 'Extrato Detalhado', route: '/cliente/extrato' },
+  { label: 'Inteligência Financeira', route: '/cliente/inteligencia' },
+  { label: 'Lançamentos', route: '/cliente/lancamentos' },
+  { label: 'Importar OFX', route: '/cliente/importar-ofx' },
+  { label: 'Contas via ERP', route: '/cliente/contas-erp' },
+  { label: 'Relatórios', route: '/cliente/relatorios' },
+  { label: 'WhatsApp & Bot IA', route: '/cliente/whatsapp' },
+  { label: 'Comercial — Fluxograma 180 Dias', route: '/cliente/comercial/fluxograma' },
+  { label: 'Comercial — Indicadores & Projeções', route: '/cliente/comercial/indicadores' },
+  { label: 'Comercial — Equipe & Remuneração', route: '/cliente/comercial/equipe' },
+  { label: 'Comercial — Concorrência & Estoque', route: '/cliente/comercial/concorrencia-estoque' },
+  { label: 'Comercial — Pós-Venda & CS', route: '/cliente/comercial/pos-venda' },
+  { label: 'Comercial — Garimpador de Leads B2B', route: '/cliente/comercial/garimpo-leads' },
+  { label: 'Marketing — Fluxograma & Diagnóstico 360º', route: '/cliente/marketing/fluxograma' },
+  { label: 'Marketing — Plano de Ação 5W2H', route: '/cliente/marketing/plano-acao' },
+  { label: 'Marketing — Orçamento, Calendário & ROI', route: '/cliente/marketing/orcamento-calendario' },
+  { label: 'Pessoas — Fluxograma RH & Cargos', route: '/cliente/pessoas/fluxograma' },
+  { label: 'Pessoas — Organograma & Descritivo', route: '/cliente/pessoas/organograma' },
+  { label: 'Pessoas — Cargos, Salários & CLT x PJ', route: '/cliente/pessoas/cargos-salarios' },
+  { label: 'Pessoas — Pesquisa de Clima', route: '/cliente/pessoas/clima' },
+  { label: 'Módulo Logística', route: '/cliente/logistica' },
+  { label: 'Políticas Financeiras', route: '/cliente/politicas' },
+  { label: 'Atas de Atendimento', route: '/cliente/atas' },
 ];
 
 interface EmpresaEmissoraInfo {
@@ -402,7 +402,7 @@ export default function UsuariosPage() {
             style={{ borderColor: 'var(--green)', color: 'var(--green)', fontWeight: 600 }}
             onClick={() => openNew('nfse')}
           >
-            🧾 Novo Cliente Emissor NFS-e
+            Novo Cliente Emissor NFS-e
           </button>
           <button className="btn btn-primary" onClick={() => openNew('bpo')}>
             ＋ Novo Usuário
@@ -451,7 +451,7 @@ export default function UsuariosPage() {
                     <tr key={u.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 14, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {u.avatarData ? (
                               <img src={u.avatarData === '__PRUNED_IN_LOCAL_STAGE__' ? `/api/users/avatar?id=${u.id}` : u.avatarData} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                             ) : (
@@ -461,13 +461,13 @@ export default function UsuariosPage() {
                           <span style={{ fontWeight: 500 }}>{u.name}</span>
                         </div>
                       </td>
-                      <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{u.email}</td>
+                      <td style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td>
                         <span className={`badge ${roleBadge}`}>
                           {roleText}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, maxWidth: 340 }}>
+                      <td style={{ fontSize: 14, maxWidth: 340 }}>
                         {u.role === 'administrador' && (
                           <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Acesso Total (Todas as Telas e Empresas)</span>
                         )}
@@ -478,15 +478,15 @@ export default function UsuariosPage() {
                               {(u.allowedRoutes || ['/consultor/dashboard']).map(r => {
                                 const screen = AVAILABLE_SCREENS.find(s => s.route === r);
                                 return (
-                                  <span key={r} className="badge badge-gray" style={{ fontSize: 10 }}>
+                                  <span key={r} className="badge badge-gray" style={{ fontSize: 12.5 }}>
                                     {screen?.label.split(' ')[1] || r.split('/').pop()}
                                   </span>
                                 );
                               })}
                             </div>
                             <strong style={{ display: 'block', marginBottom: 2 }}>Empresas:</strong>
-                            {emps.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Nenhuma (Sem acesso)</span> : emps.map(e => (
-                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4, fontSize: 10 }}>{e.nomeFantasia}</span>
+                            {emps.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma (Sem acesso)</span> : emps.map(e => (
+                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4, fontSize: 12.5 }}>{e.nomeFantasia}</span>
                             ))}
                           </div>
                         )}
@@ -494,8 +494,8 @@ export default function UsuariosPage() {
                           <div>
                             {clienteNfse ? (
                               <div style={{ marginBottom: 6 }}>
-                                <span className="badge badge-green" style={{ fontSize: 10 }}>
-                                  🧾 Acesso direto ao Emissor Nacional de NFS-e
+                                <span className="badge badge-green" style={{ fontSize: 12.5 }}>
+                                  Acesso direto ao Emissor Nacional de NFS-e
                                 </span>
                               </div>
                             ) : (
@@ -503,11 +503,11 @@ export default function UsuariosPage() {
                                 <strong style={{ display: 'block', marginBottom: 2 }}>Telas permitidas ({u.allowedRoutes?.length || 0}):</strong>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 6 }}>
                                   {(!u.allowedRoutes || u.allowedRoutes.length === 0) ? (
-                                    <span className="badge badge-gray" style={{ fontSize: 10 }}>Acesso Total (Antigo)</span>
+                                    <span className="badge badge-gray" style={{ fontSize: 12.5 }}>Acesso Total (Antigo)</span>
                                   ) : u.allowedRoutes.map(r => {
                                     const screen = AVAILABLE_CLIENT_SCREENS.find(s => s.route === r);
                                     return (
-                                      <span key={r} className="badge badge-gray" style={{ fontSize: 10 }}>
+                                      <span key={r} className="badge badge-gray" style={{ fontSize: 12.5 }}>
                                         {screen?.label.split(' ')[1] || r.split('/').pop()}
                                       </span>
                                     );
@@ -517,16 +517,16 @@ export default function UsuariosPage() {
                             )}
                             <strong style={{ display: 'block', marginBottom: 2 }}>Empresas vinculadas:</strong>
                             {emps.length === 0 ? (
-                              <span style={{ color: 'var(--red)', fontSize: 11 }}>⚠️ Nenhuma empresa vinculada</span>
+                              <span style={{ color: 'var(--red)', fontSize: 13 }}>Nenhuma empresa vinculada</span>
                             ) : emps.map(e => (
-                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4, marginBottom: 2, fontSize: 10 }}>
+                              <span key={e.id} className="badge badge-gray" style={{ marginRight: 4, marginBottom: 2, fontSize: 12.5 }}>
                                 {e.nomeFantasia || e.razaoSocial}{e.cnpj ? ` (${e.cnpj})` : ''}
                               </span>
                             ))}
                           </div>
                         )}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(u)} title="Editar usuário">✏️</button>
@@ -550,7 +550,7 @@ export default function UsuariosPage() {
                 {edit
                   ? 'Editar Usuário e Permissões'
                   : form.role === 'cliente' && modoCliente === 'nfse'
-                    ? '🧾 Novo Login de Cliente — Emissor de NFS-e'
+                    ? 'Novo Login de Cliente — Emissor de NFS-e'
                     : 'Novo Usuário'}
               </h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
@@ -564,15 +564,15 @@ export default function UsuariosPage() {
                 padding: 14,
                 marginBottom: 16,
               }}>
-                <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 13.5, marginBottom: 6 }}>
-                  ✅ Acesso criado com sucesso!
+                <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 15, marginBottom: 6 }}>
+                  Acesso criado com sucesso!
                 </div>
-                <div style={{ fontSize: 12.5, marginBottom: 10, fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 14, marginBottom: 10, fontFamily: 'monospace' }}>
                   <strong>E-mail:</strong> {credencialRecente.email} &nbsp;|&nbsp; <strong>Senha:</strong> {credencialRecente.senha}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => copiarCredencial(credencialRecente)}>
-                    📋 Copiar mensagem para enviar ao cliente
+                    Copiar mensagem para enviar ao cliente
                   </button>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>
                     Fechar janela
@@ -589,9 +589,9 @@ export default function UsuariosPage() {
                   value={form.role || 'cliente'}
                   onChange={e => setForm(f => ({ ...f, role: e.target.value as any }))}
                 >
-                  <option value="cliente">🏢 Cliente (Emissor NFS-e ou Portal BPO)</option>
-                  <option value="consultor">👔 Consultor (Equipe do Escritório)</option>
-                  <option value="administrador">💎 Administrador (Acesso Total)</option>
+                  <option value="cliente">Cliente (Emissor NFS-e ou Portal BPO)</option>
+                  <option value="consultor">Consultor (Equipe do Escritório)</option>
+                  <option value="administrador">Administrador (Acesso Total)</option>
                 </select>
               </div>
               <div className="form-group">
@@ -608,10 +608,10 @@ export default function UsuariosPage() {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    style={{ whiteSpace: 'nowrap', padding: '0 10px', fontSize: 12 }}
+                    style={{ whiteSpace: 'nowrap', padding: '0 10px', fontSize: 14 }}
                     onClick={() => setForm(f => ({ ...f, newPassword: gerarSenhaSugerida() }))}
                   >
-                    🎲 Gerar
+                    Gerar
                   </button>
                 </div>
               </div>
@@ -638,10 +638,10 @@ export default function UsuariosPage() {
                       background: modoCliente === 'nfse' ? 'rgba(34,197,94,0.08)' : 'var(--bg-card2)',
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: 13.5, color: modoCliente === 'nfse' ? 'var(--green)' : 'var(--text-main)' }}>
-                      🧾 Somente Emissor de NFS-e
+                    <div style={{ fontWeight: 700, fontSize: 15, color: modoCliente === 'nfse' ? 'var(--green)' : 'var(--text-main)' }}>
+                      Somente Emissor de NFS-e
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
                       O cliente entra <strong>direto na tela de emissão de notas fiscais</strong> da empresa vinculada (usando a procuração do escritório), sem ver telas do BPO.
                     </div>
                   </div>
@@ -663,10 +663,10 @@ export default function UsuariosPage() {
                       background: modoCliente === 'bpo' ? 'var(--accent-glow)' : 'var(--bg-card2)',
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: 13.5, color: modoCliente === 'bpo' ? 'var(--accent-light)' : 'var(--text-main)' }}>
-                      📊 Portal Financeiro BPO
+                    <div style={{ fontWeight: 700, fontSize: 15, color: modoCliente === 'bpo' ? 'var(--accent-light)' : 'var(--text-main)' }}>
+                      Portal Financeiro BPO
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.45 }}>
                       Para clientes de BPO Financeiro que acompanham Dashboard, Extrato, Lançamentos, Relatórios e Atas.
                     </div>
                   </div>
@@ -699,7 +699,7 @@ export default function UsuariosPage() {
             <div className="form-row" style={{ marginTop: 12 }}>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {!(form.role === 'cliente' && modoCliente === 'nfse') && (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-main)', marginBottom: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14.5, color: 'var(--text-main)', marginBottom: 8 }}>
                     <input
                       type="checkbox"
                       checked={!!form.receberEmailDiario}
@@ -748,7 +748,7 @@ export default function UsuariosPage() {
                         key={tab.id}
                         type="button"
                         className={`btn btn-sm ${filtroEmpresa === tab.id ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: 11, padding: '3px 8px' }}
+                        style={{ fontSize: 13, padding: '3px 8px' }}
                         onClick={() => setFiltroEmpresa(tab.id)}
                       >
                         {tab.label}
@@ -758,9 +758,9 @@ export default function UsuariosPage() {
                 </div>
 
                 {emissoresEstado === 'erro' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
-                    ⚠️ Não foi possível carregar as empresas com procuração. A lista abaixo está incompleta.
-                    <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px' }} onClick={carregarEmissores}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 14, fontWeight: 600 }}>
+                    Não foi possível carregar as empresas com procuração. A lista abaixo está incompleta.
+                    <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 13, padding: '3px 8px' }} onClick={carregarEmissores}>
                       Tentar de novo
                     </button>
                   </div>
@@ -787,9 +787,9 @@ export default function UsuariosPage() {
                   border: '1px solid var(--border-light)',
                 }}>
                   {empresasFiltradasModal.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', fontSize: 12.5, color: 'var(--text-muted)', padding: 8 }}>
+                    <div style={{ gridColumn: '1 / -1', fontSize: 14, color: 'var(--text-muted)', padding: 8 }}>
                       {emissoresEstado === 'carregando'
-                        ? '⏳ Carregando empresas com procuração...'
+                        ? 'Carregando empresas com procuração...'
                         : <>Nenhuma empresa encontrada neste filtro. Clique em &quot;Todas&quot; ou importe o CNPJ em <strong>NFS-e → Emissores por Procuração</strong>.</>}
                     </div>
                   ) : empresasFiltradasModal.map(e => {
@@ -810,7 +810,7 @@ export default function UsuariosPage() {
                           border: `1px solid ${checked ? 'var(--green)' : 'var(--border-light)'}`,
                           cursor: 'pointer',
                           background: checked ? 'rgba(34,197,94,0.1)' : 'var(--bg-base)',
-                          fontSize: 12.5,
+                          fontSize: 14,
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: checked ? 'var(--green)' : 'var(--text-main)' }}>
@@ -820,27 +820,27 @@ export default function UsuariosPage() {
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 20, flexWrap: 'wrap' }}>
-                          {e.cnpj && <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.cnpj}</span>}
-                          {mostrarSituacao && <span className={`badge ${situacao.classe}`} style={{ fontSize: 9, padding: '1px 5px' }}>{situacao.texto}</span>}
-                          {soEmissor && <span className="badge badge-gray" style={{ fontSize: 9, padding: '1px 5px' }}>Só emissor</span>}
+                          {e.cnpj && <span style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.cnpj}</span>}
+                          {mostrarSituacao && <span className={`badge ${situacao.classe}`} style={{ fontSize: 11.5, padding: '1px 5px' }}>{situacao.texto}</span>}
+                          {soEmissor && <span className="badge badge-gray" style={{ fontSize: 11.5, padding: '1px 5px' }}>Só emissor</span>}
                         </div>
                       </label>
                     );
                   })}
                 </div>
                 {form.role === 'cliente' && modoCliente === 'nfse' && emissoresEstado === 'ok' && selecionadasSemEmissao.length > 0 && (
-                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
-                    ⚠️ Sem procuração ativa: {selecionadasSemEmissao.map(e => e.nomeFantasia || e.razaoSocial).join(', ')}. O cliente só emite por essas empresas depois que a procuração for confirmada.
+                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 14, fontWeight: 600 }}>
+                    Sem procuração ativa: {selecionadasSemEmissao.map(e => e.nomeFantasia || e.razaoSocial).join(', ')}. O cliente só emite por essas empresas depois que a procuração for confirmada.
                   </div>
                 )}
                 {form.role === 'cliente' && modoCliente === 'bpo' && emissoresEstado === 'ok' && selecionadasComEmissao.length > 0 && (
-                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 12.5, fontWeight: 600 }}>
+                  <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', fontSize: 14, fontWeight: 600 }}>
                     ⚠️ {selecionadasComEmissao.map(e => e.nomeFantasia || e.razaoSocial).join(', ')} tem procuração ativa: com esse vínculo, o cliente entra só na emissão de NFS-e e não vê as telas do Portal BPO.
                   </div>
                 )}
                 {form.role === 'cliente' && modoCliente === 'nfse' && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
-                    💡 Dica: você também pode criar o login do cliente direto na tela de <strong>NFS-e → 🔑 Login do Cliente</strong> ou em <strong>🏢 Emissores por Procuração</strong>.
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 6 }}>
+                    Dica: você também pode criar o login do cliente direto na tela de <strong>NFS-e → Login do Cliente</strong> ou em <strong>Emissores por Procuração</strong>.
                   </div>
                 )}
               </div>
@@ -865,7 +865,7 @@ export default function UsuariosPage() {
                 <label
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 12px',
-                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 14, fontWeight: 500,
                     border: `1px solid ${(form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent)' : 'var(--border-light)'}`,
                     background: (form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent-glow)' : 'transparent',
                     color: (form.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL) ? 'var(--accent-light)' : 'var(--text-secondary)',
@@ -882,7 +882,7 @@ export default function UsuariosPage() {
                 <label
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 12px',
-                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 12.5, fontWeight: 500,
+                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 14, fontWeight: 500,
                     border: `1px solid ${(form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? '#16a34a' : 'var(--border-light)'}`,
                     background: (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? 'rgba(22, 163, 74, 0.12)' : 'transparent',
                     color: (form.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP) ? '#15803d' : 'var(--text-secondary)',
@@ -918,11 +918,11 @@ export default function UsuariosPage() {
                       borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--border-light)',
                       background: 'var(--bg-card2)',
-                      fontSize: 12,
+                      fontSize: 14,
                     }}
                   >
                     <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>
-                      📱 Número de WhatsApp utilizado por este usuário:
+                      Número de WhatsApp utilizado por este usuário:
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -983,7 +983,7 @@ export default function UsuariosPage() {
                           border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`,
                           cursor: isDashboard ? 'not-allowed' : 'pointer',
                           background: checked ? 'var(--accent-glow)' : 'transparent',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: checked ? 'var(--accent-light)' : 'var(--text-secondary)',
                           opacity: isDashboard ? 0.7 : 1,
                         }}
@@ -1006,7 +1006,7 @@ export default function UsuariosPage() {
               <div className="form-group">
                 <label className="form-label">Foto do Usuário (opcional)</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ fontSize: 12 }} />
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ fontSize: 14 }} />
                   {form.avatarData && (
                     <img
                       src={form.avatarData === '__PRUNED_IN_LOCAL_STAGE__' && edit ? `/api/users/avatar?id=${edit.id}` : form.avatarData}
@@ -1021,7 +1021,7 @@ export default function UsuariosPage() {
             <div className="form-actions" style={{ marginTop: 20 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={salvando}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={salvando}>
-                {salvando ? '⏳ Salvando...' : '✓ Salvar Usuário'}
+                {salvando ? 'Salvando...' : '✓ Salvar Usuário'}
               </button>
             </div>
           </div>
