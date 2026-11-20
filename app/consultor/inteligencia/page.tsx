@@ -19,7 +19,10 @@ const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: 
 type ActiveTab = 'geral' | 'dre' | 'capital' | 'chat';
 
 export default function InteligenciaFinanceiraPage() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresaId, setEmpresaId] = useState(() => {
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
+    return store.getSafeEmpresaId(saved);
+  });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
@@ -323,12 +326,12 @@ INSTRUÇÕES DE COMPORTAMENTO:
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved);
-    const handler = (e: Event) => load((e as CustomEvent).detail);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
+    const handler = (e: Event) => load(store.getSafeEmpresaId((e as CustomEvent).detail));
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-      load(current);
+      const current = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(current));
     };
     window.addEventListener('empresaChange', handler);
     window.addEventListener('cfDataChange', dataChangeHandler);

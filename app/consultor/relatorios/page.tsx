@@ -90,28 +90,22 @@ export default function RelatoriosPage() {
 
   const load = useCallback((eId: string) => {
     const list = store.getEmpresas();
-    let targetId = eId;
-    if (!list.find(e => e.id === targetId)) {
-      if (list.length > 0) {
-        targetId = list[0].id;
-        sessionStorage.setItem('cf_empresa_sel', targetId);
-      }
-    }
+    const targetId = store.getSafeEmpresaId(eId);
     setEmpresaId(targetId);
     setEmpresa(list.find(e => e.id === targetId) || null);
   }, []);
 
   useEffect(() => {
     setCurrentUser(store.getCurrentUser());
-    const saved = sessionStorage.getItem('cf_empresa_sel') || '';
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
 
-    const handler = (e: Event) => load((e as CustomEvent).detail);
+    const handler = (e: Event) => load(store.getSafeEmpresaId((e as CustomEvent).detail));
     window.addEventListener('empresaChange', handler);
 
     const dataHandler = () => {
-      const currentSaved = sessionStorage.getItem('cf_empresa_sel') || '';
-      load(currentSaved);
+      const currentSaved = sessionStorage.getItem('cf_empresa_sel');
+      load(store.getSafeEmpresaId(currentSaved));
     };
     window.addEventListener('cfDataChange', dataHandler);
 

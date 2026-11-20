@@ -8,7 +8,10 @@ import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 
 export default function ImportarOFXPage() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresaId, setEmpresaId] = useState(() => {
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
+    return store.getSafeEmpresaId(saved);
+  });
   const [transactions, setTransactions] = useState<OFXTransaction[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [portadores, setPortadores] = useState<Portador[]>([]);
@@ -107,11 +110,11 @@ export default function ImportarOFXPage() {
   }, [empresaId]);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
     const handler = (e: Event) => {
       const id = (e as CustomEvent).detail;
-      load(id);
+      load(store.getSafeEmpresaId(id));
     };
     window.addEventListener('empresaChange', handler);
     return () => window.removeEventListener('empresaChange', handler);

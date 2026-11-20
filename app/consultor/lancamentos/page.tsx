@@ -107,7 +107,10 @@ const detectCardImportColumns = (headers: string[]) => {
 };
 
 export default function LancamentosPage() {
-  const [empresaId, setEmpresaId] = useState('e1');
+  const [empresaId, setEmpresaId] = useState(() => {
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('cf_empresa_sel') : null;
+    return store.getSafeEmpresaId(saved);
+  });
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([]);
   const [portadores, setPortadores] = useState<Portador[]>([]);
@@ -248,14 +251,15 @@ export default function LancamentosPage() {
   };
 
   const load = useCallback((eId: string) => {
-    setEmpresaId(eId);
-    setLancamentos(store.getLancamentos(eId));
+    const safeId = store.getSafeEmpresaId(eId);
+    setEmpresaId(safeId);
+    setLancamentos(store.getLancamentos(safeId));
     // Carrega todas as contas analíticas (nível 3) incluindo transferências
-    setPlanoContas(store.getPlanoContas(eId).filter(p => p.nivel === 3 && p.ativo));
-    setPortadores(store.getPortadores(eId).filter(p => p.ativo));
-    setCentrosCusto(store.getCentrosCusto(eId).filter(c => c.ativo));
+    setPlanoContas(store.getPlanoContas(safeId).filter(p => p.nivel === 3 && p.ativo));
+    setPortadores(store.getPortadores(safeId).filter(p => p.ativo));
+    setCentrosCusto(store.getCentrosCusto(safeId).filter(c => c.ativo));
 
-    const emp = store.getEmpresas().find(e => e.id === eId) || null;
+    const emp = store.getEmpresas().find(e => e.id === safeId) || null;
     setActiveCompany(emp);
   }, []);
 
@@ -274,11 +278,11 @@ export default function LancamentosPage() {
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
-    load(saved);
-    const handler = (e: Event) => load((e as CustomEvent).detail);
+    const saved = sessionStorage.getItem('cf_empresa_sel');
+    load(store.getSafeEmpresaId(saved));
+    const handler = (e: Event) => load(store.getSafeEmpresaId((e as CustomEvent).detail));
     const dataChangeHandler = () => {
-      const current = sessionStorage.getItem('cf_empresa_sel') || (store.getEmpresas()[0]?.id ?? '');
+      const current = store.getSafeEmpresaId(sessionStorage.getItem('cf_empresa_sel'));
       setPlanoContas(store.getPlanoContas(current).filter(p => p.nivel === 3 && p.ativo));
       setLancamentos(store.getLancamentos(current));
       setCentrosCusto(store.getCentrosCusto(current).filter(c => c.ativo));
