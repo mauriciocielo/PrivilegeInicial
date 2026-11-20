@@ -2270,6 +2270,23 @@ table th {
   .ui-page-title {
     font-size: 19px;
   }
+  .ui-page-header {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .sidebar-footer {
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+  .btn, button.btn {
+    min-height: 36px;
+  }
+  .modal {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
 }
 
 /* ============================================================

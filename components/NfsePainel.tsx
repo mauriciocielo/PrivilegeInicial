@@ -17,6 +17,7 @@ import { base64ToUint8Array, criarZipBlobClient, type ArquivoZipClient } from '.
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
 import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
+import { diagnosticarErroNfse } from '../lib/nfse/erros-acionaveis';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
@@ -2518,9 +2519,45 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                               {n.lancamentoId ? 'Conta a receber gerada' : 'Gera conta a receber'}
                             </div>
                           )}
-                          {n.status === 'rascunho' && n.ultimoErro && (
-                            <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 3, maxWidth: 240 }}>{n.ultimoErro}</div>
-                          )}
+                          {n.status === 'rascunho' && n.ultimoErro && (() => {
+                            const diag = diagnosticarErroNfse(n.ultimoErro);
+                            return (
+                              <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 4, maxWidth: 260 }}>
+                                <div>{n.ultimoErro}</div>
+                                {diag && (
+                                  <div style={{ marginTop: 4, padding: '5px 8px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 10.5 }}>
+                                    <div><strong>Como resolver:</strong> {diag.dica}</div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (diag.acaoTipo === 'zerar_deducao') {
+                                          abrirEdicao({ ...n, valorDeducoes: 0, ultimoErro: null });
+                                          toast.info('Dedução zerada no rascunho. Confira e clique em Emitir.');
+                                        } else if (diag.acaoTipo === 'abrir_config' && !modoCliente) {
+                                          setShowConfigModal(true);
+                                        } else {
+                                          abrirEdicao(n);
+                                        }
+                                      }}
+                                      style={{
+                                        marginTop: 4,
+                                        padding: '2px 8px',
+                                        borderRadius: 5,
+                                        border: '1px solid #d97706',
+                                        background: '#ffffff',
+                                        color: '#b45309',
+                                        fontSize: 10.5,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      ⚡ {diag.acaoLabel}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13.5, color: n.status === 'cancelada' ? '#b91c1c' : '#171717' }}>
                           {fmt.currency(n.valorLiquido)}
@@ -2788,11 +2825,58 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
             </div>
 
-            {form.ultimoErro && (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
-                <strong>Última rejeição do Sefin:</strong> {form.ultimoErro}
-              </div>
-            )}
+            {form.ultimoErro && (() => {
+              const diag = diagnosticarErroNfse(form.ultimoErro);
+              return (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
+                  <div><strong>Última rejeição do Sefin:</strong> {form.ultimoErro}</div>
+                  {diag && (
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 6, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 12 }}>
+                      <span><strong>Sugestão:</strong> {diag.dica}</span>
+                      {diag.acaoTipo === 'zerar_deducao' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm(f => ({ ...f, valorDeducoes: 0, ultimoErro: null }));
+                            toast.success('Dedução zerada. Agora você já pode transmitir a nota.');
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 6,
+                            border: 'none',
+                            background: '#b45309',
+                            color: '#ffffff',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          ⚡ Zerar dedução agora
+                        </button>
+                      )}
+                      {diag.acaoTipo === 'abrir_config' && !modoCliente && (
+                        <button
+                          type="button"
+                          onClick={() => { setModalMode(null); setShowConfigModal(true); }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 6,
+                            border: 'none',
+                            background: '#600000',
+                            color: '#ffffff',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          ⚙ Abrir configuração
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* prestador */}
             <div style={secaoStyle}>
