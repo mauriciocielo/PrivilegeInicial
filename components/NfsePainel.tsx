@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import {
   store, type NfsE, type Cliente, type Empresa, type Portador, type PlanoConta, uid,
 } from '../lib/store';
@@ -7,26 +8,32 @@ import { fmt } from '../lib/reports';
 import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { toast } from 'sonner';
 import { confirmAsync } from './ConfirmProvider';
-import NfseConfigModal, { type NfseConfigResposta } from './NfseConfigModal';
-import NfseEmissoresModal, { type EmpresaEmissora } from './NfseEmissoresModal';
-import NfseAcessoClienteModal from './NfseAcessoClienteModal';
+import type { NfseConfigResposta } from './NfseConfigModal';
+import type { EmpresaEmissora } from './NfseEmissoresModal';
 import { formatarCnpj } from '../lib/nfse/emissor';
 import { useAcessoNfse, type EmpresaLiberada } from '../lib/nfse/use-acesso-nfse';
-import NfseCopiarModal from './NfseCopiarModal';
 import ComercialExportBar from './ComercialExportBar';
 import { base64ToUint8Array, criarZipBlobClient, type ArquivoZipClient } from '../lib/nfse/zip-client';
-import NfseImportarModal from './NfseImportarModal';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
-import BoletoSicoobOficial from './BoletoSicoobOficial';
 import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
 import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
-import NfseBuscarNotasModal from './NfseBuscarNotasModal';
-import CertidaoFederalModal from './CertidaoFederalModal';
-import NfseInsights from './NfseInsights';
+import PaginationBar from './ui/PaginationBar';
+import { TableSkeleton } from './ui';
 import { instrumentSerif as serif } from '../app/fonts';
+
+// Modais e painéis secundários carregados sob demanda (reduz bundle inicial da tela de NFS-e)
+const NfseConfigModal = dynamic(() => import('./NfseConfigModal'), { ssr: false });
+const NfseEmissoresModal = dynamic(() => import('./NfseEmissoresModal'), { ssr: false });
+const NfseAcessoClienteModal = dynamic(() => import('./NfseAcessoClienteModal'), { ssr: false });
+const NfseCopiarModal = dynamic(() => import('./NfseCopiarModal'), { ssr: false });
+const NfseImportarModal = dynamic(() => import('./NfseImportarModal'), { ssr: false });
+const BoletoSicoobOficial = dynamic(() => import('./BoletoSicoobOficial'), { ssr: false });
+const NfseBuscarNotasModal = dynamic(() => import('./NfseBuscarNotasModal'), { ssr: false });
+const CertidaoFederalModal = dynamic(() => import('./CertidaoFederalModal'), { ssr: false });
+const NfseInsights = dynamic(() => import('./NfseInsights'), { ssr: false });
 import {
   Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles,
   ChevronDown, SlidersHorizontal, Settings, Plus, KeyRound, Users, Trash2,
@@ -477,6 +484,18 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const certVencido = !!certificado?.validoAte && new Date(certificado.validoAte).getTime() < Date.now();
   const prontoParaEmitir = !!parametros?.codigoMunicipio && !!certificado && !certVencido;
   const emProducao = parametros?.ambiente === 'producao';
+
+  const [paginaNotas, setPaginaNotas] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(30);
+
+  useEffect(() => {
+    setPaginaNotas(1);
+  }, [empresaId, papelFiltro, statusFiltro, search, mesFiltro]);
+
+  const notasPaginadas = useMemo(() => {
+    const ini = (paginaNotas - 1) * itensPorPagina;
+    return filtered.slice(ini, ini + itensPorPagina);
+  }, [filtered, paginaNotas, itensPorPagina]);
 
   const valorForm = Number(form.valorServicos) || 0;
   const deducoesForm = Math.max(0, Math.round((Number(form.valorDeducoes) || 0) * 100) / 100);
@@ -1538,9 +1557,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#600000', marginBottom: 8 }}>
               Emissor Nacional
             </div>
-            <h3 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#000', margin: 0 }}>
+            <h3 className={serif.className} style={{ fontSize: 32, fontWeight: 400, color: '#000', margin: '0 0 18px' }}>
               Carregando dados da empresa...
             </h3>
+            <TableSkeleton rows={5} cols={6} />
           </>
         ) : (
           <>
@@ -2460,7 +2480,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </td>
                   </tr>
                 ) : (
-                  filtered.map(n => {
+                  notasPaginadas.map(n => {
                     const tomada = ehNotaTomada(n, cnpjEmpresaAtual);
                     const nomeContraparte = tomada ? (n.prestadorRazaoSocial || 'Prestador') : n.tomadorRazaoSocial;
                     const docContraparte = tomada ? n.prestadorCnpj : n.tomadorCnpjCpf;
@@ -2598,6 +2618,15 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               </tbody>
             </table>
           </div>
+          <PaginationBar
+            page={paginaNotas}
+            pageSize={itensPorPagina}
+            totalItems={filtered.length}
+            onPageChange={setPaginaNotas}
+            onPageSizeChange={size => { setItensPorPagina(size); setPaginaNotas(1); }}
+            pageSizeOptions={[30, 50, 100]}
+            itemLabel="notas fiscais"
+          />
         </div>
       </div>
 

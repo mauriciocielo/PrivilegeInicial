@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { toast } from 'sonner';
 import { WHATSAPP_SHARE_STORAGE_KEY, WhatsAppSharePayload } from '@/lib/whatsapp-share';
@@ -2065,40 +2065,56 @@ export default function WhatsAppPage() {
     c => c.followup_date && c.followup_status !== 'concluido'
   );
 
-  const filteredChats = chats.filter(c => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      c.phone.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      (c.followup_note || '').toLowerCase().includes(searchFilter.toLowerCase());
+  const [chatsVisibleLimit, setChatsVisibleLimit] = useState(40);
 
-    if (!matchesSearch) return false;
+  useEffect(() => {
+    setChatsVisibleLimit(40);
+  }, [searchFilter, chatFilter]);
 
-    const status = c.ticket_status || 'aberto';
+  const filteredChats = useMemo(() => {
+    const q = searchFilter.toLowerCase();
+    const agoraMs = Date.now();
+    return chats.filter(c => {
+      const matchesSearch =
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q) ||
+        (c.followup_note || '').toLowerCase().includes(q);
 
-    if (chatFilter === 'abertos') return status === 'aberto';
-    if (chatFilter === 'encerrados') return status === 'encerrado';
-    if (chatFilter === 'followup') {
-      return Boolean(c.followup_date && c.followup_status !== 'concluido');
-    }
-    if (chatFilter === 'unreads') return c.unread_count > 0 && status === 'aberto';
-    if (chatFilter === 'triagem') {
-      return (
-        status === 'aberto' &&
-        (c.triage_status === 'transferido_humano' ||
-          (c.bot_paused_until && new Date(c.bot_paused_until) > new Date()))
-      );
-    }
-    if (chatFilter === 'humano') {
-      const isPaused = c.bot_paused_until && new Date(c.bot_paused_until) > new Date();
-      return status === 'aberto' && (!c.bot_enabled || isPaused);
-    }
-    if (chatFilter === 'bot') {
-      const isPaused = c.bot_paused_until && new Date(c.bot_paused_until) > new Date();
-      return status === 'aberto' && c.bot_enabled && !isPaused;
-    }
+      if (!matchesSearch) return false;
 
-    return true;
-  });
+      const status = c.ticket_status || 'aberto';
+
+      if (chatFilter === 'abertos') return status === 'aberto';
+      if (chatFilter === 'encerrados') return status === 'encerrado';
+      if (chatFilter === 'followup') {
+        return Boolean(c.followup_date && c.followup_status !== 'concluido');
+      }
+      if (chatFilter === 'unreads') return c.unread_count > 0 && status === 'aberto';
+      if (chatFilter === 'triagem') {
+        return (
+          status === 'aberto' &&
+          (c.triage_status === 'transferido_humano' ||
+            (c.bot_paused_until && new Date(c.bot_paused_until).getTime() > agoraMs))
+        );
+      }
+      if (chatFilter === 'humano') {
+        const isPaused = c.bot_paused_until && new Date(c.bot_paused_until).getTime() > agoraMs;
+        return status === 'aberto' && (!c.bot_enabled || isPaused);
+      }
+      if (chatFilter === 'bot') {
+        const isPaused = c.bot_paused_until && new Date(c.bot_paused_until).getTime() > agoraMs;
+        return status === 'aberto' && c.bot_enabled && !isPaused;
+      }
+
+      return true;
+    });
+  }, [chats, searchFilter, chatFilter]);
+
+  const visibleChats = useMemo(
+    () => filteredChats.slice(0, chatsVisibleLimit),
+    [filteredChats, chatsVisibleLimit]
+  );
 
   const filteredLessons = lessons.filter(l => {
     const matchesTopic = kbTopicFilter === 'todos' || l.topic === kbTopicFilter;
@@ -2413,7 +2429,8 @@ export default function WhatsAppPage() {
                   )}
                 </div>
               ) : (
-                filteredChats.map(chat => {
+                <>
+                {visibleChats.map(chat => {
                   const isSelected = selectedChat?.id === chat.id;
                   const isBotPaused =
                     chat.bot_paused_until && new Date(chat.bot_paused_until) > new Date();
@@ -2566,7 +2583,29 @@ export default function WhatsAppPage() {
                       </div>
                     </div>
                   );
-                })
+                })}
+                {filteredChats.length > chatsVisibleLimit && (
+                  <div style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setChatsVisibleLimit(prev => prev + 40)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: '1px solid var(--border, #e5e5e5)',
+                        background: 'var(--bg-card, #ffffff)',
+                        color: '#600000',
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Carregar mais conversas ({filteredChats.length - chatsVisibleLimit} restantes)
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>

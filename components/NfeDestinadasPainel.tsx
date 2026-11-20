@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { instrumentSerif as serif } from '../app/fonts';
 import {
   Inbox, Search, RefreshCw, Download, Copy, Check, Filter, Calendar, Building2,
@@ -13,16 +14,19 @@ import {
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
 import ComercialExportBar from './ComercialExportBar';
-import NfeCertificadoModal from './NfeCertificadoModal';
-import CertidaoFederalModal from './CertidaoFederalModal';
-import NfeDifalModal from './NfeDifalModal';
-import NfeIntegracaoModal from './NfeIntegracaoModal';
-import NfeImportarXmlModal from './NfeImportarXmlModal';
-import CadastrarCnpjModal from './CadastrarCnpjModal';
-import NfeGraficoMensalArquivos, { type GraficoMensalDados } from './NfeGraficoMensalArquivos';
-import NfeMonitorLogsPainel from './NfeMonitorLogsPainel';
+import type { GraficoMensalDados } from './NfeGraficoMensalArquivos';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
+
+// Modais e painéis pesados carregados sob demanda
+const NfeCertificadoModal = dynamic(() => import('./NfeCertificadoModal'), { ssr: false });
+const CertidaoFederalModal = dynamic(() => import('./CertidaoFederalModal'), { ssr: false });
+const NfeDifalModal = dynamic(() => import('./NfeDifalModal'), { ssr: false });
+const NfeIntegracaoModal = dynamic(() => import('./NfeIntegracaoModal'), { ssr: false });
+const NfeImportarXmlModal = dynamic(() => import('./NfeImportarXmlModal'), { ssr: false });
+const CadastrarCnpjModal = dynamic(() => import('./CadastrarCnpjModal'), { ssr: false });
+const NfeGraficoMensalArquivos = dynamic(() => import('./NfeGraficoMensalArquivos'), { ssr: false });
+const NfeMonitorLogsPainel = dynamic(() => import('./NfeMonitorLogsPainel'), { ssr: false });
 
 interface EmpresaMonitor {
   id: string;
