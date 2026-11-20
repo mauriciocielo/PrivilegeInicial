@@ -81,7 +81,6 @@ export default function InteligenciaFinanceiraPage() {
     setAiLoading(true);
     const e = empresas.find(x => x.id === empresaId);
     const activeCompanyName = e?.razaoSocial || 'Cliente';
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
     const prompt = `Você é o robô Privilege AI, consultor financeiro de elite do escritório Privilege Consultoria.
 O consultor financeiro realizou uma simulação de cenários de fluxo de caixa para a empresa "${activeCompanyName}".
@@ -274,8 +273,6 @@ INSTRUÇÕES DE COMPORTAMENTO:
 3. Dê conselhos e planos de ação práticos (ex: renegociar prazos com determinados tipos de fornecedores, antecipar recebíveis, reduzir custos fixos, ajustar margem de contribuição, aplicar o superávit).
 4. Mantenha as respostas bem estruturadas em português, usando listas, tópicos em negrito e formatação markdown profissional. Evite termos genéricos, seja direto aos números.
 5. Nunca invente dados que contradigam o contexto real fornecido.`;
-
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
     // A API do Gemini exige que o primeiro turno de conversa comece com uma mensagem do usuário ('user').
     const firstUserMsgIndex = updatedMessages.findIndex(m => m.sender === 'user');

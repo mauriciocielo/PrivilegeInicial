@@ -18,7 +18,6 @@ interface TipItem {
 export default function GeminiAbc({ empresaId, curva }: CurvaTipsProps) {
   const [tips, setTips] = useState<TipItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
   const generateTips = useCallback(async () => {
     if (!curva) {

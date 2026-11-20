@@ -12,6 +12,9 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role === 'cliente') {
+      return NextResponse.json({ error: 'Apenas o escritório pode anexar certidões.' }, { status: 403 });
+    }
 
     const body = await request.json().catch(() => ({}));
     const empresaId = typeof body?.empresaId === 'string' ? body.empresaId : '';

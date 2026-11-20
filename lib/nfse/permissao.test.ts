@@ -31,26 +31,17 @@ beforeEach(() => {
 });
 
 describe('emissão pelo cliente', () => {
-
-  it('libera o cliente na própria empresa com procuração ativa', async () => {
-    findUnique.mockResolvedValue({ usarProcuracao: true, procuracaoStatus: 'ativa' });
+  it('libera o cliente na própria empresa vinculada na sessão', async () => {
     await expect(acessoEmissaoNegado(sessao('cliente', ['e1']), 'e1')).resolves.toBeNull();
   });
 
-  it.each([
-    ['sem procuração', { usarProcuracao: true, procuracaoStatus: 'sem_procuracao' }],
-    ['procuração não confirmada', { usarProcuracao: true, procuracaoStatus: 'indeterminada' }],
-    ['nunca verificada', { usarProcuracao: true, procuracaoStatus: null }],
-    ['empresa com certificado próprio', { usarProcuracao: false, procuracaoStatus: 'ativa' }],
-    ['sem configuração', null],
-  ])('bloqueia o cliente: %s', async (_nome, config) => {
-    findUnique.mockResolvedValue(config);
-    const r = await acessoEmissaoNegado(sessao('cliente', ['e1']), 'e1');
-    expect(r?.status).toBe(403);
+  it('libera o cliente quando o vínculo está salvo no cadastro do usuário no banco', async () => {
+    usuario.mockResolvedValue({ empresaIds: ['e1'] });
+    await expect(acessoEmissaoNegado(sessao('cliente', []), 'e1')).resolves.toBeNull();
   });
 
-  it('bloqueia o cliente em empresa de outro, mesmo com procuração ativa', async () => {
-    findUnique.mockResolvedValue({ usarProcuracao: true, procuracaoStatus: 'ativa' });
+  it('bloqueia o cliente em empresa de outro', async () => {
+    usuario.mockResolvedValue({ empresaIds: ['e1'] });
     const r = await acessoEmissaoNegado(sessao('cliente', ['e1']), 'e2');
     expect(r?.status).toBe(403);
     expect(findUnique).not.toHaveBeenCalled();
@@ -64,9 +55,10 @@ describe('emissão pelo cliente', () => {
   });
 });
 
-describe('certificado e configuração', () => {
-  it('seguem fechados para o cliente, mesmo na própria empresa', async () => {
-    expect((await acessoNegado(sessao('cliente', ['e1']), 'e1'))?.status).toBe(403);
+describe('acesso geral à empresa', () => {
+  it('permite acesso à própria empresa e bloqueia empresa de terceiro', async () => {
+    await expect(acessoNegado(sessao('cliente', ['e1']), 'e1')).resolves.toBeNull();
+    expect((await acessoNegado(sessao('cliente', ['e1']), 'e2'))?.status).toBe(403);
     await expect(acessoNegado(sessao('consultor', ['e1']), 'e1')).resolves.toBeNull();
   });
 });

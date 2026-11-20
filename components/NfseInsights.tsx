@@ -231,7 +231,6 @@ export default function NfseInsights({
   const gerarAnaliseComIa = useCallback(async () => {
     try {
       setGerandoIa(true);
-      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
       const totalPrestadas = notas.filter(n => n.status !== 'rascunho').reduce((s, n) => s + (n.valorServicos || 0), 0);
       const totalRascunho = notas.filter(n => n.status === 'rascunho').length;

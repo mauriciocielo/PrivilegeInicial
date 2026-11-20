@@ -48,6 +48,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const porSelecao = ids.length > 0;
     const modoMeta = url.searchParams.get('meta') === '1';
     const modoJson = url.searchParams.get('json') === '1';
+    if (ids.length > 200 && !modoJson) {
+      return NextResponse.json({ error: 'Selecione no máximo 200 notas por exportação direta.' }, { status: 400 });
+    }
     const mes = porSelecao ? '' : (url.searchParams.get('mes') || '').trim();
     const papel = porSelecao ? 'todas' : url.searchParams.get('papel') || 'prestadas';
     const formato = url.searchParams.get('formato') || 'ambos';

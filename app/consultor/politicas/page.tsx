@@ -147,8 +147,6 @@ REGRAS DE FORMATAÇÃO E ESTRUTURA:
 3. Seja detalhado e específico. Evite termos vagos.
 4. Responda em Português do Brasil de forma extremamente polida e técnica.`;
 
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
-
     try {
       const text = await askClaude({
         prompt,

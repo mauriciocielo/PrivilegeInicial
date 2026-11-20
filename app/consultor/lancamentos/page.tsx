@@ -739,23 +739,20 @@ export default function LancamentosPage() {
 ]
 Apenas retorne transações com valor maior que 0. Valores numéricos devem ser expressos como Number. Certifique-se que o JSON é válido.`;
 
-        const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: promptText },
-                  { inlineData: { mimeType: 'application/pdf', data: base64Data } }
-                ]
-              }],
-              generationConfig: { responseMimeType: "application/json" }
-            }),
-          }
-        );
+        const response = await fetch('/api/ai/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gemini-2.5-flash',
+            contents: [{
+              parts: [
+                { text: promptText },
+                { inlineData: { mimeType: 'application/pdf', data: base64Data } }
+              ]
+            }],
+            generationConfig: { responseMimeType: "application/json" }
+          }),
+        });
 
         if (!response.ok) throw new Error('Falha ao conectar com o Gemini.');
         const data = await response.json();

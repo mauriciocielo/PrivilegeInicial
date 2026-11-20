@@ -47,7 +47,7 @@ describe('cálculo', () => {
   });
 
   it('calcula o líquido como o Sefin: serviço menos retenções', () => {
-    expect(estimarValoresNota(1000, 3, true, 61.5)).toEqual({ valorIss: 30, valorLiquido: 908.5 });
+    expect(estimarValoresNota(1000, 3, true, 61.5)).toEqual({ valorIss: 30, valorBaseCalculo: 1000, valorLiquido: 908.5 });
     expect(estimarValoresNota(1000, 3, false, 61.5).valorLiquido).toBe(938.5);
     expect(estimarValoresNota(1000, 0, false).valorLiquido).toBe(1000);
   });

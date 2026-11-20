@@ -314,8 +314,6 @@ export default function ComparadorSpedPainel({ modoCliente = false }: Comparador
       setGerandoIa(true);
       setMostrarSecaoIa(true);
 
-      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
-
       const prompt = `Você é o Auditor Fiscal Chefe e Perito Tributário do sistema.
 Analise os resultados do cruzamento entre o arquivo SPED Fiscal (EFD) e os Documentos Fiscais Eletrônicos (NF-e, CT-e, NFS-e) autorizados pelo SEFAZ/ADN:
 

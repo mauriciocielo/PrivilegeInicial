@@ -22,7 +22,6 @@ interface TipItem {
 export default function GeminiTips({ empresaId, dataIni, dataFim, status = 'realizado', portadorId = '', contextKey = '' }: GeminiTipsProps) {
   const [tips, setTips] = useState<TipItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
 
   const generateTips = useCallback(async () => {
     setLoading(true);

@@ -16,9 +16,6 @@ interface Attachment {
   name: string;
 }
 
-// Recomenda-se mover a API_KEY para um arquivo .env como NEXT_PUBLIC_GEMINI_API_KEY
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyApsKGqQWqF6LeABZG2fNdzXp4G9_wTq6s';
-
 const SpeechRecognition = typeof window !== 'undefined'
   ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   : null;
@@ -174,17 +171,15 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
         const parsed = JSON.parse(rawText.trim());
         setDetected(parsed);
       } else {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts }],
-              generationConfig: { responseMimeType: "application/json" }
-            }),
-          }
-        );
+        const response = await fetch('/api/ai/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gemini-2.5-flash',
+            contents: [{ parts }],
+            generationConfig: { responseMimeType: "application/json" }
+          }),
+        });
         if (!response.ok) throw new Error('Falha ao conectar com o Gemini.');
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
