@@ -492,6 +492,29 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   // Preferência persistente de envio automático do PDF da NFS-e no WhatsApp do usuário emissor (via 46 99980-0010)
   const [enviarWppEmissor, setEnviarWppEmissor] = useState(false);
   const [wppEmissorNumero, setWppEmissorNumero] = useState('');
+  const [testandoWppEmissor, setTestandoWppEmissor] = useState(false);
+
+  const testarEnvioWppEmissor = async () => {
+    if (apenasDigitos(wppEmissorNumero).length < 10) {
+      toast.error('Digite um número de WhatsApp válido com DDD para testar.');
+      return;
+    }
+    setTestandoWppEmissor(true);
+    try {
+      const res = await fetch('/api/nfse/testar-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: wppEmissorNumero, empresaId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar teste.');
+      toast.success(`PDF de teste (NFS-e nº ${json.notaNumero || '—'}) enviado para ${wppEmissorNumero}!`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTestandoWppEmissor(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -3642,14 +3665,25 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               {enviarWppEmissor && (
                 <div>
                   <label className="form-label" style={{ fontSize: 12 }}>Seu WhatsApp para receber o PDF (DDD + número) *</label>
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="Ex.: (46) 99999-9999"
-                    value={wppEmissorNumero}
-                    onChange={e => salvarPrefWppEmissor(true, e.target.value)}
-                    style={{ maxWidth: 280 }}
-                  />
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                      type="tel"
+                      className="form-control"
+                      placeholder="Ex.: (46) 99999-9999"
+                      value={wppEmissorNumero}
+                      onChange={e => salvarPrefWppEmissor(true, e.target.value)}
+                      style={{ maxWidth: 240 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={testandoWppEmissor || apenasDigitos(wppEmissorNumero).length < 10}
+                      onClick={testarEnvioWppEmissor}
+                      style={{ borderColor: '#16a34a', color: '#15803d', fontWeight: 600 }}
+                    >
+                      {testandoWppEmissor ? 'Enviando teste...' : '⚡ Testar envio'}
+                    </button>
+                  </div>
                   <div style={{ fontSize: 11, color: '#525252', marginTop: 4 }}>
                     Assim que a nota for autorizada, o PDF oficial chega no seu WhatsApp pronto para encaminhar ao cliente. Sua escolha fica salva para as próximas notas.
                   </div>
