@@ -95,16 +95,16 @@ async function sugerirHorariosLivresAgenda(): Promise<string[]> {
     const daqui5Dias = new Date(hoje.getTime() + 5 * 24 * 60 * 60 * 1000);
     const tarefas = await db.agendaTask.findMany({
       where: {
-        date: {
+        dateStr: {
           gte: hoje.toISOString().slice(0, 10),
           lte: daqui5Dias.toISOString().slice(0, 10),
         },
-        status: { not: 'concluido' },
+        completed: false,
       },
-      select: { date: true, time: true },
+      select: { dateStr: true, horario: true },
       take: 80,
     });
-    ocupados = new Set(tarefas.map(t => `${t.date} ${(t.time || '').slice(0, 5)}`));
+    ocupados = new Set(tarefas.map(t => `${t.dateStr} ${(t.horario || '').slice(0, 5)}`));
   } catch {
     // fallback sem agenda do banco
   }

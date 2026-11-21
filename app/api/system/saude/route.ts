@@ -240,7 +240,7 @@ export async function POST(request: Request) {
 
     const res = await sendBaileysLiveMessage(telefone, linhas.join('\n'), undefined, sessaoAtiva.ownerId);
     if (!res?.sent) {
-      return NextResponse.json({ error: res?.error || 'Não foi possível enviar o alerta no WhatsApp.' }, { status: 500 });
+      return NextResponse.json({ error: 'Não foi possível enviar o alerta no WhatsApp.' }, { status: 500 });
     }
     return NextResponse.json({ ok: true, enviadoPara: telefone });
   }
