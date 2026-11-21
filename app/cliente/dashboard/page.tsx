@@ -8,6 +8,7 @@ import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
+import DailyAiBriefing from '../../../components/DailyAiBriefing';
 import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays, ShieldCheck, ReceiptText, UploadCloud, MessageSquare, Clock } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -293,6 +294,7 @@ export default function ClienteDashboard() {
       </div>
 
       <div className="page-body">
+        <DailyAiBriefing empresaId={empresaId} />
         {/* Modo Executivo — Ações Rápidas em 1 toque (Mobile & Desktop) */}
         <div
           style={{

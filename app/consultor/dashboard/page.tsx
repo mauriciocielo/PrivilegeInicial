@@ -6,6 +6,7 @@ import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
+import DailyAiBriefing from '../../../components/DailyAiBriefing';
 import { TrendingUp, TrendingDown, Activity, Scale, Printer, Plus, LogOut, ShieldCheck } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -306,6 +307,7 @@ export default function ConsultorDashboard() {
       </div>
 
       <div className="page-body">
+        <DailyAiBriefing empresaId={empresaId} />
         {/* Card Editorial Principal (Padrão Home: #0a0a0a + Card Claro) */}
         <div style={{
           display: 'grid',
