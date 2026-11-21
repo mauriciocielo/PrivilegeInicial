@@ -567,7 +567,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           { label: 'NFS-e / Emissão', href: '/cliente/nfse', icon: ReceiptText },
           { label: 'Comparador de SPED', href: '/cliente/comparador-sped', icon: FileSearch },
         ] : []),
-        { label: 'WhatsApp & Bot IA', href: '/cliente/whatsapp', icon: MessageSquare },
         { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
         { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
         { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
@@ -935,9 +934,10 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
 
+        {role !== 'cliente' && (
         <button
           type="button"
-          onClick={() => router.push(role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp')}
+          onClick={() => router.push('/consultor/whatsapp')}
           title="Abrir WhatsApp & Bot IA"
           style={{
             display: 'inline-flex',
@@ -957,6 +957,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           <MessageSquare size={14} />
           {!isSidebarCompact && <span>WhatsApp</span>}
         </button>
+        )}
 
         {/* Popover de Perfil Compacto */}
         <div ref={profilePopoverRef} style={{ position: 'relative' }}>

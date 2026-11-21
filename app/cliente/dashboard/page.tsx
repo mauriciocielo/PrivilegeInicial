@@ -333,7 +333,7 @@ export default function ClienteDashboard() {
               icon: MessageSquare,
               bg: '#f0fdf4',
               color: '#15803d',
-              href: '/cliente/whatsapp',
+              href: 'https://wa.me/5546999048990?text=Ol%C3%A1%2C%20preciso%20falar%20com%20meu%20consultor%20da%20Privilege.',
             },
           ].map(card => {
             const Icon = card.icon;
@@ -341,7 +341,13 @@ export default function ClienteDashboard() {
               <button
                 key={card.titulo}
                 type="button"
-                onClick={() => router.push(card.href)}
+                onClick={() => {
+                  if (card.href.startsWith('http')) {
+                    window.open(card.href, '_blank', 'noopener,noreferrer');
+                  } else {
+                    router.push(card.href);
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

@@ -1870,9 +1870,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <RefreshCw size={14} /> Buscar no ADN
           </button>
 
-          {/* Atalho direto para o WhatsApp da conta / usuário */}
+          {/* Atalho direto para o WhatsApp da conta / usuário (apenas consultor/admin) */}
+          {!modoCliente && (
           <a
-            href={modoCliente ? '/cliente/whatsapp' : '/consultor/whatsapp'}
+            href="/consultor/whatsapp"
             className="nfse-hero-wpp-btn"
             style={{
               background: 'rgba(16,185,129,0.18)',
@@ -1891,6 +1892,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           >
             <MessageSquare size={14} /> WhatsApp
           </a>
+          )}
 
           {/* Exportar Mês */}
           <button

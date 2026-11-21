@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   X, ChevronDown, LayoutDashboard, NotebookPen, ReceiptText, MessageSquare, Menu,
-  Building2, Sun, Moon, LogOut, Search, type LucideIcon,
+  Building2, Sun, Moon, LogOut, Search, BarChart3, type LucideIcon,
 } from 'lucide-react';
 import type { Empresa } from '../lib/store';
 
@@ -54,12 +54,19 @@ export default function MobileNavShell({
   const [expandedSection, setExpandedSection] = useState<string>(navSections[0]?.section || '');
   const prefixo = role === 'cliente' ? '/cliente' : '/consultor';
 
-  const bottomTabs = [
-    { label: 'Início', href: `${prefixo}/dashboard`, icon: LayoutDashboard },
-    { label: 'Lançam.', href: `${prefixo}/lancamentos`, icon: NotebookPen },
-    { label: 'NFS-e', href: `${prefixo}/nfse`, icon: ReceiptText },
-    { label: 'WhatsApp', href: `${prefixo}/whatsapp`, icon: MessageSquare },
-  ];
+  const bottomTabs = role === 'cliente'
+    ? [
+        { label: 'Início', href: `${prefixo}/dashboard`, icon: LayoutDashboard },
+        { label: 'Lançam.', href: `${prefixo}/lancamentos`, icon: NotebookPen },
+        { label: 'NFS-e', href: `${prefixo}/nfse`, icon: ReceiptText },
+        { label: 'Relatórios', href: `${prefixo}/relatorios`, icon: BarChart3 },
+      ]
+    : [
+        { label: 'Início', href: `${prefixo}/dashboard`, icon: LayoutDashboard },
+        { label: 'Lançam.', href: `${prefixo}/lancamentos`, icon: NotebookPen },
+        { label: 'NFS-e', href: `${prefixo}/nfse`, icon: ReceiptText },
+        { label: 'WhatsApp', href: `${prefixo}/whatsapp`, icon: MessageSquare },
+      ];
 
   return (
     <>

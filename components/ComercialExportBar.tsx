@@ -47,6 +47,9 @@ export default function ComercialExportBar({
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showWhatsModal, setShowWhatsModal] = useState(false);
+  const [whatsTo, setWhatsTo] = useState('');
+  const [sendingWhats, setSendingWhats] = useState(false);
 
   const getEmpresaInfo = () => {
     const empId = store.getSafeEmpresaId();
@@ -213,33 +216,47 @@ export default function ComercialExportBar({
     }
   }
 
-  async function handleSendWhatsApp() {
-    setBusy(true);
+  function handleSendWhatsApp() {
+    const emp = getEmpresaInfo();
+    const savedTel = typeof window !== 'undefined' ? (localStorage.getItem('cf_last_wpp_share') || '') : '';
+    setWhatsTo(emp.telefone || savedTel || '');
+    setShowWhatsModal(true);
+  }
+
+  async function handleSendWhatsSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const tel = whatsTo.trim();
+    if (tel.replace(/\D/g, '').length < 10 || sendingWhats) {
+      toast.error('Informe um número de WhatsApp válido com DDD.');
+      return;
+    }
+    setSendingWhats(true);
     try {
       const emp = getEmpresaInfo();
       const pdf = await buildPdfDoc();
       const dataUrl = pdf.output('datauristring');
       const kpiText = kpis.map(k => `• *${k.label}:* ${k.value}`).join('\n');
-      const text = `📊 *${title}* — ${emp.nome}\n\n${kpiText}\n\nSegue em anexo o relatório completo em PDF.`;
+      const mensagem = `📊 *${title}* — ${emp.nome}\n\n${kpiText}\n\nSegue em anexo o relatório completo em PDF.`;
 
-      redirectToWhatsAppShare(
-        {
-          phone: emp.telefone,
-          name: emp.nome,
-          text,
-          attachment: {
-            dataUrl,
-            mediaType: 'document',
-            fileName: `${fileNameBase}.pdf`,
-            mimeType: 'application/pdf',
-          },
-        },
-        url => router.push(url)
-      );
-    } catch {
-      toast.error('Erro ao preparar envio no WhatsApp.');
+      const res = await fetch('/api/whatsapp/disparar-direto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefone: tel,
+          mensagem,
+          pdfBase64: dataUrl,
+          pdfFileName: `${fileNameBase}.pdf`,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar relatório no WhatsApp.');
+      if (typeof window !== 'undefined') localStorage.setItem('cf_last_wpp_share', tel);
+      toast.success(`Relatório PDF enviado para ${tel} via (46) 99980-0010!`);
+      setShowWhatsModal(false);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erro ao enviar no WhatsApp.');
     } finally {
-      setBusy(false);
+      setSendingWhats(false);
     }
   }
 
@@ -407,6 +424,55 @@ export default function ComercialExportBar({
           <Mail size={14} color="var(--accent)" /> Enviar E-mail
         </button>
       </div>
+
+      {showWhatsModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999,
+            padding: 16,
+          }}
+        >
+          <form
+            onSubmit={handleSendWhatsSubmit}
+            className="card"
+            style={{ width: '100%', maxWidth: 420, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Enviar Relatório no WhatsApp</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+              O resumo e o PDF oficial de <strong>{title}</strong> serão enviados diretamente via <strong>(46) 99980-0010</strong> para o número informado abaixo.
+            </p>
+            <div>
+              <label className="form-label">WhatsApp de destino (DDD + número)</label>
+              <input
+                type="tel"
+                className="form-control"
+                placeholder="Ex.: (46) 99901-6003"
+                value={whatsTo}
+                onChange={e => setWhatsTo(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button type="button" onClick={() => setShowWhatsModal(false)} className="btn btn-secondary">Cancelar</button>
+              <button
+                type="submit"
+                disabled={sendingWhats}
+                className="btn btn-primary"
+                style={{ background: '#15803d', borderColor: '#15803d' }}
+              >
+                {sendingWhats ? 'Enviando...' : 'Enviar no WhatsApp'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showEmailModal && (
         <div

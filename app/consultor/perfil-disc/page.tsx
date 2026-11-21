@@ -67,7 +67,55 @@ export default function PerfilDiscPage() {
 
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [form, setForm] = useState({ empresaId: '', tipoRespondente: 'colaborador', nomeRespondente: '', emailRespondente: '', cargoRespondente: '', quantidade: 1 });
+  const [form, setForm] = useState({ empresaId: '', tipoRespondente: 'colaborador', nomeRespondente: '', emailRespondente: '', cargoRespondente: '', whatsappRespondente: '', quantidade: 1 });
+  const [enviandoWppId, setEnviandoWppId] = useState<string | null>(null);
+  const [wppPorAvaliacao, setWppPorAvaliacao] = useState<Record<string, string>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('cf_disc_wpp_map') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  const salvarWppAvaliacao = (chave: string, telefone: string) => {
+    setWppPorAvaliacao(prev => {
+      const next = { ...prev, [chave]: telefone };
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('cf_disc_wpp_map', JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+  };
+
+  async function enviarConviteWhatsAppDireto(id: string, token: string, nome: string | null | undefined, telefonePadrao?: string) {
+    let tel = (telefonePadrao || wppPorAvaliacao[id] || wppPorAvaliacao[token] || '').trim();
+    if (tel.replace(/\D/g, '').length < 10) {
+      const digitado = window.prompt(`WhatsApp do colaborador${nome ? ` (${nome})` : ''} com DDD (ex.: 46999016003):`, tel);
+      if (!digitado || digitado.replace(/\D/g, '').length < 10) return;
+      tel = digitado.trim();
+    }
+    salvarWppAvaliacao(id, tel);
+    salvarWppAvaliacao(token, tel);
+    setEnviandoWppId(id);
+    try {
+      const res = await fetch('/api/whatsapp/disparar-direto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefone: tel,
+          mensagem: mensagemConvite(token, nome),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar convite no WhatsApp.');
+      toast.success(`Convite DISC enviado para ${tel} via (46) 99980-0010!`);
+    } catch (e) {
+      toast.error((e as Error).message || 'Erro ao enviar no WhatsApp.');
+    } finally {
+      setEnviandoWppId(null);
+    }
+  }
   const [criados, setCriados] = useState<LinkCriado[] | null>(null);
 
   const carregar = useCallback(async () => {
@@ -115,6 +163,7 @@ export default function PerfilDiscPage() {
       nomeRespondente: base?.nomeRespondente || '',
       emailRespondente: base?.emailRespondente || '',
       cargoRespondente: base?.cargoRespondente || '',
+      whatsappRespondente: (base && (wppPorAvaliacao[base.id] || (base.token ? wppPorAvaliacao[base.token] : ''))) || '',
       quantidade: 1,
     });
     setCriados(null);
@@ -260,17 +309,11 @@ export default function PerfilDiscPage() {
                                 <button
                                   type="button"
                                   className="btn btn-secondary btn-sm"
-                                  onClick={() =>
-                                    redirectToWhatsAppShare(
-                                      {
-                                        name: a.nomeRespondente || undefined,
-                                        text: mensagemConvite(a.token!, a.nomeRespondente),
-                                      },
-                                      router.push
-                                    )
-                                  }
+                                  disabled={enviandoWppId === a.id}
+                                  style={{ color: '#15803d', borderColor: '#bbf7d0' }}
+                                  onClick={() => enviarConviteWhatsAppDireto(a.id, a.token!, a.nomeRespondente)}
                                 >
-                                  WhatsApp
+                                  {enviandoWppId === a.id ? 'Enviando...' : 'WhatsApp'}
                                 </button>
                               </>
                             )}
@@ -310,17 +353,11 @@ export default function PerfilDiscPage() {
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
-                        onClick={() =>
-                          redirectToWhatsAppShare(
-                            {
-                              name: c.nomeRespondente || undefined,
-                              text: mensagemConvite(c.token, c.nomeRespondente),
-                            },
-                            router.push
-                          )
-                        }
+                        disabled={enviandoWppId === c.id}
+                        style={{ color: '#15803d', borderColor: '#bbf7d0' }}
+                        onClick={() => enviarConviteWhatsAppDireto(c.id, c.token, c.nomeRespondente, form.whatsappRespondente)}
                       >
-                        WhatsApp
+                        {enviandoWppId === c.id ? 'Enviando...' : 'WhatsApp'}
                       </button>
                     </div>
                   ))}
@@ -388,6 +425,10 @@ export default function PerfilDiscPage() {
                     <div className="form-group">
                       <label className="form-label" htmlFor="pd-email">E-mail (opcional)</label>
                       <input id="pd-email" type="email" className="form-control" value={form.emailRespondente} maxLength={160} onChange={e => setForm(f => ({ ...f, emailRespondente: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="pd-wpp">WhatsApp do colaborador (opcional)</label>
+                      <input id="pd-wpp" type="tel" className="form-control" placeholder="Ex.: (46) 99901-6003" value={form.whatsappRespondente} maxLength={24} onChange={e => setForm(f => ({ ...f, whatsappRespondente: e.target.value }))} />
                     </div>
                   </div>
                 )}
