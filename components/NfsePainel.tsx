@@ -2438,7 +2438,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
           }}
         >
-          <div className="table-wrap">
+          <div className="table-wrap nfse-desktop-table">
             <table>
               <thead>
                 <tr>
@@ -2655,6 +2655,158 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               </tbody>
             </table>
           </div>
+
+          {/* Lista em Cards dedicada para Celular (<= 768px) */}
+          <div className="nfse-mobile-cards">
+            {filtered.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                <h3 className={serif.className} style={{ fontSize: 22, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
+                  {papelFiltro === 'tomadas'
+                    ? 'Nenhum serviço tomado neste período'
+                    : 'Nenhuma nota emitida neste período'}
+                </h3>
+                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                  Ajuste os filtros ou crie uma nova nota acima.
+                </p>
+              </div>
+            ) : (
+              notasPaginadas.map(n => {
+                const tomada = ehNotaTomada(n, cnpjEmpresaAtual);
+                const nomeContraparte = tomada ? (n.prestadorRazaoSocial || 'Prestador') : n.tomadorRazaoSocial;
+                const docContraparte = tomada ? n.prestadorCnpj : n.tomadorCnpjCpf;
+                const diag = n.status === 'rascunho' && n.ultimoErro ? diagnosticarErroNfse(n.ultimoErro) : null;
+                return (
+                  <div
+                    key={`mob-${n.id}`}
+                    style={{
+                      padding: 14,
+                      borderBottom: '1px solid #ececec',
+                      opacity: n.status === 'cancelada' || ehSimulada(n) ? 0.65 : 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
+                        <input
+                          type="checkbox"
+                          style={{ marginTop: 3 }}
+                          disabled={!!progressoLote}
+                          checked={selecionadas.has(n.id)}
+                          onChange={() => alternarSelecao(n.id)}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#171717', wordBreak: 'break-word' }}>
+                            {nomeContraparte || 'Tomador não informado'}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#737373', marginTop: 2 }}>
+                            {docContraparte || '—'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ flexShrink: 0 }}>{statusBadge(n)}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8 }}>
+                      <div style={{ fontSize: 12, color: '#525252' }}>
+                        <strong>Nº {n.numero || 'Rascunho'}</strong> • {n.dataEmissao ? fmt.date(n.dataEmissao) : '—'} • {n.dataCompetencia}
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: n.status === 'cancelada' ? '#b91c1c' : '#171717', whiteSpace: 'nowrap' }}>
+                        {fmt.currency(n.valorLiquido)}
+                      </div>
+                    </div>
+
+                    {(n.codigoServico || n.discriminacao) && (
+                      <div style={{ fontSize: 12, color: '#525252', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <strong>{n.codigoServico}</strong> {n.discriminacao}
+                      </div>
+                    )}
+
+                    {n.status === 'rascunho' && n.ultimoErro && (
+                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 11.5, color: '#991b1b' }}>
+                        <div>{n.ultimoErro}</div>
+                        {diag && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (diag.acaoTipo === 'zerar_deducao') {
+                                abrirEdicao({ ...n, valorDeducoes: 0, ultimoErro: null });
+                                toast.info('Dedução zerada. Confira e clique em Emitir.');
+                              } else if (diag.acaoTipo === 'abrir_config' && !modoCliente) {
+                                setShowConfigModal(true);
+                              } else {
+                                abrirEdicao(n);
+                              }
+                            }}
+                            style={{
+                              marginTop: 6,
+                              padding: '5px 10px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: '#b45309',
+                              color: '#fff',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            ⚡ {diag.acaoLabel}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: 12, padding: '6px 10px' }}
+                        onClick={() => { setViewItem(n); setModalMode('ver'); }}
+                      >
+                        Ver
+                      </button>
+                      {n.chaveAcesso && (
+                        <>
+                          <a
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            href={`/api/nfse/${n.id}/danfse?baixar=1`}
+                          >
+                            <FileText size={13} /> PDF
+                          </a>
+                          <a
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            href={`/api/nfse/${n.id}/xml`}
+                            download
+                          >
+                            <FileCode size={13} /> XML
+                          </a>
+                        </>
+                      )}
+                      {!tomada && n.status === 'rascunho' && (
+                        <>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 12, padding: '6px 10px' }}
+                            onClick={() => abrirEdicao(n)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: 12, padding: '6px 12px', background: '#600000', borderColor: '#600000' }}
+                            disabled={!!transmitindoId}
+                            onClick={() => handleTransmitir(n)}
+                          >
+                            {transmitindoId === n.id ? 'Transmitindo...' : 'Transmitir'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
           <PaginationBar
             page={paginaNotas}
             pageSize={itensPorPagina}
@@ -3603,7 +3755,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
               {/* Valores */}
               <div style={{ border: '1px solid #cbd5e1', borderRadius: 6, marginBottom: 16, overflow: 'hidden' }}>
                 <div style={{ background: '#1e3a5f', color: '#fff', padding: '6px 12px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Valores e Tributos</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 0 }}>
                   {[
                     { label: 'Valor dos Serviços', value: viewItem.valorServicos },
                     { label: 'Deduções', value: viewItem.valorDeducoes },

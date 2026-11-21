@@ -218,11 +218,11 @@ Regras:
   };
 
   return (
-    <div style={{
+    <div className="floating-copilot-root no-print" style={{
       position: 'fixed',
       bottom: 24,
       right: 24,
-      zIndex: 9999,
+      zIndex: 1400,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
@@ -230,7 +230,7 @@ Regras:
     }}>
       {/* Container do Chat Box */}
       {open && (
-        <div style={{
+        <div className="floating-copilot-box" style={{
           width: 380,
           height: 520,
           background: 'var(--bg-base)',

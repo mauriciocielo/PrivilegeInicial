@@ -109,48 +109,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''} ${isSidebarCompact ? 'sidebar-compact' : ''}`}>
-      {/* Botão flutuante para toggle do menu no mobile */}
-      <button 
-        className="mobile-menu-toggle"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          position: 'fixed',
-          top: 12,
-          left: 12,
-          zIndex: 1000,
-          background: 'var(--accent)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '50%',
-          width: 40,
-          height: 40,
-          display: 'none',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 20,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          cursor: 'pointer'
-        }}
-      >
-        {sidebarOpen ? '✕' : '☰'}
-      </button>
-
-      {/* Overlay de fundo no mobile */}
-      {sidebarOpen && (
-        <div 
-          className="mobile-sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 99,
-            display: 'none'
-          }}
-        />
-      )}
-
+    <div className={`app-layout ${isSidebarCompact ? 'sidebar-compact' : ''}`}>
       <Sidebar role="cliente" />
       <main className="main-content">
         {acessoNfse.carregando || (acessoNfse.liberado && !authorized) || (!acessoNfse.liberado && pathname === ROTA_NFSE) ? (

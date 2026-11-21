@@ -309,9 +309,9 @@ export default function ConsultorDashboard() {
         {/* Card Editorial Principal (Padrão Home: #0a0a0a + Card Claro) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1.15fr 1fr',
-          gap: 20,
-          marginBottom: 28,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 18,
+          marginBottom: 24,
         }}>
           <div style={{
             background: '#0a0a0a',
