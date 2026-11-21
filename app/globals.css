@@ -1570,7 +1570,8 @@ tbody td {
   }
   .sidebar-nav { display: none !important; }
   .mobile-hamburger-btn { display: inline-flex !important; }
-  .page-header { padding: 14px 18px; flex-direction: column; align-items: flex-start; height: auto; gap: 12px; }
+  .page-header { padding: 14px 18px; flex-direction: column; align-items: flex-start; height: auto; gap: 12px; position: static !important; }
+  .nfse-hero-header { position: static !important; padding: 18px 16px !important; }
   .page-body { padding: 16px; }
 }
 
@@ -1885,11 +1886,16 @@ tbody td {
   .main-content { width: 100%; min-height: 100vh; }
 
   .page-header {
+    position: static !important;
     height: auto;
     min-height: 54px;
-    padding: 10px 14px 10px 60px;
+    padding: 12px 14px !important;
     flex-wrap: wrap;
     gap: 8px;
+  }
+  .nfse-hero-header {
+    position: static !important;
+    padding: 16px 14px !important;
   }
 
   .page-title { font-size: 15.5px; }

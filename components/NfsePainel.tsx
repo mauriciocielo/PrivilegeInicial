@@ -1707,6 +1707,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           `background: var(--bg-base) !important` (fundo branco), o que deixaria o texto
           claro invisível. Replicamos o layout (flex + sticky) inline. */}
       <div
+        className="nfse-hero-header"
         style={{
           background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
