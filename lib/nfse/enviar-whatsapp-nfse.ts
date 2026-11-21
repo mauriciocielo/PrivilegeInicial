@@ -21,7 +21,7 @@ export interface ResultadoWhatsappNfse {
  * Localiza a sessão Baileys conectada correspondente ao número do administrador
  * (padrão 46999800010). Faz fallback para qualquer sessão de administrador conectada.
  */
-async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PADRAO): Promise<string | null> {
+export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PADRAO): Promise<string | null> {
   const ult8 = apenasDigitos(numeroAlvo).slice(-8);
 
   const candidatos = new Set<string>(['default']);

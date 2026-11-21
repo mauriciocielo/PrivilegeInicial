@@ -4,7 +4,7 @@ import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare } from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
 // persistem a agenda — manter uma cópia local aqui já causou divergência de
@@ -76,11 +76,73 @@ export default function AgendaPage() {
   });
 
   const [googleConectado, setGoogleConectado] = useState(false);
+  const [googlePermanentSupported, setGooglePermanentSupported] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+
+  // Envio configurável da agenda no WhatsApp via (46) 99980-0010
+  const [enviarWppAgenda, setEnviarWppAgenda] = useState(false);
+  const [wppAgendaNumero, setWppAgendaNumero] = useState('');
+  const [enviandoWppTaskId, setEnviandoWppTaskId] = useState<string | null>(null);
+
+  const salvarPrefWppAgenda = (ativo: boolean, telefone: string) => {
+    setEnviarWppAgenda(ativo);
+    setWppAgendaNumero(telefone);
+    if (typeof window === 'undefined') return;
+    try {
+      const uidAtual = store.getCurrentUser()?.id || 'padrao';
+      localStorage.setItem(`agenda_wpp_pref_${uidAtual}`, JSON.stringify({ ativo, telefone }));
+    } catch {
+      // ignora
+    }
+  };
+
+  /**
+   * Busca um access_token válido: primeiro tenta o servidor (refresh_token permanente no PostgreSQL);
+   * se não existir, usa o token local ainda dentro da validade.
+   */
+  const obterTokenGoogleValido = async (): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/google-calendar/token');
+      if (res.ok) {
+        const data = await res.json();
+        setGooglePermanentSupported(Boolean(data.permanentSupported));
+        if (data.connected && data.accessToken) {
+          localStorage.setItem('cf_gcal_token', data.accessToken);
+          if (data.expiresAt) localStorage.setItem('cf_gcal_expires_at', String(data.expiresAt));
+          setGoogleConectado(true);
+          return data.accessToken as string;
+        }
+      }
+    } catch {
+      // fallback local
+    }
+
+    const localToken = localStorage.getItem('cf_gcal_token');
+    const localExp = Number(localStorage.getItem('cf_gcal_expires_at') || 0);
+    if (localToken && (!localExp || localExp > Date.now() + 60_000)) {
+      setGoogleConectado(true);
+      return localToken;
+    }
+    return null;
+  };
 
   useEffect(() => {
     setMounted(true);
-    setGoogleConectado(!!localStorage.getItem('cf_gcal_token'));
+    try {
+      const uidAtual = store.getCurrentUser()?.id || 'padrao';
+      const raw = localStorage.getItem(`agenda_wpp_pref_${uidAtual}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setEnviarWppAgenda(Boolean(parsed?.ativo));
+        setWppAgendaNumero(typeof parsed?.telefone === 'string' ? parsed.telefone : '');
+      }
+    } catch {
+      // ignora
+    }
+    obterTokenGoogleValido().then(t => {
+      if (t) syncGoogle(t, baseDate, true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -120,10 +182,16 @@ export default function AgendaPage() {
         console.error('Erro ao consultar o Google Calendar:', res.status, corpoErro);
 
         if (res.status === 401) {
-          // Token expirado/revogado — limpa e pede pra reconectar.
+          // Tenta renovar automaticamente pelo servidor (refresh_token permanente) antes de desconectar
           localStorage.removeItem('cf_gcal_token');
+          localStorage.removeItem('cf_gcal_expires_at');
+          const novoToken = await obterTokenGoogleValido();
+          if (novoToken && novoToken !== token) {
+            await syncGoogle(novoToken, ref, silencioso);
+            return;
+          }
           setGoogleConectado(false);
-          if (!silencioso) toast.error('Sua conexão com o Google expirou. Clique em "Conectar Google" de novo.');
+          if (!silencioso) toast.error('Sua conexão com o Google expirou. Clique em "Conectar Google" para renovar.');
         } else if (res.status === 403 && /Calendar API|disabled|accessNotConfigured/i.test(msgGoogle)) {
           if (!silencioso) toast.error('A Google Calendar API não está habilitada no projeto do Google Cloud. Ative-a em "APIs e Serviços" e tente de novo.', { duration: 8000 });
         } else if (!silencioso) {
@@ -212,10 +280,44 @@ export default function AgendaPage() {
     }
   };
 
-  const loginGoogle = useGoogleLogin({
+  // Fluxo permanente (auth-code -> refresh_token salvo no PostgreSQL, nunca mais expira em 1h)
+  const loginGoogleAuthCode = useGoogleLogin({
+    flow: 'auth-code',
+    scope: 'https://www.googleapis.com/auth/calendar.events',
+    onSuccess: async (codeResponse) => {
+      try {
+        toast.info('Conectando Google Calendar de forma permanente...');
+        const res = await fetch('/api/google-calendar/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.accessToken) {
+          throw new Error(data.error || 'Falha ao ativar sincronização permanente.');
+        }
+        localStorage.setItem('cf_gcal_token', data.accessToken);
+        if (data.expiresAt) localStorage.setItem('cf_gcal_expires_at', String(data.expiresAt));
+        setGoogleConectado(true);
+        toast.success('Google Calendar conectado com renovação automática permanente!');
+        syncGoogle(data.accessToken, baseDate, false);
+      } catch (e) {
+        toast.error((e as Error).message || 'Erro ao salvar conexão permanente com o Google.');
+      }
+    },
+    onError: (error) => {
+      console.error('Login Google (auth-code) falhou:', error);
+      toast.error('Erro ao conectar com o Google Calendar. Verifique os pop-ups do navegador.');
+    },
+  });
+
+  // Fallback implicit flow (caso GOOGLE_CLIENT_SECRET ainda não esteja no servidor)
+  const loginGoogleImplicit = useGoogleLogin({
     scope: 'https://www.googleapis.com/auth/calendar.events',
     onSuccess: (tokenResponse) => {
+      const expiresAt = Date.now() + Number(tokenResponse.expires_in || 3600) * 1000;
       localStorage.setItem('cf_gcal_token', tokenResponse.access_token);
+      localStorage.setItem('cf_gcal_expires_at', String(expiresAt));
       setGoogleConectado(true);
       toast.info('Conta Google conectada — importando eventos...');
       syncGoogle(tokenResponse.access_token, baseDate, false);
@@ -226,23 +328,44 @@ export default function AgendaPage() {
     },
   });
 
-  const sincronizarAgora = () => {
-    const t = localStorage.getItem('cf_gcal_token');
-    if (!t) { toast.error('Conecte sua conta Google primeiro.'); return; }
+  const loginGoogle = () => {
+    if (googlePermanentSupported) {
+      loginGoogleAuthCode();
+    } else {
+      loginGoogleImplicit();
+    }
+  };
+
+  const sincronizarAgora = async () => {
+    const t = await obterTokenGoogleValido();
+    if (!t) {
+      toast.info('Renovando conexão com o Google Calendar...');
+      loginGoogle();
+      return;
+    }
     syncGoogle(t, baseDate, false);
   };
 
-  const desconectarGoogle = () => {
+  const desconectarGoogle = async () => {
     localStorage.removeItem('cf_gcal_token');
+    localStorage.removeItem('cf_gcal_expires_at');
+    await fetch('/api/google-calendar/token', { method: 'DELETE' }).catch(() => {});
     setGoogleConectado(false);
     toast.success('Conta Google desconectada.');
   };
 
-  // Tenta sincronizar sozinho ao trocar de mês/semana, se já houver um token salvo.
+  // Auto-sync ao trocar de mês/semana e renovação periódica a cada 10 minutos
   useEffect(() => {
     if (!mounted) return;
-    const t = localStorage.getItem('cf_gcal_token');
-    if (t) syncGoogle(t, baseDate, true);
+    obterTokenGoogleValido().then(t => {
+      if (t) syncGoogle(t, baseDate, true);
+    });
+    const timer = setInterval(() => {
+      obterTokenGoogleValido().then(t => {
+        if (t) syncGoogle(t, baseDate, true);
+      });
+    }, 10 * 60 * 1000);
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, baseDate]);
 
@@ -325,10 +448,16 @@ export default function AgendaPage() {
     }
     setIsModalOpen(false);
 
-    // Auto-sincronizar imediatamente para empurrar pro Google
-    const gToken = localStorage.getItem('cf_gcal_token');
-    if (gToken) {
-      setTimeout(() => syncGoogle(gToken, baseDate, true), 100);
+    // Auto-sincronizar imediatamente para empurrar pro Google (renovando token se necessário)
+    obterTokenGoogleValido().then(gToken => {
+      if (gToken) setTimeout(() => syncGoogle(gToken, baseDate, true), 100);
+    });
+
+    // Envio automático no WhatsApp configurado (via 46 99980-0010)
+    if (enviarWppAgenda && wppAgendaNumero.replace(/\D/g, '').length >= 10) {
+      const partes = task.dateStr.split('-');
+      const dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}` : task.dateStr;
+      enviarCompromissoWhatsApp(task, dataFmt, wppAgendaNumero, true);
     }
   };
 
@@ -341,17 +470,15 @@ export default function AgendaPage() {
     saveTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
   };
 
-  const handleCopyMessage = async (task: AgendaTask, dataFormatada: string) => {
+  const montarMensagemCompromisso = (task: AgendaTask, dataFormatada: string) => {
     const emp = empresas.find(e => e.id === task.empresaId);
     const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
     const nomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
-    
     const partCli = (task as any).clienteParticipante || '';
     const partCons = nomes ? nomes : 'Equipe Privilege';
     const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia || emp.razaoSocial}` : 'A combinar / Online');
-
     const empNome = emp ? (emp.nomeFantasia || emp.razaoSocial) : 'Privilege';
-    
+
     let text = `Olá! 🌟 Tudo bem?\nPassando para confirmar nosso compromisso. Aqui estão os detalhes:\n\n`;
     text += `📅 *Data:* ${dataFormatada}\n`;
     text += `⏰ *Horário:* ${task.horario}\n`;
@@ -361,6 +488,45 @@ export default function AgendaPage() {
     if (partCli) text += `🗣️ *Participante(s) do Cliente:* ${partCli}\n`;
     text += `\n📌 *Assunto:* ${task.title}\n`;
     text += `\nQualquer imprevisto, é só me avisar. Até lá! 👋`;
+    return text;
+  };
+
+  const enviarCompromissoWhatsApp = async (
+    task: AgendaTask,
+    dataFormatada: string,
+    telefoneAlvo?: string,
+    silencioso = false
+  ) => {
+    let tel = (telefoneAlvo || wppAgendaNumero || '').trim();
+    if (tel.replace(/\D/g, '').length < 10) {
+      if (silencioso) return;
+      const digitado = window.prompt('Informe o WhatsApp com DDD para enviar este compromisso (ex.: 46999016003):', tel);
+      if (!digitado || digitado.replace(/\D/g, '').length < 10) return;
+      tel = digitado.trim();
+      salvarPrefWppAgenda(enviarWppAgenda, tel);
+    }
+
+    setEnviandoWppTaskId(task.id);
+    try {
+      const mensagem = montarMensagemCompromisso(task, dataFormatada);
+      const res = await fetch('/api/agenda/enviar-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: tel, mensagem }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar compromisso no WhatsApp.');
+      toast.success(`Compromisso enviado no WhatsApp (${tel}) via 46 99980-0010!`);
+    } catch (e) {
+      if (!silencioso) toast.error((e as Error).message);
+      else toast.warning(`Compromisso salvo, mas o WhatsApp não foi enviado: ${(e as Error).message}`);
+    } finally {
+      setEnviandoWppTaskId(null);
+    }
+  };
+
+  const handleCopyMessage = async (task: AgendaTask, dataFormatada: string) => {
+    const text = montarMensagemCompromisso(task, dataFormatada);
     try {
       await navigator.clipboard.writeText(text);
       toast.success('Mensagem copiada para a área de transferência.');
@@ -614,6 +780,14 @@ export default function AgendaPage() {
                           {task.title}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button
+                            title="Enviar compromisso no WhatsApp (via 46 99980-0010)"
+                            disabled={enviandoWppTaskId === task.id}
+                            onClick={() => enviarCompromissoWhatsApp(task, `${diaSelecionado.date.getDate()}/${pad2(diaSelecionado.date.getMonth() + 1)}`)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', opacity: enviandoWppTaskId === task.id ? 0.5 : 1 }}
+                          >
+                            <MessageSquare size={14} />
+                          </button>
                           <button title="Editar compromisso" onClick={() => abrirEditar(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                             <Edit2 size={14} />
                           </button>
@@ -697,6 +871,27 @@ export default function AgendaPage() {
                   <label className="form-label" style={{ fontWeight: 600 }}>Horário</label>
                   <input type="time" className="form-control" value={newTask.horario} onChange={e => setNewTask({ ...newTask, horario: e.target.value })} />
                 </div>
+              </div>
+
+              <div style={{ padding: '10px 12px', borderRadius: 10, background: enviarWppAgenda ? '#f0fdf4' : 'var(--bg-base)', border: `1px solid ${enviarWppAgenda ? '#bbf7d0' : 'var(--border)'}` }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={enviarWppAgenda}
+                    onChange={e => salvarPrefWppAgenda(e.target.checked, wppAgendaNumero)}
+                  />
+                  <span>Enviar no WhatsApp ao agendar (via 46 99980-0010)</span>
+                </label>
+                {enviarWppAgenda && (
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="WhatsApp com DDD (ex.: 46999016003)"
+                    value={wppAgendaNumero}
+                    onChange={e => salvarPrefWppAgenda(true, e.target.value)}
+                    style={{ marginTop: 8 }}
+                  />
+                )}
               </div>
 
               <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
