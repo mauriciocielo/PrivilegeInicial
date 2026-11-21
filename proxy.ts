@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const host = request.headers.get('host') || '';
-  
+
   // Redirecionamento permanente (301) de www para sem www
   if (host.startsWith('www.')) {
     const newHost = host.replace(/^www\./, '');
@@ -32,4 +32,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|og-image.png).*)',
   ],
 };
-

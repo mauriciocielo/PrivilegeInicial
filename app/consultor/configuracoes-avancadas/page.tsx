@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { store, Empresa, StoreAuditLog, User } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import MonitorSaude24h from '../../../components/MonitorSaude24h';
 
-type AbaAtiva = 'cofre' | 'auditoria';
+type AbaAtiva = 'saude' | 'cofre' | 'auditoria';
 
 export default function ConfiguracoesAvancadasPage() {
   const [empresaId, setEmpresaId] = useState('e1');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('cofre');
+  const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('saude');
   const [auditLogs, setAuditLogs] = useState<StoreAuditLog[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -92,6 +93,9 @@ export default function ConfiguracoesAvancadasPage() {
 
       <div className="page-body">
         <div className="tabs" style={{ marginBottom: 20 }}>
+          <button className={`tab ${abaAtiva === 'saude' ? 'active' : ''}`} onClick={() => setAbaAtiva('saude')}>
+            🛡️ Monitor 24h &amp; Alertas
+          </button>
           <button className={`tab ${abaAtiva === 'cofre' ? 'active' : ''}`} onClick={() => setAbaAtiva('cofre')}>
             🔒 Cofre (Fechamento)
           </button>
@@ -99,6 +103,8 @@ export default function ConfiguracoesAvancadasPage() {
             🕵️‍♂️ Auditoria de Logs
           </button>
         </div>
+
+        {abaAtiva === 'saude' && <MonitorSaude24h />}
 
         {abaAtiva === 'cofre' && (
           <div className="card" style={{ maxWidth: 700 }}>

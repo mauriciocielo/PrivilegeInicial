@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { store, Empresa } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
@@ -7,13 +8,14 @@ import AnimatedCounter from '../../../components/AnimatedCounter';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
 import ProjecaoCaixaResumo from '../../../components/ProjecaoCaixaResumo';
-import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays, ShieldCheck } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Percent, Scale, CalendarDays, ShieldCheck, ReceiptText, UploadCloud, MessageSquare, Clock } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 export default function ClienteDashboard() {
+  const router = useRouter();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   // Dynamically initialize from the user's assigned company
   const [empresaId, setEmpresaId] = useState(() => {
@@ -29,6 +31,7 @@ export default function ClienteDashboard() {
   const [tendencia, setTendencia] = useState<{ mes: string; receitas: number; despesas: number; saldo: number }[]>([]);
   const [valuation, setValuation] = useState({ ebitdaMedio: 0, mult: 5, divida: 0, valor: 0 });
   const [agendasSemana, setAgendasSemana] = useState<any[]>([]);
+  const [contasSemana, setContasSemana] = useState<{ qtd: number; valor: number }>({ qtd: 0, valor: 0 });
   const [userName, setUserName] = useState('');
   
   const [mesSelecionado, setMesSelecionado] = useState(() => {
@@ -73,7 +76,18 @@ export default function ClienteDashboard() {
     setResumo(r);
     setTendencia(r);
 
-    const lancs = store.getLancamentos(safeId).filter(l => l.status === 'realizado');
+    const todosLancs = store.getLancamentos(safeId);
+    const hojeIso = new Date().toISOString().slice(0, 10);
+    const em7DiasIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const pendentes7d = todosLancs.filter(
+      l => l.status === 'previsto' && l.data >= hojeIso && l.data <= em7DiasIso
+    );
+    setContasSemana({
+      qtd: pendentes7d.length,
+      valor: pendentes7d.reduce((acc, l) => acc + (Number(l.valor) || 0), 0),
+    });
+
+    const lancs = todosLancs.filter(l => l.status === 'realizado');
     const lancsMs = lancs.filter(l => l.data.startsWith(mesSel));
     const plano = store.getPlanoContas(safeId);
     const rec = lancsMs.filter(l => {
@@ -279,10 +293,110 @@ export default function ClienteDashboard() {
       </div>
 
       <div className="page-body">
+        {/* Modo Executivo — Ações Rápidas em 1 toque (Mobile & Desktop) */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
+            gap: 12,
+            marginBottom: 20,
+          }}
+        >
+          {[
+            {
+              titulo: 'Emitir NFS-e',
+              sub: 'Nota fiscal em 1 clique',
+              icon: ReceiptText,
+              bg: 'rgba(96, 0, 0, 0.08)',
+              color: '#600000',
+              href: '/cliente/nfse',
+            },
+            {
+              titulo: 'Enviar Comprovante',
+              sub: 'Lançamento rápido com IA',
+              icon: UploadCloud,
+              bg: '#eff6ff',
+              color: '#1d4ed8',
+              href: '/cliente/lancamentos',
+            },
+            {
+              titulo: 'Contas da Semana',
+              sub: contasSemana.qtd > 0 ? `${contasSemana.qtd} prevista(s) • ${fmt.currency(contasSemana.valor)}` : 'Nenhuma pendência em 7 dias',
+              icon: Clock,
+              bg: contasSemana.qtd > 0 ? '#fffbeb' : '#f0fdf4',
+              color: contasSemana.qtd > 0 ? '#b45309' : '#15803d',
+              href: '/cliente/lancamentos',
+            },
+            {
+              titulo: 'Falar com Consultor',
+              sub: 'Atendimento Privilege',
+              icon: MessageSquare,
+              bg: '#f0fdf4',
+              color: '#15803d',
+              href: '/cliente/whatsapp',
+            },
+          ].map(card => {
+            const Icon = card.icon;
+            return (
+              <button
+                key={card.titulo}
+                type="button"
+                onClick={() => router.push(card.href)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '14px 16px',
+                  borderRadius: 16,
+                  border: '1px solid var(--border, #e5e5e5)',
+                  background: 'var(--bg-card, #ffffff)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.15s, transform 0.15s',
+                }}
+              >
+                <span
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    background: card.bg,
+                    color: card.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={18} />
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #171717)' }}>
+                    {card.titulo}
+                  </span>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 11.5,
+                      color: 'var(--text-muted, #737373)',
+                      marginTop: 2,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {card.sub}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Card Editorial Principal (Padrão Home: #0a0a0a + Card Claro) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1.15fr 1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: 20,
           marginBottom: 28,
         }}>

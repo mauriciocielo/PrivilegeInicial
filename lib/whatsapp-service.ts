@@ -4,6 +4,7 @@ import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply
 import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { detectAndCreateDemandTask } from './whatsapp-agenda';
+import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
 import {
   AssistantPersona,
@@ -2052,10 +2053,30 @@ export async function processIncomingMessage(params: {
     return { reply: config.welcome_message, source: 'rule' };
   }
 
+  // Funil Comercial Automático (Garimpador B2B -> Kanban -> Horários livres da agenda)
+  let contextoComercialIA = '';
+  if (!params.isGroup && cleanText) {
+    try {
+      const funilRes = await processarRespostaLeadComercial({
+        chatId: params.chatId,
+        phone: params.phone,
+        contactName: params.name,
+        texto: cleanText,
+        pool,
+      });
+      if (funilRes.ehLeadInteressado && funilRes.contextoPrompt) {
+        contextoComercialIA = funilRes.contextoPrompt;
+      }
+    } catch {
+      // nunca bloqueia atendimento
+    }
+  }
+
   const isRealQuestionOrConversation =
     cleanText.includes('?') ||
     cleanText.split(/\s+/).length >= 4 ||
-    Boolean(currentTriage?.nomeCliente && !isGreeting);
+    Boolean(currentTriage?.nomeCliente && !isGreeting) ||
+    Boolean(contextoComercialIA);
 
   // Quando estiver em modo IA ou Híbrido com chave configurada e o cliente já tiver nome/dúvida real,
   // usa o Gemini/Claude com todo o histórico e base aprendida antes de cair nas respostas fixas de triagem.
@@ -2066,11 +2087,14 @@ export async function processIncomingMessage(params: {
         : DEFAULT_ASSISTANTS;
     const activePersona =
       assistantsList.find(a => a.id === config.active_assistant_id) || assistantsList[0];
-    const personaPrompt = activePersona?.customPrompt
+    const basePersonaPrompt = activePersona?.customPrompt
       ? `${config.bot_prompt}\n\nVocê está atuando como ${activePersona.name} (${activePersona.role}):\n${activePersona.customPrompt}`
       : activePersona && activePersona.id !== 'leo'
       ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
       : config.bot_prompt;
+    const personaPrompt = contextoComercialIA
+      ? `${basePersonaPrompt}${contextoComercialIA}`
+      : basePersonaPrompt;
 
     const { text: aiReply, handover } = await generateLeoReply(cleanText, personaPrompt, ownerId, params.chatId);
     await dispatchBotReply({
