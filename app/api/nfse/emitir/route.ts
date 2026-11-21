@@ -14,6 +14,7 @@ import { totalRetidoFederal } from '../../../../lib/nfse/retencao';
 import { estimarValoresNota } from '../../../../lib/nfse/lote';
 import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
 import { enviarEmailNfseEmitida } from '../../../../lib/nfse/enviar-email-nfse';
+import { enviarNfsePorWhatsAppAoEmissor } from '../../../../lib/nfse/enviar-whatsapp-nfse';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const textoOuNull = (v: unknown) => texto(v) || null;
@@ -311,11 +312,27 @@ export async function POST(request: Request) {
       ambiente,
     });
 
+    const querWhatsappEmissor = body?.enviarWhatsappEmissor === true;
+    const whatsappEmissor = texto(body?.whatsappEmissor);
+    const whatsappEnviado = querWhatsappEmissor && whatsappEmissor
+      ? await enviarNfsePorWhatsAppAoEmissor({
+          telefoneDestino: whatsappEmissor,
+          numero: autorizada.numero || '',
+          dataEmissao: autorizada.dataEmissao,
+          prestadorNome: autorizada.prestadorRazaoSocial,
+          tomadorNome: dados.tomadorNome,
+          valorLiquido: autorizada.valorLiquido,
+          nfseXml: resultado.nfseXml,
+          ambiente,
+        })
+      : { enviado: false };
+
     return NextResponse.json({
       recuperada: resultado.recuperada,
       alertas: [...alertasEmissao(cfg, dados), ...resultado.alertas],
       aliquotaNaDps: exigeAliquotaNaDps(cfg, issRetido),
       emailEnviado,
+      whatsappEnviado,
       nota: {
         status: autorizada.status,
         numero: autorizada.numero,

@@ -526,7 +526,7 @@ export default function WhatsAppPage() {
         } else if (data.qr_code) {
           setConfig(prev => (prev ? { ...prev, qr_code: data.qr_code, status: 'qrcode' } : prev));
         }
-      } catch {}
+      } catch { }
     }
 
     pollQr();
@@ -2430,181 +2430,181 @@ export default function WhatsAppPage() {
                 </div>
               ) : (
                 <>
-                {visibleChats.map(chat => {
-                  const isSelected = selectedChat?.id === chat.id;
-                  const isBotPaused =
-                    chat.bot_paused_until && new Date(chat.bot_paused_until) > new Date();
-                  const isClosed = chat.ticket_status === 'encerrado';
-                  const hasFollowup = Boolean(
-                    chat.followup_date && chat.followup_status !== 'concluido'
-                  );
+                  {visibleChats.map(chat => {
+                    const isSelected = selectedChat?.id === chat.id;
+                    const isBotPaused =
+                      chat.bot_paused_until && new Date(chat.bot_paused_until) > new Date();
+                    const isClosed = chat.ticket_status === 'encerrado';
+                    const hasFollowup = Boolean(
+                      chat.followup_date && chat.followup_status !== 'concluido'
+                    );
 
-                  return (
-                    <div
-                      key={chat.id}
-                      onClick={() => selectChat(chat)}
-                      className={`wa-chat-item ${isSelected ? 'selected' : ''}`}
-                      style={isClosed ? { opacity: 0.78 } : undefined}
-                    >
-                      <div className="wa-avatar">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={getContactAvatarUrl(chat)}
-                          alt={chat.name}
-                          className="wa-avatar-img"
-                          onError={e => {
-                            const target = e.currentTarget;
-                            target.onerror = null;
-                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              chat.name || 'WA'
-                            )}&background=600000&color=fff&bold=true&size=128`;
-                          }}
-                        />
-                      </div>
-
-                      <div className="wa-chat-info">
-                        <div className="wa-chat-row1">
-                          <span className="wa-chat-name">{chat.name}</span>
-                          <span className="wa-chat-time">
-                            {chat.last_message_time
-                              ? new Date(chat.last_message_time).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                              : ''}
-                          </span>
+                    return (
+                      <div
+                        key={chat.id}
+                        onClick={() => selectChat(chat)}
+                        className={`wa-chat-item ${isSelected ? 'selected' : ''}`}
+                        style={isClosed ? { opacity: 0.78 } : undefined}
+                      >
+                        <div className="wa-avatar">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getContactAvatarUrl(chat)}
+                            alt={chat.name}
+                            className="wa-avatar-img"
+                            onError={e => {
+                              const target = e.currentTarget;
+                              target.onerror = null;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                chat.name || 'WA'
+                              )}&background=600000&color=fff&bold=true&size=128`;
+                            }}
+                          />
                         </div>
 
-                        <div className="wa-chat-snippet">
-                          {chat.last_message || 'Nenhuma mensagem recente'}
-                        </div>
-
-                        <div className="wa-chat-meta">
-                          {isClosed ? (
-                            <span
-                              className="wa-tag"
-                              style={{
-                                background: 'rgba(21, 128, 61, 0.12)',
-                                color: 'var(--green)',
-                                fontWeight: 700,
-                              }}
-                            >
-                              ✓ Encerrado
+                        <div className="wa-chat-info">
+                          <div className="wa-chat-row1">
+                            <span className="wa-chat-name">{chat.name}</span>
+                            <span className="wa-chat-time">
+                              {chat.last_message_time
+                                ? new Date(chat.last_message_time).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : ''}
                             </span>
-                          ) : (
-                            <span className={`wa-tag crm-${chat.crm_stage || 'atendimento'}`}>
-                              {chat.crm_stage === 'lead' && 'Lead'}
-                              {chat.crm_stage === 'em_atendimento' && 'Em Atendimento'}
-                              {chat.crm_stage === 'aguardando_documentos' && 'Aguardando Docs'}
-                              {chat.crm_stage === 'proposta' && 'Proposta'}
-                              {chat.crm_stage === 'fechado' && 'Fechado'}
-                              {chat.crm_stage === 'pos_venda' && 'Pós-Venda'}
-                            </span>
-                          )}
+                          </div>
 
-                          {hasFollowup && (
-                            <span
-                              className="wa-tag"
-                              style={{
-                                background: 'rgba(180, 83, 9, 0.14)',
-                                color: 'var(--yellow)',
-                                fontWeight: 700,
-                              }}
-                              title={`Follow-up: ${new Date(chat.followup_date!).toLocaleString('pt-BR')}`}
-                            >
-                              ⏰{' '}
-                              {new Date(chat.followup_date!).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                              })}
-                            </span>
-                          )}
+                          <div className="wa-chat-snippet">
+                            {chat.last_message || 'Nenhuma mensagem recente'}
+                          </div>
 
-                          {!isClosed &&
-                            (chat.triage_status === 'transferido_humano' ? (
+                          <div className="wa-chat-meta">
+                            {isClosed ? (
                               <span
                                 className="wa-tag"
                                 style={{
-                                  background: 'rgba(180, 83, 9, 0.15)',
-                                  color: 'var(--yellow)',
+                                  background: 'rgba(21, 128, 61, 0.12)',
+                                  color: 'var(--green)',
                                   fontWeight: 700,
                                 }}
                               >
-                                📋 Triado
+                                ✓ Encerrado
                               </span>
-                            ) : isBotPaused ? (
-                              <span className="wa-tag humano">Humano</span>
-                            ) : chat.bot_enabled ? (
-                              <span className="wa-tag bot">Bot</span>
-                            ) : null)}
-
-                          {/* Botões rápidos de Encerrar / Reabrir e Follow-up direto no card */}
-                          <div
-                            style={{
-                              marginLeft: 'auto',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {chat.unread_count > 0 && !isClosed && (
-                              <span className="wa-badge-count">{chat.unread_count}</span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenFollowupModal(chat, false)}
-                              className="wa-mini-action-btn"
-                              title="Agendar Follow-up"
-                            >
-                              ⏰
-                            </button>
-                            {isClosed ? (
-                              <button
-                                type="button"
-                                onClick={() => handleReopenTicket(chat.id)}
-                                className="wa-mini-action-btn reopen"
-                                title="Reabrir Chamado"
-                              >
-                                ↺ Reabrir
-                              </button>
                             ) : (
+                              <span className={`wa-tag crm-${chat.crm_stage || 'atendimento'}`}>
+                                {chat.crm_stage === 'lead' && 'Lead'}
+                                {chat.crm_stage === 'em_atendimento' && 'Em Atendimento'}
+                                {chat.crm_stage === 'aguardando_documentos' && 'Aguardando Docs'}
+                                {chat.crm_stage === 'proposta' && 'Proposta'}
+                                {chat.crm_stage === 'fechado' && 'Fechado'}
+                                {chat.crm_stage === 'pos_venda' && 'Pós-Venda'}
+                              </span>
+                            )}
+
+                            {hasFollowup && (
+                              <span
+                                className="wa-tag"
+                                style={{
+                                  background: 'rgba(180, 83, 9, 0.14)',
+                                  color: 'var(--yellow)',
+                                  fontWeight: 700,
+                                }}
+                                title={`Follow-up: ${new Date(chat.followup_date!).toLocaleString('pt-BR')}`}
+                              >
+                                ⏰{' '}
+                                {new Date(chat.followup_date!).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                })}
+                              </span>
+                            )}
+
+                            {!isClosed &&
+                              (chat.triage_status === 'transferido_humano' ? (
+                                <span
+                                  className="wa-tag"
+                                  style={{
+                                    background: 'rgba(180, 83, 9, 0.15)',
+                                    color: 'var(--yellow)',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  📋 Triado
+                                </span>
+                              ) : isBotPaused ? (
+                                <span className="wa-tag humano">Humano</span>
+                              ) : chat.bot_enabled ? (
+                                <span className="wa-tag bot">Bot</span>
+                              ) : null)}
+
+                            {/* Botões rápidos de Encerrar / Reabrir e Follow-up direto no card */}
+                            <div
+                              style={{
+                                marginLeft: 'auto',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              {chat.unread_count > 0 && !isClosed && (
+                                <span className="wa-badge-count">{chat.unread_count}</span>
+                              )}
                               <button
                                 type="button"
-                                onClick={() => handleCloseTicket(chat.id)}
-                                className="wa-mini-action-btn close"
-                                title="Encerrar chamado para limpar a fila"
+                                onClick={() => handleOpenFollowupModal(chat, false)}
+                                className="wa-mini-action-btn"
+                                title="Agendar Follow-up"
                               >
-                                ✓ Encerrar
+                                ⏰
                               </button>
-                            )}
+                              {isClosed ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReopenTicket(chat.id)}
+                                  className="wa-mini-action-btn reopen"
+                                  title="Reabrir Chamado"
+                                >
+                                  ↺ Reabrir
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCloseTicket(chat.id)}
+                                  className="wa-mini-action-btn close"
+                                  title="Encerrar chamado para limpar a fila"
+                                >
+                                  ✓ Encerrar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
+                    );
+                  })}
+                  {filteredChats.length > chatsVisibleLimit && (
+                    <div style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => setChatsVisibleLimit(prev => prev + 40)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          border: '1px solid var(--border, #e5e5e5)',
+                          background: 'var(--bg-card, #ffffff)',
+                          color: '#600000',
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Carregar mais conversas ({filteredChats.length - chatsVisibleLimit} restantes)
+                      </button>
                     </div>
-                  );
-                })}
-                {filteredChats.length > chatsVisibleLimit && (
-                  <div style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => setChatsVisibleLimit(prev => prev + 40)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: '1px solid var(--border, #e5e5e5)',
-                        background: 'var(--bg-card, #ffffff)',
-                        color: '#600000',
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Carregar mais conversas ({filteredChats.length - chatsVisibleLimit} restantes)
-                    </button>
-                  </div>
-                )}
+                  )}
                 </>
               )}
             </div>

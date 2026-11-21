@@ -489,6 +489,37 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const [paginaNotas, setPaginaNotas] = useState(1);
   const [itensPorPagina, setItensPorPagina] = useState(30);
 
+  // Preferência persistente de envio automático do PDF da NFS-e no WhatsApp do usuário emissor (via 46 99980-0010)
+  const [enviarWppEmissor, setEnviarWppEmissor] = useState(false);
+  const [wppEmissorNumero, setWppEmissorNumero] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const uidAtual = store.getCurrentUser()?.id || 'padrao';
+      const raw = localStorage.getItem(`nfse_wpp_emissor_${uidAtual}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setEnviarWppEmissor(Boolean(parsed?.ativo));
+        setWppEmissorNumero(typeof parsed?.telefone === 'string' ? parsed.telefone : '');
+      }
+    } catch {
+      // ignora
+    }
+  }, []);
+
+  const salvarPrefWppEmissor = (ativo: boolean, telefone: string) => {
+    setEnviarWppEmissor(ativo);
+    setWppEmissorNumero(telefone);
+    if (typeof window === 'undefined') return;
+    try {
+      const uidAtual = store.getCurrentUser()?.id || 'padrao';
+      localStorage.setItem(`nfse_wpp_emissor_${uidAtual}`, JSON.stringify({ ativo, telefone }));
+    } catch {
+      // ignora
+    }
+  };
+
   useEffect(() => {
     setPaginaNotas(1);
   }, [empresaId, papelFiltro, statusFiltro, search, mesFiltro]);
@@ -989,7 +1020,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       const res = await fetch('/api/nfse/emitir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId, nota: notaAEnviar, ...(pTotTribSN !== undefined ? { pTotTribSN } : {}) }),
+        body: JSON.stringify({
+          empresaId,
+          nota: notaAEnviar,
+          ...(pTotTribSN !== undefined ? { pTotTribSN } : {}),
+          enviarWhatsappEmissor: enviarWppEmissor && apenasDigitos(wppEmissorNumero).length >= 10,
+          whatsappEmissor: wppEmissorNumero,
+        }),
       });
       const dados = await res.json().catch(() => ({}));
 
@@ -1016,6 +1053,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       const final = autorizada.gerarContaReceber && autorizada.ambiente === 'producao' ? gerarContaReceber(autorizada) : autorizada;
       store.saveNfsE(final);
       setNfseList(store.getNfsE(empresaId));
+      if (dados.whatsappEnviado?.enviado) {
+        toast.success('PDF da NFS-e enviado no seu WhatsApp (pronto para encaminhar ao cliente)!');
+      } else if (enviarWppEmissor && dados.whatsappEnviado?.motivo) {
+        toast.warning(`Nota emitida, mas o WhatsApp não foi enviado: ${dados.whatsappEnviado.motivo}`);
+      }
       return { resultado: 'autorizada', nota: final, recuperada: !!dados.recuperada, alertas: dados.alertas || [] };
     } catch {
       return { resultado: 'incerta', mensagem: 'A conexão caiu durante o envio e a emissão não foi confirmada. Transmita de novo: o sistema consulta o Sefin antes e não duplica a nota.' };
@@ -3578,6 +3620,39 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 planoContas={planoContas}
                 onChange={f => setForm(atual => ({ ...atual, ...f }))}
               />
+            </div>
+
+            {/* envio automático do PDF da NFS-e no WhatsApp do usuário emissor */}
+            <div style={{ ...secaoStyle, background: enviarWppEmissor ? '#f0fdf4' : secaoStyle.background, borderColor: enviarWppEmissor ? '#bbf7d0' : 'var(--border-light)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: enviarWppEmissor ? 10 : 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#171717' }}>
+                  <input
+                    type="checkbox"
+                    checked={enviarWppEmissor}
+                    onChange={e => salvarPrefWppEmissor(e.target.checked, wppEmissorNumero)}
+                  />
+                  <span>Receber PDF da NFS-e no meu WhatsApp ao emitir</span>
+                </label>
+                <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>
+                  Envio via (46) 99980-0010
+                </span>
+              </div>
+              {enviarWppEmissor && (
+                <div>
+                  <label className="form-label" style={{ fontSize: 12 }}>Seu WhatsApp para receber o PDF (DDD + número) *</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="Ex.: (46) 99999-9999"
+                    value={wppEmissorNumero}
+                    onChange={e => salvarPrefWppEmissor(true, e.target.value)}
+                    style={{ maxWidth: 280 }}
+                  />
+                  <div style={{ fontSize: 11, color: '#525252', marginTop: 4 }}>
+                    Assim que a nota for autorizada, o PDF oficial chega no seu WhatsApp pronto para encaminhar ao cliente. Sua escolha fica salva para as próximas notas.
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-actions" style={{ marginTop: 24, gap: 10 }}>
