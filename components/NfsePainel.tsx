@@ -1798,11 +1798,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           )}
         </div>
 
-        <div className="header-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <div className="header-actions nfse-hero-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
           {/* Botão Principal em Destaque */}
           <button
             type="button"
-            className="btn"
+            className="btn nfse-hero-primary-btn"
             style={{
               background: '#600000',
               color: '#fff',
@@ -1849,6 +1849,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           {/* Atalho direto para o WhatsApp da conta / usuário */}
           <a
             href={modoCliente ? '/cliente/whatsapp' : '/consultor/whatsapp'}
+            className="nfse-hero-wpp-btn"
             style={{
               background: 'rgba(16,185,129,0.18)',
               border: '1px solid rgba(16,185,129,0.45)',
