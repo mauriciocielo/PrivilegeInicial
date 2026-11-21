@@ -7,13 +7,14 @@ import BrandLogo from './BrandLogo';
 import TwoFactorModal from './TwoFactorModal';
 import CommandPalette from './CommandPalette';
 import NotificationCenter from './NotificationCenter';
+import MobileNavShell from './MobileNavShell';
 import {
   Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -279,6 +280,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   // Ao mudar de rota, fecha dropdowns abertos
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     const onGlobalShortcut = (e: KeyboardEvent) => {
@@ -296,6 +298,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     setShowCompanyDropdown(false);
     setShowProfilePopover(false);
     setShowCommandPalette(false);
+    setMobileDrawerOpen(false);
   }, [pathname]);
 
   // Só um submenu aberto por vez, e nada fica salvo: um submenu que continua aberto
@@ -648,7 +651,17 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   );
 
   return (
+    <>
     <header className="sidebar">
+      <button
+        type="button"
+        className="mobile-hamburger-btn"
+        aria-label="Abrir menu"
+        onClick={() => setMobileDrawerOpen(true)}
+      >
+        <Menu size={20} />
+      </button>
+
       <div 
         className="sidebar-logo" 
         style={{ 
@@ -1075,5 +1088,26 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         }}
       />
     </header>
+
+    <MobileNavShell
+      drawerOpen={mobileDrawerOpen}
+      onOpenDrawer={() => setMobileDrawerOpen(true)}
+      onCloseDrawer={() => setMobileDrawerOpen(false)}
+      onOpenSearch={() => setShowCommandPalette(true)}
+      navSections={nav}
+      pathname={pathname || ''}
+      role={role}
+      userName={user?.name}
+      userEmail={user?.email}
+      activeEmpresa={activeEmpresa}
+      selectableEmpresas={selectableEmpresas}
+      selectedEmpresaId={selectedEmpresa}
+      onSelectEmpresa={id => handleEmpresaChange(id)}
+      onNavigate={href => router.push(href)}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+      onLogout={handleLogout}
+    />
+    </>
   );
 }

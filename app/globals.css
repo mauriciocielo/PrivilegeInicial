@@ -1560,11 +1560,18 @@ tbody td {
 @media (max-width: 1024px) {
   .grid-2, .grid-3, .grid-12, .grid-21, .mvv-grid, .partners-grid { grid-template-columns: 1fr !important; gap: 16px; }
   .stat-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .sidebar { padding: 0 16px; height: auto; flex-wrap: wrap; }
-  /* Sem overflow aqui: ele cortava os submenus, que ficam fora da barra. */
-  .sidebar-nav { width: 100%; flex-wrap: wrap; padding-bottom: 8px; justify-content: flex-start; }
-  .page-header { padding: 0 20px; flex-direction: column; align-items: flex-start; height: auto; gap: 12px; padding-bottom: 14px; }
-  .page-body { padding: 20px; }
+  .sidebar {
+    padding: 0 12px !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  .sidebar-nav { display: none !important; }
+  .mobile-hamburger-btn { display: inline-flex !important; }
+  .page-header { padding: 14px 18px; flex-direction: column; align-items: flex-start; height: auto; gap: 12px; }
+  .page-body { padding: 16px; }
 }
 
 @media (max-width: 640px) {
@@ -2263,7 +2270,145 @@ table th {
   transition: background-color 0.12s ease;
 }
 
+/* ============================================================
+   SHELL DEDICADO MOBILE & TABLET (Drawer + Bottom Tab Bar)
+   ============================================================ */
+.mobile-hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e5e5);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #171717);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(3px);
+  display: flex;
+  animation: fadeIn 0.16s ease;
+}
+
+.mobile-drawer-panel {
+  width: 310px;
+  max-width: 86vw;
+  height: 100dvh;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #171717);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 12px 0 36px rgba(0, 0, 0, 0.22);
+  animation: slideInLeft 0.2s ease-out;
+}
+
+.mobile-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  html, body, .app-layout, .main-content {
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 768px) {
+  .sidebar {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 10px !important;
+  }
+  .sidebar-logo {
+    padding-right: 4px !important;
+  }
+  .sidebar-footer {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+  .cmd-trigger-btn span,
+  .cmd-trigger-btn kbd {
+    display: none !important;
+  }
+  .cmd-trigger-btn {
+    padding: 7px 9px !important;
+  }
+  .sidebar-footer > button[title="Abrir WhatsApp & Bot IA"] {
+    display: none !important;
+  }
+  .user-card > span {
+    display: none !important;
+  }
+  .user-card {
+    padding: 3px 6px 3px 3px !important;
+  }
+  .main-content {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mobile-bottom-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1500;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--bg-card, #ffffff);
+    border-top: 1px solid var(--border, #e5e5e5);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-bottom-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 2px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #737373);
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .mobile-bottom-tab.active {
+    color: #600000;
+    background: rgba(96, 0, 0, 0.07);
+  }
   .form-row {
     grid-template-columns: 1fr !important;
   }
@@ -2274,9 +2419,15 @@ table th {
     gap: 10px;
     margin-bottom: 14px;
   }
-  .sidebar-footer {
-    flex-wrap: wrap;
-    gap: 6px !important;
+  .page-body {
+    padding: 12px !important;
+  }
+  .page-header {
+    padding: 12px 14px !important;
+  }
+  .card {
+    padding: 14px !important;
+    border-radius: 14px !important;
   }
   .btn, button.btn {
     min-height: 36px;
