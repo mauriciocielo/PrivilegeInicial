@@ -289,7 +289,7 @@ export default function InteligenciaTributariaPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <label style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>REGIME:</label>
-          <select className="form-control" value={regime} onChange={e => setRegime(e.target.value as RegimeTributario)} style={{ fontSize: 14, padding: '5px 10px', width: 180 }}>
+          <select className="form-control" value={regime} onChange={e => setRegime(e.target.value as RegimeTributario)} style={{ fontSize: 14, padding: '5px 10px', minWidth: 180, width: 'auto' }}>
             {REGIMES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>

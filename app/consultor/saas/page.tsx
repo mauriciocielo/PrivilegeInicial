@@ -412,7 +412,7 @@ export default function SaasBackofficePage() {
               </div>
               <select
                 className="form-control"
-                style={{ width: 150, fontSize: 14 }}
+                style={{ minWidth: 150, width: 'auto', fontSize: 14 }}
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
               >
@@ -564,7 +564,7 @@ export default function SaasBackofficePage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <select
                 className="form-control"
-                style={{ width: 170, fontSize: 14 }}
+                style={{ minWidth: 170, width: 'auto', fontSize: 14 }}
                 value={movTypeFilter}
                 onChange={e => setMovTypeFilter(e.target.value)}
               >
@@ -579,7 +579,7 @@ export default function SaasBackofficePage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 150, fontSize: 14 }}
+                style={{ minWidth: 150, width: 'auto', fontSize: 14 }}
                 value={movStatusFilter}
                 onChange={e => setMovStatusFilter(e.target.value)}
               >

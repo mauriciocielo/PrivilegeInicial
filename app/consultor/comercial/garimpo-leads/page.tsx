@@ -1384,7 +1384,7 @@ export default function GarimpoLeadsPage() {
               />
               <select
                 className="form-control"
-                style={{ width: 165 }}
+                style={{ minWidth: 165, width: 'auto' }}
                 value={filtroStatus}
                 onChange={e => setFiltroStatus(e.target.value)}
               >
@@ -1395,7 +1395,7 @@ export default function GarimpoLeadsPage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 155 }}
+                style={{ minWidth: 155, width: 'auto' }}
                 value={filtroIcp}
                 onChange={e => setFiltroIcp(e.target.value as any)}
               >
@@ -1406,7 +1406,7 @@ export default function GarimpoLeadsPage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 135 }}
+                style={{ minWidth: 135, width: 'auto' }}
                 value={filtroNotaMin}
                 onChange={e => setFiltroNotaMin(Number(e.target.value))}
               >
@@ -1669,7 +1669,7 @@ export default function GarimpoLeadsPage() {
                         <td>
                           <select
                             className="form-control"
-                            style={{ padding: '4px 8px', fontSize: 14, width: 145 }}
+                            style={{ padding: '4px 8px', fontSize: 14, minWidth: 145, width: 'auto' }}
                             value={lead.status}
                             onChange={e => atualizarStatusLead(lead.id, e.target.value as LeadGarimpado['status'])}
                           >

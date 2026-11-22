@@ -879,9 +879,9 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           }}
         >
           <Search size={13} style={{ color: '#600000' }} />
-          {!isSidebarCompact && <span>Buscar</span>}
+          {!isSidebarCompact && <span className="topbar-rotulo">Buscar</span>}
           {!isSidebarCompact && (
-            <kbd
+            <kbd className="topbar-rotulo"
               style={{
                 fontSize: 12.5,
                 padding: '1px 5px',
@@ -955,7 +955,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           }}
         >
           <MessageSquare size={14} />
-          {!isSidebarCompact && <span>WhatsApp</span>}
+          {!isSidebarCompact && <span className="topbar-rotulo">WhatsApp</span>}
         </button>
         )}
 
@@ -1007,7 +1007,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
             </div>
             {!isSidebarCompact && (
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="topbar-rotulo" style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user?.name?.split(' ')[0] || 'Conta'}
               </span>
             )}

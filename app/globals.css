@@ -2560,3 +2560,20 @@ table th {
   padding-top: 12px;
   padding-bottom: 12px;
 }
+
+/* ============================================================
+   Barra do topo em telas médias (até 1600px): com a fonte maior e os
+   atalhos novos (busca, alertas), os itens passavam da largura da janela
+   e criavam rolagem lateral. Aperta os espaços e deixa só os ícones
+   da busca, do WhatsApp e do usuário (o texto continua no title/tooltip).
+   ============================================================ */
+@media (min-width: 1025px) and (max-width: 1600px) {
+  .sidebar { padding: 0 18px; gap: 8px; }
+  .sidebar-nav { gap: 0; }
+  .nav-section-label { padding: 6px 9px; font-size: 14px !important; }
+  .sidebar-footer { gap: 6px !important; }
+  .topbar-rotulo { display: none !important; }
+}
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .nav-section-label { padding: 6px 7px; font-size: 13.5px !important; }
+}

@@ -282,7 +282,7 @@ export default function ConsultorDashboard() {
             className="form-control" 
             value={mesSelecionado} 
             onChange={e => setMesSelecionado(e.target.value)}
-            style={{ width: 170, background: '#ffffff', borderRadius: '99px', border: '1px solid #e5e5e5', fontWeight: 500, padding: '8px 14px' }}
+            style={{ minWidth: 170, width: 'auto', background: '#ffffff', borderRadius: '99px', border: '1px solid #e5e5e5', fontWeight: 500, padding: '8px 14px' }}
           >
             {mesesOptions.map(m => {
               const [y, mo] = m.split('-');

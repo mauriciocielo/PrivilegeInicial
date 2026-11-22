@@ -619,7 +619,7 @@ export default function QuizGameHostPage() {
                   </button>
                   <select
                     className="form-control"
-                    style={{ width: 130, padding: '5px 8px', fontSize: 14 }}
+                    style={{ minWidth: 130, width: 'auto', padding: '5px 8px', fontSize: 14 }}
                     value={q.timeLimitSec}
                     onChange={e => {
                       const val = Number(e.target.value);

@@ -105,7 +105,7 @@ export default function ProjecaoCaixaPage() {
           </div>
         </div>
         <div className="header-actions">
-          <select className="form-control" style={{ width: 150 }} value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>
+          <select className="form-control" style={{ minWidth: 150, width: 'auto' }} value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>
             {[6, 12, 18, 24, 36].map(n => <option key={n} value={n}>{n} meses</option>)}
           </select>
         </div>

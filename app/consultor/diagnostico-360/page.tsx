@@ -242,7 +242,7 @@ export default function Diagnostico360Page() {
                         <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-secondary)' }}>Mês-Base:</span>
                         <select 
                             className="form-control" 
-                            style={{ height: 32, fontSize: 14.5, border: 'none', background: 'transparent', width: 140, cursor: 'pointer' }}
+                            style={{ height: 32, fontSize: 14.5, border: 'none', background: 'transparent', minWidth: 140, width: 'auto', cursor: 'pointer' }}
                             value={mesSelecionado}
                             onChange={e => setMesSelecionado(e.target.value)}
                         >

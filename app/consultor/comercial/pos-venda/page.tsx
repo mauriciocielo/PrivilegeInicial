@@ -198,7 +198,7 @@ export default function PosVendaCsPage() {
                     <input type="number" min={0} max={10} className="form-control" style={{ width: 65, fontSize: 14 }} value={r.nps} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, nps: Number(e.target.value) } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <select className="form-control" style={{ width: 110, fontSize: 14 }} value={r.healthScore} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, healthScore: e.target.value as any } : x)))}>
+                    <select className="form-control" style={{ minWidth: 110, width: 'auto', fontSize: 14 }} value={r.healthScore} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, healthScore: e.target.value as any } : x)))}>
                       <option value="verde">Saudável</option>
                       <option value="amarelo">Atenção</option>
                       <option value="vermelho">Risco</option>

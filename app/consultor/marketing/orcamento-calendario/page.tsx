@@ -237,7 +237,7 @@ export default function MarketingOrcamentoCalendarioPage() {
                   <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 14 }} value={c.format} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, format: e.target.value } : x)))} /></td>
                   <td style={{ padding: 6 }}><input className="form-control" style={{ width: 150, fontSize: 14 }} value={c.owner} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, owner: e.target.value } : x)))} /></td>
                   <td style={{ padding: 6 }}>
-                    <select className="form-control" style={{ width: 125, fontSize: 14 }} value={c.status} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, status: e.target.value as any } : x)))}>
+                    <select className="form-control" style={{ minWidth: 125, width: 'auto', fontSize: 14 }} value={c.status} onChange={e => setCalendar(prev => prev.map((x, i) => (i === idx ? { ...x, status: e.target.value as any } : x)))}>
                       <option value="planejado">Planejado</option>
                       <option value="producao">Em Produção</option>
                       <option value="publicado">Publicado</option>
