@@ -59,7 +59,7 @@ export default function AIInsights({ empresaId, mesSelecionado }: { empresaId: s
            type: 'negative',
            icon: AlertTriangle,
            title: 'Despesas Infladas',
-           desc: `Os gastos da empresa subiram ${variacaoDesp.toFixed(1)}% (R$ ${fmt.currency(despAtual - despAnt)} a mais que no mês anterior).`
+           desc: `Os gastos da empresa subiram ${variacaoDesp.toFixed(1)}% (${fmt.currency(despAtual - despAnt)} a mais que no mês anterior).`
          });
       }
     }

@@ -42,6 +42,10 @@ import {
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
 } from '../lib/nfse/retencao';
+import { formatarCpfCnpj } from '../lib/formatar-documento';
+
+/** "2026-11" → "11/2026" */
+const competenciaBr = (c?: string | null) => (c && /^\d{4}-\d{2}/.test(c) ? `${c.slice(5, 7)}/${c.slice(0, 4)}` : c || '—');
 
 type ModalMode = 'novo' | 'ver' | null;
 type PapelFiltro = 'prestadas' | 'tomadas';
@@ -1920,78 +1924,6 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <RefreshCw size={14} /> Buscar no ADN
           </button>
 
-          {/* Atalho direto para o WhatsApp da conta / usuário (apenas consultor/admin) */}
-          {!modoCliente && (
-          <a
-            href="/consultor/whatsapp"
-            className="nfse-hero-wpp-btn"
-            style={{
-              background: 'rgba(16,185,129,0.18)',
-              border: '1px solid rgba(16,185,129,0.45)',
-              color: '#a7f3d0',
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 14.5,
-              padding: '10px 16px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              textDecoration: 'none',
-            }}
-            title="Abrir seu WhatsApp, Assistente Virtual e CRM"
-          >
-            <MessageSquare size={14} /> WhatsApp
-          </a>
-          )}
-
-          {/* Exportar Mês */}
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff',
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 14.5,
-              padding: '10px 16px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              cursor: 'pointer',
-            }}
-            onClick={() => {
-              setMesExportacao(mesFiltro || hojeBrasilia().slice(0, 7));
-              setPapelExportacao(papelFiltro);
-              setShowExportarModal(true);
-            }}
-          >
-            <Download size={14} /> Exportar Mês
-          </button>
-
-          {/* Analista IA */}
-          <button
-            type="button"
-            style={{
-              background: 'rgba(124,58,237,0.22)',
-              color: '#e9d5ff',
-              border: '1px solid rgba(167,139,250,0.4)',
-              borderRadius: 10,
-              padding: '10px 16px',
-              fontWeight: 600,
-              fontSize: 14.5,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              cursor: 'pointer',
-            }}
-            onClick={() => window.dispatchEvent(new CustomEvent('abrirCopilotoFiscal'))}
-            title="Abrir o assistente de IA com o contexto fiscal"
-          >
-            <Sparkles size={14} /> Analista IA
-          </button>
-
           {/* Menu Dropdown de Ferramentas e Gestão */}
           <div style={{ position: 'relative' }} ref={menuFerramentasRef}>
             <button
@@ -2069,6 +2001,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </button>
                   </>
                 )}
+
+                <button
+                  type="button"
+                  style={itemMenuDropdownStyle}
+                  onClick={() => {
+                    setShowMenuFerramentas(false);
+                    setMesExportacao(mesFiltro || hojeBrasilia().slice(0, 7));
+                    setPapelExportacao(papelFiltro);
+                    setShowExportarModal(true);
+                  }}
+                >
+                  <Download size={15} color="#374151" /> Exportar Mês
+                </button>
 
                 <button
                   type="button"
@@ -2621,13 +2566,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <td style={{ fontSize: 14.5, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
                         <td>
                           <div style={{ fontWeight: 600, color: '#171717', fontSize: 15 }}>{nomeContraparte}</div>
-                          <div style={{ fontSize: 13.5, color: '#525252', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{docContraparte}</div>
+                          <div style={{ fontSize: 13.5, color: '#525252', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{formatarCpfCnpj(docContraparte)}</div>
                         </td>
                         <td style={{ fontSize: 14, color: '#525252', maxWidth: 240 }}>
                           <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>
                           <div style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.discriminacao}</div>
                         </td>
-                        <td style={{ fontSize: 14.5, color: '#525252' }}>{n.dataCompetencia}</td>
+                        <td style={{ fontSize: 14.5, color: '#525252' }}>{competenciaBr(n.dataCompetencia)}</td>
                         <td>
                           {statusBadge(n)}
                           {n.chaveAcesso && n.ambiente === 'homologacao' && (
@@ -2826,7 +2771,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8 }}>
                       <div style={{ fontSize: 14, color: '#525252' }}>
-                        <strong>Nº {n.numero || 'Rascunho'}</strong> • {n.dataEmissao ? fmt.date(n.dataEmissao) : '—'} • {n.dataCompetencia}
+                        <strong>Nº {n.numero || 'Rascunho'}</strong> • {n.dataEmissao ? fmt.date(n.dataEmissao) : '—'} • {competenciaBr(n.dataCompetencia)}
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: n.status === 'cancelada' ? '#b91c1c' : '#171717', whiteSpace: 'nowrap' }}>
                         {fmt.currency(n.valorLiquido)}
