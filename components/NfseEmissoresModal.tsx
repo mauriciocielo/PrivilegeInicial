@@ -369,7 +369,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                         </div>
                       )}
                     </td>
-                    <td style={{ fontSize: 14, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{e.cnpj}</td>
+                    <td style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{e.cnpj}</td>
                     <td>
                       {badgeStatus(c?.procuracaoStatus)}
                       {c?.procuracaoVerificadaEm && (

@@ -468,7 +468,7 @@ export default function PainelSituacaoFiscal() {
                   <tr key={e.id}>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 15 }}>{e.nomeFantasia || e.razaoSocial}</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{e.cnpj}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{e.cnpj}</div>
                     </td>
                     <td style={{ maxWidth: 320 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Relatório (SITFIS)</div>

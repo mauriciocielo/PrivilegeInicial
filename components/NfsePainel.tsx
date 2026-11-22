@@ -1743,7 +1743,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             <div style={{ fontSize: 13.5, color: '#525252' }}>{e.nomeFantasia}</div>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
                         <td>
                           {e.nfseConfig?.procuracaoStatus === 'ativa' ? (
                             <span className="badge badge-green">Procuração ativa</span>
@@ -2621,7 +2621,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <td style={{ fontSize: 14.5, whiteSpace: 'nowrap', color: '#525252' }}>{fmt.date(n.dataEmissao)}</td>
                         <td>
                           <div style={{ fontWeight: 600, color: '#171717', fontSize: 15 }}>{nomeContraparte}</div>
-                          <div style={{ fontSize: 13.5, color: '#525252', fontFamily: 'monospace' }}>{docContraparte}</div>
+                          <div style={{ fontSize: 13.5, color: '#525252', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{docContraparte}</div>
                         </td>
                         <td style={{ fontSize: 14, color: '#525252', maxWidth: 240 }}>
                           <div style={{ fontWeight: 600, color: '#171717' }}>{n.codigoServico}</div>

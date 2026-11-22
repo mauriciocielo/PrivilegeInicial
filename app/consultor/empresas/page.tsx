@@ -5,6 +5,7 @@ import { uid } from '../../../lib/store';
 import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { formatarCpfCnpj } from '../../../lib/formatar-documento';
 
 interface ApiKeyResumo {
   id: string;
@@ -386,7 +387,7 @@ ${result.portadoresAdded} portadores criados`);
                       </div>
                     </td>
                     <td>{e.nomeFantasia}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{e.cnpj}</td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14 }}>{formatarCpfCnpj(e.cnpj)}</td>
                     <td>{e.responsavel || '-'}</td>
                     <td>{e.atividade ? <span className="badge badge-blue">{e.atividade}</span> : '-'}</td>
                     <td>

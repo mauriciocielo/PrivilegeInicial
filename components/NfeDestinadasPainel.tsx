@@ -817,7 +817,7 @@ export default function NfeDestinadasPainel() {
                           <div style={{ fontSize: 13.5, color: '#525252' }}>{emp.nomeFantasia}</div>
                         )}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
                       <td>
                         {emp.certificado === 'propria' ? (
                           <span className="badge badge-green">A1 Próprio</span>
@@ -2315,7 +2315,7 @@ export default function NfeDestinadasPainel() {
                           <div style={{ fontSize: 13.5, color: '#525252' }}>{emp.nomeFantasia}</div>
                         )}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14, color: '#525252' }}>{formatCnpj(emp.cnpj)}</td>
                       <td>
                         {emp.certificado === 'propria' ? (
                           <span className="badge badge-green">A1 Próprio ({formatData(emp.certValidoAte)})</span>
@@ -2439,7 +2439,7 @@ export default function NfeDestinadasPainel() {
                 <div>
                   <div style={{ fontSize: 13, color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>Emitente (Fornecedor)</div>
                   <div style={{ fontSize: 15.5, fontWeight: 600, color: '#111827', marginTop: 2 }}>{notaDetalhe.emitenteNome}</div>
-                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: '#6b7280' }}>CNPJ: {formatCnpj(notaDetalhe.emitenteCnpj)}</div>
+                  <div style={{ fontSize: 14, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: '#6b7280' }}>CNPJ: {formatCnpj(notaDetalhe.emitenteCnpj)}</div>
                 </div>
 
                 <div>

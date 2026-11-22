@@ -820,7 +820,7 @@ export default function UsuariosPage() {
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 20, flexWrap: 'wrap' }}>
-                          {e.cnpj && <span style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{e.cnpj}</span>}
+                          {e.cnpj && <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{e.cnpj}</span>}
                           {mostrarSituacao && <span className={`badge ${situacao.classe}`} style={{ fontSize: 11.5, padding: '1px 5px' }}>{situacao.texto}</span>}
                           {soEmissor && <span className="badge badge-gray" style={{ fontSize: 11.5, padding: '1px 5px' }}>Só emissor</span>}
                         </div>

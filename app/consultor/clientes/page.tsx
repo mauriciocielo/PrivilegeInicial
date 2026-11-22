@@ -4,6 +4,7 @@ import { store, type Cliente, type Lancamento, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { formatarCpfCnpj } from '../../../lib/formatar-documento';
 
 type Tab = 'lista' | 'historico';
 type TipoFiltro = '' | 'cliente' | 'fornecedor' | 'ambos';
@@ -385,7 +386,7 @@ export default function ClientesPage() {
                             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{c.nomeFantasia}</div>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{c.cpfCnpj}</td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14 }}>{formatarCpfCnpj(c.cpfCnpj)}</td>
                         <td>{badgeTipo(c.tipo)}</td>
                         <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           {[c.cidade, c.estado].filter(Boolean).join(' / ') || '—'}

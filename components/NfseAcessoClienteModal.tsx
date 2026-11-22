@@ -206,7 +206,7 @@ export default function NfseAcessoClienteModal({ empresa, onFechar, onAtualizado
           <div>
             <h2 className="modal-title">Acesso do Cliente para Emitir NFS-e</h2>
             <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>
-              {nomeEmpresa} · <span style={{ fontFamily: 'monospace' }}>{empresa.cnpj}</span>
+              {nomeEmpresa} · <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{empresa.cnpj}</span>
             </div>
           </div>
           <button className="modal-close" onClick={onFechar} disabled={salvando}>✕</button>
