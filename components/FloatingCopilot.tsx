@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
 import { askClaudeDetailed } from '../lib/claude-client';
+import { Brain, Send, X } from 'lucide-react';
+import MarkdownLeve from './ui/MarkdownLeve';
 
 // Telas fiscais: aqui o copilot troca o contexto financeiro pelo fiscal (notas, CND, certificados).
 const EH_TELA_FISCAL = (p: string) => /\/dashboard2|\/nfe-destinadas|\/nfse|\/cnd-federal/.test(p);
@@ -24,6 +26,8 @@ function getVisibleScreenSnapshot(): string {
 interface Message {
   sender: 'ai' | 'user';
   text: string;
+  /** Aviso de falha: aparece na conversa, mas não volta para a IA como histórico. */
+  erro?: boolean;
   timestamp: string;
 }
 
@@ -182,7 +186,7 @@ Regras:
 3. Se perguntarem sobre qualquer área (Financeiro, Comercial, Marketing, Pessoas ou Administrativo), conecte os indicadores de forma estratégica.`;
     }
 
-    const chatHist = [...messages, userMsg].slice(-8).map(m => ({
+    const chatHist = [...messages, userMsg].filter(m => !m.erro).slice(-8).map(m => ({
       role: m.sender === 'user' ? 'user' : 'model',
       parts: [{ text: m.text }]
     }));
@@ -205,14 +209,15 @@ Regras:
           ...prev,
           {
             sender: 'ai',
-            text: `⚠️ ${result.error || 'Não foi possível obter resposta da IA. Verifique se a variável GROQ_API_KEY está configurada no servidor.'}`,
+            text: result.error || 'Não foi possível obter resposta da IA agora. Tente de novo em instantes.',
+            erro: true,
             timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
       }
     } catch(err) {
       console.error(err);
-      setMessages(prev => [...prev, { sender: 'ai', text: 'Desculpe, ocorreu uma instabilidade na minha antena. Verifique sua conexão com o servidor AI.', timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
+      setMessages(prev => [...prev, { sender: 'ai', erro: true, text: 'Não consegui falar com o servidor de IA. Verifique a conexão e tente de novo.', timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }]);
     }
     setLoading(false);
   };
@@ -226,111 +231,121 @@ Regras:
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
-      fontFamily: 'var(--font-sans)',
     }}>
-      {/* Container do Chat Box */}
       {open && (
-        <div className="floating-copilot-box" style={{
-          width: 380,
-          height: 520,
-          background: 'var(--bg-base)',
-          borderRadius: 16,
-          boxShadow: '0 12px 48px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.05)',
-          marginBottom: 16,
+        <div className="floating-copilot-box" role="dialog" aria-label="Assistente de IA" style={{
+          width: 400,
+          maxWidth: 'calc(100vw - 32px)',
+          height: 560,
+          maxHeight: 'calc(100vh - 120px)',
+          background: 'var(--bg-card)',
+          borderRadius: 18,
+          border: '1px solid var(--border)',
+          boxShadow: '0 24px 60px -12px rgba(20,20,19,0.28)',
+          marginBottom: 14,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          animation: 'fadeUp 0.3s ease-out'
+          animation: 'fadeUp 0.25s ease-out',
         }}>
-          {/* Header */}
+          {/* Cabeçalho */}
           <div style={{
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, var(--accent) 0%, rgba(96,0,0,0.8) 100%)',
+            padding: '14px 16px',
+            background: 'linear-gradient(135deg, #600000 0%, #3b0000 100%)',
             color: '#fff',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            gap: 10,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 22 }}>🧠</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{ehFiscal ? 'Privilege Copilot Fiscal' : 'Privilege Copilot 360º'}</h3>
-                <span style={{ fontSize: 13, opacity: 0.8 }}>{ehFiscal ? 'Apoio ao analista fiscal' : 'Analisa Dash, Relatórios & Site'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.14)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Brain size={20} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.2 }}>{ehFiscal ? 'Copiloto Fiscal' : 'Copiloto Privilege'}</div>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>{ehFiscal ? 'Notas, CNDs e certificados' : 'Analisa a tela que você está vendo'}</div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <select
                 value={provider}
-                onChange={e => setProvider(e.target.value as any)}
+                onChange={e => setProvider(e.target.value as typeof provider)}
                 title="Motor de IA"
+                aria-label="Motor de IA"
                 style={{
-                  background: 'rgba(255,255,255,0.16)',
+                  background: 'rgba(255,255,255,0.14)',
                   color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.28)',
+                  border: '1px solid rgba(255,255,255,0.25)',
                   borderRadius: 8,
-                  padding: '3px 6px',
+                  padding: '4px 6px',
                   fontSize: 13,
                   fontWeight: 600,
                   outline: 'none',
+                  cursor: 'pointer',
                 }}
               >
-                <option value="auto" style={{ color: '#111' }}>IA: Auto (Groq)</option>
+                <option value="auto" style={{ color: '#111' }}>Automático</option>
                 <option value="groq" style={{ color: '#111' }}>Groq</option>
                 <option value="gemini" style={{ color: '#111' }}>Gemini</option>
                 <option value="claude" style={{ color: '#111' }}>Claude</option>
                 <option value="ollama" style={{ color: '#111' }}>Ollama</option>
               </select>
               <button
+                type="button"
                 onClick={() => setOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', padding: 4 }}
+                aria-label="Fechar assistente"
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 4, display: 'grid', placeItems: 'center', borderRadius: 8 }}
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, background: 'var(--bg-card)' }}>
+          {/* Mensagens */}
+          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, background: 'var(--bg-base)' }}>
             {messages.map((m, idx) => (
               <div key={idx} style={{
                 alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%',
+                maxWidth: m.sender === 'user' ? '85%' : '95%',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
               }}>
                 <div style={{
-                  background: m.sender === 'user' ? 'var(--blue)' : 'var(--bg-card2)',
-                  color: m.sender === 'user' ? '#fff' : 'var(--text-main)',
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  borderBottomRightRadius: m.sender === 'user' ? 0 : 12,
-                  borderBottomLeftRadius: m.sender === 'ai' ? 0 : 12,
-                  border: m.sender === 'ai' ? '1px solid var(--border-light)' : 'none',
+                  background: m.sender === 'user' ? '#600000' : m.erro ? '#fffbeb' : 'var(--bg-card)',
+                  color: m.sender === 'user' ? '#fff' : m.erro ? '#92400e' : 'var(--text-primary)',
+                  padding: '10px 14px',
+                  borderRadius: 14,
+                  borderBottomRightRadius: m.sender === 'user' ? 4 : 14,
+                  borderBottomLeftRadius: m.sender === 'ai' ? 4 : 14,
+                  border: m.sender === 'ai' ? `1px solid ${m.erro ? '#fde68a' : 'var(--border)'}` : 'none',
                   fontSize: 14.5,
-                  lineHeight: '1.5',
-                  whiteSpace: 'pre-line' 
+                  lineHeight: 1.55,
+                  overflowWrap: 'anywhere',
                 }}>
-                  {m.text}
+                  {m.sender === 'ai' && !m.erro
+                    ? <MarkdownLeve texto={m.text} />
+                    : <span style={{ whiteSpace: 'pre-line' }}>{m.text}</span>}
                 </div>
-                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4, alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start' }}>{m.timestamp}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start' }}>{m.timestamp}</span>
               </div>
             ))}
             {loading && (
-              <div style={{ alignSelf: 'flex-start', maxWidth: '85%', background: 'var(--bg-card2)', padding: '12px 16px', borderRadius: 12, borderBottomLeftRadius: 0, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border-light)' }}>
-                <div className="animate-pulse" style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%' }} />
-                <div className="animate-pulse" style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', animationDelay: '0.2s' }} />
-                <div className="animate-pulse" style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', animationDelay: '0.4s' }} />
+              <div aria-label="A IA está respondendo" style={{ alignSelf: 'flex-start', background: 'var(--bg-card)', padding: '12px 16px', borderRadius: 14, borderBottomLeftRadius: 4, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
+                {[0, 0.2, 0.4].map(d => (
+                  <span key={d} className="animate-pulse" style={{ width: 7, height: 7, background: '#600000', borderRadius: '50%', animationDelay: `${d}s` }} />
+                ))}
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Prompts (ai-chat-widget) */}
-          <div style={{ padding: '8px 12px', background: 'var(--bg-card2)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {/* Sugestões rápidas */}
+          <div style={{ padding: '8px 12px', background: 'var(--bg-card)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { label: 'Analisar esta tela', prompt: 'Analise os dados, KPIs e tabelas visíveis nesta tela atual e me dê os principais insights.' },
-              { label: 'Gargalos', prompt: 'Quais os principais gargalos ou riscos que você identifica nos números atuais?' },
-              { label: 'Plano de Ação', prompt: 'Com base nesta tela e nos indicadores da empresa, sugira 3 ações práticas imediatas.' },
+              { label: 'Riscos', prompt: 'Quais os principais gargalos ou riscos que você identifica nos números atuais?' },
+              { label: 'Plano de ação', prompt: 'Com base nesta tela e nos indicadores da empresa, sugira 3 ações práticas imediatas.' },
             ].map(chip => (
               <button
                 key={chip.label}
@@ -338,14 +353,15 @@ Regras:
                 disabled={loading}
                 onClick={() => sendMessage(chip.prompt)}
                 style={{
-                  fontSize: 13,
-                  padding: '4px 9px',
+                  fontSize: 13.5,
+                  padding: '5px 11px',
                   borderRadius: 999,
                   border: '1px solid var(--border)',
-                  background: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  cursor: 'pointer',
+                  background: 'var(--bg-base)',
+                  color: 'var(--text-primary)',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
+                  opacity: loading ? 0.6 : 1,
                 }}
               >
                 {chip.label}
@@ -353,72 +369,78 @@ Regras:
             ))}
           </div>
 
-          {/* Input Area */}
-          <div style={{ padding: 12, background: 'var(--bg-base)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 8 }}>
-            <input 
+          {/* Campo de pergunta */}
+          <form
+            onSubmit={e => { e.preventDefault(); sendMessage(); }}
+            style={{ padding: 12, background: 'var(--bg-card)', borderTop: '1px solid var(--border-light)', display: 'flex', gap: 8 }}
+          >
+            <input
               type="text"
-              placeholder={ehFiscal ? 'Pergunte sobre notas, CND, certificados...' : 'Pergunte sobre qualquer dash ou relatório...'}
+              placeholder={ehFiscal ? 'Pergunte sobre notas, CNDs, certificados...' : 'Pergunte sobre esta tela ou a empresa...'}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              aria-label="Sua pergunta"
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: '10px 14px',
-                borderRadius: 20,
+                borderRadius: 12,
                 border: '1px solid var(--border)',
-                background: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                fontSize: 14.5,
-                outline: 'none'
+                background: 'var(--bg-base)',
+                color: 'var(--text-primary)',
+                fontSize: 15,
+                outline: 'none',
               }}
               disabled={loading}
             />
-            <button 
-              onClick={() => sendMessage()}
+            <button
+              type="submit"
               disabled={loading || !input.trim()}
+              aria-label="Enviar pergunta"
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                background: 'var(--primary)',
-                color: '#000',
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: '#600000',
+                color: '#fff',
                 border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                opacity: loading || !input.trim() ? 0.6 : 1
+                display: 'grid',
+                placeItems: 'center',
+                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                opacity: loading || !input.trim() ? 0.5 : 1,
+                flexShrink: 0,
               }}
             >
-              ➤
+              <Send size={18} />
             </button>
-          </div>
+          </form>
         </div>
       )}
 
-      {/* Floating Toggle Button */}
-      <button 
+      {/* Botão flutuante */}
+      <button
+        type="button"
         onClick={() => setOpen(!open)}
+        aria-label={open ? 'Fechar assistente de IA' : 'Abrir assistente de IA'}
+        title="Assistente de IA"
         style={{
-          width: 56,
-          height: 56,
+          width: 58,
+          height: 58,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--accent) 0%, rgba(96,0,0,0.8) 100%)',
+          background: 'linear-gradient(135deg, #7f1d1d 0%, #600000 100%)',
           border: 'none',
           color: '#fff',
-          fontSize: 28,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 8px 32px rgba(96,0,0,0.3)',
+          display: 'grid',
+          placeItems: 'center',
+          boxShadow: '0 10px 28px rgba(96,0,0,0.35)',
           cursor: 'pointer',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-          transform: open ? 'scale(0.9)' : 'scale(1)',
+          transition: 'transform 0.2s',
+          transform: open ? 'scale(0.92)' : 'scale(1)',
         }}
-        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-        onMouseLeave={e => e.currentTarget.style.transform = open ? 'scale(0.9)' : 'scale(1)'}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = open ? 'scale(0.92)' : 'scale(1)'; }}
       >
-        {open ? '✕' : '🧠'}
+        {open ? <X size={24} /> : <Brain size={26} />}
       </button>
     </div>
   );
