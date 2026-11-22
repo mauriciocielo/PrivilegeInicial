@@ -6,6 +6,8 @@ import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Brain as IcoBrain, FolderOpen as IcoFolderOpen } from 'lucide-react';
+import { Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function ImportarOFXPage() {
   const [empresaId, setEmpresaId] = useState(() => {
@@ -402,7 +404,7 @@ export default function ImportarOFXPage() {
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
             >
-              <div className="upload-icon">📂</div>
+              <div className="upload-icon"><IcoFolderOpen size={20} strokeWidth={2} aria-hidden /></div>
               <div className="upload-text">Arraste o arquivo OFX aqui ou clique para selecionar</div>
               <div className="upload-hint">Suporte: .ofx, .qfx (bancos brasileiros)</div>
             </div>
@@ -646,7 +648,7 @@ export default function ImportarOFXPage() {
         {transactions.length === 0 && !done && (
           <div className="card">
             <div className="empty-state">
-              <div className="empty-state-icon">📂</div>
+              <div className="empty-state-icon"><IcoFolderOpen size={20} strokeWidth={2} aria-hidden /></div>
               <h3>Nenhum arquivo carregado</h3>
               <p>Faça o upload de um arquivo OFX ou carregue o exemplo de demonstração.</p>
             </div>
@@ -706,9 +708,7 @@ export default function ImportarOFXPage() {
                                 className="btn btn-danger btn-sm btn-icon" 
                                 onClick={() => handleDeleteRule(r.id)}
                                 title="Excluir regra"
-                              >
-                                🗑️
-                              </button>
+                              ><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                             </td>
                           </tr>
                         );
@@ -717,7 +717,7 @@ export default function ImportarOFXPage() {
                       <tr>
                         <td colSpan={3}>
                           <div className="empty-state">
-                            <div className="empty-state-icon">🧠</div>
+                            <div className="empty-state-icon"><IcoBrain size={20} strokeWidth={2} aria-hidden /></div>
                             <h3>Nenhuma regra configurada</h3>
                             <p>As regras são geradas automaticamente quando você categoriza lançamentos no OFX ou podem ser adicionadas manualmente clicando no botão acima.</p>
                           </div>

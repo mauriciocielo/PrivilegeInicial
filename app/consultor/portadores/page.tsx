@@ -5,6 +5,8 @@ import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Landmark as IcoLandmark } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 const TIPO_LABELS: Record<string, string> = {
   conta_corrente: '🏦 Conta Corrente',
@@ -120,7 +122,7 @@ export default function PortadoresPage() {
         {/* Summary */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏦</div>
+            <div className="stat-icon blue"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo Total</div>
             <div className="stat-value" style={{ fontSize: 20, color: totalSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {fmt.currency(totalSaldo)}
@@ -172,15 +174,15 @@ export default function PortadoresPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(p)}>✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(p.id)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(p)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(p.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
                 {portadores.length === 0 && (
-                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">🏦</div><h3>Nenhum portador cadastrado</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div><h3>Nenhum portador cadastrado</h3></div></td></tr>
                 )}
               </tbody>
             </table>

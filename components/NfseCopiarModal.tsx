@@ -6,6 +6,7 @@ import { fmt } from '../lib/reports';
 import { hojeBrasilia, type AmbienteNfse } from '../lib/nfse/dps';
 import { copiarParaCompetencia, existeNotaIgual, mesAnterior, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
+import { ClipboardList as IcoClipboardList } from 'lucide-react';
 
 interface Props {
   notas: NfsE[];
@@ -124,7 +125,7 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
 
         {candidatas.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
+            <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
             <h3>Nenhuma nota emitida neste mês</h3>
             <p>Use Buscar Notas do Portal para trazer as notas emitidas fora do sistema.</p>
           </div>

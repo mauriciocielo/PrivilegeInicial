@@ -8,6 +8,8 @@ import { uid } from '../../../lib/store';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { AlertTriangle as IcoAlertTriangle, Banknote as IcoBanknote, Check as IcoCheck, ClipboardList as IcoClipboardList, DoorOpen as IcoDoorOpen, Landmark as IcoLandmark, ShieldCheck as IcoShieldCheck, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 // Recharts dynamically imported without SSR to prevent Next.js hydration errors
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -491,22 +493,22 @@ export default function CondominioHubPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="stat-grid">
               <div className="stat-card blue">
-                <div className="stat-icon blue">🚪</div>
+                <div className="stat-icon blue"><IcoDoorOpen size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Total Unidades</div>
                 <div className="stat-value">{metricas.totalUnidades}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">⚠️</div>
+                <div className="stat-icon red"><IcoAlertTriangle size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Inadimplência</div>
                 <div className="stat-value">{metricas.inadimplenciaPct}%</div>
               </div>
               <div className="stat-card green">
-                <div className="stat-icon green">🛡️</div>
+                <div className="stat-icon green"><IcoShieldCheck size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Fundo de Reserva</div>
                 <div className="stat-value">{fmt.currency(metricas.reserveBalance)}</div>
               </div>
               <div className="stat-card purple">
-                <div className="stat-icon purple">🏦</div>
+                <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Caixa Total</div>
                 <div className="stat-value">{fmt.currency(metricas.totalCaixa)}</div>
               </div>
@@ -576,7 +578,7 @@ export default function CondominioHubPage() {
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">🚪</div>
+                          <div className="empty-state-icon"><IcoDoorOpen size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhuma unidade cadastrada</h3>
                           <p>Cadastre as unidades para faturar as mensalidades ordinárias.</p>
                         </div>
@@ -609,8 +611,8 @@ export default function CondominioHubPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditUni(u)}>✏️</button>
-                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteUnidade(u.id)}>🗑️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditUni(u)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteUnidade(u.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                           </div>
                         </td>
                       </tr>
@@ -844,7 +846,7 @@ export default function CondominioHubPage() {
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">✓</div>
+                          <div className="empty-state-icon"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Excelente! Nenhuma inadimplência encontrada</h3>
                           <p>Todas as unidades estão com as taxas condominiais quitadas.</p>
                         </div>
@@ -924,22 +926,22 @@ export default function CondominioHubPage() {
             {/* Overview cards */}
             <div className="stat-grid">
               <div className="stat-card blue">
-                <div className="stat-icon blue">💰</div>
+                <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Receber (Pendente)</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.aReceberPendente)}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">💸</div>
+                <div className="stat-icon red"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Pagar (Pendente)</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.aPagarPendente)}</div>
               </div>
               <div className="stat-card green">
-                <div className="stat-icon green">✓</div>
+                <div className="stat-icon green"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Recebido no Mês</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.recebidoMes)}</div>
               </div>
               <div className="stat-card purple">
-                <div className="stat-icon purple">🏦</div>
+                <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Pago no Mês</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.pagoMes)}</div>
               </div>
@@ -1026,7 +1028,7 @@ export default function CondominioHubPage() {
                       <tr>
                         <td colSpan={8}>
                           <div className="empty-state">
-                            <div className="empty-state-icon">📋</div>
+                            <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
                             <h3>Nenhum lançamento financeiro encontrado</h3>
                             <p>Adicione um lançamento manual ou utilize a aba "Gerar Taxas".</p>
                           </div>
@@ -1077,8 +1079,8 @@ export default function CondominioHubPage() {
                                     )}
                                   </>
                                 )}
-                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditFin(l)}>✏️</button>
-                                <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteFinLanc(l.id)}>🗑️</button>
+                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditFin(l)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                                <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteFinLanc(l.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                               </div>
                             </td>
                           </tr>

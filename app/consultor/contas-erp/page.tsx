@@ -3,6 +3,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { store } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import { Check as IcoCheck, FileText as IcoFileText, Plug as IcoPlug, Wallet as IcoWallet } from 'lucide-react';
 
 type StatusConta = 'aberto' | 'parcial' | 'liquidado' | 'cancelado';
 
@@ -176,12 +177,12 @@ export default function ConsultorContasErpPage() {
 
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="card stat-card">
-            <div className="stat-icon blue">💰</div>
+            <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em aberto</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{fmt.currency(resumo.totalAberto)}</div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon purple">📄</div>
+            <div className="stat-icon purple"><IcoFileText size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Títulos em aberto</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{resumo.qtdAberto}</div>
           </div>
@@ -191,7 +192,7 @@ export default function ConsultorContasErpPage() {
             <div className="stat-value" style={{ fontSize: 22, color: resumo.qtdVencida > 0 ? 'var(--red)' : undefined }}>{resumo.qtdVencida}</div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon green">✓</div>
+            <div className="stat-icon green"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Liquidados</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{resumo.qtdLiquidada}</div>
           </div>
@@ -217,7 +218,7 @@ export default function ConsultorContasErpPage() {
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando...</div>
           ) : !erro && filtradas.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🔌</div>
+              <div className="empty-state-icon"><IcoPlug size={20} strokeWidth={2} aria-hidden /></div>
               <h3>Nenhum título encontrado</h3>
               <p>
                 Assim que o ERP do cliente enviar lançamentos pela integração de API (veja

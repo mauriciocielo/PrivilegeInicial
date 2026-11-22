@@ -6,6 +6,8 @@ import { gerarPdfBalancoPatrimonial } from '../../../lib/balanco-pdf';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import GeminiTips from '../../../components/GeminiTips';
+import { FileText as IcoFileText } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 const GRUPO_LABELS: Record<GrupoContaBalanco, string> = {
   ativo_circulante: 'Ativo Circulante',
@@ -350,9 +352,7 @@ export default function BalancoPatrimonialPage() {
                           className="btn btn-ghost btn-sm btn-icon"
                           title="Remover conta da estrutura"
                           onClick={() => handleDeleteConta(conta)}
-                        >
-                          🗑️
-                        </button>
+                        ><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                       </td>
                     </tr>
                   ))}
@@ -526,9 +526,9 @@ export default function BalancoPatrimonialPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 8 }}>
-                            <button className="btn btn-ghost btn-sm btn-icon" title="Abrir" onClick={() => handleLoadHistorico(bp)}>✏️</button>
-                            <button className="btn btn-ghost btn-sm btn-icon" title="Exportar PDF" disabled={exportando} onClick={() => handleExportHistoricoPdf(bp)}>📄</button>
-                            <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDeleteHistorico(bp)}>🗑️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" title="Abrir" onClick={() => handleLoadHistorico(bp)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                            <button className="btn btn-ghost btn-sm btn-icon" title="Exportar PDF" disabled={exportando} onClick={() => handleExportHistoricoPdf(bp)}><IcoFileText size={20} strokeWidth={2} aria-hidden /></button>
+                            <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDeleteHistorico(bp)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                           </div>
                         </td>
                       </tr>

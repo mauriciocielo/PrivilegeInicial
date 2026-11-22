@@ -6,6 +6,7 @@ import GeminiTips from '../../../components/GeminiTips';
 import { toast } from 'sonner';
 import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { ClipboardList as IcoClipboardList } from 'lucide-react';
 
 const isContaRedutoraReceita = (descricao: string) => descricao.trim().startsWith('( - )');
 
@@ -1184,7 +1185,7 @@ export default function RelatoriosPage() {
                   {preview?.rows.length === 0 ? (
                     <tr><td colSpan={9}>
                       <div className="empty-state">
-                        <div className="empty-state-icon">📋</div>
+                        <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
                         <h3>Nenhum dado para o período</h3>
                       </div>
                     </td></tr>

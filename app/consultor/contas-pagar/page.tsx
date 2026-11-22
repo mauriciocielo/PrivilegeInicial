@@ -5,6 +5,8 @@ import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
+import { AlertTriangle as IcoAlertTriangle, Banknote as IcoBanknote, BarChart3 as IcoBarChart3, Building2 as IcoBuilding2, CheckCircle2 as IcoCheckCircle2, Hourglass as IcoHourglass } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
 
@@ -248,7 +250,7 @@ export default function ContasPagarPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
         <p>Use o seletor no menu lateral para escolher a empresa.</p>
       </div>
@@ -287,25 +289,25 @@ export default function ContasPagarPage() {
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card red">
-            <div className="stat-icon red">⏳</div>
+            <div className="stat-icon red"><IcoHourglass size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Pendente</div>
             <div className="stat-value" style={{ fontSize: 18, color: 'var(--red)' }}>{fmt.currency(totalPendente)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
-            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>⚠️</div>
+            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}><IcoAlertTriangle size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Vencidas</div>
             <div className="stat-value" style={{ fontSize: 18, color: '#f59e0b' }}>{fmt.currency(vencidos.reduce((a, l) => a + l.valor, 0))}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
           </div>
           <div className="stat-card blue">
-            <div className="stat-icon blue">✅</div>
+            <div className="stat-icon blue"><IcoCheckCircle2 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Pago (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPago)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pagos.length} conta(s)</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">📊</div>
+            <div className="stat-icon purple"><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Geral (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPendente + totalPago)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
@@ -400,7 +402,7 @@ export default function ContasPagarPage() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">💸</div>
+                      <div className="empty-state-icon"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhuma conta a pagar encontrada</h3>
                       <p>Ajuste os filtros ou cadastre uma nova conta.</p>
                     </div>
@@ -454,8 +456,8 @@ export default function ContasPagarPage() {
                               ↩ Desfazer
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir">🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>

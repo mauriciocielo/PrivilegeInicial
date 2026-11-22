@@ -13,6 +13,8 @@ import {
   ArrowLeftRight, CheckCheck, Trash2, BarChart3, FolderUp, Plus, FileSpreadsheet,
   AlertTriangle, Printer, ChevronDown, Wallet, Receipt,
 } from 'lucide-react';
+import { Inbox as IcoInbox } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 type Filtros = { tipo: string; status: string; portadorId: string; search: string; mes: string, semPlano: boolean, planoContaId: string, dataIni: string, dataFim: string };
 type CardImportRow = {
@@ -1259,7 +1261,7 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                 {filtered.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">📭</div>
+                      <div className="empty-state-icon"><IcoInbox size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhum lançamento encontrado</h3>
                       <p>Ajuste os filtros ou adicione um novo lançamento.</p>
                     </div>
@@ -1476,13 +1478,13 @@ Apenas retorne transações com valor maior que 0. Valores numéricos devem ser 
                               Boleto C6
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
                           {l.planoContaId !== 'transf' && (
                             <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleDuplicate(l)} title="Duplicar (cria uma cópia com a data de hoje)">
                               <Copy size={13} />
                             </button>
                           )}
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir">🗑️</button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>

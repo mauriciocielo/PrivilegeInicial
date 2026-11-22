@@ -5,6 +5,8 @@ import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { formatarCpfCnpj } from '../../../lib/formatar-documento';
+import { Banknote as IcoBanknote, BarChart3 as IcoBarChart3, Building2 as IcoBuilding2, CheckCircle2 as IcoCheckCircle2, Factory as IcoFactory, Inbox as IcoInbox, Landmark as IcoLandmark, User as IcoUser, Users as IcoUsers, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 type Tab = 'lista' | 'historico';
 type TipoFiltro = '' | 'cliente' | 'fornecedor' | 'ambos';
@@ -176,7 +178,7 @@ export default function ClientesPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
         <p>Use o seletor no menu lateral para escolher a empresa.</p>
       </div>
@@ -200,12 +202,12 @@ export default function ClientesPage() {
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card green">
-            <div className="stat-icon green">👤</div>
+            <div className="stat-icon green"><IcoUser size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Clientes Ativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{totalClientes}</div>
           </div>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏭</div>
+            <div className="stat-icon blue"><IcoFactory size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Fornecedores Ativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{totalFornecedores}</div>
           </div>
@@ -215,7 +217,7 @@ export default function ClientesPage() {
             <div className="stat-value" style={{ fontSize: 24 }}>{clientes.length}</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid var(--accent)' }}>
-            <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--accent)' }}>📊</div>
+            <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--accent)' }}><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Inativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{clientes.filter(c => !c.ativo).length}</div>
           </div>
@@ -239,22 +241,22 @@ export default function ClientesPage() {
           <>
             <div className="stat-grid" style={{ marginBottom: 20 }}>
               <div className="stat-card green">
-                <div className="stat-icon green">💰</div>
+                <div className="stat-icon green"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Receber (pendente)</div>
                 <div className="stat-value" style={{ fontSize: 16, color: 'var(--green)' }}>{fmt.currency(totalReceber)}</div>
               </div>
               <div className="stat-card blue">
-                <div className="stat-icon blue">✅</div>
+                <div className="stat-icon blue"><IcoCheckCircle2 size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Já Recebido</div>
                 <div className="stat-value" style={{ fontSize: 16 }}>{fmt.currency(totalRecebido)}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">💸</div>
+                <div className="stat-icon red"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Pagar (pendente)</div>
                 <div className="stat-value" style={{ fontSize: 16, color: 'var(--red)' }}>{fmt.currency(totalPagar)}</div>
               </div>
               <div className="stat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
-                <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>🏦</div>
+                <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Total Pago a Fornecedor</div>
                 <div className="stat-value" style={{ fontSize: 16 }}>{fmt.currency(totalPago)}</div>
               </div>
@@ -304,7 +306,7 @@ export default function ClientesPage() {
                     {historicoLancs.length === 0 ? (
                       <tr><td colSpan={5}>
                         <div className="empty-state" style={{ padding: 30 }}>
-                          <div className="empty-state-icon">📭</div>
+                          <div className="empty-state-icon"><IcoInbox size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhum lançamento vinculado</h3>
                           <p>Vincule este cadastro ao criar ou editar lançamentos em Contas a Pagar/Receber.</p>
                         </div>
@@ -373,7 +375,7 @@ export default function ClientesPage() {
                     {filtered.length === 0 ? (
                       <tr><td colSpan={8}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">👥</div>
+                          <div className="empty-state-icon"><IcoUsers size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhum cadastro encontrado</h3>
                           <p>Clique em "＋ Novo Cadastro" para adicionar um cliente ou fornecedor.</p>
                         </div>
@@ -413,7 +415,7 @@ export default function ClientesPage() {
                             >
                               Histórico
                             </button>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(c)} title="Editar">✏️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(c)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
                             <button
                               className="btn btn-ghost btn-sm btn-icon"
                               onClick={() => toggleAtivo(c)}
@@ -421,7 +423,7 @@ export default function ClientesPage() {
                             >
                               {c.ativo ? '🔕' : '✅'}
                             </button>
-                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)} title="Excluir">🗑️</button>
+                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                           </div>
                         </td>
                       </tr>

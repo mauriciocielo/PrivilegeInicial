@@ -5,6 +5,8 @@ import { uid } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { Brain as IcoBrain } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function PlanoContasPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -410,14 +412,14 @@ export default function PlanoContasPage() {
                                 {pc.nivel < 3 && (
                                   <button className="btn btn-secondary btn-sm" style={{ fontSize: 13, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
                                 )}
-                                <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
+                                <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
                                 <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
                                   {pc.ativo ? '⏸️' : '▶️'}
                                 </button>
                                 <button className="btn btn-warning btn-sm" style={{ padding: '4px 8px', fontSize: 13, fontWeight: 600 }} title="Se a conta duplicou, clique aqui para despachar os lançamentos para a original" onClick={() => openMerge(pc)}>
                                   Resolver Duplicidade
                                 </button>
-                                <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
+                                <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                               </div>
                             </td>
                           </tr>
@@ -493,7 +495,7 @@ export default function PlanoContasPage() {
                       <tr>
                         <td colSpan={3}>
                           <div className="empty-state">
-                            <div className="empty-state-icon">🧠</div>
+                            <div className="empty-state-icon"><IcoBrain size={20} strokeWidth={2} aria-hidden /></div>
                             <h3>Nenhuma regra configurada</h3>
                             <p>O sistema cria regras automaticamente quando você categoriza transações no OFX.</p>
                           </div>
@@ -515,9 +517,7 @@ export default function PlanoContasPage() {
                               )}
                             </td>
                             <td>
-                              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteRegra(r.id)}>
-                                🗑️
-                              </button>
+                              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteRegra(r.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                             </td>
                           </tr>
                         );

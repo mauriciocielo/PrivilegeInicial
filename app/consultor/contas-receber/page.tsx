@@ -9,6 +9,8 @@ import { downloadCsv } from '../../../lib/csv';
 import { gerarRemessaSicoob240, nomeArquivoRemessa, RemessaSicoobInvalidaError, type BeneficiarioSicoob, type PagamentoCnab } from '../../../lib/cnab/sicoob240';
 import { gerarBoletoSicoob, barrasITF } from '../../../lib/cnab/boleto-sicoob';
 import BoletoSicoobOficial from '../../../components/BoletoSicoobOficial';
+import { AlertTriangle as IcoAlertTriangle, BarChart3 as IcoBarChart3, Building2 as IcoBuilding2, CheckCircle2 as IcoCheckCircle2, Hourglass as IcoHourglass, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 /** Código de barras Interleaved 2 of 5 como SVG (padrão do boleto). */
 function CodigoBarrasBoleto({ codigo, altura = 50 }: { codigo: string; altura?: number }) {
@@ -480,7 +482,7 @@ export default function ContasReceberPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
         <p>Use o seletor no menu lateral para escolher a empresa.</p>
       </div>
@@ -526,25 +528,25 @@ export default function ContasReceberPage() {
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card green">
-            <div className="stat-icon green">⏳</div>
+            <div className="stat-icon green"><IcoHourglass size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total a Receber</div>
             <div className="stat-value" style={{ fontSize: 18, color: 'var(--green)' }}>{fmt.currency(totalPendente)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid #ef4444' }}>
-            <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>⚠️</div>
+            <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}><IcoAlertTriangle size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Vencidas (Inadimplência)</div>
             <div className="stat-value" style={{ fontSize: 18, color: '#ef4444' }}>{fmt.currency(vencidos.reduce((a, l) => a + l.valor, 0))}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
           </div>
           <div className="stat-card blue">
-            <div className="stat-icon blue">✅</div>
+            <div className="stat-icon blue"><IcoCheckCircle2 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Recebido (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalRecebido)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{recebidos.length} conta(s)</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">📊</div>
+            <div className="stat-icon purple"><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Geral (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPendente + totalRecebido)}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
@@ -639,7 +641,7 @@ export default function ContasReceberPage() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">💰</div>
+                      <div className="empty-state-icon"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhuma conta a receber encontrada</h3>
                       <p>Ajuste os filtros ou cadastre uma nova conta.</p>
                     </div>
@@ -727,8 +729,8 @@ export default function ContasReceberPage() {
                               ↩ Desfazer
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir">🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>

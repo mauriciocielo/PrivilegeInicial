@@ -7,6 +7,7 @@ import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { ROTA_SOMENTE_FISCAL, ROTA_SOMENTE_WHATSAPP } from '../../../components/Sidebar';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 
@@ -529,8 +530,8 @@ export default function UsuariosPage() {
                       <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(u)} title="Editar usuário">✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(u.id)} title="Excluir usuário">🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(u)} title="Editar usuário"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(u.id)} title="Excluir usuário"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>

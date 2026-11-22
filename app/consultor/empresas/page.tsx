@@ -6,6 +6,8 @@ import ImageCropper from '../../../components/ImageCropper';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { formatarCpfCnpj } from '../../../lib/formatar-documento';
+import { Building2 as IcoBuilding2 } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 interface ApiKeyResumo {
   id: string;
@@ -423,14 +425,14 @@ ${result.portadoresAdded} portadores criados`);
                             Importar Plano
                           </button>
                         )}
-                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(e)}>✏️</button>
-                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(e.id)}>🗑️</button>
+                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(e)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(e.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">🏢</div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div><h3>Nenhuma empresa encontrada</h3></div></td></tr>
                 )}
               </tbody>
             </table>

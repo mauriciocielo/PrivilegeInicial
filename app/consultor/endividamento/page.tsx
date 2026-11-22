@@ -5,6 +5,8 @@ import { fmt } from '../../../lib/reports';
 import GeminiTips from '../../../components/GeminiTips';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Banknote as IcoBanknote, Calendar as IcoCalendar, TrendingDown as IcoTrendingDown } from 'lucide-react';
+import { Pencil as IcoPencil, ScrollText as IcoScrollText, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function EndividamentoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -215,17 +217,17 @@ export default function EndividamentoPage() {
 
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card red">
-            <div className="stat-icon red">📉</div>
+            <div className="stat-icon red"><IcoTrendingDown size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo Devedor Total</div>
             <div className="stat-value">{fmt.currency(currentTotalBalance)}</div>
           </div>
           <div className="stat-card orange">
-            <div className="stat-icon orange">💸</div>
+            <div className="stat-icon orange"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Custo Fixo Mensal (Demanda de Caixa)</div>
             <div className="stat-value">{fmt.currency(totalPagamentosMes)}</div>
           </div>
           <div className="stat-card green">
-            <div className="stat-icon green">📅</div>
+            <div className="stat-icon green"><IcoCalendar size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Maior Prazo Residual</div>
             <div className="stat-value">{maxMesesParaQuitar} meses</div>
           </div>
@@ -312,9 +314,9 @@ export default function EndividamentoPage() {
                     <td style={{ fontSize: 14 }}>{e.garantia || '-'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(e)}>✏️</button>
-                        <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(e.id)}>🗑️</button>
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Ver Histórico de Saldos" onClick={() => setViewHistoryId(viewHistoryId === e.id ? null : e.id)}>📜</button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(e)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                        <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(e.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="Ver Histórico de Saldos" onClick={() => setViewHistoryId(viewHistoryId === e.id ? null : e.id)}><IcoScrollText size={20} strokeWidth={2} aria-hidden /></button>
                       </div>
                     </td>
                   </tr>

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { SERVICOS_PADRAO } from '../../../lib/contrato-pdf';
 import ApiDocumentation from '../../../components/ApiDocumentation';
+import { Building2 as IcoBuilding2, Landmark as IcoLandmark, Users as IcoUsers } from 'lucide-react';
 
 type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup' | 'api-docs';
 
@@ -908,12 +909,12 @@ export default function AdministrativoPage() {
 
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏢</div>
+            <div className="stat-icon blue"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Empresas Ativas</div>
             <div className="stat-value">{empresas.length}</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">👥</div>
+            <div className="stat-icon purple"><IcoUsers size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Usuários</div>
             <div className="stat-value">{users.length}</div>
           </div>
@@ -933,7 +934,7 @@ export default function AdministrativoPage() {
             <div className="stat-value">{fmt.currency(data.resultado)}</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">🏦</div>
+            <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em Portadores</div>
             <div className="stat-value" style={{ color: data.portadoresTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(data.portadoresTotal)}</div>
           </div>

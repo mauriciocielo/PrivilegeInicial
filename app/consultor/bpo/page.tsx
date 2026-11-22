@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { store, Empresa } from '../../../lib/store';
 import { toast } from 'sonner';
+import { BarChart3 as IcoBarChart3 } from 'lucide-react';
 
 const STATUS_SLA = ['ABERTO', 'EM_ANDAMENTO', 'ATRASADO', 'CONCLUIDO'] as const;
 type StatusSla = typeof STATUS_SLA[number];
@@ -100,7 +101,7 @@ export default function BpoDashboardPage() {
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando...</div>
             ) : linhasSla.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">📊</div>
+                <div className="empty-state-icon"><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
                 <h3>Nenhuma empresa no seu escopo</h3>
               </div>
             ) : (

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { store, CentroCusto, Empresa } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function CentrosCustoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -117,8 +118,8 @@ export default function CentrosCustoPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openForm(c)}>✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openForm(c)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>

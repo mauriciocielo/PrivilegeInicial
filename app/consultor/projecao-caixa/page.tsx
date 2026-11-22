@@ -7,6 +7,7 @@ import { projetarCaixa, parcelaPrice, type NovoFinanciamento, type ContaFinancei
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
+import { Landmark as IcoLandmark, Wallet as IcoWallet } from 'lucide-react';
 
 export default function ProjecaoCaixaPage() {
   const [empresaId, setEmpresaId] = useState('');
@@ -115,7 +116,7 @@ export default function ProjecaoCaixaPage() {
         {/* Indicadores */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="card stat-card">
-            <div className="stat-icon blue">💰</div>
+            <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em conta hoje</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{fmt.currency(saldoInicial)}</div>
           </div>
@@ -127,7 +128,7 @@ export default function ProjecaoCaixaPage() {
             </div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon purple">🏦</div>
+            <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Serviço da dívida ({horizonte}m)</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{fmt.currency(atual.totalServicoDivida)}</div>
           </div>

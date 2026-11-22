@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { store, Lancamento, PlanoConta, Portador } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
+import { ClipboardList as IcoClipboardList } from 'lucide-react';
 
 export default function ClienteExtrato() {
   // Dynamically initialize from the user's assigned company, not hardcoded 'e1'
@@ -140,7 +141,7 @@ export default function ClienteExtrato() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon">📋</div><h3>Nenhum lançamento encontrado</h3></div></td></tr>
+                  <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div><h3>Nenhum lançamento encontrado</h3></div></td></tr>
                 ) : filtered.map(l => {
                   const pc = planoContas.find(p => p.id === l.planoContaId);
                   const port = portadores.find(p => p.id === l.portadorId);

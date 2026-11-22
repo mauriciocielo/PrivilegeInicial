@@ -7,6 +7,7 @@ import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import GeminiAbc from '../../../components/GeminiAbc';
+import { Eye as IcoEye, Trash2 as IcoTrash2 } from 'lucide-react';
 
 const BADGE_CLASSE: Record<string, string> = {
   A: 'badge-green',
@@ -352,8 +353,8 @@ export default function CurvaAbcPage() {
                       <td style={{ textAlign: 'right' }}>{curva.percentualA}% / {curva.percentualB}%</td>
                       <td>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" title="Abrir" onClick={() => handleAbrir(curva)}>👁️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleExcluir(curva)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" title="Abrir" onClick={() => handleAbrir(curva)}><IcoEye size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleExcluir(curva)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
