@@ -379,13 +379,13 @@ export default function ClienteDashboard() {
                   <Icon size={18} />
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #171717)' }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text-primary, #171717)' }}>
                     {card.titulo}
                   </span>
                   <span
                     style={{
                       display: 'block',
-                      fontSize: 11.5,
+                      fontSize: 13.5,
                       color: 'var(--text-muted, #737373)',
                       marginTop: 2,
                       whiteSpace: 'nowrap',

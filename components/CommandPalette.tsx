@@ -245,7 +245,7 @@ export default function CommandPalette({
           )}
           <kbd
             style={{
-              fontSize: 11,
+              fontSize: 13,
               padding: '2px 7px',
               borderRadius: 6,
               border: '1px solid var(--border, #e5e5e5)',
@@ -263,15 +263,15 @@ export default function CommandPalette({
           {groups.length === 0 ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted, #737373)' }}>
               <Sparkles size={22} style={{ opacity: 0.45, marginBottom: 8 }} />
-              <div style={{ fontSize: 13.5, fontWeight: 600 }}>Nenhum resultado encontrado</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Tente buscar por NFS-e, Lançamentos, WhatsApp, Leads ou o nome/CNPJ de uma empresa.</div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhum resultado encontrado</div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>Tente buscar por NFS-e, Lançamentos, WhatsApp, Leads ou o nome/CNPJ de uma empresa.</div>
             </div>
           ) : (
             groups.map(group => (
               <div key={group.name} style={{ marginBottom: 8 }}>
                 <div
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 13,
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
@@ -327,7 +327,7 @@ export default function CommandPalette({
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
-                            fontSize: 13.5,
+                            fontSize: 15,
                             fontWeight: 600,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -338,7 +338,7 @@ export default function CommandPalette({
                           {item.active && (
                             <span
                               style={{
-                                fontSize: 10,
+                                fontSize: 12.5,
                                 fontWeight: 700,
                                 padding: '1px 6px',
                                 borderRadius: 99,
@@ -353,7 +353,7 @@ export default function CommandPalette({
                         <span
                           style={{
                             display: 'block',
-                            fontSize: 11.5,
+                            fontSize: 13.5,
                             color: 'var(--text-muted, #737373)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -381,7 +381,7 @@ export default function CommandPalette({
             padding: '8px 14px',
             borderTop: '1px solid var(--border, #ececec)',
             background: 'var(--bg-base, #fafafa)',
-            fontSize: 11,
+            fontSize: 13,
             color: 'var(--text-muted, #737373)',
           }}
         >

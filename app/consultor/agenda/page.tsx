@@ -874,7 +874,7 @@ export default function AgendaPage() {
               </div>
 
               <div style={{ padding: '10px 12px', borderRadius: 10, background: enviarWppAgenda ? '#f0fdf4' : 'var(--bg-base)', border: `1px solid ${enviarWppAgenda ? '#bbf7d0' : 'var(--border)'}` }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={enviarWppAgenda}

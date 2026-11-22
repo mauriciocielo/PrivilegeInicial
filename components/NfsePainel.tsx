@@ -2779,12 +2779,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           <div className="nfse-mobile-cards">
             {filtered.length === 0 ? (
               <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                <h3 className={serif.className} style={{ fontSize: 22, fontWeight: 400, color: '#171717', marginBottom: 6 }}>
+                <h3 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', marginBottom: 6 }}>
                   {papelFiltro === 'tomadas'
                     ? 'Nenhum serviço tomado neste período'
                     : 'Nenhuma nota emitida neste período'}
                 </h3>
-                <p style={{ fontSize: 13, color: '#525252', margin: 0 }}>
+                <p style={{ fontSize: 14.5, color: '#525252', margin: 0 }}>
                   Ajuste os filtros ou crie uma nova nota acima.
                 </p>
               </div>
@@ -2813,10 +2813,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                           onChange={() => alternarSelecao(n.id)}
                         />
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#171717', wordBreak: 'break-word' }}>
+                          <div style={{ fontSize: 15.5, fontWeight: 700, color: '#171717', wordBreak: 'break-word' }}>
                             {nomeContraparte || 'Tomador não informado'}
                           </div>
-                          <div style={{ fontSize: 11.5, color: '#737373', marginTop: 2 }}>
+                          <div style={{ fontSize: 13.5, color: '#737373', marginTop: 2 }}>
                             {docContraparte || '—'}
                           </div>
                         </div>
@@ -2825,7 +2825,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8 }}>
-                      <div style={{ fontSize: 12, color: '#525252' }}>
+                      <div style={{ fontSize: 14, color: '#525252' }}>
                         <strong>Nº {n.numero || 'Rascunho'}</strong> • {n.dataEmissao ? fmt.date(n.dataEmissao) : '—'} • {n.dataCompetencia}
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: n.status === 'cancelada' ? '#b91c1c' : '#171717', whiteSpace: 'nowrap' }}>
@@ -2834,13 +2834,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     </div>
 
                     {(n.codigoServico || n.discriminacao) && (
-                      <div style={{ fontSize: 12, color: '#525252', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 14, color: '#525252', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <strong>{n.codigoServico}</strong> {n.discriminacao}
                       </div>
                     )}
 
                     {n.status === 'rascunho' && n.ultimoErro && (
-                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 11.5, color: '#991b1b' }}>
+                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 13.5, color: '#991b1b' }}>
                         <div>{n.ultimoErro}</div>
                         {diag && (
                           <button
@@ -2862,7 +2862,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                               border: 'none',
                               background: '#b45309',
                               color: '#fff',
-                              fontSize: 11.5,
+                              fontSize: 13.5,
                               fontWeight: 700,
                               cursor: 'pointer',
                             }}
@@ -2876,7 +2876,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                       <button
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 12, padding: '6px 10px' }}
+                        style={{ fontSize: 14, padding: '6px 10px' }}
                         onClick={() => { setViewItem(n); setModalMode('ver'); }}
                       >
                         Ver
@@ -2885,14 +2885,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <>
                           <a
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{ fontSize: 14, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                             href={`/api/nfse/${n.id}/danfse?baixar=1`}
                           >
                             <FileText size={13} /> PDF
                           </a>
                           <a
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{ fontSize: 14, padding: '6px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                             href={`/api/nfse/${n.id}/xml`}
                             download
                           >
@@ -2904,14 +2904,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <>
                           <button
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 12, padding: '6px 10px' }}
+                            style={{ fontSize: 14, padding: '6px 10px' }}
                             onClick={() => abrirEdicao(n)}
                           >
                             Editar
                           </button>
                           <button
                             className="btn btn-primary btn-sm"
-                            style={{ fontSize: 12, padding: '6px 12px', background: '#600000', borderColor: '#600000' }}
+                            style={{ fontSize: 14, padding: '6px 12px', background: '#600000', borderColor: '#600000' }}
                             disabled={!!transmitindoId}
                             onClick={() => handleTransmitir(n)}
                           >
@@ -3755,7 +3755,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             {/* envio automático do PDF da NFS-e no WhatsApp do usuário emissor */}
             <div style={{ ...secaoStyle, background: enviarWppEmissor ? '#f0fdf4' : secaoStyle.background, borderColor: enviarWppEmissor ? '#bbf7d0' : 'var(--border-light)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: enviarWppEmissor ? 10 : 0 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#171717' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14.5, fontWeight: 600, color: '#171717' }}>
                   <input
                     type="checkbox"
                     checked={enviarWppEmissor}
@@ -3763,13 +3763,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   />
                   <span>Receber PDF da NFS-e no meu WhatsApp ao emitir</span>
                 </label>
-                <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>
                   Envio via (46) 99980-0010
                 </span>
               </div>
               {enviarWppEmissor && (
                 <div>
-                  <label className="form-label" style={{ fontSize: 12 }}>Seu WhatsApp para receber o PDF (DDD + número) *</label>
+                  <label className="form-label" style={{ fontSize: 14 }}>Seu WhatsApp para receber o PDF (DDD + número) *</label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <input
                       type="tel"
@@ -3786,10 +3786,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                       onClick={testarEnvioWppEmissor}
                       style={{ borderColor: '#16a34a', color: '#15803d', fontWeight: 600 }}
                     >
-                      {testandoWppEmissor ? 'Enviando teste...' : '⚡ Testar envio'}
+                      {testandoWppEmissor ? 'Enviando teste...' : 'Testar envio'}
                     </button>
                   </div>
-                  <div style={{ fontSize: 11, color: '#525252', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: '#525252', marginTop: 4 }}>
                     Assim que a nota for autorizada, o PDF oficial chega no seu WhatsApp pronto para encaminhar ao cliente. Sua escolha fica salva para as próximas notas.
                   </div>
                 </div>

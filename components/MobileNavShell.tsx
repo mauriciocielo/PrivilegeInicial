@@ -94,11 +94,11 @@ export default function MobileNavShell({
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary, #171717)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--text-primary, #171717)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {userName || 'Privilege Gestão'}
                 </div>
                 {userEmail && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted, #737373)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted, #737373)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {userEmail}
                   </div>
                 )}
@@ -143,7 +143,7 @@ export default function MobileNavShell({
                   border: '1px solid var(--border, #e5e5e5)',
                   background: 'var(--bg-base, #fafafa)',
                   color: 'var(--text-muted, #525252)',
-                  fontSize: 13,
+                  fontSize: 14.5,
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
@@ -154,7 +154,7 @@ export default function MobileNavShell({
 
               {selectableEmpresas.length > 0 && (
                 <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted, #737373)', marginBottom: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted, #737373)', marginBottom: 4 }}>
                     <Building2 size={11} style={{ color: '#600000' }} /> Empresa Ativa
                   </label>
                   <select
@@ -170,7 +170,7 @@ export default function MobileNavShell({
                       border: '1px solid var(--border, #e5e5e5)',
                       background: 'var(--bg-card, #ffffff)',
                       color: 'var(--text-primary, #171717)',
-                      fontSize: 13,
+                      fontSize: 14.5,
                       fontWeight: 600,
                     }}
                   >
@@ -203,7 +203,7 @@ export default function MobileNavShell({
                         border: 'none',
                         background: isOpen ? 'rgba(96, 0, 0, 0.06)' : 'transparent',
                         color: isOpen ? '#600000' : 'var(--text-primary, #171717)',
-                        fontSize: 13,
+                        fontSize: 14.5,
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
@@ -241,7 +241,7 @@ export default function MobileNavShell({
                                 border: 'none',
                                 background: active ? '#600000' : 'transparent',
                                 color: active ? '#ffffff' : 'var(--text-primary, #262626)',
-                                fontSize: 13.5,
+                                fontSize: 15,
                                 fontWeight: active ? 600 : 500,
                                 cursor: 'pointer',
                                 textAlign: 'left',

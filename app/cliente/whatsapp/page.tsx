@@ -25,7 +25,7 @@ export default function ClienteWhatsAppPage() {
           <MessageSquare size={26} />
         </div>
         <h2 style={{ fontSize: 19, fontWeight: 700, margin: '0 0 8px' }}>Atendimento Privilege</h2>
-        <p style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 20px' }}>
+        <p style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 20px' }}>
           O painel interno de mensagens é restrito à equipe do escritório. Para falar diretamente com o seu consultor, clique no botão abaixo.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>

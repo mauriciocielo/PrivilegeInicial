@@ -94,7 +94,7 @@ export default function ConfiguracoesAvancadasPage() {
       <div className="page-body">
         <div className="tabs" style={{ marginBottom: 20 }}>
           <button className={`tab ${abaAtiva === 'saude' ? 'active' : ''}`} onClick={() => setAbaAtiva('saude')}>
-            🛡️ Monitor 24h &amp; Alertas
+            Monitor 24h &amp; Alertas
           </button>
           <button className={`tab ${abaAtiva === 'cofre' ? 'active' : ''}`} onClick={() => setAbaAtiva('cofre')}>
             Cofre (Fechamento)

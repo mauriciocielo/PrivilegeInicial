@@ -60,7 +60,7 @@ export function StatusBadge({
         gap: 6,
         padding: '3px 9px',
         borderRadius: 99,
-        fontSize: 11.5,
+        fontSize: 13.5,
         fontWeight: 600,
         background: t.bg,
         color: t.color,
