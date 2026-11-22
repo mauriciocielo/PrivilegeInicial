@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   X, ChevronDown, LayoutDashboard, NotebookPen, ReceiptText, MessageSquare, Menu,
-  Building2, Sun, Moon, LogOut, Search, BarChart3, type LucideIcon,
+  Building2, LogOut, Search, BarChart3, type LucideIcon,
 } from 'lucide-react';
 import type { Empresa } from '../lib/store';
 
@@ -26,10 +26,7 @@ interface MobileNavShellProps {
   selectableEmpresas: Empresa[];
   selectedEmpresaId: string;
   onSelectEmpresa: (id: string) => void;
-  onNavigate: (href: string) => void;
-  theme: string;
-  onToggleTheme: () => void;
-  onLogout: () => void;
+  onNavigate: (href: string) => void;  onLogout: () => void;
 }
 
 export default function MobileNavShell({
@@ -46,10 +43,7 @@ export default function MobileNavShell({
   selectableEmpresas,
   selectedEmpresaId,
   onSelectEmpresa,
-  onNavigate,
-  theme,
-  onToggleTheme,
-  onLogout,
+  onNavigate,  onLogout,
 }: MobileNavShellProps) {
   const [expandedSection, setExpandedSection] = useState<string>(navSections[0]?.section || '');
   const prefixo = role === 'cliente' ? '/cliente' : '/consultor';
@@ -270,14 +264,6 @@ export default function MobileNavShell({
                 gap: 8,
               }}
             >
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="btn btn-secondary btn-sm"
-                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                {theme === 'dark' ? <><Sun size={14} /> Claro</> : <><Moon size={14} /> Escuro</>}
-              </button>
               <button
                 type="button"
                 onClick={() => {

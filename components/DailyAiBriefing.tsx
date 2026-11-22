@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ArrowRight, Lightbulb } from 'lucide-react';
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { store } from '../lib/store';
 import type { BriefingDiaPayload, PrioridadeBriefing } from '../app/api/ai/briefing-dia/route';
 
@@ -260,24 +260,6 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
             })}
           </div>
 
-          {/* Dica estratégica */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
-              padding: '9px 12px',
-              borderRadius: 10,
-              background: 'var(--bg-base, #fafafa)',
-              border: '1px solid var(--border, #ececec)',
-              fontSize: 14,
-              color: 'var(--text-secondary, #525252)',
-              lineHeight: 1.4,
-            }}
-          >
-            <Lightbulb size={15} style={{ color: '#b45309', flexShrink: 0, marginTop: 1 }} />
-            <span><strong>Dica do dia:</strong> {data.dicaEstrategica}</span>
-          </div>
         </>
       )}
     </div>

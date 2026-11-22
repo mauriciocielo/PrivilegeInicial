@@ -14,7 +14,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, type LucideIcon,
+  Bell, LogOut, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -212,7 +212,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [appMode, setAppMode] = useState<'empresarial' | 'condominio'>('empresarial');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'idle'>('idle');
   const acessoNfse = useAcessoNfse(role === 'cliente');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     // Sincronização de status do banco
@@ -227,18 +226,12 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   }, []);
 
   useEffect(() => {
-    // Carregamento de tema
-    const saved = localStorage.getItem('cf_theme') || 'light';
-    setTheme(saved as 'light' | 'dark');
-    document.documentElement.setAttribute('data-theme', saved);
+    // Tema escuro desativado: as telas têm milhares de cores fixas em estilos inline e
+    // só uma parte se adaptava (textos escuros sobre fundo escuro, cartões brancos).
+    // Quem tinha escolhido o escuro volta ao claro até o tema ser refeito por completo.
+    localStorage.removeItem('cf_theme');
+    document.documentElement.setAttribute('data-theme', 'light');
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    localStorage.setItem('cf_theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-  };
 
   // Estados customizados para Premium UI
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -880,21 +873,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         >
           <Search size={13} style={{ color: '#600000' }} />
           {!isSidebarCompact && <span className="topbar-rotulo">Buscar</span>}
-          {!isSidebarCompact && (
-            <kbd className="topbar-rotulo"
-              style={{
-                fontSize: 12.5,
-                padding: '1px 5px',
-                borderRadius: 5,
-                border: '1px solid #e5e5e5',
-                background: '#fafafa',
-                color: '#737373',
-                fontFamily: 'inherit',
-              }}
-            >
-              Ctrl K
-            </kbd>
-          )}
         </button>
 
         {/* Central de Notificações & Status 24h */}
@@ -1036,16 +1014,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               <div style={{ height: 1, background: '#f0f0f0', margin: '8px 0' }} />
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                  <span style={{ fontSize: 14, color: '#525252' }}>Tema</span>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '4px 10px', fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                    onClick={toggleTheme}
-                  >
-                    {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}
-                  </button>
-                </div>
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', textAlign: 'left', display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-start' }}
@@ -1105,8 +1073,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       selectedEmpresaId={selectedEmpresa}
       onSelectEmpresa={id => handleEmpresaChange(id)}
       onNavigate={href => router.push(href)}
-      theme={theme}
-      onToggleTheme={toggleTheme}
       onLogout={handleLogout}
     />
     </>

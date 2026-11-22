@@ -414,11 +414,14 @@ export default function ConsultorDashboard() {
             </div>
             {carregado && <TrendBadge atual={totais.saldo} anterior={totaisAnterior.receitas - totaisAnterior.despesas} favoravelSeMaior={true} />}
           </div>
+          {totalDivida > 0 && (
           <div className="stat-card">
             <div className="stat-icon yellow"><Scale size={18} /></div>
             <div className="stat-label">Total Endividamento Ativo</div>
             <div className="stat-value" style={{ color: '#b45309' }}><AnimatedCounter target={totalDivida} prefix="R$ " decimals={2} /></div>
           </div>
+          )}
+          {(titulosErp.receberAberto > 0 || titulosErp.pagarAberto > 0) && (
           <a href="/consultor/contas-erp" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
             <div className={`stat-icon ${titulosErp.vencidos > 0 ? 'red' : 'blue'}`}>
               <Scale size={18} />
@@ -430,6 +433,7 @@ export default function ConsultorDashboard() {
               <span style={{ color: 'var(--red)' }}>-{fmt.currency(titulosErp.pagarAberto)}</span>
             </div>
           </a>
+          )}
         </div>
 
         {/* Leitura rápida do caixa futuro — o detalhamento fica na tela dedicada */}
@@ -440,8 +444,8 @@ export default function ConsultorDashboard() {
           <div className="glass-card card-dynamic animate-slide-up" style={{ padding: '24px 28px', border: '1px solid rgba(255,255,255,0.94)', background: 'rgba(255,255,255,0.45)', animationDelay: '600ms', display: 'flex', flexDirection: 'column' }}>
             <div className="card-header">
               <div>
-                <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>DRE Interativa — YOY / MoM</div>
-                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Crescimento e Margem nos últimos 6 meses (Waterfall simulado)</div>
+                <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Receitas, despesas e resultado</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Últimos 6 meses</div>
               </div>
             </div>
             <div className="chart-container" style={{ paddingTop: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -456,9 +460,9 @@ export default function ConsultorDashboard() {
                     formatter={(v: any) => fmt.currency(Number(v || 0))}
                   />
                   <Legend wrapperStyle={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: 10 }} />
-                  <Bar dataKey="receitas" name="Entradas (Revenue)" fill="url(#colorRecC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
-                  <Bar dataKey="despesas" name="Saídas (Costs)" fill="url(#colorDespC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
-                  <Bar dataKey="saldo" name="Margem Bruta (Net)" fill="var(--amber)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="receitas" name="Receitas" fill="url(#colorRecC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="despesas" name="Despesas" fill="url(#colorDespC)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
+                  <Bar dataKey="saldo" name="Resultado" fill="var(--amber)" radius={[4,4,0,0]} animationDuration={1500} animationEasing="ease-out" />
                   <defs>
                     <linearGradient id="colorRecC" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>

@@ -44,7 +44,8 @@ export default function FloatingCopilot() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<'auto' | 'groq' | 'gemini' | 'claude' | 'ollama'>('auto');
+  // A escolha do motor fica no servidor (Groq → Ollama → configuração → Gemini → Claude → OpenAI).
+  const provider = 'auto' as const;
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -268,29 +269,6 @@ Regras:
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <select
-                value={provider}
-                onChange={e => setProvider(e.target.value as typeof provider)}
-                title="Motor de IA"
-                aria-label="Motor de IA"
-                style={{
-                  background: 'rgba(255,255,255,0.14)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  borderRadius: 8,
-                  padding: '4px 6px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="auto" style={{ color: '#111' }}>Automático</option>
-                <option value="groq" style={{ color: '#111' }}>Groq</option>
-                <option value="gemini" style={{ color: '#111' }}>Gemini</option>
-                <option value="claude" style={{ color: '#111' }}>Claude</option>
-                <option value="ollama" style={{ color: '#111' }}>Ollama</option>
-              </select>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
