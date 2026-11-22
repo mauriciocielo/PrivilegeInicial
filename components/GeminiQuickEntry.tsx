@@ -241,7 +241,7 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gemini-entrada" style={{ display: 'flex', gap: 8 }}>
           <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
             <input
               type="text"

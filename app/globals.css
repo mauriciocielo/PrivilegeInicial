@@ -2577,3 +2577,23 @@ table th {
 @media (min-width: 1025px) and (max-width: 1280px) {
   .nav-section-label { padding: 6px 7px; font-size: 13.5px !important; }
 }
+
+/* Celular: o seletor de empresa saía pela borda direita do cabeçalho e o título
+   do Dashboard Fiscal ocupava quatro linhas. */
+@media (max-width: 1024px) {
+  .topbar-empresa { flex-shrink: 1 !important; min-width: 0; }
+  .topbar-empresa > div { max-width: 100% !important; min-width: 0; }
+}
+@media (max-width: 640px) {
+  .topbar-empresa > div { max-width: 38vw !important; }
+  .sidebar-logo img, .sidebar-logo svg { max-height: 34px; width: auto; }
+  .nfse-ui h1 { font-size: 23px !important; line-height: 1.2 !important; }
+}
+@media (max-width: 640px) {
+  /* A busca continua no menu do celular ("Buscar tela ou empresa..."). */
+  .topbar-busca { display: none !important; }
+  .topbar-empresa > div { overflow: hidden; }
+  /* Lançador de IA: o campo ocupa a linha inteira e os botões descem. */
+  .gemini-entrada { flex-wrap: wrap; }
+  .gemini-entrada > div:first-child { flex: 1 1 100% !important; }
+}

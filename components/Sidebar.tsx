@@ -682,7 +682,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       </div>
 
       {!isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
-        <div ref={companyDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+        <div ref={companyDropdownRef} className="topbar-empresa" style={{ position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => {
               if (selectableEmpresas.length > 1 || isConsultorOrAdmin) {
@@ -861,7 +861,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           type="button"
           onClick={() => setShowCommandPalette(true)}
           title="Busca rápida de telas e empresas (Ctrl+K)"
-          className="cmd-trigger-btn"
+          className="cmd-trigger-btn topbar-busca"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
