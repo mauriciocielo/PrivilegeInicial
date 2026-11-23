@@ -243,8 +243,8 @@ export default function AgendarPublicoPage() {
           </h1>
           <p className="page-subtitle" style={{ margin: '6px 0 0' }}>
             {confirmado
-              ? 'Sua reserva foi registrada na agenda da nossa equipe.'
-              : 'Escolha o consultor, o melhor dia e horário — enviaremos o invite por e-mail e a confirmação no WhatsApp.'}
+              ? 'Sua solicitação foi registrada na agenda da Privilege e será validada pela nossa equipe.'
+              : 'Escolha o melhor dia e horário — enviaremos o invite por e-mail e a confirmação no WhatsApp.'}
           </p>
         </div>
 
@@ -263,15 +263,15 @@ export default function AgendarPublicoPage() {
                   Tudo certo, {nome.split(' ')[0]}!
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  Reserva confirmada com {confirmado.consultor}.
+                  Reserva registrada — um consultor da Privilege validará o atendimento.
                 </div>
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13.5, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Consultor</span>
-                <strong>{confirmado.consultor}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Atendimento</span>
+                <strong>Equipe Privilege (a validar)</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Data e Horário</span>
@@ -337,7 +337,7 @@ export default function AgendarPublicoPage() {
                     {etapa}
                   </span>
                   <span className="card-title" style={{ fontSize: 22, margin: 0 }}>
-                    {etapa === 1 ? 'Consultor, Data e Horário' : 'Seus Dados e Invite'}
+                    {etapa === 1 ? 'Formato, Data e Horário' : 'Seus Dados e Invite'}
                   </span>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
@@ -347,55 +347,10 @@ export default function AgendarPublicoPage() {
 
               {etapa === 1 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-                  {/* 1. Consultor */}
-                  {consultores.length > 0 && (
-                    <div>
-                      <label className="form-label" style={{ marginBottom: 8 }}>
-                        1. Escolha o Consultor {trocandoConsultor ? '(atualizando agenda...)' : ''}
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
-                        {consultores.map(c => {
-                          const ativo = consultor?.id === c.id;
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              className={`ag-choice ag-choice-soft${ativo ? ' active' : ''}`}
-                              onClick={() => setSlugAtivo(c.slug || c.id)}
-                              style={{ padding: '10px 12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}
-                            >
-                              <span
-                                style={{
-                                  width: 30,
-                                  height: 30,
-                                  borderRadius: '50%',
-                                  background: ativo ? 'var(--accent)' : 'var(--bg-secondary)',
-                                  color: ativo ? '#fff' : 'var(--text-secondary)',
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {iniciais(c.nome)}
-                              </span>
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
-                                <div style={{ fontSize: 11, opacity: 0.72 }}>{c.cargo}</div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. Formato e Assunto */}
+                  {/* 1. Formato e Assunto */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
                     <div>
-                      <label className="form-label" style={{ marginBottom: 8 }}>2. Formato da Reunião</label>
+                      <label className="form-label" style={{ marginBottom: 8 }}>1. Formato da Reunião</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         {([
                           { id: 'Online (Google Meet)' as const, label: 'Online (Meet)', icon: <Video size={14} /> },
@@ -418,7 +373,7 @@ export default function AgendarPublicoPage() {
                     </div>
 
                     <div>
-                      <label className="form-label" style={{ marginBottom: 8 }}>3. Assunto Principal</label>
+                      <label className="form-label" style={{ marginBottom: 8 }}>2. Assunto Principal</label>
                       <select
                         className="form-control"
                         value={assunto}
@@ -431,9 +386,9 @@ export default function AgendarPublicoPage() {
                     </div>
                   </div>
 
-                  {/* 4. Dia */}
+                  {/* 3. Dia */}
                   <div>
-                    <label className="form-label" style={{ marginBottom: 8 }}>4. Escolha o Dia</label>
+                    <label className="form-label" style={{ marginBottom: 8 }}>3. Escolha o Dia</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
                       {dias.map(d => (
                         <button
@@ -454,9 +409,9 @@ export default function AgendarPublicoPage() {
                     </div>
                   </div>
 
-                  {/* 5. Horário */}
+                  {/* 4. Horário */}
                   <div>
-                    <label className="form-label" style={{ marginBottom: 8 }}>5. Escolha o Horário (Brasília)</label>
+                    <label className="form-label" style={{ marginBottom: 8 }}>4. Escolha o Horário (Brasília)</label>
                     {horariosManha.length > 0 && (
                       <div style={{ marginBottom: 10 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Manhã</div>
@@ -515,7 +470,7 @@ export default function AgendarPublicoPage() {
                       onClick={() => setEtapa(1)}
                       style={{ paddingLeft: 0, color: 'var(--accent)' }}
                     >
-                      <ArrowLeft size={14} /> Alterar consultor, dia ou horário
+                      <ArrowLeft size={14} /> Alterar dia ou horário
                     </button>
                   </div>
 
@@ -621,11 +576,11 @@ export default function AgendarPublicoPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {iniciais(consultor.nome)}
+                  PR
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{consultor.nome}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{consultor.cargo}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Equipe Privilege</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Consultor validado após confirmação</div>
                 </div>
               </div>
 

@@ -202,17 +202,12 @@ export async function GET(
 
     return NextResponse.json({
       consultor: {
-        id: consultor.id,
-        slug: slugify(consultor.name) || consultor.id,
-        nome: consultor.name,
-        cargo: consultor.role === 'administrador' ? 'Diretoria & Consultoria' : 'Consultor Privilege',
+        id: 'privilege',
+        slug: 'privilege',
+        nome: 'Equipe Privilege',
+        cargo: 'Consultoria Contábil & Financeira',
       },
-      consultores: todosConsultores.map(u => ({
-        id: u.id,
-        slug: slugify(u.name) || u.id,
-        nome: u.name,
-        cargo: u.role === 'administrador' ? 'Diretoria & Consultoria' : 'Consultor Privilege',
-      })),
+      consultores: [],
       diasDisponiveis,
     });
   } catch (error) {
@@ -390,8 +385,8 @@ export async function POST(
         id,
         title: tituloFinal,
         empresaId: 'empresa_default',
-        consultorId: consultor.id,
-        consultoresIds: [consultor.id],
+        consultorId: '',
+        consultoresIds: [],
         clienteParticipante: detalhesParticipante,
         dateStr,
         horario,
@@ -413,7 +408,7 @@ export async function POST(
         `Olá, *${nomeCliente}*! Sua reunião foi reservada com sucesso:`,
         ``,
         `• *Assunto:* ${assunto}`,
-        `• *Consultor:* ${consultor.name}`,
+        `• *Atendimento:* Equipe Privilege`,
         `• *Data:* ${dataBr}`,
         `• *Horário:* ${horario}`,
         `• *Formato:* ${modalidade}`,
