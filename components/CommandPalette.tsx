@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
-  Search, Building2, ArrowRight, CornerDownLeft, Sparkles, X, type LucideIcon,
+  Search, Building2, CornerDownLeft, X, type LucideIcon,
 } from 'lucide-react';
 import type { Empresa } from '../lib/store';
+import { formatarCpfCnpj } from '../lib/formatar-documento';
 
 export interface CommandNavSection {
   section: string;
@@ -13,7 +14,9 @@ export interface CommandNavSection {
 
 interface CommandItem {
   id: string;
-  group: 'Ações Rápidas' | 'Telas do Sistema' | 'Trocar Empresa';
+  /** Cabeçalho do grupo: a área do menu (Administrativo, Financeiro...) ou "Trocar empresa". */
+  group: string;
+  tipo: 'tela' | 'empresa';
   label: string;
   subtitle: string;
   keywords: string;
@@ -32,6 +35,16 @@ interface CommandPaletteProps {
   onNavigate: (href: string) => void;
   onSelectEmpresa: (empresaId: string) => void;
 }
+
+const teclaEstilo: CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 12,
+  padding: '1px 6px',
+  borderRadius: 5,
+  border: '1px solid var(--border, #e5e5e5)',
+  background: 'var(--bg-base, #f8f8f8)',
+  color: 'var(--text-secondary, #525252)',
+};
 
 function norm(str: string): string {
   return (str || '')
@@ -72,7 +85,8 @@ export default function CommandPalette({
       for (const item of sec.items) {
         list.push({
           id: `nav:${item.href}`,
-          group: 'Telas do Sistema',
+          group: sec.section,
+          tipo: 'tela',
           label: item.label,
           subtitle: sec.section,
           keywords: `${item.label} ${sec.section} ${item.href}`,
@@ -91,9 +105,10 @@ export default function CommandPalette({
       const nome = emp.nomeFantasia || emp.razaoSocial || 'Empresa';
       list.push({
         id: `emp:${emp.id}`,
-        group: 'Trocar Empresa',
+        group: 'Trocar empresa',
+        tipo: 'empresa',
         label: nome,
-        subtitle: emp.cnpj ? `CNPJ ${emp.cnpj}` : emp.razaoSocial || 'Trocar empresa ativa',
+        subtitle: emp.cnpj ? formatarCpfCnpj(emp.cnpj) : '',
         keywords: `${nome} ${emp.razaoSocial || ''} ${emp.cnpj || ''} ${(emp.cnpj || '').replace(/\D/g, '')}`,
         icon: Building2,
         active: emp.id === selectedEmpresaId,
@@ -110,10 +125,10 @@ export default function CommandPalette({
   const filtered = useMemo(() => {
     const q = norm(query);
     if (!q) {
-      // Sem busca: prioriza telas mais usadas (até 10) + até 6 empresas
-      const telas = allItems.filter(i => i.group === 'Telas do Sistema').slice(0, 10);
-      const emps = allItems.filter(i => i.group === 'Trocar Empresa').slice(0, 6);
-      return [...telas, ...emps];
+      // Sem busca: empresas primeiro (até 5) e depois todas as telas, agrupadas por área
+      const emps = allItems.filter(i => i.tipo === 'empresa').slice(0, 5);
+      const telas = allItems.filter(i => i.tipo === 'tela');
+      return [...emps, ...telas];
     }
     const termos = q.split(/\s+/).filter(Boolean);
     return allItems
@@ -216,7 +231,7 @@ export default function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Ir para tela, trocar empresa por nome ou CNPJ..."
+            placeholder="Buscar tela ou empresa (nome ou CNPJ)"
             style={{
               flex: 1,
               border: 'none',
@@ -243,40 +258,24 @@ export default function CommandPalette({
               <X size={15} />
             </button>
           )}
-          <kbd
-            style={{
-              fontSize: 13,
-              padding: '2px 7px',
-              borderRadius: 6,
-              border: '1px solid var(--border, #e5e5e5)',
-              color: 'var(--text-muted, #737373)',
-              background: 'var(--bg-base, #f8f8f8)',
-              fontFamily: 'inherit',
-            }}
-          >
-            ESC
-          </kbd>
         </div>
 
         {/* Lista de resultados */}
-        <div ref={listRef} style={{ overflowY: 'auto', padding: '8px 8px 10px', flex: 1 }}>
+        <div ref={listRef} style={{ overflowY: 'auto', padding: '6px 8px 10px', flex: 1 }}>
           {groups.length === 0 ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted, #737373)' }}>
-              <Sparkles size={22} style={{ opacity: 0.45, marginBottom: 8 }} />
-              <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhum resultado encontrado</div>
-              <div style={{ fontSize: 14, marginTop: 4 }}>Tente buscar por NFS-e, Lançamentos, WhatsApp, Leads ou o nome/CNPJ de uma empresa.</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Nada encontrado</div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>Tente pelo nome da tela (NFS-e, Lançamentos...) ou pelo nome ou CNPJ da empresa.</div>
             </div>
           ) : (
             groups.map(group => (
-              <div key={group.name} style={{ marginBottom: 8 }}>
+              <div key={group.name} style={{ marginTop: 6 }}>
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
+                    fontSize: 12.5,
+                    fontWeight: 600,
                     color: 'var(--text-muted, #737373)',
-                    padding: '6px 10px 4px',
+                    padding: '8px 10px 4px',
                   }}
                 >
                   {group.name}
@@ -284,6 +283,8 @@ export default function CommandPalette({
                 {group.items.map(({ item, flatIdx }) => {
                   const isSelected = flatIdx === activeIndex;
                   const Icon = item.icon;
+                  // Na busca, as telas mostram a área à direita para diferenciar nomes parecidos.
+                  const detalhe = item.tipo === 'empresa' ? item.subtitle : (query ? item.subtitle : '');
                   return (
                     <button
                       key={item.id}
@@ -295,75 +296,42 @@ export default function CommandPalette({
                         width: '100%',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 11,
-                        padding: '9px 11px',
-                        borderRadius: 10,
+                        gap: 12,
+                        padding: '8px 10px',
+                        borderRadius: 8,
                         border: 'none',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        background: isSelected ? 'rgba(96, 0, 0, 0.08)' : 'transparent',
+                        background: isSelected ? 'rgba(96, 0, 0, 0.07)' : 'transparent',
                         color: 'inherit',
+                        fontSize: 14.5,
                         transition: 'background 0.12s',
                       }}
                     >
+                      <Icon size={17} style={{ flexShrink: 0, color: isSelected ? '#600000' : 'var(--text-muted, #737373)' }} />
                       <span
                         style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          background: isSelected ? '#600000' : 'var(--bg-base, #f4f4f5)',
-                          color: isSelected ? '#ffffff' : '#600000',
+                          flex: 1,
+                          minWidth: 0,
+                          fontWeight: isSelected ? 600 : 500,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
-                        <Icon size={15} />
+                        {item.label}
                       </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            fontSize: 15,
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {item.label}
-                          {item.active && (
-                            <span
-                              style={{
-                                fontSize: 12.5,
-                                fontWeight: 700,
-                                padding: '1px 6px',
-                                borderRadius: 99,
-                                background: '#dcfce7',
-                                color: '#15803d',
-                              }}
-                            >
-                              Ativo
-                            </span>
-                          )}
+                      {item.active && (
+                        <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d', flexShrink: 0 }}>
+                          {item.tipo === 'empresa' ? 'Atual' : 'Você está aqui'}
                         </span>
-                        <span
-                          style={{
-                            display: 'block',
-                            fontSize: 13.5,
-                            color: 'var(--text-muted, #737373)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {item.subtitle}
+                      )}
+                      {detalhe && (
+                        <span style={{ fontSize: 13, color: 'var(--text-muted, #737373)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          {detalhe}
                         </span>
-                      </span>
-                      {isSelected && <ArrowRight size={14} style={{ color: '#600000', flexShrink: 0 }} />}
+                      )}
+                      {isSelected && <CornerDownLeft size={14} style={{ color: '#600000', flexShrink: 0 }} />}
                     </button>
                   );
                 })}
@@ -377,21 +345,16 @@ export default function CommandPalette({
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 14px',
+            gap: 16,
+            padding: '9px 16px',
             borderTop: '1px solid var(--border, #ececec)',
-            background: 'var(--bg-base, #fafafa)',
             fontSize: 13,
             color: 'var(--text-muted, #737373)',
           }}
         >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <span>↑↓ navegar</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <CornerDownLeft size={11} /> abrir
-            </span>
-          </span>
-          <span>Privilege • Busca Global</span>
+          <span><kbd style={teclaEstilo}>↑</kbd> <kbd style={teclaEstilo}>↓</kbd> navegar</span>
+          <span><kbd style={teclaEstilo}>Enter</kbd> abrir</span>
+          <span><kbd style={teclaEstilo}>Esc</kbd> fechar</span>
         </div>
       </div>
     </div>

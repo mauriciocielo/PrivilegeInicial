@@ -5,6 +5,13 @@ import { store } from '../lib/store';
 export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: string, mesSelecionado: string }) {
   const [score, setScore] = useState(0);
   const [details, setDetails] = useState<{ label: string; points: number; max: number }[]>([]);
+  // Recalcula quando os lançamentos terminam de carregar ou mudam.
+  const [versaoDados, setVersaoDados] = useState(0);
+  useEffect(() => {
+    const aoMudar = () => setVersaoDados(v => v + 1);
+    window.addEventListener('cfDataChange', aoMudar);
+    return () => window.removeEventListener('cfDataChange', aoMudar);
+  }, []);
 
   useEffect(() => {
     if (!empresaId || !mesSelecionado) return;
@@ -64,7 +71,7 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
 
     setScore(totalScore);
     setDetails(items);
-  }, [empresaId, mesSelecionado]);
+  }, [empresaId, mesSelecionado, versaoDados]);
 
   // Determine color based on score (Serasa style)
   let healthColor = 'var(--red)';
@@ -100,8 +107,9 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
          <div style={{
             position: 'absolute', top: 20, width: 220, height: 110,
             borderTopLeftRadius: 120, borderTopRightRadius: 120,
-            border: `12px solid ${healthColor}`, 
-            borderBottom: 'none',
+            borderTop: `12px solid ${healthColor}`,
+            borderLeft: `12px solid ${healthColor}`,
+            borderRight: `12px solid ${healthColor}`,
             boxSizing: 'border-box'
          }} />
          

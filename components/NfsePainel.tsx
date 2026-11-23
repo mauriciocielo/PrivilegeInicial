@@ -18,7 +18,7 @@ import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from '.
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
 import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
 import { diagnosticarErroNfse } from '../lib/nfse/erros-acionaveis';
-import { estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
+import { copiarParaCompetencia, estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
 import type { CnaeEmpresa } from '../lib/nfse/cnae-servicos';
 import PaginationBar from './ui/PaginationBar';
@@ -764,7 +764,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     }
   };
 
+  // Número da nota usada como modelo (só para o título do formulário).
+  const [copiaDeNumero, setCopiaDeNumero] = useState('');
+
   const openNovo = () => {
+    setCopiaDeNumero('');
     setPapelFiltro('prestadas');
     setPercentuaisRetencao(SEM_RETENCAO);
     setRetencaoManual(false);
@@ -940,6 +944,44 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     setAliquotaSimplesDigitada(null);
     setOrigemEndereco('');
     setModalMode('novo');
+  };
+
+  // Última nota prestada e autorizada: base do botão "Copiar última nota".
+  const ultimaNotaEmitida = useMemo(() => nfseList
+    .filter(n => n.status === 'emitida' && !ehNotaTomada(n, cnpjEmpresaAtual))
+    .sort((a, b) => (b.dataEmissao || '').localeCompare(a.dataEmissao || '') || (b.createdAt || '').localeCompare(a.createdAt || ''))[0],
+  [nfseList, cnpjEmpresaAtual]);
+
+  /**
+   * Abre uma nota nova já preenchida com os dados de outra (tomador, serviço, valores e retenções).
+   * Número, chave e nDPS ficam de fora: é outra nota. Basta ajustar descrição/valor e transmitir.
+   */
+  const copiarNota = (origem: NfsE) => {
+    openNovo();
+    setCopiaDeNumero(origem.numero);
+    const copia = copiarParaCompetencia(origem, hojeBrasilia().slice(0, 7), true);
+    setForm(f => ({
+      ...f,
+      ...copia,
+      obraCodigo: origem.obraCodigo,
+      obraInscImobFisc: origem.obraInscImobFisc,
+      obraCep: origem.obraCep,
+      obraLogradouro: origem.obraLogradouro,
+      obraNumero: origem.obraNumero,
+      obraComplemento: origem.obraComplemento,
+      obraBairro: origem.obraBairro,
+      gerarContaReceber: !!origem.gerarContaReceber,
+      portadorId: origem.portadorId,
+      planoContaId: origem.planoContaId,
+    }));
+    const retidos = { irrf: origem.valorIr, pis: origem.valorPis, cofins: origem.valorCofins, csll: origem.valorCsll, cp: origem.valorInss };
+    // Com retenção na nota original, mantém os mesmos percentuais (acompanham o novo valor).
+    // Sem retenção, deixa a regra da empresa decidir, como numa nota nova.
+    if (totalRetidoFederal(retidos) > 0 || origem.issRetido) {
+      setPercentuaisRetencao(percentuaisDosValores(origem.valorServicos, retidos));
+      setRetencaoManual(true);
+    }
+    toast.success(`Dados copiados da nota nº ${origem.numero}. Ajuste a descrição e o valor e transmita.`);
   };
 
   /** Guarda a alíquota digitada para as próximas notas. Cliente só usa na nota: a configuração é do escritório. */
@@ -1900,6 +1942,30 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <Plus size={16} /> Nova Nota Manual
           </button>
 
+          {ultimaNotaEmitida && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: 10,
+                fontWeight: 600,
+                fontSize: 14.5,
+                padding: '10px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+              }}
+              onClick={() => copiarNota(ultimaNotaEmitida)}
+              title={`Nova nota com os dados da nº ${ultimaNotaEmitida.numero} (${ultimaNotaEmitida.tomadorRazaoSocial}). Você só ajusta o que mudou.`}
+            >
+              <Copy size={14} /> Copiar última nota
+            </button>
+          )}
+
           {/* Sincronização direta no ADN */}
           <button
             type="button"
@@ -2701,6 +2767,16 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 {n.cobrancaBrcode ? '✓ Boleto / Pix' : 'Emitir Boleto'}
                               </button>
                             )}
+                            {!tomada && n.status !== 'rascunho' && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: 14, padding: '5px 10px', background: '#fff', border: '1px solid #e5e5e5', color: '#171717', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                onClick={() => copiarNota(n)}
+                                title="Criar uma nova nota com os mesmos dados"
+                              >
+                                <Copy size={12} /> Copiar
+                              </button>
+                            )}
                             {!tomada && n.status === 'emitida' && !n.cancelamentoEmAnalise && (
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -2844,6 +2920,15 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                             <FileCode size={13} /> XML
                           </a>
                         </>
+                      )}
+                      {!tomada && n.status !== 'rascunho' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: 14, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => copiarNota(n)}
+                        >
+                          <Copy size={13} /> Copiar
+                        </button>
                       )}
                       {!tomada && n.status === 'rascunho' && (
                         <>
@@ -3037,7 +3122,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         <div className="modal-overlay nfse-ui">
           <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
-              <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : 'Nova nota manual'}</h2>
+              <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : copiaDeNumero ? `Nova nota (cópia da nº ${copiaDeNumero})` : 'Nova nota manual'}</h2>
               <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
             </div>
 

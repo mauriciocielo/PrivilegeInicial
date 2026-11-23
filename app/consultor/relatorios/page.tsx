@@ -1264,7 +1264,7 @@ export default function RelatoriosPage() {
               }}>
                 <div style={{ borderBottom: '3px solid #8c1a22', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, width: 165, marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
+                    <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, width: 'auto', marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
                     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>Privilege Contabilidade e Consultoria</div>
                     <h1 style={{ fontSize: 24, fontWeight: 700, color: '#000', margin: 0, lineHeight: 1.2 }}>Relatório Analítico Detalhado</h1>
                     <div style={{ fontSize: 14, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>{empresa?.nomeFantasia || empresa?.razaoSocial}</div>

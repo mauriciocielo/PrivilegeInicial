@@ -6,6 +6,7 @@ import { fmt } from '../../../lib/reports';
 import AIInsights from '../../../components/AIInsights';
 import HealthScore from '../../../components/HealthScore';
 import { toast } from 'sonner';
+import { formatarCpfCnpj } from '../../../lib/formatar-documento';
 
 // Ocultamos o Header padrão e Sidebar no globals.css via print helpers
 export default function ReportBoardPage() {
@@ -32,27 +33,33 @@ export default function ReportBoardPage() {
       return;
     }
 
-    const emp = store.getEmpresas().find(e => e.id === eid);
-    setEmpresa(emp || null);
-    setMesSelecionado(mes);
+    // Os lançamentos chegam do servidor depois da primeira renderização:
+    // recalcula sempre que o store avisar que os dados mudaram.
+    const calcular = () => {
+      const emp = store.getEmpresas().find(e => e.id === eid);
+      setEmpresa(emp || null);
+      setMesSelecionado(mes);
 
-    // Calc Data
-    const lancs = store.getLancamentos(eid).filter(l => l.status === 'realizado');
-    const lancsMs = lancs.filter(l => l.data.startsWith(mes));
-    
-    const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
-    const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
-    
-    const ports = store.getPortadores(eid);
-    const [ano, mo] = mes.split('-');
-    const dataFim = new Date(Number(ano), Number(mo), 0).toISOString().split('T')[0];
-    const totalCaixa = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eid, dataFim), 0);
+      const lancs = store.getLancamentos(eid).filter(l => l.status === 'realizado');
+      const lancsMs = lancs.filter(l => l.data.startsWith(mes));
 
-    setTotais({ rec, desp, saldo: rec - desp, portadores: totalCaixa });
-    setIndicadores(store.getIndicadores(eid).find(i => i.mes === mes));
-    setLancsRecentes([...lancsMs].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5));
+      const rec = lancsMs.filter(l => l.tipo === 'receita').reduce((a, l) => a + l.valor, 0);
+      const desp = lancsMs.filter(l => l.tipo === 'despesa').reduce((a, l) => a + l.valor, 0);
 
-    setLoading(false);
+      const ports = store.getPortadores(eid);
+      const [ano, mo] = mes.split('-');
+      const dataFim = new Date(Number(ano), Number(mo), 0).toISOString().split('T')[0];
+      const totalCaixa = ports.reduce((a, p) => a + store.getSaldoPortador(p.id, eid, dataFim), 0);
+
+      setTotais({ rec, desp, saldo: rec - desp, portadores: totalCaixa });
+      setIndicadores(store.getIndicadores(eid).find(i => i.mes === mes));
+      setLancsRecentes([...lancsMs].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5));
+
+      setLoading(false);
+    };
+    calcular();
+    window.addEventListener('cfDataChange', calcular);
+    return () => window.removeEventListener('cfDataChange', calcular);
   }, [searchParams, router]);
 
   const handleExportPDF = async () => {
@@ -90,15 +97,16 @@ export default function ReportBoardPage() {
   if (loading || !empresa) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando dados estruturados...</div>;
 
   const [a, m] = mesSelecionado.split('-');
-  const mesExtenso = new Date(Number(a), Number(m)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const mesLongo = new Date(Number(a), Number(m)-1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const mesExtenso = mesLongo.charAt(0).toUpperCase() + mesLongo.slice(1);
 
   return (
     <div style={{ background: 'var(--bg-default)', minHeight: '100vh', padding: 24 }}>
       {/* Controles de Acesso (Não Impressos) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <button className="btn btn-secondary" onClick={() => router.back()}>← Voltar ao Dashboard</button>
+        <button className="btn btn-secondary" onClick={() => router.back()}>Voltar ao dashboard</button>
         <button className="btn btn-primary" onClick={handleExportPDF}>
-          PDF: Gerar Report Board
+          Baixar PDF
         </button>
       </div>
 
@@ -120,14 +128,14 @@ export default function ReportBoardPage() {
         <div style={{ borderBottom: '2px solid var(--accent)', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ marginBottom: 12 }}>
-              <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Privilege Logo" style={{ height: 45, width: 165, display: 'block' }} crossOrigin="anonymous" />
+              <img src="/privilege-logo-colorida.svg" alt="Privilege Contabilidade e Consultoria" style={{ height: 42, width: 'auto', display: 'block' }} crossOrigin="anonymous" />
             </div>
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#030712', margin: '8px 0 4px 0', letterSpacing: '-0.5px' }}>Finance Report & Analytics</h1>
-            <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>Período de Análise: <span style={{ fontWeight: 700, color: '#030712' }}>{mesExtenso}</span></div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#030712', margin: '8px 0 4px 0', letterSpacing: '-0.5px' }}>Relatório Gerencial</h1>
+            <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>Período: <span style={{ fontWeight: 700, color: '#030712' }}>{mesExtenso}</span></div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{empresa.nomeFantasia}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>CNPJ: {empresa.cnpj || 'Não cadastrado'}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>CNPJ {empresa.cnpj ? formatarCpfCnpj(empresa.cnpj) : 'não cadastrado'}</div>
             <div style={{ marginTop: 12, background: 'var(--bg-card)', padding: '6px 12px', borderRadius: 20, fontSize: 12, display: 'inline-block' }}>
                Gerado em {new Date().toLocaleDateString('pt-BR')}
             </div>
@@ -135,30 +143,30 @@ export default function ReportBoardPage() {
         </div>
 
         {/* Resumo Executivo (Totais) */}
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>1. Resumo Executivo Operacional</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-           <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Ingressos (Realizado)</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--green)', marginTop: 8 }}>{fmt.currency(totais.rec)}</div>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>1. Resumo do mês</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 32 }}>
+           <div style={{ background: '#fff', padding: '16px 14px', borderRadius: 12, border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Entradas do mês</div>
+              <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--green)', marginTop: 8 }}>{fmt.currency(totais.rec)}</div>
            </div>
-           <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Saídas (Realizado)</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--red)', marginTop: 8 }}>{fmt.currency(totais.desp)}</div>
+           <div style={{ background: '#fff', padding: '16px 14px', borderRadius: 12, border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Saídas do mês</div>
+              <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--red)', marginTop: 8 }}>{fmt.currency(totais.desp)}</div>
            </div>
-           <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid var(--border-light)', borderTop: `4px solid ${totais.saldo >= 0 ? 'var(--green)' : 'var(--red)'}` }}>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Resultado Líquido</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 8 }}>{fmt.currency(totais.saldo)}</div>
+           <div style={{ background: '#fff', padding: '16px 14px', borderRadius: 12, border: '1px solid var(--border-light)', boxShadow: `inset 0 4px 0 ${totais.saldo >= 0 ? 'var(--green)' : 'var(--red)'}` }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Resultado do mês</div>
+              <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', color: totais.saldo >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 8 }}>{fmt.currency(totais.saldo)}</div>
            </div>
-           <div style={{ background: '#030712', padding: 20, borderRadius: 12, color: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>Saldo Acumulado (Em Caixa)</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginTop: 8 }}>{fmt.currency(totais.portadores)}</div>
+           <div style={{ background: '#030712', padding: '16px 14px', borderRadius: 12, color: '#fff' }}>
+              <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>Saldo em caixa</div>
+              <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', color: '#fff', marginTop: 8 }}>{fmt.currency(totais.portadores)}</div>
            </div>
         </div>
 
         {/* Intelligence (Side by side with Score) */}
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>2. Inteligência e Performance</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>2. Análise e saúde financeira</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginBottom: 32 }}>
-           <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border-light)', overflow: 'hidden' }}>
+           <div className="report-insights" style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border-light)', overflow: 'hidden', padding: '20px 20px 0' }}>
               <AIInsights empresaId={empresa.id} mesSelecionado={mesSelecionado} />
            </div>
            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border-light)' }}>
@@ -167,8 +175,8 @@ export default function ReportBoardPage() {
         </div>
 
         {/* Recent Transactions */}
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>3. Principais Movimentações</h2>
-        <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid var(--border-light)' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textTransform: 'uppercase' }}>3. Últimas movimentações</h2>
+        <div style={{ background: '#fff', padding: '16px 14px', borderRadius: 12, border: '1px solid var(--border-light)' }}>
            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
              <thead>
                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-secondary)' }}>
@@ -198,7 +206,7 @@ export default function ReportBoardPage() {
 
         {/* Rodapé do Relatório */}
         <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
-           <div>Privilege Consultoria Financeira - Report Automático e Confidencial</div>
+           <div>Privilege Contabilidade e Consultoria · Relatório confidencial</div>
            <div>Página Única</div>
         </div>
       </div>

@@ -133,6 +133,12 @@
   padding: 0;
 }
 
+/* Botões, campos e listas não herdam a fonte por padrão no navegador (caíam em Arial). */
+button, input, select, textarea, optgroup, option {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
 html {
   scroll-behavior: smooth;
   font-size: 16px;
