@@ -56,6 +56,7 @@ export default function AgendarPublicoPage() {
   const [nome, setNome] = useState('');
   const [empresa, setEmpresa] = useState('');
   const [email, setEmail] = useState('');
+  const [emailsExtras, setEmailsExtras] = useState('');
   const [telefone, setTelefone] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -67,6 +68,8 @@ export default function AgendarPublicoPage() {
     horario: string;
     assunto: string;
     modalidade: string;
+    meetLink?: string | null;
+    inviteGoogleEnviado?: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function AgendarPublicoPage() {
           nome,
           empresa,
           email,
+          emailsExtras,
           telefone,
           assunto,
           modalidade,
@@ -135,6 +139,8 @@ export default function AgendarPublicoPage() {
         horario: json.horario,
         assunto: json.assunto || assunto,
         modalidade: json.modalidade || modalidade,
+        meetLink: json.meetLink || null,
+        inviteGoogleEnviado: Boolean(json.inviteGoogleEnviado),
       });
     } catch (err) {
       setErro((err as Error).message);
@@ -259,6 +265,20 @@ export default function AgendarPublicoPage() {
               <span style={{ color: '#64748b' }}>Formato</span>
               <strong style={{ color: '#0f172a' }}>{confirmado.modalidade}</strong>
             </div>
+            {confirmado.meetLink && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: '#64748b' }}>Google Meet</span>
+                <a href={confirmado.meetLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}>
+                  Acessar sala da reunião
+                </a>
+              </div>
+            )}
+            {confirmado.inviteGoogleEnviado && email && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: '#64748b' }}>Invite enviado</span>
+                <strong style={{ color: '#15803d' }}>{email}</strong>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -650,10 +670,23 @@ export default function AgendarPublicoPage() {
                   </div>
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 5 }}>
-                      <Mail size={13} /> E-mail (opcional)
+                      <Mail size={13} /> E-mail para o Invite *
                     </label>
-                    <input className="ag-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com.br" />
+                    <input className="ag-input" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@empresa.com.br" />
                   </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 5 }}>
+                    <Mail size={13} /> Outros e-mails convidados no Invite (opcional)
+                  </label>
+                  <input
+                    className="ag-input"
+                    type="text"
+                    value={emailsExtras}
+                    onChange={e => setEmailsExtras(e.target.value)}
+                    placeholder="socio@empresa.com.br, financeiro@empresa.com.br"
+                  />
                 </div>
 
                 <div>

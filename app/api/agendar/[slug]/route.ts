@@ -143,7 +143,8 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const nomeCliente = typeof body?.nome === 'string' ? body.nome.trim() : '';
     const empresaCliente = typeof body?.empresa === 'string' ? body.empresa.trim() : '';
-    const emailCliente = typeof body?.email === 'string' ? body.email.trim() : '';
+    const emailCliente = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const emailsExtrasRaw = typeof body?.emailsExtras === 'string' ? body.emailsExtras : '';
     const telefoneCliente = typeof body?.telefone === 'string' ? body.telefone.replace(/\D/g, '') : '';
     const assunto = typeof body?.assunto === 'string' && body.assunto.trim() ? body.assunto.trim() : 'Reunião de Consultoria';
     const modalidade = typeof body?.modalidade === 'string' && body.modalidade.trim() ? body.modalidade.trim() : 'Online (Google Meet)';
@@ -153,6 +154,117 @@ export async function POST(
 
     if (!nomeCliente || telefoneCliente.length < 10 || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || !/^\d{2}:\d{2}$/.test(horario)) {
       return NextResponse.json({ error: 'Preencha nome, WhatsApp com DDD, data e horário.' }, { status: 400 });
+    }
+
+    const emailsConvidados = Array.from(
+      new Set(
+        [emailCliente, ...emailsExtrasRaw.split(/[;,\s]+/), consultor.email || '']
+          .map(s => s.trim().toLowerCase())
+          .filter(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))
+      )
+    );
+
+    // 1. Tenta criar o evento no Google Calendar do consultor (com Invite por e-mail + Google Meet se online)
+    let googleEventId: string | null = null;
+    let meetLink: string | null = null;
+    let inviteGoogleEnviado = false;
+
+    try {
+      const rows = await db.$queryRawUnsafe<
+        Array<{ user_id: string; access_token: string; refresh_token: string | null; expires_at: string | number }>
+      >(
+        `SELECT user_id, access_token, refresh_token, expires_at
+           FROM google_calendar_tokens
+          WHERE user_id = $1
+          LIMIT 1`,
+        consultor.id
+      );
+
+      const row = rows[0];
+      let gToken: string | null = null;
+      if (row) {
+        const exp = Number(row.expires_at || 0);
+        if (row.access_token && exp > Date.now() + 2 * 60 * 1000) {
+          gToken = row.access_token;
+        } else if (row.refresh_token) {
+          const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+          const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+          if (clientId && clientSecret) {
+            const tRes = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                client_id: clientId,
+                client_secret: clientSecret,
+                refresh_token: row.refresh_token,
+                grant_type: 'refresh_token',
+              }),
+            });
+            const tJson = await tRes.json().catch(() => ({}));
+            if (tRes.ok && tJson.access_token) {
+              gToken = tJson.access_token;
+              const novoExp = Date.now() + Number(tJson.expires_in || 3600) * 1000;
+              await db.$executeRawUnsafe(
+                `UPDATE google_calendar_tokens SET access_token = $2, expires_at = $3, updated_at = NOW() WHERE user_id = $1`,
+                row.user_id,
+                gToken,
+                novoExp
+              );
+            }
+          }
+        }
+      }
+
+      if (gToken) {
+        const [hh, mm] = horario.split(':').map(Number);
+        const fimHh = Math.min(23, (hh || 9) + 1);
+        const ehOnline = modalidade.toLowerCase().includes('online') || modalidade.toLowerCase().includes('meet');
+        const evBody: any = {
+          summary: empresaCliente ? `${assunto} — ${empresaCliente}` : `${assunto} — ${nomeCliente}`,
+          description: [
+            `Cliente: ${nomeCliente}${empresaCliente ? ` (${empresaCliente})` : ''}`,
+            `WhatsApp: ${telefoneCliente}`,
+            observacoes ? `Pauta: ${observacoes}` : '',
+            'Agendado via Privilege Contabilidade e Consultoria',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          start: { dateTime: `${dateStr}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00-03:00` },
+          end: { dateTime: `${dateStr}T${String(fimHh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00-03:00` },
+          location: modalidade,
+        };
+        if (emailsConvidados.length > 0) {
+          evBody.attendees = emailsConvidados.map(email => ({ email }));
+        }
+        if (ehOnline) {
+          evBody.conferenceData = {
+            createRequest: {
+              requestId: `pub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          };
+        }
+
+        const gRes = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${gToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(evBody),
+          }
+        );
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          googleEventId = gData.id || null;
+          meetLink =
+            gData.hangoutLink ||
+            gData.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri ||
+            null;
+          inviteGoogleEnviado = emailsConvidados.length > 0;
+        }
+      }
+    } catch {
+      // ignora falha pontual do Google Calendar; agendamento segue normalmente
     }
 
     // Garante empresa_default para satisfazer FK de AgendaTask
@@ -193,7 +305,8 @@ export async function POST(
         horario,
         completed: false,
         recurrent: false,
-        location: modalidade,
+        location: meetLink || modalidade,
+        googleEventId,
       },
     });
 
@@ -212,6 +325,8 @@ export async function POST(
         `• *Data:* ${dataBr}`,
         `• *Horário:* ${horario}`,
         `• *Formato:* ${modalidade}`,
+        ...(meetLink ? [`• *Link Google Meet:* ${meetLink}`] : []),
+        ...(inviteGoogleEnviado && emailCliente ? [`• *Invite enviado para:* ${emailCliente}`] : []),
         ``,
         `Caso precise ajustar o horário, basta responder por aqui.`,
         ``,
@@ -237,9 +352,10 @@ export async function POST(
           ``,
           `• *Cliente:* ${nomeCliente}${empresaCliente ? ` (${empresaCliente})` : ''}`,
           `• *WhatsApp:* ${telefoneCliente}`,
-          ...(emailCliente ? [`• *E-mail:* ${emailCliente}`] : []),
+          ...(emailCliente ? [`• *E-mail (Invite):* ${emailCliente}`] : []),
           `• *Assunto:* ${assunto}`,
           `• *Formato:* ${modalidade}`,
+          ...(meetLink ? [`• *Meet:* ${meetLink}`] : []),
           `• *Data:* ${dataBr} às ${horario}`,
           ...(observacoes ? [`• *Obs:* ${observacoes}`] : []),
         ].join('\n');
@@ -256,6 +372,8 @@ export async function POST(
       horario,
       assunto,
       modalidade,
+      meetLink,
+      inviteGoogleEnviado,
     });
   } catch (error) {
     console.error('Erro em POST /api/agendar/[slug]:', error);
