@@ -127,8 +127,11 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const nomeCliente = typeof body?.nome === 'string' ? body.nome.trim() : '';
     const empresaCliente = typeof body?.empresa === 'string' ? body.empresa.trim() : '';
+    const emailCliente = typeof body?.email === 'string' ? body.email.trim() : '';
     const telefoneCliente = typeof body?.telefone === 'string' ? body.telefone.replace(/\D/g, '') : '';
     const assunto = typeof body?.assunto === 'string' && body.assunto.trim() ? body.assunto.trim() : 'Reunião de Consultoria';
+    const modalidade = typeof body?.modalidade === 'string' && body.modalidade.trim() ? body.modalidade.trim() : 'Online (Google Meet)';
+    const observacoes = typeof body?.observacoes === 'string' ? body.observacoes.trim() : '';
     const dateStr = typeof body?.dateStr === 'string' ? body.dateStr.trim() : '';
     const horario = typeof body?.horario === 'string' ? body.horario.trim() : '';
 
@@ -153,6 +156,14 @@ export async function POST(
 
     const id = `pub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const tituloFinal = empresaCliente ? `${assunto} — ${empresaCliente}` : `${assunto} — ${nomeCliente}`;
+    const detalhesParticipante = [
+      nomeCliente,
+      telefoneCliente,
+      emailCliente || null,
+      observacoes ? `Obs: ${observacoes}` : null,
+    ]
+      .filter(Boolean)
+      .join(' • ');
 
     await db.agendaTask.create({
       data: {
@@ -161,12 +172,12 @@ export async function POST(
         empresaId: 'empresa_default',
         consultorId: consultor.id,
         consultoresIds: [consultor.id],
-        clienteParticipante: `${nomeCliente} (${telefoneCliente})`,
+        clienteParticipante: detalhesParticipante,
         dateStr,
         horario,
         completed: false,
         recurrent: false,
-        location: 'Online / A confirmar',
+        location: modalidade,
       },
     });
 
@@ -184,6 +195,7 @@ export async function POST(
         `• *Consultor:* ${consultor.name}`,
         `• *Data:* ${dataBr}`,
         `• *Horário:* ${horario}`,
+        `• *Formato:* ${modalidade}`,
         ``,
         `Caso precise ajustar o horário, basta responder por aqui.`,
         ``,
@@ -209,8 +221,11 @@ export async function POST(
           ``,
           `• *Cliente:* ${nomeCliente}${empresaCliente ? ` (${empresaCliente})` : ''}`,
           `• *WhatsApp:* ${telefoneCliente}`,
+          ...(emailCliente ? [`• *E-mail:* ${emailCliente}`] : []),
           `• *Assunto:* ${assunto}`,
+          `• *Formato:* ${modalidade}`,
           `• *Data:* ${dataBr} às ${horario}`,
+          ...(observacoes ? [`• *Obs:* ${observacoes}`] : []),
         ].join('\n');
         await sendBaileysLiveMessage(destCons, msgCons, undefined, ownerId).catch(() => {});
       }
@@ -221,7 +236,10 @@ export async function POST(
       id,
       consultor: consultor.name,
       dataBr,
+      dateStr,
       horario,
+      assunto,
+      modalidade,
     });
   } catch (error) {
     console.error('Erro em POST /api/agendar/[slug]:', error);
