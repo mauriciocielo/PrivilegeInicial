@@ -6,7 +6,60 @@ import { registrarDisparoWhatsApp } from '../../../../lib/whatsapp-disparos-log'
 
 export const dynamic = 'force-dynamic';
 
-const SLOTS_PADRAO = ['08:30', '09:30', '10:30', '11:30', '13:30', '14:30', '15:30', '16:30', '17:30'];
+const SLOTS_PADRAO = ['08:00', '09:00', '10:00', '11:00', '13:30', '14:30', '15:30', '16:30', '17:30'];
+
+async function obterGoogleAccessTokenConsultor(userId: string): Promise<string | null> {
+  try {
+    const rows = await db.$queryRawUnsafe<
+      Array<{ user_id: string; access_token: string; refresh_token: string | null; expires_at: string | number }>
+    >(
+      `SELECT user_id, access_token, refresh_token, expires_at
+         FROM google_calendar_tokens
+        WHERE user_id = $1
+        LIMIT 1`,
+      userId
+    );
+    const row = rows[0];
+    if (!row) return null;
+
+    const exp = Number(row.expires_at || 0);
+    if (row.access_token && exp > Date.now() + 2 * 60 * 1000) {
+      return row.access_token;
+    }
+
+    if (row.refresh_token) {
+      const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+      if (clientId && clientSecret) {
+        const tRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: row.refresh_token,
+            grant_type: 'refresh_token',
+          }),
+          signal: AbortSignal.timeout(7000),
+        });
+        const tJson = await tRes.json().catch(() => ({}));
+        if (tRes.ok && tJson.access_token) {
+          const novoExp = Date.now() + Number(tJson.expires_in || 3600) * 1000;
+          await db.$executeRawUnsafe(
+            `UPDATE google_calendar_tokens SET access_token = $2, expires_at = $3, updated_at = NOW() WHERE user_id = $1`,
+            row.user_id,
+            tJson.access_token,
+            novoExp
+          );
+          return String(tJson.access_token);
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function slugify(nome: string): string {
   return (nome || '')
@@ -73,6 +126,39 @@ export async function GET(
       select: { dateStr: true, horario: true, consultorId: true, consultoresIds: true },
     });
 
+    // Cruza também com o Google Calendar do consultor (se conectado) para evitar choque de horários externos
+    const intervalosGoogle: Array<{ startMs: number; endMs: number }> = [];
+    if (datasConsulta.length > 0) {
+      try {
+        const gToken = await obterGoogleAccessTokenConsultor(consultor.id);
+        if (gToken) {
+          const timeMin = `${datasConsulta[0]}T00:00:00-03:00`;
+          const timeMax = `${datasConsulta[datasConsulta.length - 1]}T23:59:59-03:00`;
+          const gRes = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true`,
+            { headers: { Authorization: `Bearer ${gToken}` }, signal: AbortSignal.timeout(6000) }
+          );
+          if (gRes.ok) {
+            const gData = await gRes.json();
+            for (const ev of gData.items || []) {
+              if (ev.status === 'cancelled') continue;
+              if (ev.transparency === 'transparent') continue; // evento marcado como "livre"
+              const sRaw = ev.start?.dateTime || (ev.start?.date ? `${ev.start.date}T00:00:00-03:00` : null);
+              const eRaw = ev.end?.dateTime || (ev.end?.date ? `${ev.end.date}T23:59:59-03:00` : null);
+              if (!sRaw || !eRaw) continue;
+              const startMs = Date.parse(sRaw);
+              const endMs = Date.parse(eRaw);
+              if (!Number.isNaN(startMs) && !Number.isNaN(endMs)) {
+                intervalosGoogle.push({ startMs, endMs });
+              }
+            }
+          }
+        }
+      } catch {
+        // fallback silencioso apenas com a Agenda do sistema
+      }
+    }
+
     const horaAtualMin = agoraBr.getUTCHours() * 60 + agoraBr.getUTCMinutes();
     const hojeIso = agoraBr.toISOString().slice(0, 10);
 
@@ -94,6 +180,12 @@ export async function GET(
         if (iso === hojeIso) {
           const [sh, sm] = slot.split(':').map(Number);
           if (sh * 60 + sm <= horaAtualMin + 60) return false; // mínimo 1h de antecedência
+        }
+        if (intervalosGoogle.length > 0) {
+          const slotStart = Date.parse(`${iso}T${slot}:00-03:00`);
+          const slotEnd = slotStart + 60 * 60 * 1000;
+          const conflitoGoogle = intervalosGoogle.some(ev => slotStart < ev.endMs && slotEnd > ev.startMs);
+          if (conflitoGoogle) return false;
         }
         return true;
       });
