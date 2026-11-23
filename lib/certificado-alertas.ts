@@ -113,37 +113,50 @@ export async function coletarCertificadosEmAtencao(): Promise<CertificadoEmAtenc
   return itens.sort((a, b) => a.validoAte.localeCompare(b.validoAte));
 }
 
+function formatarDocumento(doc?: string): string {
+  const d = String(doc || '').replace(/\D/g, '');
+  if (d.length === 14) {
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  }
+  if (d.length === 11) {
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  }
+  return doc || '';
+}
+
 export function montarMensagemAlertaCertificados(itens: CertificadoEmAtencao[]): string {
   const vencidos = itens.filter(i => i.vencido);
   const vencendo = itens.filter(i => !i.vencido);
 
   const linhas: string[] = [
-    `*Aviso de Certificados Digitais A1*`,
+    `🔐 *Aviso de Certificados Digitais A1*`,
     `Privilege Contabilidade`,
     ``,
   ];
 
   if (itens.length === 0) {
-    linhas.push(`Todos os certificados digitais A1 monitorados estão válidos e em dia.`);
+    linhas.push(`✅ Todos os certificados digitais A1 monitorados estão válidos e em dia.`);
   } else {
     if (vencidos.length > 0) {
-      linhas.push(`*Vencidos (${vencidos.length}):*`);
+      linhas.push(`🔴 *Vencidos (${vencidos.length}):*`);
       for (const c of vencidos) {
-        linhas.push(`▪ *${c.nome}* — vencido em ${c.validoAteBr}`);
+        const docFmt = formatarDocumento(c.cnpj);
+        linhas.push(`🏢 *${c.nome}*${docFmt ? `\n   • CNPJ: ${docFmt}` : ''}\n   • 📅 Vencido em *${c.validoAteBr}*`);
       }
       linhas.push(``);
     }
 
     if (vencendo.length > 0) {
-      linhas.push(`*Vencendo em até 30 dias (${vencendo.length}):*`);
+      linhas.push(`⚠️ *Vencendo em até 30 dias (${vencendo.length}):*`);
       for (const c of vencendo) {
+        const docFmt = formatarDocumento(c.cnpj);
         const prazo = c.dias === 0 ? 'vence hoje' : c.dias === 1 ? 'vence amanhã' : `vence em ${c.dias} dias`;
-        linhas.push(`▪ *${c.nome}* — ${prazo} (${c.validoAteBr})`);
+        linhas.push(`🏢 *${c.nome}*${docFmt ? `\n   • CNPJ: ${docFmt}` : ''}\n   • 📅 ${prazo} (*${c.validoAteBr}*)`);
       }
       linhas.push(``);
     }
 
-    linhas.push(`Providencie a renovação para evitar interrupção na emissão e consulta de notas fiscais.`);
+    linhas.push(`📌 Providencie a renovação para evitar interrupção na emissão e consulta de notas fiscais.`);
   }
 
   linhas.push(``, `_Monitoramento Automático • Privilege Contabilidade_`);
