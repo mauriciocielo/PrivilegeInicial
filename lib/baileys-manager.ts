@@ -1148,12 +1148,12 @@ export async function sendBaileysLiveMessage(
     mimeType?: string;
   },
   ownerId = 'default'
-): Promise<{ sent: boolean; waKey?: any; profilePic?: string | null }> {
+): Promise<{ sent: boolean; waKey?: any; profilePic?: string | null; error?: string }> {
   const sock = await ensureBaileysConnected(true, ownerId);
   const st = getSessionState(ownerId);
   if (!sock) {
     console.warn(`[Baileys:${ownerId}] Socket não está conectado no momento do envio.`);
-    return { sent: false };
+    return { sent: false, error: `Socket da sessão "${ownerId}" não está conectado.` };
   }
 
   try {
@@ -1205,9 +1205,9 @@ export async function sendBaileysLiveMessage(
     notifySocketIoClients(chatId, ownerId);
 
     return { sent: true, waKey: sentMsg?.key, profilePic };
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[Baileys:${ownerId}] Erro ao enviar mensagem ao vivo:`, err);
-    return { sent: false };
+    return { sent: false, error: err?.message || String(err) };
   }
 }
 

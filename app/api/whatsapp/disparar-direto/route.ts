@@ -3,7 +3,8 @@ import { requireAuth } from '../../../../lib/api-auth';
 import { apenasDigitos } from '../../../../lib/nfse/dps';
 import { encontrarSessaoAdminPorNumero } from '../../../../lib/nfse/enviar-whatsapp-nfse';
 import { buscarGrupoWhatsAppEmpresa } from '../../../../lib/agenda-lembretes';
-import { sendBaileysLiveMessage } from '../../../../lib/baileys-manager';
+import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from '../../../../lib/baileys-manager';
+import { resolveWhatsAppOwnerId } from '../../../../lib/whatsapp-owner';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,10 +72,12 @@ export async function POST(request: Request) {
       destinoNome = telefoneRaw;
     }
 
-    const ownerId = await encontrarSessaoAdminPorNumero('46999800010');
+    const ownerIdPreferencial = resolveWhatsAppOwnerId(request);
+    const ownerId = await encontrarSessaoAdminPorNumero('46999800010', ownerIdPreferencial);
     if (!ownerId) {
+      const ativas = listarSessoesBaileysAtivas().map(s => `${s.ownerId}:${s.connected ? 'on' : 'off'}`).join(', ');
       return NextResponse.json(
-        { error: 'WhatsApp (46) 99980-0010 não está conectado no servidor no momento.' },
+        { error: `WhatsApp não está conectado no servidor no momento (${ativas || '0 sessões em memória'}). Reconecte no painel WhatsApp.` },
         { status: 422 }
       );
     }
@@ -90,7 +93,10 @@ export async function POST(request: Request) {
 
     const res = await sendBaileysLiveMessage(destino, mensagem, options, ownerId);
     if (!res?.sent) {
-      return NextResponse.json({ error: 'Não foi possível enviar no WhatsApp.' }, { status: 500 });
+      return NextResponse.json(
+        { error: `Não foi possível enviar no WhatsApp (${res?.error || `sessão ${ownerId}`}).` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
