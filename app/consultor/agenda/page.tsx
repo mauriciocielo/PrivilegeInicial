@@ -649,7 +649,46 @@ export default function AgendaPage() {
 
   const handleDelete = async (task: AgendaTask) => {
     if (!(await confirmAsync('Excluir este compromisso?'))) return;
-    saveTasks(tasks.filter(t => t.id !== task.id));
+    const restantes = tasks.filter(t => t.id !== task.id);
+    setTasks(restantes);
+    store.saveAgendaTasks(restantes);
+
+    // 1. Exclui de verdade no PostgreSQL (migrate-backup com cf_deleted_records)
+    try {
+      const delRes = await fetch('/api/migrate-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collection: 'cf_deleted_records',
+          data: [{ collection: 'cf_agenda_semanal', id: task.id }],
+        }),
+      });
+      if (!delRes.ok) {
+        console.error('Falha ao excluir compromisso no servidor:', delRes.status);
+      }
+    } catch (err) {
+      console.error('Erro ao excluir compromisso no servidor:', err);
+    }
+
+    // 2. Se estava sincronizado com o Google Calendar, remove lá também para não reaparecer no próximo sync
+    const gcalId = task.id.startsWith('gcal-')
+      ? task.id.slice(5)
+      : ((task as any).googleEventId ? String((task as any).googleEventId) : '');
+    if (gcalId) {
+      try {
+        const gToken = await obterTokenGoogleValido();
+        if (gToken) {
+          await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(gcalId)}`,
+            { method: 'DELETE', headers: { Authorization: `Bearer ${gToken}` } }
+          );
+        }
+      } catch {
+        // ignora erro pontual do Google Calendar
+      }
+    }
+
+    toast.success('Compromisso excluído!');
   };
 
   const handleToggleComplete = (task: AgendaTask) => {
