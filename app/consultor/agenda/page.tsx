@@ -580,8 +580,9 @@ export default function AgendaPage() {
       consultorId: ((newTask as any).consultoresIds || [])[0] || '',
       horario: newTask.horario,
       dateStr: newTask.dateStr,
-      completed: false,
+      completed: isEdit ? Boolean(anterior?.completed) : false,
       recurrent: newTask.recurrent || false,
+      location: newTask.location || '',
       clienteParticipante: (newTask as any).clienteParticipante || '',
       consultoresIds: (newTask as any).consultoresIds || [],
     } as any;
@@ -724,8 +725,9 @@ export default function AgendaPage() {
     setEnviandoWppTaskId(task.id);
     try {
       const mensagem = montarMensagemCompromisso(task, dataFormatada, anterior);
-      const payload = grupoEmp?.groupJid
-        ? { groupJid: grupoEmp.groupJid, groupName: grupoEmp.groupName, mensagem }
+      const usarGrupo = !telefoneAlvo && Boolean(grupoEmp?.groupJid);
+      const payload = usarGrupo
+        ? { groupJid: grupoEmp!.groupJid, groupName: grupoEmp!.groupName, mensagem }
         : { telefone: tel, mensagem };
       const res = await fetch('/api/agenda/enviar-whatsapp', {
         method: 'POST',
