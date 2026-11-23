@@ -4,7 +4,10 @@ import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare, Users } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare, Users,
+  Calendar, Clock, MapPin, Search, List, LayoutGrid, Columns, RefreshCw, CheckCircle2, Building2,
+} from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
 // persistem a agenda — manter uma cópia local aqui já causou divergência de
@@ -66,9 +69,14 @@ export default function AgendaPage() {
   const [tasks, setTasks] = useState<AgendaTask[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  const [view, setView] = useState<'month' | 'week'>('month');
+  const [view, setView] = useState<'month' | 'week' | 'list'>('month');
   const [baseDate, setBaseDate] = useState<Date>(new Date());
-  const [selectedDayIso, setSelectedDayIso] = useState<string | null>(null);
+  const [selectedDayIso, setSelectedDayIso] = useState<string>(hojeIso());
+
+  const [buscaTexto, setBuscaTexto] = useState('');
+  const [filtroEmpresaId, setFiltroEmpresaId] = useState('');
+  const [filtroConsultorId, setFiltroConsultorId] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendentes' | 'concluidos'>('todos');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState<Partial<AgendaTask>>({
@@ -446,19 +454,80 @@ export default function AgendaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, baseDate]);
 
+  const tasksFiltradas = useMemo(() => {
+    const q = buscaTexto.trim().toLowerCase();
+    return tasks.filter(t => {
+      if (filtroEmpresaId && t.empresaId !== filtroEmpresaId) return false;
+      if (filtroConsultorId) {
+        const multiIds: string[] = (t as any).consultoresIds || (t.consultorId ? [t.consultorId] : []);
+        if (!multiIds.includes(filtroConsultorId)) return false;
+      }
+      if (filtroStatus === 'pendentes' && t.completed) return false;
+      if (filtroStatus === 'concluidos' && !t.completed) return false;
+      if (q) {
+        const emp = empresas.find(e => e.id === t.empresaId);
+        const alvo = [
+          t.title,
+          emp?.nomeFantasia,
+          emp?.razaoSocial,
+          (t as any).clienteParticipante,
+          t.location,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!alvo.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [tasks, buscaTexto, filtroEmpresaId, filtroConsultorId, filtroStatus, empresas]);
+
   const tasksPorDia = useMemo(() => {
     const map = new Map<string, AgendaTask[]>();
-    for (const t of tasks) {
+    for (const t of tasksFiltradas) {
       const arr = map.get(t.dateStr) || [];
       arr.push(t);
       map.set(t.dateStr, arr);
     }
     for (const arr of map.values()) arr.sort((a, b) => String(a.horario || '').localeCompare(String(b.horario || '')));
     return map;
-  }, [tasks]);
+  }, [tasksFiltradas]);
+
+  const resumoKpis = useMemo(() => {
+    const hoje = hojeIso();
+    const em7d = toIsoLocal(new Date(Date.now() + 7 * 86400000));
+    const mesPrefix = `${baseDate.getFullYear()}-${pad2(baseDate.getMonth() + 1)}`;
+    let hojeTotal = 0;
+    let hojePendentes = 0;
+    let prox7Dias = 0;
+    let mesPendentes = 0;
+    let mesConcluidos = 0;
+    for (const t of tasks) {
+      if (t.dateStr === hoje) {
+        hojeTotal++;
+        if (!t.completed) hojePendentes++;
+      }
+      if (t.dateStr >= hoje && t.dateStr <= em7d && !t.completed) {
+        prox7Dias++;
+      }
+      if (t.dateStr.startsWith(mesPrefix)) {
+        if (t.completed) mesConcluidos++;
+        else mesPendentes++;
+      }
+    }
+    return { hojeTotal, hojePendentes, prox7Dias, mesPendentes, mesConcluidos };
+  }, [tasks, baseDate]);
+
+  const diasListaPauta = useMemo(() => {
+    const mesPrefix = `${baseDate.getFullYear()}-${pad2(baseDate.getMonth() + 1)}`;
+    const entries = Array.from(tasksPorDia.entries())
+      .filter(([iso]) => iso.startsWith(mesPrefix) || buscaTexto.trim().length > 0 || Boolean(filtroEmpresaId))
+      .sort(([a], [b]) => a.localeCompare(b));
+    return entries;
+  }, [tasksPorDia, baseDate, buscaTexto, filtroEmpresaId]);
 
   const dias = useMemo(
-    () => (view === 'month' ? gerarGradeDoMes(baseDate) : gerarGradeDaSemana(baseDate)),
+    () => (view === 'week' ? gerarGradeDaSemana(baseDate) : gerarGradeDoMes(baseDate)),
     [view, baseDate]
   );
 
@@ -690,350 +759,807 @@ export default function AgendaPage() {
 
   const mover = (dir: 1 | -1) => {
     const n = new Date(baseDate);
-    if (view === 'month') n.setMonth(n.getMonth() + dir);
-    else n.setDate(n.getDate() + dir * 7);
+    if (view === 'week') n.setDate(n.getDate() + dir * 7);
+    else n.setMonth(n.getMonth() + dir);
     setBaseDate(n);
   };
 
   if (!mounted) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando agenda...</div>;
 
-  const tituloTopo = view === 'month'
-    ? `${MESES[baseDate.getMonth()]} de ${baseDate.getFullYear()}`
-    : (() => {
+  const tituloTopo = view === 'week'
+    ? (() => {
         const semana = gerarGradeDaSemana(baseDate);
         const ini = semana[0].date, fim = semana[6].date;
         return ini.getMonth() === fim.getMonth()
           ? `${ini.getDate()} – ${fim.getDate()} de ${MESES[ini.getMonth()]}, ${ini.getFullYear()}`
           : `${ini.getDate()} de ${MESES[ini.getMonth()]} – ${fim.getDate()} de ${MESES[fim.getMonth()]}`;
-      })();
+      })()
+    : `${MESES[baseDate.getMonth()]} de ${baseDate.getFullYear()}`;
 
-  const diaSelecionado = selectedDayIso ? dias.find(d => d.iso === selectedDayIso) : null;
-  const tarefasDoDiaSelecionado = selectedDayIso ? (tasksPorDia.get(selectedDayIso) || []) : [];
+  const dataSelecionadaObj = (() => {
+    const [a, m, d] = (selectedDayIso || hojeIso()).split('-').map(Number);
+    return new Date(a, (m || 1) - 1, d || 1);
+  })();
+  const tarefasDoDiaSelecionado = tasksPorDia.get(selectedDayIso) || [];
+  const temFiltroAtivo = Boolean(buscaTexto.trim() || filtroEmpresaId || filtroConsultorId || filtroStatus !== 'todos');
+  const hojeStr = hojeIso();
+  const amanhaStr = toIsoLocal(new Date(Date.now() + 86400000));
+
+  const renderCardCompromisso = (task: AgendaTask, dataBrCurta: string) => {
+    const emp = empresas.find(e => e.id === task.empresaId);
+    const multiIds: string[] = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
+    const consNomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
+    const isGoogle = task.id.startsWith('gcal');
+    const grupoEmp = task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
+    const participante = (task as any).clienteParticipante;
+
+    return (
+      <div
+        key={task.id}
+        className="agenda-task-card"
+        style={{
+          padding: '13px 14px',
+          borderRadius: 12,
+          border: '1px solid var(--border-light)',
+          borderLeft: `4px solid ${task.completed ? '#16a34a' : isGoogle ? '#2563eb' : '#600000'}`,
+          background: task.completed ? 'var(--bg-base)' : 'var(--bg-card)',
+          opacity: task.completed ? 0.72 : 1,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background: task.completed ? '#dcfce7' : isGoogle ? '#eff6ff' : '#fef2f2',
+                  color: task.completed ? '#15803d' : isGoogle ? '#1d4ed8' : '#7f1d1d',
+                }}
+              >
+                <Clock size={11} /> {task.horario || '--:--'}
+              </span>
+              {isGoogle && (
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '2px 7px', borderRadius: 6 }}>
+                  Google
+                </span>
+              )}
+              {grupoEmp && (
+                <span
+                  title={`Grupo vinculado: ${grupoEmp.groupName}`}
+                  style={{ fontSize: 10.5, fontWeight: 700, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 7px', borderRadius: 6 }}
+                >
+                  Grupo WPP
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                textDecoration: task.completed ? 'line-through' : 'none',
+                lineHeight: 1.35,
+              }}
+            >
+              {task.title}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            <button
+              className="agenda-icon-btn"
+              title={grupoEmp ? `Enviar no grupo "${grupoEmp.groupName}"` : 'Enviar no WhatsApp (via 46 99980-0010)'}
+              disabled={enviandoWppTaskId === task.id}
+              onClick={() => enviarCompromissoWhatsApp(task, dataBrCurta)}
+              style={{ color: '#15803d', opacity: enviandoWppTaskId === task.id ? 0.45 : 1 }}
+            >
+              <MessageSquare size={14} />
+            </button>
+            <button className="agenda-icon-btn" title="Editar compromisso" onClick={() => abrirEditar(task)}>
+              <Edit2 size={14} />
+            </button>
+            <button className="agenda-icon-btn" title="Copiar mensagem" onClick={() => handleCopyMessage(task, dataBrCurta)}>
+              <Copy size={14} />
+            </button>
+            <button
+              className="agenda-icon-btn"
+              title={task.completed ? 'Marcar como pendente' : 'Concluir compromisso'}
+              onClick={() => handleToggleComplete(task)}
+              style={{ color: task.completed ? '#16a34a' : undefined }}
+            >
+              <Check size={14} />
+            </button>
+            <button className="agenda-icon-btn" title="Excluir" onClick={() => handleDelete(task)} style={{ color: '#dc2626' }}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+
+        {(emp || consNomes || participante || task.location) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-light)', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+            {emp && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+                <Building2 size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.nomeFantasia || emp.razaoSocial}</span>
+              </div>
+            )}
+            {consNomes && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)' }}>
+                <Users size={12} style={{ flexShrink: 0 }} />
+                <span>{consNomes}{participante ? ` • Cliente: ${participante}` : ''}</span>
+              </div>
+            )}
+            {!consNomes && participante && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)' }}>
+                <Users size={12} style={{ flexShrink: 0 }} />
+                <span>Cliente: {participante}</span>
+              </div>
+            )}
+            {task.location && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)' }}>
+                <MapPin size={12} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.location}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes springPop { 0% { transform: scale(0.7) translateY(30px); opacity: 0; } 60% { transform: scale(1.04) translateY(-3px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
-        
-        .calendar-cell { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .calendar-cell:hover { transform: scale(1.06); box-shadow: 0 18px 45px rgba(0,0,0,0.15); z-index: 20; border-radius: 12px; position: relative; border-color: transparent !important; }
-        
-        .event-chip { transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; }
-        .event-chip:hover { transform: translateX(5px) scale(1.03); filter: brightness(0.9); box-shadow: 0 6px 14px rgba(0,0,0,0.12); }
-        
-        .task-card { animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .task-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 28px rgba(0,0,0,0.12); }
-        
-        .modal-overlay { animation: fadeIn 0.3s ease-out; }
-        .modal-slide { animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-        .modal-create { animation: springPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes springPop { 0% { transform: scale(0.95) translateY(12px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+
+        .agenda-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .agenda-kpi-card {
+          background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px;
+          padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+          cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+        }
+        .agenda-kpi-card:hover { border-color: #600000; box-shadow: 0 6px 18px rgba(96,0,0,0.06); transform: translateY(-1px); }
+
+        .agenda-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+        .agenda-side-panel { position: sticky; top: 16px; }
+
+        .agenda-cell {
+          background: var(--bg-card); padding: 7px 7px 8px; cursor: pointer;
+          display: flex; flex-direction: column; gap: 4px; min-width: 0;
+          transition: background .15s ease, box-shadow .15s ease;
+        }
+        .agenda-cell:hover { background: var(--bg-base); }
+        .agenda-cell.is-selected { box-shadow: inset 0 0 0 2px #600000; background: rgba(96, 0, 0, 0.025); }
+
+        .agenda-chip {
+          font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 6px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          transition: filter .15s ease;
+        }
+        .agenda-chip:hover { filter: brightness(0.94); }
+
+        .agenda-task-card { transition: box-shadow .18s ease, border-color .18s ease; }
+        .agenda-task-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+
+        .agenda-icon-btn {
+          width: 28px; height: 28px; border-radius: 7px; border: 1px solid transparent;
+          background: transparent; color: var(--text-muted); cursor: pointer;
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: background .15s ease, color .15s ease;
+        }
+        .agenda-icon-btn:hover { background: var(--bg-card2); color: var(--text-primary); }
+
+        .modal-overlay { animation: fadeIn 0.2s ease-out; }
+        .modal-create { animation: springPop 0.25s ease-out forwards; }
+
+        @media (max-width: 1120px) {
+          .agenda-layout { grid-template-columns: 1fr; }
+          .agenda-side-panel { position: static; }
+        }
+        @media (max-width: 820px) {
+          .agenda-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
       `}</style>
 
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="page-title">Agenda</div>
-          <div className="page-subtitle">Compromissos da consultoria, com sincronização opcional do Google Calendar.</div>
+          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Calendar size={22} style={{ color: '#600000' }} />
+            Agenda Executiva
+          </div>
+          <div className="page-subtitle">Compromissos da consultoria com sincronização Google Calendar e avisos automáticos nos grupos dos clientes.</div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {googleConectado ? (
-            <>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--green)' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />
-                Google conectado
-              </span>
-              <button className="btn btn-secondary" onClick={sincronizarAgora} disabled={sincronizando} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
-                {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar agora'}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '4px 10px' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>Google</span>
+              <button
+                type="button"
+                onClick={sincronizarAgora}
+                disabled={sincronizando}
+                title="Sincronizar Google Calendar agora"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, padding: '2px 4px' }}
+              >
+                <RefreshCw size={12} className={sincronizando ? 'animate-spin' : ''} />
+                {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
               </button>
-              <button className="btn btn-ghost" onClick={desconectarGoogle} style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Desconectar
+              <button
+                type="button"
+                onClick={desconectarGoogle}
+                title="Desconectar conta Google"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 11, padding: '2px 4px' }}
+              >
+                Sair
               </button>
-            </>
+            </div>
           ) : (
-            <button className="btn btn-secondary" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => loginGoogle()} style={{ background: '#fff', border: '1px solid #d1d5db', color: '#374151' }}>
               <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="" style={{ width: 14, height: 14, marginRight: 6, verticalAlign: -2 }} />
               Conectar Google
             </button>
           )}
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-sm"
             onClick={() => {
               setShowGruposModal(true);
               carregarVinculosGrupos(true);
             }}
             style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600 }}
           >
-            <Users size={15} style={{ marginRight: 5, verticalAlign: -3 }} />
-            Grupos dos Clientes ({Object.keys(vinculosGrupos).length})
+            <Users size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Grupos ({Object.keys(vinculosGrupos).length})
           </button>
-          <button className="btn btn-primary" onClick={() => abrirNovo()}>
-            <Plus size={15} style={{ marginRight: 4, verticalAlign: -3 }} /> Agendar
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => abrirNovo(selectedDayIso)}
+            style={{ background: '#600000', borderColor: '#600000', fontWeight: 700 }}
+          >
+            <Plus size={15} style={{ marginRight: 4, verticalAlign: -3 }} /> Novo Compromisso
           </button>
         </div>
       </div>
 
       <div className="page-body">
-        {/* Barra estilo Google Calendar: navegação + título do período + troca Mês/Semana */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
-          marginBottom: 18, background: 'var(--bg-card)', padding: '12px 18px', borderRadius: 12, border: '1px solid var(--border-light)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => setBaseDate(new Date())}>Hoje</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => mover(-1)} title="Anterior" style={{ padding: '4px 8px' }}><ChevronLeft size={18} /></button>
-            <button className="btn btn-ghost btn-sm" onClick={() => mover(1)} title="Próximo" style={{ padding: '4px 8px' }}><ChevronRight size={18} /></button>
-            <div style={{ fontWeight: 800, fontSize: 17, marginLeft: 4, textTransform: 'capitalize' }}>{tituloTopo}</div>
-          </div>
-
-          <div style={{ display: 'flex', background: 'var(--bg-card2)', borderRadius: 8, padding: 3 }}>
-            {(['month', 'week'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className="btn btn-sm"
-                style={{
-                  border: 'none', padding: '6px 14px',
-                  background: view === v ? 'var(--bg-card)' : 'transparent',
-                  boxShadow: view === v ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                  fontWeight: view === v ? 700 : 500,
-                  color: view === v ? 'var(--text-primary)' : 'var(--text-muted)',
-                }}
-              >
-                {v === 'month' ? 'Mês' : 'Semana'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Cabeçalho dos dias da semana */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0, marginBottom: 2 }}>
-          {DIAS_SEMANA.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: 'var(--text-muted)', padding: '4px 0' }}>
-              {d}
+        {/* KPIs Executivos */}
+        <div className="agenda-kpi-grid">
+          <div
+            className="agenda-kpi-card"
+            onClick={() => {
+              setBaseDate(new Date());
+              setSelectedDayIso(hojeStr);
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>Hoje</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>{resumoKpis.hojeTotal}</div>
+              <div style={{ fontSize: 11.5, color: resumoKpis.hojePendentes > 0 ? '#600000' : '#16a34a', fontWeight: 600 }}>
+                {resumoKpis.hojePendentes > 0 ? `${resumoKpis.hojePendentes} pendente(s)` : 'Dia em dia'}
+              </div>
             </div>
-          ))}
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef2f2', color: '#600000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock size={18} />
+            </div>
+          </div>
+
+          <div
+            className="agenda-kpi-card"
+            onClick={() => {
+              setBaseDate(new Date());
+              setView('week');
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>Próximos 7 dias</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>{resumoKpis.prox7Dias}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Pendentes na semana</div>
+            </div>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={18} />
+            </div>
+          </div>
+
+          <div
+            className="agenda-kpi-card"
+            onClick={() => setFiltroStatus(filtroStatus === 'concluidos' ? 'todos' : 'concluidos')}
+          >
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>Mês Atual</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
+                {resumoKpis.mesPendentes + resumoKpis.mesConcluidos}
+              </div>
+              <div style={{ fontSize: 11.5, color: '#16a34a', fontWeight: 600 }}>
+                {resumoKpis.mesConcluidos} concluído(s)
+              </div>
+            </div>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+
+          <div
+            className="agenda-kpi-card"
+            onClick={() => {
+              setShowGruposModal(true);
+              carregarVinculosGrupos(true);
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>Grupos WhatsApp</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>{Object.keys(vinculosGrupos).length}</div>
+              <div style={{ fontSize: 11.5, color: '#15803d', fontWeight: 600 }}>Lembretes 1d / 1h ativos</div>
+            </div>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0fdf4', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Users size={18} />
+            </div>
+          </div>
         </div>
 
-        {/* Grade do calendário */}
+        {/* Barra de Navegação + Filtros */}
         <div
-          className="card"
           style={{
-            display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
-            gridAutoRows: view === 'month' ? 'minmax(104px, 1fr)' : 'minmax(320px, 1fr)',
-            gap: 1, padding: 0, overflow: 'hidden', background: 'var(--border-light)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-light)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
           }}
         >
-          {dias.map(dia => {
-            const doDia = tasksPorDia.get(dia.iso) || [];
-            const visiveis = doDia.slice(0, view === 'month' ? 3 : 20);
-            const resto = doDia.length - visiveis.length;
-
-            return (
-              <div
-                key={dia.iso}
-                className="calendar-cell"
-                onClick={() => setSelectedDayIso(dia.iso)}
-                style={{
-                  background: 'var(--bg-card)', padding: '6px 6px 8px', cursor: 'pointer',
-                  opacity: view === 'month' && !dia.noMes ? 0.45 : 1,
-                  display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0,
-                  animation: `slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards`,
-                  animationDelay: `${Math.min(20, dia.date.getDate() % 7) * 0.03}s` // staggered animation
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setBaseDate(new Date());
+                  setSelectedDayIso(hojeStr);
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: view === 'month' ? 'flex-end' : 'center' }}>
-                  <span style={{
-                    width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRadius: '50%', fontSize: 12.5, fontWeight: dia.isHoje ? 800 : 600,
-                    background: dia.isHoje ? 'var(--accent)' : 'transparent',
-                    color: dia.isHoje ? '#fff' : 'var(--text-primary)',
-                  }}>
-                    {dia.date.getDate()}
-                  </span>
+                Hoje
+              </button>
+              <button className="agenda-icon-btn" onClick={() => mover(-1)} title="Anterior" style={{ border: '1px solid var(--border-light)' }}>
+                <ChevronLeft size={16} />
+              </button>
+              <button className="agenda-icon-btn" onClick={() => mover(1)} title="Próximo" style={{ border: '1px solid var(--border-light)' }}>
+                <ChevronRight size={16} />
+              </button>
+              <div style={{ fontWeight: 800, fontSize: 16.5, marginLeft: 4, textTransform: 'capitalize', color: 'var(--text-primary)' }}>
+                {tituloTopo}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', background: 'var(--bg-base)', borderRadius: 9, padding: 3, border: '1px solid var(--border-light)' }}>
+              {[
+                { id: 'month' as const, label: 'Mês', icon: <LayoutGrid size={13} /> },
+                { id: 'week' as const, label: 'Semana', icon: <Columns size={13} /> },
+                { id: 'list' as const, label: 'Lista', icon: <List size={13} /> },
+              ].map(v => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setView(v.id)}
+                  style={{
+                    border: 'none',
+                    borderRadius: 7,
+                    padding: '5px 12px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontSize: 12.5,
+                    background: view === v.id ? 'var(--bg-card)' : 'transparent',
+                    boxShadow: view === v.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    fontWeight: view === v.id ? 700 : 500,
+                    color: view === v.id ? '#600000' : 'var(--text-muted)',
+                  }}
+                >
+                  {v.icon} {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Linha de Filtros */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 10, borderTop: '1px solid var(--border-light)' }}>
+            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Buscar por assunto, cliente ou local..."
+                value={buscaTexto}
+                onChange={e => setBuscaTexto(e.target.value)}
+                style={{ paddingLeft: 32, height: 34, fontSize: 12.5 }}
+              />
+            </div>
+
+            <select
+              className="form-control"
+              value={filtroEmpresaId}
+              onChange={e => setFiltroEmpresaId(e.target.value)}
+              style={{ width: 'auto', minWidth: 165, maxWidth: 220, height: 34, fontSize: 12.5 }}
+            >
+              <option value="">Todas as empresas</option>
+              {empresas.map(e => (
+                <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+              ))}
+            </select>
+
+            <select
+              className="form-control"
+              value={filtroConsultorId}
+              onChange={e => setFiltroConsultorId(e.target.value)}
+              style={{ width: 'auto', minWidth: 150, maxWidth: 200, height: 34, fontSize: 12.5 }}
+            >
+              <option value="">Toda a equipe</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+
+            <div style={{ display: 'inline-flex', gap: 4 }}>
+              {([
+                { id: 'todos', label: 'Todos' },
+                { id: 'pendentes', label: 'Pendentes' },
+                { id: 'concluidos', label: 'Concluídos' },
+              ] as const).map(st => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setFiltroStatus(st.id)}
+                  style={{
+                    height: 32,
+                    padding: '0 10px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: '1px solid',
+                    borderColor: filtroStatus === st.id ? '#600000' : 'var(--border-light)',
+                    background: filtroStatus === st.id ? '#600000' : 'var(--bg-base)',
+                    color: filtroStatus === st.id ? '#fff' : 'var(--text-secondary)',
+                  }}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+
+            {temFiltroAtivo && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setBuscaTexto('');
+                  setFiltroEmpresaId('');
+                  setFiltroConsultorId('');
+                  setFiltroStatus('todos');
+                }}
+                style={{ fontSize: 12, color: '#dc2626' }}
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Layout Principal: Calendário/Lista + Painel Lateral do Dia */}
+        <div className="agenda-layout">
+          <div>
+            {view === 'list' ? (
+              <div className="card" style={{ padding: 16 }}>
+                {diasListaPauta.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '44px 16px', color: 'var(--text-muted)' }}>
+                    <Calendar size={34} style={{ opacity: 0.35, marginBottom: 10 }} />
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      Nenhum compromisso encontrado
+                    </div>
+                    <div style={{ fontSize: 12.5, marginBottom: 14 }}>
+                      Ajuste os filtros ou crie um novo agendamento para este período.
+                    </div>
+                    <button className="btn btn-primary btn-sm" onClick={() => abrirNovo(selectedDayIso)} style={{ background: '#600000', borderColor: '#600000' }}>
+                      <Plus size={14} style={{ marginRight: 4, verticalAlign: -2 }} /> Agendar compromisso
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {diasListaPauta.map(([iso, lista]) => {
+                      const [ano, mes, diaNum] = iso.split('-').map(Number);
+                      const dt = new Date(ano, mes - 1, diaNum);
+                      const dataBrCurta = `${pad2(diaNum)}/${pad2(mes)}`;
+                      const badgeDia = iso === hojeStr ? 'Hoje' : iso === amanhaStr ? 'Amanhã' : null;
+                      return (
+                        <div key={iso}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginBottom: 8,
+                              paddingBottom: 6,
+                              borderBottom: '1px solid var(--border-light)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 800, color: iso === hojeStr ? '#600000' : 'var(--text-primary)' }}>
+                                {DIAS_SEMANA[dt.getDay()]} · {diaNum} de {MESES[mes - 1]}
+                              </span>
+                              {badgeDia && (
+                                <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: iso === hojeStr ? '#600000' : '#eff6ff', color: iso === hojeStr ? '#fff' : '#2563eb' }}>
+                                  {badgeDia}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => abrirNovo(iso)}
+                              style={{ fontSize: 11.5, color: '#600000' }}
+                            >
+                              + Adicionar
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {lista.map(t => renderCardCompromisso(t, dataBrCurta))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0, marginBottom: 4 }}>
+                  {DIAS_SEMANA.map(d => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: 'var(--text-muted)', padding: '4px 0' }}>
+                      {d}
+                    </div>
+                  ))}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
-                  {visiveis.map(t => {
-                    const isGoogle = t.id.startsWith('gcal');
+                <div
+                  className="card"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)',
+                    gridAutoRows: view === 'month' ? 'minmax(108px, 1fr)' : 'minmax(360px, 1fr)',
+                    gap: 1,
+                    padding: 0,
+                    overflow: 'hidden',
+                    background: 'var(--border-light)',
+                  }}
+                >
+                  {dias.map(dia => {
+                    const doDia = tasksPorDia.get(dia.iso) || [];
+                    const visiveis = doDia.slice(0, view === 'month' ? 3 : 20);
+                    const resto = doDia.length - visiveis.length;
+                    const isSelected = selectedDayIso === dia.iso;
+
                     return (
                       <div
-                        key={t.id}
-                        className="event-chip"
-                        title={`${t.horario} · ${t.title}`}
-                        style={{
-                          fontSize: 10.5, fontWeight: 600, padding: '2px 6px', borderRadius: 5,
-                          background: isGoogle ? 'rgba(59,130,246,0.12)' : 'rgba(140,26,34,0.1)',
-                          color: isGoogle ? '#2563eb' : 'var(--accent)',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          textDecoration: t.completed ? 'line-through' : 'none',
-                          opacity: t.completed ? 0.55 : 1,
-                          animation: 'fadeIn 0.4s ease-out'
-                        }}
+                        key={dia.iso}
+                        className={`agenda-cell${isSelected ? ' is-selected' : ''}`}
+                        onClick={() => setSelectedDayIso(dia.iso)}
+                        onDoubleClick={() => abrirNovo(dia.iso)}
+                        style={{ opacity: view === 'month' && !dia.noMes ? 0.42 : 1 }}
                       >
-                        {t.horario} {t.title}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          {doDia.length > 0 ? (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', paddingLeft: 2 }}>
+                              {doDia.length}
+                            </span>
+                          ) : <span />}
+                          <span
+                            style={{
+                              width: 26,
+                              height: 26,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '50%',
+                              fontSize: 12.5,
+                              fontWeight: dia.isHoje || isSelected ? 800 : 600,
+                              background: dia.isHoje ? '#600000' : isSelected ? 'rgba(96,0,0,0.12)' : 'transparent',
+                              color: dia.isHoje ? '#fff' : isSelected ? '#600000' : 'var(--text-primary)',
+                            }}
+                          >
+                            {dia.date.getDate()}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
+                          {visiveis.map(t => {
+                            const isGoogle = t.id.startsWith('gcal');
+                            return (
+                              <div
+                                key={t.id}
+                                className="agenda-chip"
+                                title={`${t.horario} · ${t.title}`}
+                                style={{
+                                  background: t.completed
+                                    ? 'rgba(22,163,74,0.12)'
+                                    : isGoogle
+                                      ? 'rgba(37,99,235,0.11)'
+                                      : 'rgba(96,0,0,0.1)',
+                                  color: t.completed ? '#15803d' : isGoogle ? '#1d4ed8' : '#7f1d1d',
+                                  textDecoration: t.completed ? 'line-through' : 'none',
+                                  opacity: t.completed ? 0.65 : 1,
+                                }}
+                              >
+                                <span style={{ fontWeight: 800, marginRight: 3 }}>{t.horario}</span>
+                                {t.title}
+                              </div>
+                            );
+                          })}
+                          {resto > 0 && (
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#600000', padding: '1px 5px' }}>
+                              +{resto} mais
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
-                  {resto > 0 && (
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '0 6px' }}>
-                      +{resto} mais
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              </>
+            )}
+          </div>
 
-      {/* Painel do dia — lista completa + adicionar, ao clicar numa célula */}
-      {diaSelecionado && (
-        <div
-          className="modal-overlay"
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(3px)' }}
-          onClick={() => setSelectedDayIso(null)}
-        >
-          <div
-            className="card modal-slide"
-            style={{ width: 380, maxWidth: '92vw', height: '100vh', borderRadius: 0, overflowY: 'auto', padding: 0 }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderBottom: '1px solid var(--border-light)' }}>
+          {/* Painel Lateral Fixo: Compromissos do Dia Selecionado */}
+          <div className="card agenda-side-panel" style={{ padding: 0, overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '15px 16px',
+                borderBottom: '1px solid var(--border-light)',
+                background: 'var(--bg-base)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}
+            >
               <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                  {DIAS_SEMANA[diaSelecionado.date.getDay()]}
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: selectedDayIso === hojeStr ? '#600000' : 'var(--text-muted)' }}>
+                  {DIAS_SEMANA[dataSelecionadaObj.getDay()]} {selectedDayIso === hojeStr ? '• HOJE' : selectedDayIso === amanhaStr ? '• AMANHÃ' : ''}
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>
-                  {diaSelecionado.date.getDate()} de {MESES[diaSelecionado.date.getMonth()]}
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {dataSelecionadaObj.getDate()} de {MESES[dataSelecionadaObj.getMonth()]}
                 </div>
               </div>
-              <button onClick={() => setSelectedDayIso(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                <X size={20} />
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => abrirNovo(selectedDayIso)}
+                style={{ background: '#600000', borderColor: '#600000' }}
+              >
+                <Plus size={14} style={{ marginRight: 3, verticalAlign: -2 }} /> Novo
               </button>
             </div>
 
-            <div style={{ padding: 16 }}>
-              <button className="btn btn-primary btn-sm" style={{ width: '100%', marginBottom: 16 }} onClick={() => abrirNovo(diaSelecionado.iso)}>
-                <Plus size={14} style={{ marginRight: 4, verticalAlign: -2 }} /> Novo compromisso neste dia
-              </button>
-
-              {tarefasDoDiaSelecionado.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: 13 }}>
-                  Nenhum compromisso neste dia.
+            <div style={{ padding: 14, maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+              {tarefasDoDiaSelecionado.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '28px 12px', color: 'var(--text-muted)' }}>
+                  <Calendar size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                    Dia livre
+                  </div>
+                  <div style={{ fontSize: 12, marginBottom: 12 }}>
+                    Nenhum compromisso agendado para esta data.
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => abrirNovo(selectedDayIso)}
+                    style={{ fontSize: 12 }}
+                  >
+                    + Agendar neste dia
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {tarefasDoDiaSelecionado.map(task =>
+                    renderCardCompromisso(task, `${pad2(dataSelecionadaObj.getDate())}/${pad2(dataSelecionadaObj.getMonth() + 1)}`)
+                  )}
                 </div>
               )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {tarefasDoDiaSelecionado.map((task, index) => {
-                  const emp = empresas.find(e => e.id === task.empresaId);
-                  const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
-                  const consNomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
-                  const isGoogle = task.id.startsWith('gcal');
-                  return (
-                    <div key={task.id} className="task-card" style={{
-                      padding: 14, borderRadius: 12, border: '1px solid var(--border-light)',
-                      borderLeft: `5px solid ${isGoogle ? '#3b82f6' : 'var(--accent)'}`,
-                      opacity: task.completed ? 0.6 : 1,
-                      animationDelay: `${index * 0.08}s`
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.completed ? 'line-through' : 'none' }}>
-                          <span style={{ color: isGoogle ? '#3b82f6' : 'var(--accent)', marginRight: 6 }}>{task.horario}</span>
-                          {task.title}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button
-                            title="Enviar compromisso no WhatsApp (via 46 99980-0010)"
-                            disabled={enviandoWppTaskId === task.id}
-                            onClick={() => enviarCompromissoWhatsApp(task, `${diaSelecionado.date.getDate()}/${pad2(diaSelecionado.date.getMonth() + 1)}`)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', opacity: enviandoWppTaskId === task.id ? 0.5 : 1 }}
-                          >
-                            <MessageSquare size={14} />
-                          </button>
-                          <button title="Editar compromisso" onClick={() => abrirEditar(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                            <Edit2 size={14} />
-                          </button>
-                          <button title="Copiar mensagem" onClick={() => handleCopyMessage(task, `${diaSelecionado.date.getDate()}/${pad2(diaSelecionado.date.getMonth() + 1)}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                            <Copy size={14} />
-                          </button>
-                          <button title={task.completed ? 'Marcar como pendente' : 'Marcar como concluído'} onClick={() => handleToggleComplete(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: task.completed ? 'var(--green)' : 'var(--text-muted)' }}>
-                            <Check size={14} />
-                          </button>
-                          <button title="Excluir" onClick={() => handleDelete(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      {emp && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>🏢 {emp.nomeFantasia || emp.razaoSocial}</div>}
-                      {!isGoogle && consNomes && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>👥 {consNomes}</div>}
-                      {isGoogle && <div style={{ fontSize: 10.5, color: '#3b82f6', fontWeight: 700, marginTop: 4 }}>🌐 Google Calendar</div>}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Modal de criação */}
+      {/* Modal de criação / edição */}
       {isModalOpen && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}>
-          <div className="card modal-create" style={{ width: 440, maxWidth: '92vw', padding: 24, position: 'relative' }}>
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setIsModalOpen(false)}
+        >
+          <div className="card modal-create" style={{ width: 500, maxWidth: '96vw', maxHeight: '90vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
             <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <X size={18} />
             </button>
-            <h3 style={{ fontSize: 18, marginBottom: 20 }}>{newTask.id ? 'Editar compromisso' : 'Novo compromisso'}</h3>
+            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px' }}>{newTask.id ? 'Editar compromisso' : 'Novo compromisso'}</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 18px' }}>
+              Preencha os detalhes abaixo. Se a empresa tiver grupo vinculado, o aviso sai automaticamente.
+            </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Título</label>
-                <input type="text" className="form-control" placeholder="Reunião de fechamento mensal" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} autoFocus />
+                <label className="form-label" style={{ fontWeight: 600 }}>Assunto / Título *</label>
+                <input type="text" className="form-control" placeholder="Ex.: Reunião de fechamento mensal" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} autoFocus />
               </div>
 
-              <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Empresa (opcional)</label>
-                <select className="form-control" value={newTask.empresaId} onChange={e => setNewTask({ ...newTask, empresaId: e.target.value })}>
-                  <option value="">Selecione...</option>
-                  {empresas.map(e => <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Equipe Responsável (Selecione um ou mais)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 110, overflowY: 'auto', border: '1px solid var(--border)', padding: '10px 12px', borderRadius: 8 }}>
-                  {users.map(u => (
-                    <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={((newTask as any).consultoresIds || []).includes(u.id)} 
-                        onChange={e => {
-                          const ids = (newTask as any).consultoresIds || [];
-                          if (e.target.checked) setNewTask({ ...newTask, consultoresIds: [...ids, u.id] } as any);
-                          else setNewTask({ ...newTask, consultoresIds: ids.filter((i: string) => i !== u.id) } as any);
-                        }} 
-                      />
-                      {u.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Participantes do Cliente (opcional)</label>
-                <input type="text" className="form-control" placeholder="Quem vai participar? (Ex: João, Financeiro)" value={(newTask as any).clienteParticipante || ''} onChange={e => setNewTask({ ...newTask, clienteParticipante: e.target.value } as any)} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Data</label>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Data *</label>
                   <input type="date" className="form-control" value={newTask.dateStr} onChange={e => setNewTask({ ...newTask, dateStr: e.target.value })} />
                 </div>
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Horário</label>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Horário *</label>
                   <input type="time" className="form-control" value={newTask.horario} onChange={e => setNewTask({ ...newTask, horario: e.target.value })} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Empresa (opcional)</label>
+                  <select className="form-control" value={newTask.empresaId} onChange={e => setNewTask({ ...newTask, empresaId: e.target.value })}>
+                    <option value="">Selecione...</option>
+                    {empresas.map(e => <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Participantes do Cliente</label>
+                  <input type="text" className="form-control" placeholder="Ex.: João, Financeiro" value={(newTask as any).clienteParticipante || ''} onChange={e => setNewTask({ ...newTask, clienteParticipante: e.target.value } as any)} />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Local ou Link da Reunião</label>
+                <input type="text" className="form-control" placeholder="Ex.: Google Meet, Presencial no escritório..." value={newTask.location || ''} onChange={e => setNewTask({ ...newTask, location: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Equipe Responsável</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {users.map(u => {
+                    const ids: string[] = (newTask as any).consultoresIds || [];
+                    const ativo = ids.includes(u.id);
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => {
+                          if (ativo) setNewTask({ ...newTask, consultoresIds: ids.filter(i => i !== u.id) } as any);
+                          else setNewTask({ ...newTask, consultoresIds: [...ids, u.id] } as any);
+                        }}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: 99,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: ativo ? '#600000' : 'var(--border)',
+                          background: ativo ? '#600000' : 'var(--bg-base)',
+                          color: ativo ? '#fff' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {ativo ? '✓ ' : ''}{u.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1051,7 +1577,7 @@ export default function AgendaPage() {
                     </span>
                   </label>
                   <div style={{ fontSize: 11, color: '#166534', marginTop: 4 }}>
-                    Confirmações automáticas de <strong>1 dia antes</strong> e <strong>1 hora antes</strong> também serão disparadas 24h pelo servidor.
+                    Lembretes automáticos de <strong>1 dia antes</strong> e <strong>1 hora antes</strong> serão disparados 24h pelo servidor.
                   </div>
                 </div>
               )}
@@ -1063,7 +1589,7 @@ export default function AgendaPage() {
                     checked={enviarWppAgenda}
                     onChange={e => salvarPrefWppAgenda(e.target.checked, wppAgendaNumero)}
                   />
-                  <span>Enviar no WhatsApp ao agendar (via 46 99980-0010)</span>
+                  <span>Enviar também em um WhatsApp individual (via 46 99980-0010)</span>
                 </label>
                 {enviarWppAgenda && (
                   <input
@@ -1077,9 +1603,11 @@ export default function AgendaPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={handleSaveTask}>Salvar</button>
+                <button className="btn btn-primary" onClick={handleSaveTask} style={{ background: '#600000', borderColor: '#600000' }}>
+                  {newTask.id ? 'Salvar alterações' : 'Agendar compromisso'}
+                </button>
               </div>
             </div>
           </div>
