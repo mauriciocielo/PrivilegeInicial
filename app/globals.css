@@ -2452,3 +2452,66 @@ table th {
   .card { border: 1px solid #ccc; box-shadow: none; background: #fff !important; color: #000 !important; }
   body { background: #fff !important; color: #000 !important; }
 }
+
+
+/* ============================================================
+   POLIMENTO GLOBAL UI/UX EXECUTIVO (PRIVILEGE PREMIUM)
+   ============================================================ */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Alinhamento tabular perfeito para números, valores monetários e datas em tabelas e KPIs */
+.data-table td,
+.data-table th,
+.kpi-value,
+.stat-value,
+table td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco acessível limpo e consistente em todos os controles */
+.form-control:focus,
+.form-input:focus,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(96, 0, 0, 0.12) !important;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+/* Hover sutil e elegante nas linhas de tabela */
+.data-table tbody tr {
+  transition: background-color 120ms ease;
+}
+.data-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Scrollbars refinadas e discretas */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(110, 108, 102, 0.28);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 0, 0, 0.45);
+}
+
+/* Botões com resposta tátil suave sem exageros */
+.btn {
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
