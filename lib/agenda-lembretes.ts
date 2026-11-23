@@ -1,6 +1,7 @@
 import db from './prisma';
 import { encontrarSessaoAdminPorNumero } from './nfse/enviar-whatsapp-nfse';
 import { sendBaileysLiveMessage } from './baileys-manager';
+import { registrarDisparoWhatsApp } from './whatsapp-disparos-log';
 
 let tabelasGarantidas = false;
 
@@ -204,6 +205,15 @@ export async function processarLembretesAgenda24h(): Promise<{ enviados24h: numb
             ].join('\n');
 
       const res = await sendBaileysLiveMessage(grupo.group_jid, texto, undefined, ownerId);
+      await registrarDisparoWhatsApp({
+        categoria: tipo === '24h' ? 'agenda_lembrete_1d' : 'agenda_lembrete_1h',
+        destino: grupo.group_jid,
+        destinoNome: grupo.group_name || empNome,
+        mensagem: texto,
+        status: res?.sent ? 'enviado' : 'erro',
+        erro: res?.sent ? null : (res?.error || 'Falha no envio'),
+        ownerId,
+      });
       if (res?.sent) {
         await db.$executeRawUnsafe(
           `INSERT INTO agenda_lembretes_enviados (task_id, tipo, alvo_chave)
@@ -222,4 +232,118 @@ export async function processarLembretesAgenda24h(): Promise<{ enviados24h: numb
   }
 
   return { enviados24h, enviados1h };
+}
+
+let ultimoCheckMatinalMs = 0;
+
+/**
+ * Resumo matinal automático da Agenda (07h30–09h00 BRT, segunda a sexta):
+ * envia para cada consultor/administrador com telefone cadastrado a pauta enxuta dos compromissos do dia.
+ */
+export async function processarResumoMatinalConsultores24h(): Promise<{ enviados: number }> {
+  const agoraMs = Date.now();
+  if (agoraMs - ultimoCheckMatinalMs < 15 * 60 * 1000) {
+    return { enviados: 0 };
+  }
+  ultimoCheckMatinalMs = agoraMs;
+
+  const br = new Date(agoraMs - 3 * 3600 * 1000);
+  const diaSemana = br.getUTCDay(); // 0=Dom, 6=Sáb
+  const minutosDia = br.getUTCHours() * 60 + br.getUTCMinutes();
+  // Janela: seg–sex, entre 07:30 (450 min) e 09:00 (540 min) horário de Brasília
+  if (diaSemana === 0 || diaSemana === 6 || minutosDia < 450 || minutosDia > 540) {
+    return { enviados: 0 };
+  }
+
+  const hojeIso = br.toISOString().slice(0, 10);
+  let enviados = 0;
+
+  try {
+    await ensureAgendaGruposTables();
+
+    const tarefasHoje = await db.agendaTask.findMany({
+      where: { dateStr: hojeIso, completed: false },
+      orderBy: { horario: 'asc' },
+    });
+    if (tarefasHoje.length === 0) return { enviados: 0 };
+
+    const consultores = await db.user.findMany({
+      where: { role: { not: 'cliente' } },
+      select: { id: true, name: true, phone: true },
+    });
+    const empresas = await db.empresa.findMany({
+      select: { id: true, nomeFantasia: true, razaoSocial: true },
+    });
+    const empMap = new Map(empresas.map(e => [e.id, e.nomeFantasia || e.razaoSocial]));
+
+    let ownerId: string | null = null;
+
+    for (const cons of consultores) {
+      const telDigits = String(cons.phone || '').replace(/\D/g, '');
+      if (telDigits.length < 10) continue;
+
+      const minhasTarefas = tarefasHoje.filter(t => {
+        const ids = Array.isArray(t.consultoresIds) ? (t.consultoresIds as string[]) : [];
+        return t.consultorId === cons.id || ids.includes(cons.id);
+      });
+      if (minhasTarefas.length === 0) continue;
+
+      const chaveTask = `matinal_${cons.id}_${hojeIso}`;
+      const jaEnviado = await db.$queryRawUnsafe<Array<{ task_id: string }>>(
+        `SELECT task_id FROM agenda_lembretes_enviados
+          WHERE task_id = $1 AND tipo = 'matinal' AND alvo_chave = $2
+          LIMIT 1`,
+        chaveTask,
+        hojeIso
+      );
+      if (jaEnviado.length > 0) continue;
+
+      if (!ownerId) {
+        ownerId = await encontrarSessaoAdminPorNumero('46999800010');
+        if (!ownerId) break;
+      }
+
+      const destino = telDigits.startsWith('55') ? telDigits : `55${telDigits}`;
+      const dataBr = formatarDataBr(hojeIso);
+      const linhas = [
+        `☀️ *Bom dia, ${cons.name.split(' ')[0]}!*`,
+        `Sua pauta de hoje (*${dataBr}*):`,
+        ``,
+        ...minhasTarefas.map(t => {
+          const emp = empMap.get(t.empresaId);
+          const loc = t.location ? ` • ${t.location}` : '';
+          return `▪ *${t.horario}* — ${t.title}${emp ? ` (${emp})` : ''}${loc}`;
+        }),
+        ``,
+        `_Total: ${minhasTarefas.length} compromisso(s) • Privilege Contabilidade_`,
+      ];
+      const texto = linhas.join('\n');
+
+      const res = await sendBaileysLiveMessage(destino, texto, undefined, ownerId);
+      await registrarDisparoWhatsApp({
+        categoria: 'agenda_resumo_matinal',
+        destino,
+        destinoNome: `${cons.name} (Resumo 07h30)`,
+        mensagem: texto,
+        status: res?.sent ? 'enviado' : 'erro',
+        erro: res?.sent ? null : (res?.error || 'Falha no envio'),
+        ownerId,
+      });
+
+      if (res?.sent) {
+        await db.$executeRawUnsafe(
+          `INSERT INTO agenda_lembretes_enviados (task_id, tipo, alvo_chave)
+           VALUES ($1, 'matinal', $2)
+           ON CONFLICT (task_id, tipo, alvo_chave) DO NOTHING`,
+          chaveTask,
+          hojeIso
+        );
+        enviados++;
+      }
+    }
+  } catch (err) {
+    console.warn('[Agenda 24h] Erro ao processar resumo matinal dos consultores:', err);
+  }
+
+  return { enviados };
 }

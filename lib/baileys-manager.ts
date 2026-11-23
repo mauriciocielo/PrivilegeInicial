@@ -13,6 +13,12 @@ import QRCode from 'qrcode';
 import { getEmailDbPool } from './email-db';
 import { processIncomingMessage, ensureChatColumns } from './whatsapp-service';
 import { updateMessageDeliveryAndReadStatus } from './campaign-read-tracker';
+import {
+  clearPostgresAuthState,
+  hasPostgresAuthCreds,
+  listPostgresAuthOwners,
+  usePostgresAuthState,
+} from './baileys-pg-auth';
 
 interface BaileysSessionState {
   sock: WASocket | null;
@@ -540,7 +546,8 @@ export async function ensureBaileysConnected(
   }
 
   const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
-  if (fs.existsSync(credsFile)) {
+  const hasSavedAuth = fs.existsSync(credsFile) || (await hasPostgresAuthCreds(ownerId));
+  if (hasSavedAuth) {
     if (!waitForOpen) {
       startBaileysSocket(false, ownerId).catch(err =>
         console.error(`[Baileys:${ownerId}] Auto-connect erro:`, err)
@@ -561,11 +568,16 @@ export async function ensureBaileysConnected(
 }
 
 /**
- * Inicializa automaticamente todas as sessões Baileys salvas em disco ou no banco
- * para que o sistema funcione em 2º plano mesmo sem nenhuma tela aberta.
+ * Inicializa automaticamente todas as sessões Baileys salvas em disco ou no PostgreSQL
+ * para que o sistema funcione em 2º plano 24h mesmo após deploys/restarts no Railway.
  */
 export async function bootAllSavedBaileysSessions(): Promise<string[]> {
   const owners = new Set<string>();
+
+  try {
+    const pgOwners = await listPostgresAuthOwners();
+    for (const o of pgOwners) owners.add(o);
+  } catch {}
 
   try {
     const rootDir = getAuthRoot();
@@ -599,7 +611,8 @@ export async function bootAllSavedBaileysSessions(): Promise<string[]> {
   const started: string[] = [];
   for (const ownerId of owners) {
     const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
-    if (fs.existsSync(credsFile)) {
+    const hasAuth = fs.existsSync(credsFile) || (await hasPostgresAuthCreds(ownerId));
+    if (hasAuth) {
       ensureBaileysConnected(false, ownerId).catch(() => {});
       started.push(ownerId);
     }
@@ -663,6 +676,7 @@ export async function startBaileysSocket(
     if (forceReset) {
       st.qr = null;
       st.connected = false;
+      await clearPostgresAuthState(ownerId);
       if (fs.existsSync(authDir)) {
         try {
           fs.rmSync(authDir, { recursive: true, force: true });
@@ -670,11 +684,7 @@ export async function startBaileysSocket(
       }
     }
 
-    if (!fs.existsSync(authDir)) {
-      fs.mkdirSync(authDir, { recursive: true });
-    }
-
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    const { state, saveCreds } = await usePostgresAuthState(ownerId, authDir);
     const { version } = await fetchLatestBaileysVersion().catch(() => ({
       version: [2, 3000, 1015901307] as [number, number, number],
     }));
@@ -1120,6 +1130,7 @@ export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void
   }
   st.qr = null;
   st.connected = false;
+  await clearPostgresAuthState(ownerId);
   if (fs.existsSync(authDir)) {
     try {
       fs.rmSync(authDir, { recursive: true, force: true });

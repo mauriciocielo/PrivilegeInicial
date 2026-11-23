@@ -1,6 +1,7 @@
 import db from './prisma';
 import { encontrarSessaoAdminPorNumero } from './nfse/enviar-whatsapp-nfse';
 import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from './baileys-manager';
+import { registrarDisparoWhatsApp } from './whatsapp-disparos-log';
 
 export const TELEFONE_ALERTA_CERTIFICADO_PADRAO =
   (process.env.CERTIFICADO_ALERTA_WHATSAPP || '4630351018').replace(/\D/g, '') || '4630351018';
@@ -199,6 +200,15 @@ export async function enviarAlertaCertificadosWhatsApp(
   const itens = await coletarCertificadosEmAtencao();
   const mensagem = montarMensagemAlertaCertificados(itens);
   const res = await sendBaileysLiveMessage(destino, mensagem, undefined, ownerId);
+  await registrarDisparoWhatsApp({
+    categoria: 'certificado_alerta',
+    destino,
+    destinoNome: `Certificados A1 (${destino})`,
+    mensagem,
+    status: res?.sent ? 'enviado' : 'erro',
+    erro: res?.sent ? null : (res?.error || `sessão ${ownerId}`),
+    ownerId,
+  });
 
   if (!res?.sent) {
     return { ok: false, erro: `Sessão "${ownerId}" localizada, mas o WhatsApp recusou o envio para ${destino}.` };

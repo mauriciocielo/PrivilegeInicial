@@ -5,6 +5,7 @@ import { encontrarSessaoAdminPorNumero } from '../../../../lib/nfse/enviar-whats
 import { buscarGrupoWhatsAppEmpresa } from '../../../../lib/agenda-lembretes';
 import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from '../../../../lib/baileys-manager';
 import { resolveWhatsAppOwnerId } from '../../../../lib/whatsapp-owner';
+import { registrarDisparoWhatsApp, type CategoriaDisparo } from '../../../../lib/whatsapp-disparos-log';
 
 export async function POST(request: Request) {
   try {
@@ -49,17 +50,30 @@ export async function POST(request: Request) {
       destinoNome = telefoneRaw;
     }
 
+    const categoria: CategoriaDisparo =
+      body?.categoria === 'agenda_alteracao' || body?.categoria === 'agenda_cancelamento'
+        ? body.categoria
+        : 'agenda_criacao';
+
     const ownerIdPreferencial = resolveWhatsAppOwnerId(request);
     const ownerId = await encontrarSessaoAdminPorNumero('46999800010', ownerIdPreferencial);
     if (!ownerId) {
       const ativas = listarSessoesBaileysAtivas().map(s => `${s.ownerId}:${s.connected ? 'on' : 'off'}`).join(', ');
-      return NextResponse.json(
-        { error: `WhatsApp não está conectado no servidor no momento (${ativas || '0 sessões em memória'}). Reconecte no painel WhatsApp.` },
-        { status: 422 }
-      );
+      const erroMsg = `WhatsApp não está conectado no servidor no momento (${ativas || '0 sessões em memória'}). Reconecte no painel WhatsApp.`;
+      await registrarDisparoWhatsApp({ categoria, destino, destinoNome, mensagem, status: 'erro', erro: erroMsg });
+      return NextResponse.json({ error: erroMsg }, { status: 422 });
     }
 
     const res = await sendBaileysLiveMessage(destino, mensagem, undefined, ownerId);
+    await registrarDisparoWhatsApp({
+      categoria,
+      destino,
+      destinoNome,
+      mensagem,
+      status: res?.sent ? 'enviado' : 'erro',
+      erro: res?.sent ? null : (res?.error || `sessão ${ownerId}`),
+      ownerId,
+    });
     if (!res?.sent) {
       return NextResponse.json(
         { error: `Não foi possível entregar a mensagem no WhatsApp (${res?.error || `sessão ${ownerId}`}).` },

@@ -7,6 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare, Users,
   Calendar, Clock, MapPin, Search, List, LayoutGrid, Columns, RefreshCw, CheckCircle2, Building2,
+  Video, Mail, History, RotateCw, Repeat,
 } from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
@@ -104,6 +105,61 @@ export default function AgendaPage() {
   const [grupoJidSel, setGrupoJidSel] = useState('');
   const [salvandoGrupo, setSalvandoGrupo] = useState(false);
   const [avisarGrupoAoSalvar, setAvisarGrupoAoSalvar] = useState(true);
+
+  // Google Invite (attendees), Google Meet automático e Recorrência mensal
+  const [convidadosEmails, setConvidadosEmails] = useState('');
+  const [gerarGoogleMeet, setGerarGoogleMeet] = useState(false);
+  const [recorrenciaMeses, setRecorrenciaMeses] = useState<number>(6);
+
+  // Histórico de Disparos WhatsApp (Agenda, Grupos, Certificados, Relatórios)
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [carregandoLogs, setCarregandoLogs] = useState(false);
+  const [reenviandoLogId, setReenviandoLogId] = useState<string | null>(null);
+  const [logsDisparos, setLogsDisparos] = useState<
+    Array<{
+      id: string;
+      categoria: string;
+      destino: string;
+      destinoNome: string;
+      mensagem: string;
+      status: 'enviado' | 'erro';
+      erro: string | null;
+      createdAt: string;
+    }>
+  >([]);
+
+  const carregarLogsDisparos = async () => {
+    setCarregandoLogs(true);
+    try {
+      const res = await fetch('/api/agenda/logs?limit=50');
+      if (!res.ok) return;
+      const data = await res.json();
+      setLogsDisparos(Array.isArray(data.logs) ? data.logs : []);
+    } catch {
+      // ignora
+    } finally {
+      setCarregandoLogs(false);
+    }
+  };
+
+  const reenviarLog = async (id: string) => {
+    setReenviandoLogId(id);
+    try {
+      const res = await fetch('/api/agenda/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao reenviar.');
+      toast.success(`Mensagem reenviada para ${json.destinoNome || 'o destino'}!`);
+      await carregarLogsDisparos();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setReenviandoLogId(null);
+    }
+  };
 
   const carregarVinculosGrupos = async (live = false) => {
     if (live) setCarregandoGrupos(true);
@@ -302,7 +358,7 @@ export default function AgendaPage() {
         if (isNaN(start.getTime())) continue;
         const myId = `gcal-${ev.id}`;
         if (map.has(myId) || existingGoogleIds.has(ev.id)) continue;
-        
+
         map.set(myId, {
           id: myId,
           title: ev.summary || 'Sem título',
@@ -344,7 +400,7 @@ export default function AgendaPage() {
             (lt as any).googleEventId = novoEv.id;
             exportados++;
           }
-        } catch(e) {}
+        } catch (e) { }
       }
 
       if (importados > 0 || exportados > 0) {
@@ -434,7 +490,7 @@ export default function AgendaPage() {
   const desconectarGoogle = async () => {
     localStorage.removeItem('cf_gcal_token');
     localStorage.removeItem('cf_gcal_expires_at');
-    await fetch('/api/google-calendar/token', { method: 'DELETE' }).catch(() => {});
+    await fetch('/api/google-calendar/token', { method: 'DELETE' }).catch(() => { });
     setGoogleConectado(false);
     toast.success('Conta Google desconectada.');
   };
@@ -551,7 +607,10 @@ export default function AgendaPage() {
   };
 
   const abrirNovo = (dateStr?: string) => {
-    setNewTask({ title: '', empresaId: '', horario: '09:00', dateStr: dateStr || selectedDayIso || hojeIso(), recurrent: false, consultoresIds: [] } as any);
+    setNewTask({ title: '', empresaId: '', horario: '09:00', dateStr: dateStr || selectedDayIso || hojeIso(), recurrent: false, location: '', consultoresIds: [] } as any);
+    setConvidadosEmails('');
+    setGerarGoogleMeet(false);
+    setRecorrenciaMeses(6);
     setIsModalOpen(true);
   };
 
@@ -561,18 +620,94 @@ export default function AgendaPage() {
       consultoresIds: (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []),
       clienteParticipante: (task as any).clienteParticipante || '',
     } as any);
+    setConvidadosEmails(String((task as any).convidadosEmails || ''));
+    setGerarGoogleMeet(false);
     setIsModalOpen(true);
   };
 
-  const handleSaveTask = () => {
+  const sincronizarEventoNoGoogle = async (
+    task: AgendaTask,
+    emailsLista: string[],
+    criarMeet: boolean
+  ): Promise<{ googleEventId?: string; meetLink?: string }> => {
+    const gToken = await obterTokenGoogleValido();
+    if (!gToken) return {};
+
+    const emp = empresas.find(e => e.id === task.empresaId);
+    const prefixoEmpresa = emp ? `[${emp.nomeFantasia || emp.razaoSocial}] ` : '';
+    const enderecoEmpresa = emp ? [emp.endereco, emp.cidade, emp.uf].filter(Boolean).join(', ') : '';
+
+    const hh = parseInt((task.horario || '09:00').split(':')[0]) || 9;
+    const mm = (task.horario || '09:00').split(':')[1] || '00';
+    const fimHh = Math.min(23, hh + 1);
+
+    const existingGoogleId = task.id.startsWith('gcal-')
+      ? task.id.slice(5)
+      : ((task as any).googleEventId ? String((task as any).googleEventId) : '');
+
+    const evBody: any = {
+      summary: `${prefixoEmpresa}${task.title}`,
+      description: [
+        emp ? `Empresa: ${emp.nomeFantasia || emp.razaoSocial}` : '',
+        (task as any).clienteParticipante ? `Participantes: ${(task as any).clienteParticipante}` : '',
+        'Agendado via Privilege Contabilidade e Consultoria',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      start: { dateTime: `${task.dateStr}T${pad2(hh)}:${mm}:00-03:00` },
+      end: { dateTime: `${task.dateStr}T${pad2(fimHh)}:${mm}:00-03:00` },
+      location: task.location || enderecoEmpresa || 'Consultoria / Remoto',
+    };
+
+    if (emailsLista.length > 0) {
+      evBody.attendees = emailsLista.map(email => ({ email }));
+    }
+
+    if (criarMeet) {
+      evBody.conferenceData = {
+        createRequest: {
+          requestId: `priv_${task.id}_${Date.now()}`,
+          conferenceSolutionKey: { type: 'hangoutsMeet' },
+        },
+      };
+    }
+
+    const query = `conferenceDataVersion=1${emailsLista.length > 0 ? '&sendUpdates=all' : ''}`;
+    const url = existingGoogleId
+      ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(existingGoogleId)}?${query}`
+      : `https://www.googleapis.com/calendar/v3/calendars/primary/events?${query}`;
+
+    try {
+      const res = await fetch(url, {
+        method: existingGoogleId ? 'PATCH' : 'POST',
+        headers: { Authorization: `Bearer ${gToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(evBody),
+      });
+      if (!res.ok) return {};
+      const data = await res.json();
+      const meetLink =
+        data.hangoutLink ||
+        data.conferenceData?.entryPoints?.find((ep: any) => ep.entryPointType === 'video')?.uri ||
+        undefined;
+      return { googleEventId: data.id || existingGoogleId || undefined, meetLink };
+    } catch {
+      return {};
+    }
+  };
+
+  const handleSaveTask = async () => {
     if (!newTask.title || !newTask.dateStr || !newTask.horario) {
       toast.error('Preencha título, data e horário.');
       return;
     }
-    
-    // Se o newTask já tiver um ID, estamos editando. Senão, cria novo.
+
     const isEdit = !!newTask.id;
     const anterior = isEdit ? tasks.find(t => t.id === newTask.id) : undefined;
+    const emailsLista = convidadosEmails
+      .split(/[;,\s]+/)
+      .map(s => s.trim().toLowerCase())
+      .filter(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+
     const task: AgendaTask = {
       id: newTask.id || Math.random().toString(36).slice(2, 11),
       title: newTask.title,
@@ -581,30 +716,64 @@ export default function AgendaPage() {
       horario: newTask.horario,
       dateStr: newTask.dateStr,
       completed: isEdit ? Boolean(anterior?.completed) : false,
-      recurrent: newTask.recurrent || false,
+      recurrent: Boolean(newTask.recurrent),
       location: newTask.location || '',
       clienteParticipante: (newTask as any).clienteParticipante || '',
       consultoresIds: (newTask as any).consultoresIds || [],
+      googleEventId: (anterior as any)?.googleEventId || (newTask as any)?.googleEventId || undefined,
+      convidadosEmails: emailsLista.join(', '),
     } as any;
+
+    // 1. Se Google conectado, cria/atualiza evento direto (com Invite + Google Meet se marcado)
+    if (googleConectado) {
+      const gRes = await sincronizarEventoNoGoogle(task, emailsLista, gerarGoogleMeet);
+      if (gRes.googleEventId) (task as any).googleEventId = gRes.googleEventId;
+      if (gRes.meetLink) task.location = gRes.meetLink;
+      if (emailsLista.length > 0 && gRes.googleEventId) {
+        toast.success(`Invite do Google Calendar enviado para ${emailsLista.length} convidado(s)!`);
+      }
+    }
+
+    // 2. Recorrência mensal real (gera próximos meses ao criar um novo compromisso recorrente)
+    const extrasRecorrentes: AgendaTask[] = [];
+    if (!isEdit && task.recurrent && recorrenciaMeses > 1) {
+      const [anoIni, mesIni, diaIni] = task.dateStr.split('-').map(Number);
+      for (let i = 1; i < recorrenciaMeses; i++) {
+        const dt = new Date(anoIni, (mesIni - 1) + i, Math.min(diaIni, 28));
+        const proxTask: AgendaTask = {
+          ...task,
+          id: `${task.id}_m${i}_${Math.random().toString(36).slice(2, 5)}`,
+          dateStr: toIsoLocal(dt),
+          googleEventId: undefined,
+        } as any;
+        extrasRecorrentes.push(proxTask);
+      }
+    }
 
     if (isEdit) {
       saveTasks(tasks.map(t => (t.id === task.id ? task : t)));
       toast.success('Compromisso atualizado!');
     } else {
-      saveTasks([...tasks, task]);
-      toast.success('Compromisso criado!');
+      saveTasks([...tasks, task, ...extrasRecorrentes]);
+      toast.success(
+        extrasRecorrentes.length > 0
+          ? `Compromisso criado + ${extrasRecorrentes.length} ocorrências mensais agendadas!`
+          : 'Compromisso criado!'
+      );
     }
     setIsModalOpen(false);
 
-    // Auto-sincronizar imediatamente para empurrar pro Google (renovando token se necessário)
-    obterTokenGoogleValido().then(gToken => {
-      if (gToken) setTimeout(() => syncGoogle(gToken, baseDate, true), 100);
-    });
+    // Sincroniza extras recorrentes com o Google Calendar em 2º plano
+    if (extrasRecorrentes.length > 0) {
+      obterTokenGoogleValido().then(gToken => {
+        if (gToken) setTimeout(() => syncGoogle(gToken, baseDate, true), 250);
+      });
+    }
 
     const partes = task.dateStr.split('-');
     const dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : task.dateStr;
 
-    // 1. Envio automático no GRUPO DO CLIENTE (criação ou alteração de data/horário/assunto)
+    // 3. Envio automático no GRUPO DO CLIENTE (criação ou alteração de data/horário/assunto/local)
     const grupoEmp = task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
     if (grupoEmp?.groupJid && grupoEmp.notificarAgenda && avisarGrupoAoSalvar) {
       const mudou =
@@ -612,7 +781,8 @@ export default function AgendaPage() {
         anterior &&
         (anterior.dateStr !== task.dateStr ||
           anterior.horario !== task.horario ||
-          anterior.title !== task.title);
+          anterior.title !== task.title ||
+          anterior.location !== task.location);
 
       if (!isEdit || mudou) {
         const msgGrupo = montarMensagemCompromisso(task, dataFmt, isEdit ? anterior : undefined);
@@ -623,6 +793,7 @@ export default function AgendaPage() {
             groupJid: grupoEmp.groupJid,
             groupName: grupoEmp.groupName,
             mensagem: msgGrupo,
+            categoria: isEdit ? 'agenda_alteracao' : 'agenda_criacao',
           }),
         })
           .then(r => r.json().then(j => ({ ok: r.ok, j })))
@@ -637,11 +808,11 @@ export default function AgendaPage() {
               toast.warning(`Compromisso salvo, mas não foi possível avisar no grupo: ${j?.error || 'WhatsApp offline'}`);
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
-    // 2. Envio automático no WhatsApp individual configurado (opcional)
+    // 4. Envio automático no WhatsApp individual configurado (opcional)
     if (enviarWppAgenda && wppAgendaNumero.replace(/\D/g, '').length >= 10) {
       enviarCompromissoWhatsApp(task, dataFmt, wppAgendaNumero, true, isEdit ? anterior : undefined);
     }
@@ -649,6 +820,11 @@ export default function AgendaPage() {
 
   const handleDelete = async (task: AgendaTask) => {
     if (!(await confirmAsync('Excluir este compromisso?'))) return;
+    const grupoEmp = task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
+    const deveAvisarCancelamento =
+      Boolean(grupoEmp?.groupJid && grupoEmp.notificarAgenda) &&
+      (await confirmAsync(`Deseja também enviar o aviso de cancelamento no grupo "${grupoEmp!.groupName}"?`));
+
     const restantes = tasks.filter(t => t.id !== task.id);
     setTasks(restantes);
     store.saveAgendaTasks(restantes);
@@ -679,13 +855,52 @@ export default function AgendaPage() {
         const gToken = await obterTokenGoogleValido();
         if (gToken) {
           await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(gcalId)}`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(gcalId)}?sendUpdates=all`,
             { method: 'DELETE', headers: { Authorization: `Bearer ${gToken}` } }
           );
         }
       } catch {
         // ignora erro pontual do Google Calendar
       }
+    }
+
+    // 3. Aviso de cancelamento no grupo do cliente (se confirmado)
+    if (deveAvisarCancelamento && grupoEmp?.groupJid) {
+      const partes = task.dateStr.split('-');
+      const dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : task.dateStr;
+      const emp = empresas.find(e => e.id === task.empresaId);
+      const empNome = emp?.nomeFantasia || emp?.razaoSocial || 'Cliente';
+      const msgCancelamento = [
+        `❌ *Compromisso Cancelado*`,
+        ``,
+        `Olá, equipe da *${empNome}*!`,
+        `Informamos que o compromisso abaixo foi cancelado:`,
+        ``,
+        `• *Assunto:* ${task.title}`,
+        `• *Data:* ${dataFmt}`,
+        `• *Horário:* ${task.horario}`,
+        ``,
+        `Caso deseje reagendar, basta nos chamar por aqui.`,
+        ``,
+        `_Privilege Contabilidade e Consultoria_`,
+      ].join('\n');
+
+      fetch('/api/agenda/enviar-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupJid: grupoEmp.groupJid,
+          groupName: grupoEmp.groupName,
+          mensagem: msgCancelamento,
+          categoria: 'agenda_cancelamento',
+        }),
+      })
+        .then(r => r.json().then(j => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+          if (ok) toast.success(`Cancelamento avisado no grupo "${grupoEmp.groupName}"!`);
+          else toast.warning(`Compromisso excluído, mas falhou o aviso no grupo: ${j?.error || 'WhatsApp offline'}`);
+        })
+        .catch(() => { });
     }
 
     toast.success('Compromisso excluído!');
@@ -809,12 +1024,12 @@ export default function AgendaPage() {
 
   const tituloTopo = view === 'week'
     ? (() => {
-        const semana = gerarGradeDaSemana(baseDate);
-        const ini = semana[0].date, fim = semana[6].date;
-        return ini.getMonth() === fim.getMonth()
-          ? `${ini.getDate()} – ${fim.getDate()} de ${MESES[ini.getMonth()]}, ${ini.getFullYear()}`
-          : `${ini.getDate()} de ${MESES[ini.getMonth()]} – ${fim.getDate()} de ${MESES[fim.getMonth()]}`;
-      })()
+      const semana = gerarGradeDaSemana(baseDate);
+      const ini = semana[0].date, fim = semana[6].date;
+      return ini.getMonth() === fim.getMonth()
+        ? `${ini.getDate()} – ${fim.getDate()} de ${MESES[ini.getMonth()]}, ${ini.getFullYear()}`
+        : `${ini.getDate()} de ${MESES[ini.getMonth()]} – ${fim.getDate()} de ${MESES[fim.getMonth()]}`;
+    })()
     : `${MESES[baseDate.getMonth()]} de ${baseDate.getFullYear()}`;
 
   const dataSelecionadaObj = (() => {
@@ -1048,6 +1263,17 @@ export default function AgendaPage() {
               Conectar Google
             </button>
           )}
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setShowLogsModal(true);
+              carregarLogsDisparos();
+            }}
+            title="Histórico de envios automáticos e manuais no WhatsApp"
+          >
+            <History size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Histórico
+          </button>
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => {
@@ -1571,6 +1797,84 @@ export default function AgendaPage() {
                 <input type="text" className="form-control" placeholder="Ex.: Google Meet, Presencial no escritório..." value={newTask.location || ''} onChange={e => setNewTask({ ...newTask, location: e.target.value })} />
               </div>
 
+              {/* Google Calendar Invite + Google Meet */}
+              <div style={{ padding: '10px 12px', borderRadius: 10, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12, color: '#1e40af', margin: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Mail size={13} /> Invite no Google Calendar (e-mails convidados)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lista = new Set<string>(
+                        convidadosEmails.split(/[;,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean)
+                      );
+                      const emp = empresas.find(e => e.id === newTask.empresaId);
+                      if (emp?.email && emp.email.includes('@')) lista.add(emp.email.trim().toLowerCase());
+                      const cIds: string[] = (newTask as any).consultoresIds || [];
+                      for (const cid of cIds) {
+                        const u = users.find(x => x.id === cid);
+                        if (u?.email && u.email.includes('@')) lista.add(u.email.trim().toLowerCase());
+                      }
+                      setConvidadosEmails(Array.from(lista).join(', '));
+                    }}
+                    style={{ background: '#fff', border: '1px solid #93c5fd', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600, color: '#1d4ed8', cursor: 'pointer' }}
+                  >
+                    + Puxar e-mails
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="cliente@empresa.com.br, consultor@privilege..."
+                  value={convidadosEmails}
+                  onChange={e => setConvidadosEmails(e.target.value)}
+                  style={{ background: '#fff', fontSize: 12.5 }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 600, color: '#1e3a8a', marginTop: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={gerarGoogleMeet}
+                    onChange={e => setGerarGoogleMeet(e.target.checked)}
+                    disabled={!googleConectado}
+                  />
+                  <Video size={13} />
+                  <span>
+                    Gerar link do Google Meet automaticamente
+                    {!googleConectado ? ' (conecte o Google Calendar)' : ''}
+                  </span>
+                </label>
+              </div>
+
+              {/* Recorrência mensal (apenas na criação) */}
+              {!newTask.id && (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(newTask.recurrent)}
+                        onChange={e => setNewTask({ ...newTask, recurrent: e.target.checked })}
+                      />
+                      <Repeat size={13} />
+                      <span>Repetir mensalmente (Fechamento / BPO)</span>
+                    </label>
+                    {newTask.recurrent && (
+                      <select
+                        className="form-control"
+                        value={recorrenciaMeses}
+                        onChange={e => setRecorrenciaMeses(Number(e.target.value))}
+                        style={{ width: 'auto', height: 30, fontSize: 12, padding: '2px 8px' }}
+                      >
+                        <option value={3}>Próximos 3 meses</option>
+                        <option value={6}>Próximos 6 meses</option>
+                        <option value={12}>Próximos 12 meses</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="form-label" style={{ fontWeight: 600 }}>Equipe Responsável</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1654,6 +1958,111 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+      {/* Modal de Histórico de Disparos WhatsApp */}
+      {showLogsModal && (
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setShowLogsModal(false)}
+        >
+          <div className="card modal-create" style={{ width: 680, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
+            <button onClick={() => setShowLogsModal(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingRight: 28, marginBottom: 14 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <History size={18} style={{ color: '#600000' }} /> Histórico de Disparos WhatsApp
+                </h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                  Últimos 50 envios automáticos e manuais (Agenda, Lembretes 1d/1h, Resumo 07h30, Certificados e Relatórios).
+                </p>
+              </div>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={carregarLogsDisparos} disabled={carregandoLogs}>
+                <RefreshCw size={13} className={carregandoLogs ? 'animate-spin' : ''} style={{ marginRight: 4, verticalAlign: -2 }} />
+                Atualizar
+              </button>
+            </div>
+
+            {carregandoLogs ? (
+              <div style={{ padding: 30, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Carregando histórico...</div>
+            ) : logsDisparos.length === 0 ? (
+              <div style={{ padding: 30, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 10 }}>
+                Nenhum disparo registrado ainda.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {logsDisparos.map(log => {
+                  const labels: Record<string, string> = {
+                    agenda_criacao: 'Agenda (Novo)',
+                    agenda_alteracao: 'Agenda (Alteração)',
+                    agenda_cancelamento: 'Agenda (Cancelamento)',
+                    agenda_lembrete_1d: 'Lembrete 1 dia',
+                    agenda_lembrete_1h: 'Lembrete 1 hora',
+                    agenda_resumo_matinal: 'Resumo 07h30',
+                    certificado_alerta: 'Certificado A1',
+                    relatorio: 'Relatório',
+                  };
+                  const dt = new Date(log.createdAt);
+                  const horaFmt = Number.isNaN(dt.getTime())
+                    ? log.createdAt
+                    : dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                  const ok = log.status === 'enviado';
+                  return (
+                    <div
+                      key={log.id}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 10,
+                        border: `1px solid ${ok ? 'var(--border-light)' : '#fecaca'}`,
+                        background: ok ? 'var(--bg-base)' : '#fef2f2',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: ok ? '#dcfce7' : '#fee2e2', color: ok ? '#15803d' : '#b91c1c' }}>
+                            {ok ? 'Entregue' : 'Falhou'}
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#600000' }}>
+                            {labels[log.categoria] || log.categoria}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>• {horaFmt}</span>
+                        </div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {log.destinoNome}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>
+                          {log.mensagem.replace(/\n+/g, ' ')}
+                        </div>
+                        {log.erro && (
+                          <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 3 }}>
+                            Motivo: {log.erro}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={reenviandoLogId === log.id}
+                        onClick={() => reenviarLog(log.id)}
+                        style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5 }}
+                      >
+                        <RotateCw size={12} className={reenviandoLogId === log.id ? 'animate-spin' : ''} />
+                        {reenviandoLogId === log.id ? 'Enviando...' : 'Reenviar'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modal de Vínculo Empresa <-> Grupo WhatsApp */}
       {showGruposModal && (
         <div

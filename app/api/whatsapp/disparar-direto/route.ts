@@ -5,6 +5,7 @@ import { encontrarSessaoAdminPorNumero } from '../../../../lib/nfse/enviar-whats
 import { buscarGrupoWhatsAppEmpresa } from '../../../../lib/agenda-lembretes';
 import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from '../../../../lib/baileys-manager';
 import { resolveWhatsAppOwnerId } from '../../../../lib/whatsapp-owner';
+import { registrarDisparoWhatsApp } from '../../../../lib/whatsapp-disparos-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,6 +93,15 @@ export async function POST(request: Request) {
       : undefined;
 
     const res = await sendBaileysLiveMessage(destino, mensagem, options, ownerId);
+    await registrarDisparoWhatsApp({
+      categoria: 'relatorio',
+      destino,
+      destinoNome,
+      mensagem,
+      status: res?.sent ? 'enviado' : 'erro',
+      erro: res?.sent ? null : (res?.error || `sessão ${ownerId}`),
+      ownerId,
+    });
     if (!res?.sent) {
       return NextResponse.json(
         { error: `Não foi possível enviar no WhatsApp (${res?.error || `sessão ${ownerId}`}).` },
