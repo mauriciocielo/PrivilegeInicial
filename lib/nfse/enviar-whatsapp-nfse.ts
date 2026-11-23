@@ -23,7 +23,10 @@ export interface ResultadoWhatsappNfse {
  * Localiza a sessão Baileys conectada correspondente ao número do administrador
  * (padrão 46999800010). Faz fallback para qualquer sessão de administrador conectada.
  */
-export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PADRAO): Promise<string | null> {
+export async function encontrarSessaoAdminPorNumero(
+  numeroAlvo = NUMERO_ADMIN_PADRAO,
+  ownerIdPreferencial?: string
+): Promise<string | null> {
   const ult8 = apenasDigitos(numeroAlvo).slice(-8);
 
   const buscarEmMemoria = (): string | null => {
@@ -36,7 +39,11 @@ export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PA
       if (ult8 && digitsSessao.endsWith(ult8)) {
         return s.ownerId;
       }
-      if (!fallbackConectada) fallbackConectada = s.ownerId;
+      if (ownerIdPreferencial && s.ownerId === ownerIdPreferencial) {
+        fallbackConectada = s.ownerId;
+      } else if (!fallbackConectada) {
+        fallbackConectada = s.ownerId;
+      }
     }
 
     return fallbackConectada;
@@ -45,9 +52,14 @@ export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PA
   let encontrada = buscarEmMemoria();
   if (encontrada) return encontrada;
 
-  // Caso ainda não tenha subido em memória (ex.: servidor acabou de reiniciar), inicializa sessões salvas
+  // Caso ainda não tenha subido ou esteja reconectando, inicializa e aguarda abrir
   const booted = await bootAllSavedBaileysSessions().catch(() => [] as string[]);
-  const candidatos = new Set<string>(['default', ...booted]);
+  const candidatos = new Set<string>();
+  if (ownerIdPreferencial) candidatos.add(ownerIdPreferencial);
+  candidatos.add('default');
+  candidatos.add('default_linha2');
+  for (const b of booted) candidatos.add(b);
+  for (const s of listarSessoesBaileysAtivas()) candidatos.add(s.ownerId);
 
   try {
     const rows = await db.$queryRawUnsafe<Array<{ id: string }>>(
@@ -60,9 +72,12 @@ export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PA
     // ignora
   }
 
-  // Tenta aguardar a conexão dos candidatos salvos (se houver creds.json)
+  // Aguarda conexão real (sock?.user?.id) para cada candidato
   for (const ownerId of candidatos) {
-    const sock = getBaileysSocketForOwner(ownerId) || (await ensureBaileysConnected(true, ownerId).catch(() => null));
+    let sock = getBaileysSocketForOwner(ownerId);
+    if (!sock?.user?.id) {
+      sock = await ensureBaileysConnected(true, ownerId).catch(() => null);
+    }
     const userId = String(sock?.user?.id || '');
     if (!userId) continue;
     const digitsSessao = userId.split(':')[0].replace(/\D/g, '');

@@ -261,7 +261,9 @@ export async function POST(request: Request) {
 
   if (action === 'enviar_alerta_certificados') {
     const { enviarAlertaCertificadosWhatsApp } = await import('@/lib/certificado-alertas');
-    const resultado = await enviarAlertaCertificadosWhatsApp(body?.telefone);
+    const { resolveWhatsAppOwnerId } = await import('@/lib/whatsapp-owner');
+    const ownerIdPreferencial = resolveWhatsAppOwnerId(request);
+    const resultado = await enviarAlertaCertificadosWhatsApp(body?.telefone, ownerIdPreferencial);
     if (!resultado.ok) {
       return NextResponse.json({ error: resultado.erro || 'Falha ao enviar aviso de certificados.' }, { status: 422 });
     }

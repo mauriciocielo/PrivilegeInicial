@@ -1,6 +1,6 @@
 import db from './prisma';
 import { encontrarSessaoAdminPorNumero } from './nfse/enviar-whatsapp-nfse';
-import { sendBaileysLiveMessage } from './baileys-manager';
+import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from './baileys-manager';
 
 export const TELEFONE_ALERTA_CERTIFICADO_PADRAO =
   (process.env.CERTIFICADO_ALERTA_WHATSAPP || '4630351018').replace(/\D/g, '') || '4630351018';
@@ -177,18 +177,22 @@ function definirMarco(item: CertificadoEmAtencao): string | null {
  * Disparo imediato (manual/teste) do relatório de certificados A1 para o WhatsApp configurado
  * (padrão: 4630351018), utilizando a sessão oficial 46999800010.
  */
-export async function enviarAlertaCertificadosWhatsApp(telefoneOpcional?: string): Promise<{
+export async function enviarAlertaCertificadosWhatsApp(
+  telefoneOpcional?: string,
+  ownerIdPreferencial?: string
+): Promise<{
   ok: boolean;
   enviadoPara?: string;
   quantidade?: number;
   erro?: string;
 }> {
   const destino = normalizarTelefoneCertificado(telefoneOpcional);
-  const ownerId = await encontrarSessaoAdminPorNumero('46999800010');
+  const ownerId = await encontrarSessaoAdminPorNumero('46999800010', ownerIdPreferencial);
   if (!ownerId) {
+    const ativas = listarSessoesBaileysAtivas().map(s => `${s.ownerId}:${s.connected ? 'on' : 'off'}`).join(', ');
     return {
       ok: false,
-      erro: 'Sessão oficial do WhatsApp (46) 99980-0010 não está conectada no momento.',
+      erro: `Nenhuma sessão Baileys conectada no servidor no momento (${ativas || '0 sessões em memória'}). Verifique o painel WhatsApp ou reconecte o QR Code.`,
     };
   }
 
@@ -197,7 +201,7 @@ export async function enviarAlertaCertificadosWhatsApp(telefoneOpcional?: string
   const res = await sendBaileysLiveMessage(destino, mensagem, undefined, ownerId);
 
   if (!res?.sent) {
-    return { ok: false, erro: 'Não foi possível enviar o aviso de certificados no WhatsApp.' };
+    return { ok: false, erro: `Sessão "${ownerId}" localizada, mas o WhatsApp recusou o envio para ${destino}.` };
   }
 
   return { ok: true, enviadoPara: destino, quantidade: itens.length };
