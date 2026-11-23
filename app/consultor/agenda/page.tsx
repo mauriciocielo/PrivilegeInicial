@@ -87,6 +87,7 @@ export default function AgendaPage() {
 
   const [googleConectado, setGoogleConectado] = useState(false);
   const [googlePermanentSupported, setGooglePermanentSupported] = useState(false);
+  const [googleHasRefreshToken, setGoogleHasRefreshToken] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
 
   // Envio configurável da agenda no WhatsApp via (46) 99980-0010
@@ -337,6 +338,7 @@ export default function AgendaPage() {
       if (res.ok) {
         const data = await res.json();
         setGooglePermanentSupported(Boolean(data.permanentSupported));
+        setGoogleHasRefreshToken(Boolean(data.hasRefreshToken));
         if (data.connected && data.accessToken) {
           localStorage.setItem('cf_gcal_token', data.accessToken);
           if (data.expiresAt) localStorage.setItem('cf_gcal_expires_at', String(data.expiresAt));
@@ -515,6 +517,7 @@ export default function AgendaPage() {
   // Fluxo permanente (auth-code -> refresh_token salvo no PostgreSQL, nunca mais expira em 1h)
   const loginGoogleAuthCode = useGoogleLogin({
     flow: 'auth-code',
+    select_account: true,
     scope: 'https://www.googleapis.com/auth/calendar.events',
     onSuccess: async (codeResponse) => {
       try {
@@ -531,11 +534,12 @@ export default function AgendaPage() {
         localStorage.setItem('cf_gcal_token', data.accessToken);
         if (data.expiresAt) localStorage.setItem('cf_gcal_expires_at', String(data.expiresAt));
         setGoogleConectado(true);
-        toast.success(
-          data.hasRefreshToken
-            ? 'Google Calendar conectado em modo PERMANENTE (refresh_token salvo)!'
-            : 'Google Calendar conectado! (Renovação automática ativa.)'
-        );
+        setGoogleHasRefreshToken(Boolean(data.hasRefreshToken));
+        if (data.hasRefreshToken) {
+          toast.success('Google Calendar conectado em modo PERMANENTE (refresh_token salvo)!');
+        } else {
+          toast.warning('Google conectado sem refresh_token. Clique em "Sair" e conecte novamente para ativar o modo permanente.');
+        }
         syncGoogle(data.accessToken, baseDate, false);
       } catch (e) {
         toast.error((e as Error).message || 'Erro ao salvar conexão permanente com o Google.');
@@ -1373,13 +1377,19 @@ export default function AgendaPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {googleConectado ? (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: googlePermanentSupported ? '#f0fdf4' : '#fffbeb', border: `1px solid ${googlePermanentSupported ? '#bbf7d0' : '#fde68a'}`, borderRadius: 10, padding: '4px 10px' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: googlePermanentSupported ? '#16a34a' : '#d97706' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: (googlePermanentSupported && googleHasRefreshToken) ? '#f0fdf4' : '#fffbeb', border: `1px solid ${(googlePermanentSupported && googleHasRefreshToken) ? '#bbf7d0' : '#fde68a'}`, borderRadius: 10, padding: '4px 10px' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: (googlePermanentSupported && googleHasRefreshToken) ? '#16a34a' : '#d97706' }} />
               <span
-                title={googlePermanentSupported ? 'Conexão permanente ativa com refresh_token no PostgreSQL' : 'Modo temporário (1h) — adicione GOOGLE_CLIENT_SECRET no Railway e reconecte'}
-                style={{ fontSize: 12, fontWeight: 700, color: googlePermanentSupported ? '#15803d' : '#b45309' }}
+                title={
+                  googlePermanentSupported && googleHasRefreshToken
+                    ? 'Conexão permanente ativa com refresh_token salvo no PostgreSQL'
+                    : googlePermanentSupported
+                      ? 'Conectado sem refresh_token — clique em Sair e conecte novamente para ativar o modo permanente'
+                      : 'Modo temporário (1h) — adicione GOOGLE_CLIENT_SECRET nas variáveis do servidor'
+                }
+                style={{ fontSize: 12, fontWeight: 700, color: (googlePermanentSupported && googleHasRefreshToken) ? '#15803d' : '#b45309' }}
               >
-                {googlePermanentSupported ? 'Google Permanente' : 'Google (1h)'}
+                {googlePermanentSupported && googleHasRefreshToken ? 'Google Permanente' : 'Google (1h)'}
               </span>
               <button
                 type="button"

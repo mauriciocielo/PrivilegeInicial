@@ -63,6 +63,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         permanentSupported: supported,
         connected: true,
+        hasRefreshToken: Boolean(row.refresh_token),
         accessToken: row.access_token,
         expiresAt,
       });
@@ -95,6 +96,7 @@ export async function GET(request: Request) {
         return NextResponse.json({
           permanentSupported: supported,
           connected: true,
+          hasRefreshToken: true,
           accessToken: tokenJson.access_token,
           expiresAt: novoExpiresAt,
           refreshed: true,
@@ -110,7 +112,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       permanentSupported: supported,
       connected: false,
+      hasRefreshToken: Boolean(row?.refresh_token),
       accessToken: null,
+      reason: !supported ? 'missing_secret' : !row?.refresh_token ? 'no_refresh_token' : 'refresh_failed',
     });
   } catch (error) {
     console.error('Erro em GET /api/google-calendar/token:', error);
@@ -195,8 +199,21 @@ export async function DELETE(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     await ensureTable();
+
+    // Revoga o token no Google para que a próxima conexão force consentimento e devolva um refresh_token novo
+    const rows = await db.$queryRawUnsafe<Array<{ access_token: string; refresh_token: string | null }>>(
+      `SELECT access_token, refresh_token FROM google_calendar_tokens WHERE user_id = $1 LIMIT 1`,
+      auth.session.userId
+    );
+    const tokenParaRevogar = rows[0]?.refresh_token || rows[0]?.access_token;
+    if (tokenParaRevogar) {
+      await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(tokenParaRevogar)}`, {
+        method: 'POST',
+      }).catch(() => {});
+    }
+
     await db.$executeRawUnsafe(`DELETE FROM google_calendar_tokens WHERE user_id = $1`, auth.session.userId);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, revoked: Boolean(tokenParaRevogar) });
   } catch {
     return NextResponse.json({ ok: true });
   }
