@@ -4,6 +4,8 @@ import { requireAuth } from '../../../../lib/api-auth';
 import { ensureAgendaGruposTables } from '../../../../lib/agenda-lembretes';
 import { encontrarSessaoAdminPorNumero } from '../../../../lib/nfse/enviar-whatsapp-nfse';
 import { listarGruposBaileys } from '../../../../lib/baileys-manager';
+import { resolveWhatsAppOwnerId } from '../../../../lib/whatsapp-owner';
+import { getEmailDbPool } from '../../../../lib/email-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,11 +37,44 @@ export async function GET(request: Request) {
     let sessaoConectada = false;
 
     if (listarAoVivo) {
-      const ownerId = await encontrarSessaoAdminPorNumero('46999800010');
+      const ownerIdPreferencial = resolveWhatsAppOwnerId(request);
+      const ownerId = await encontrarSessaoAdminPorNumero('46999800010', ownerIdPreferencial);
+      const mapaGrupos = new Map<string, { jid: string; nome: string; participantes: number }>();
+
       if (ownerId) {
         sessaoConectada = true;
-        gruposWhatsApp = await listarGruposBaileys(ownerId);
+        const aoVivo = await listarGruposBaileys(ownerId);
+        for (const g of aoVivo) {
+          mapaGrupos.set(g.jid, g);
+        }
       }
+
+      // Fallback/complemento: inclui grupos já sincronizados no banco (whatsapp_chats)
+      try {
+        const pool = getEmailDbPool();
+        if (pool) {
+          const res = await pool.query(
+            `SELECT DISTINCT remote_jid, name
+               FROM whatsapp_chats
+              WHERE remote_jid LIKE '%@g.us'
+              ORDER BY name ASC`
+          );
+          for (const row of res.rows) {
+            const jid = String(row.remote_jid || '').trim();
+            if (!jid.endsWith('@g.us')) continue;
+            if (!mapaGrupos.has(jid)) {
+              const nomeLimpo = String(row.name || jid).replace(/^👥\s*/, '').trim() || jid;
+              mapaGrupos.set(jid, { jid, nome: nomeLimpo, participantes: 0 });
+            }
+          }
+        }
+      } catch {
+        // tabela opcional
+      }
+
+      gruposWhatsApp = Array.from(mapaGrupos.values()).sort((a, b) =>
+        a.nome.localeCompare(b.nome, 'pt-BR')
+      );
     }
 
     return NextResponse.json({

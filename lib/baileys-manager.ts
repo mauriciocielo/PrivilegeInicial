@@ -770,11 +770,12 @@ export async function startBaileysSocket(
                 const displayName = subject.startsWith('👥') ? subject : `👥 ${subject}`;
                 await pool
                   .query(
-                    `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, unread_count, bot_enabled, crm_stage, ticket_status)
-                     VALUES ($1, $2, $3, $4, $5, '', 0, FALSE, 'em_atendimento', 'encerrado')
+                    `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
+                     VALUES ($1, $2, $3, $4, $5, '', NOW(), 0, FALSE, 'em_atendimento', 'aberto')
                      ON CONFLICT (id) DO UPDATE SET
                        name = EXCLUDED.name,
-                       remote_jid = EXCLUDED.remote_jid`,
+                       remote_jid = EXCLUDED.remote_jid,
+                       bot_enabled = FALSE`,
                     [chatId, ownerId, cleanGroupPhone, displayName, gid]
                   )
                   .catch(() => {});
