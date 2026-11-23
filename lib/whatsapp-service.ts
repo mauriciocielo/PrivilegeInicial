@@ -3,7 +3,6 @@ import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
 import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
-import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
 import {
@@ -1810,13 +1809,8 @@ export async function processIncomingMessage(params: {
     }
   }
 
-  // Se surgir uma demanda acionável (inclusive por áudio transcrito), registra tarefa na Agenda automaticamente
-  detectAndCreateDemandTask({
-    clientName: params.name || params.phone,
-    phone: params.phone,
-    messageText: cleanText,
-    ownerId,
-  }).catch(() => {});
+  // Criação automática de tarefas na Agenda a partir de mensagens do WhatsApp desativada
+  // para evitar poluição da Agenda; agendamentos devem ser feitos na tela Agenda ou via /agendar.
 
   const lowerText = cleanText.toLowerCase();
 
