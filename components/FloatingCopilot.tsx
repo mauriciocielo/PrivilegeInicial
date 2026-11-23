@@ -238,7 +238,9 @@ Regras:
           width: 400,
           maxWidth: 'calc(100vw - 32px)',
           height: 560,
-          maxHeight: 'calc(100vh - 120px)',
+          // Desconta a barra do topo (64px) e o botão com as margens (~110px): em notebooks o topo do painel ficava escondido.
+          maxHeight: 'calc(100dvh - 180px)',
+          minHeight: 280,
           background: 'var(--bg-card)',
           borderRadius: 18,
           border: '1px solid var(--border)',

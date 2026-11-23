@@ -923,6 +923,9 @@ body {
 
 select.form-control,
 select.form-input { cursor: pointer; }
+
+/* Campo de mês: várias telas fixavam 155–170px e o "novembro de 2026" perdia o ano atrás do ícone do calendário. */
+input[type="month"] { min-width: 13.5em; }
 select.form-control option,
 select.form-input option { background: var(--bg-card2); }
 
