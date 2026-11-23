@@ -37,11 +37,14 @@ function iniciais(nome: string): string {
 
 export default function AgendarPublicoPage() {
   const params = useParams();
-  const slug = String(params?.slug || 'privilege');
+  const slugInicial = String(params?.slug || 'privilege');
+  const [slugAtivo, setSlugAtivo] = useState(slugInicial);
 
   const [loading, setLoading] = useState(true);
+  const [trocandoConsultor, setTrocandoConsultor] = useState(false);
   const [erro, setErro] = useState('');
-  const [consultor, setConsultor] = useState<{ id: string; nome: string; cargo: string } | null>(null);
+  const [consultor, setConsultor] = useState<{ id: string; slug?: string; nome: string; cargo: string } | null>(null);
+  const [consultores, setConsultores] = useState<Array<{ id: string; slug: string; nome: string; cargo: string }>>([]);
   const [dias, setDias] = useState<DiaDisponivel[]>([]);
 
   const [etapa, setEtapa] = useState<1 | 2>(1);
@@ -67,22 +70,33 @@ export default function AgendarPublicoPage() {
   } | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/agendar/${encodeURIComponent(slug)}`)
+    const primeiraCarga = !consultor;
+    if (primeiraCarga) setLoading(true);
+    else setTrocandoConsultor(true);
+
+    fetch(`/api/agendar/${encodeURIComponent(slugAtivo)}`)
       .then(r => r.json().then(j => ({ ok: r.ok, j })))
       .then(({ ok, j }) => {
         if (!ok) {
           setErro(j.error || 'Agenda não encontrada.');
           return;
         }
+        setErro('');
         setConsultor(j.consultor);
+        if (Array.isArray(j.consultores)) setConsultores(j.consultores);
         const lista: DiaDisponivel[] = Array.isArray(j.diasDisponiveis) ? j.diasDisponiveis : [];
         setDias(lista);
+        setHorarioSel('');
         if (lista.length > 0) setDiaSel(lista[0].dateStr);
+        else setDiaSel('');
       })
       .catch(() => setErro('Não foi possível carregar os horários disponíveis.'))
-      .finally(() => setLoading(false));
-  }, [slug]);
+      .finally(() => {
+        setLoading(false);
+        setTrocandoConsultor(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slugAtivo]);
 
   const diaAtual = dias.find(d => d.dateStr === diaSel);
   const horariosManha = (diaAtual?.horarios || []).filter(h => Number(h.split(':')[0]) < 12);
@@ -97,7 +111,7 @@ export default function AgendarPublicoPage() {
     setErro('');
     setEnviando(true);
     try {
-      const res = await fetch(`/api/agendar/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/agendar/${encodeURIComponent(consultor?.id || slugAtivo)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -400,7 +414,60 @@ export default function AgendarPublicoPage() {
             </div>
 
             {etapa === 1 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {/* Seletor de Consultor */}
+                {consultores.length > 1 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
+                      Com qual consultor deseja falar? {trocandoConsultor ? '(atualizando horários...)' : ''}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                      {consultores.map(c => {
+                        const ativo = consultor?.id === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setSlugAtivo(c.slug || c.id)}
+                            style={{
+                              padding: '7px 12px',
+                              borderRadius: 10,
+                              border: '1.5px solid',
+                              borderColor: ativo ? '#600000' : '#e2e8f0',
+                              background: ativo ? '#fef2f2' : '#fff',
+                              color: ativo ? '#600000' : '#334155',
+                              fontSize: 12.5,
+                              fontWeight: ativo ? 800 : 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 7,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: '50%',
+                                background: ativo ? '#600000' : '#e2e8f0',
+                                color: ativo ? '#fff' : '#475569',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {iniciais(c.nome)}
+                            </span>
+                            {c.nome}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Formato */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Formato da Reunião</div>

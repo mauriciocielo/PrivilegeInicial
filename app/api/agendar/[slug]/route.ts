@@ -17,17 +17,25 @@ function slugify(nome: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-async function localizarConsultorPorSlug(slug: string) {
-  const alvo = decodeURIComponent(slug || '').trim().toLowerCase();
+async function listarConsultoresPublicos() {
   const usuarios = await db.user.findMany({
     where: { role: { not: 'cliente' } },
     select: { id: true, name: true, email: true, phone: true, role: true },
+    orderBy: { name: 'asc' },
   });
+  return usuarios;
+}
+
+async function localizarConsultorPorSlug(slug: string, usuariosParam?: Awaited<ReturnType<typeof listarConsultoresPublicos>>) {
+  const alvo = decodeURIComponent(slug || '').trim().toLowerCase();
+  const usuarios = usuariosParam || (await listarConsultoresPublicos());
   return (
     usuarios.find(u => u.id.toLowerCase() === alvo) ||
     usuarios.find(u => slugify(u.name) === alvo) ||
     usuarios.find(u => slugify(u.name.split(' ')[0]) === alvo) ||
-    (alvo === 'privilege' ? usuarios.find(u => u.role === 'administrador') || usuarios[0] : null)
+    usuarios.find(u => u.role === 'administrador') ||
+    usuarios[0] ||
+    null
   );
 }
 
@@ -37,9 +45,10 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
-    const consultor = await localizarConsultorPorSlug(slug);
+    const todosConsultores = await listarConsultoresPublicos();
+    const consultor = await localizarConsultorPorSlug(slug, todosConsultores);
     if (!consultor) {
-      return NextResponse.json({ error: 'Consultor não encontrado.' }, { status: 404 });
+      return NextResponse.json({ error: 'Nenhum consultor disponível no momento.' }, { status: 404 });
     }
 
     const agoraBr = new Date(Date.now() - 3 * 3600 * 1000);
@@ -102,9 +111,16 @@ export async function GET(
     return NextResponse.json({
       consultor: {
         id: consultor.id,
+        slug: slugify(consultor.name) || consultor.id,
         nome: consultor.name,
         cargo: consultor.role === 'administrador' ? 'Diretoria & Consultoria' : 'Consultor Privilege',
       },
+      consultores: todosConsultores.map(u => ({
+        id: u.id,
+        slug: slugify(u.name) || u.id,
+        nome: u.name,
+        cargo: u.role === 'administrador' ? 'Diretoria & Consultoria' : 'Consultor Privilege',
+      })),
       diasDisponiveis,
     });
   } catch (error) {
