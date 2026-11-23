@@ -690,6 +690,7 @@ export async function checkAndDispatchDueFollowups(pool: any) {
         AND followup_status = 'pendente'
         AND followup_date IS NOT NULL
         AND followup_date <= NOW()
+        AND COALESCE(remote_jid, '') NOT LIKE '%@g.us'
       LIMIT 10
     `);
     for (const row of res.rows) {
@@ -1904,6 +1905,17 @@ export async function processIncomingMessage(params: {
         params.waKey ? JSON.stringify(params.waKey) : null,
       ]
     );
+  }
+
+  const ehGrupo = Boolean(
+    params.isGroup ||
+    (params.remoteJid && params.remoteJid.includes('@g.us')) ||
+    (params.chatId && params.chatId.includes('@g.us'))
+  );
+
+  // Bot nunca responde automaticamente em grupos de WhatsApp (evita excesso de mensagens)
+  if (ehGrupo) {
+    return { source: 'none' };
   }
 
   if (!config.bot_enabled) {

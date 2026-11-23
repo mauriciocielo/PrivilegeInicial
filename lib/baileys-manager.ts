@@ -924,13 +924,13 @@ export async function startBaileysSocket(
             await pool
               .query(
                 `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 0, TRUE, 'em_atendimento')
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 0, $8, 'em_atendimento')
                  ON CONFLICT (id) DO UPDATE SET
                    profile_pic = COALESCE(EXCLUDED.profile_pic, whatsapp_chats.profile_pic),
                    remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid),
                    last_message = EXCLUDED.last_message,
                    last_message_time = NOW()`,
-                [chatId, ownerId, cleanPhone, cleanPhone, profilePic, sendJid, text]
+                [chatId, ownerId, cleanPhone, cleanPhone, profilePic, sendJid, text, !isGroup]
               )
               .catch(() => {});
 
