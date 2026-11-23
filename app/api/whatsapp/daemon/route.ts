@@ -4,6 +4,7 @@ import { runWhatsAppBackgroundTick } from '@/lib/whatsapp-service';
 import { listCampaigns, startCampaignWorker } from '@/lib/campaign-manager';
 import { iniciarWorkerFilaEmail } from '@/lib/email-queue';
 import { processarLembretesAgenda24h } from '@/lib/agenda-lembretes';
+import { processarAlertasCertificados24h } from '@/lib/certificado-alertas';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +23,13 @@ async function executeDaemonTick() {
   }
   iniciarWorkerFilaEmail();
   const lembretesAgenda = await processarLembretesAgenda24h().catch(() => ({ enviados24h: 0, enviados1h: 0 }));
+  const alertasCertificados = await processarAlertasCertificados24h().catch(() => ({ enviados: 0 }));
   return {
     success: true,
     startedOwners,
     hasRunningCampaign,
     lembretesAgenda,
+    alertasCertificados,
     timestamp: new Date().toISOString(),
   };
 }

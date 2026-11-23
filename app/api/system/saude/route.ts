@@ -245,5 +245,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, enviadoPara: telefone });
   }
 
+  if (action === 'enviar_alerta_certificados') {
+    const { enviarAlertaCertificadosWhatsApp } = await import('@/lib/certificado-alertas');
+    const resultado = await enviarAlertaCertificadosWhatsApp(body?.telefone);
+    if (!resultado.ok) {
+      return NextResponse.json({ error: resultado.erro || 'Falha ao enviar aviso de certificados.' }, { status: 422 });
+    }
+    return NextResponse.json({
+      ok: true,
+      enviadoPara: resultado.enviadoPara,
+      quantidade: resultado.quantidade,
+    });
+  }
+
   return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 });
 }
