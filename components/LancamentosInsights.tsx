@@ -115,7 +115,7 @@ export default function LancamentosInsights({
   return (
     <div style={{ marginBottom: 20 }}>
       <h3 className="ai-insights-title" style={{ fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
-        <Sparkles size={14} className="pulse-glow" /> Insights da IA
+        <Sparkles size={14} /> Insights da IA
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
         {insights.map((insight, idx) => {

@@ -926,6 +926,66 @@ select.form-input { cursor: pointer; }
 select.form-control option,
 select.form-input option { background: var(--bg-card2); }
 
+/* Lista de opções dos selects com o visual do sistema, no lugar da lista cinza/azul do Windows.
+   Chrome e Edge 135+; nos outros navegadores continua a lista nativa. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+  select:not([multiple]):not([size]) {
+    align-items: center;
+    gap: 8px;
+  }
+  select:not([multiple]):not([size])::picker-icon {
+    content: '';
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    color: var(--text-muted);
+    transition: rotate 0.15s;
+  }
+  select:not([multiple]):not([size]):open::picker-icon {
+    rotate: 180deg;
+  }
+  select:not([multiple]):not([size])::picker(select) {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    box-shadow: 0 12px 32px rgba(15, 15, 15, 0.14);
+    padding: 4px;
+    margin-block: 4px;
+    max-height: min(340px, 60vh);
+  }
+  select:not([multiple]):not([size]) option {
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 14.5px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  select:not([multiple]):not([size]) option::checkmark {
+    display: none;
+  }
+  select:not([multiple]):not([size]) option:hover,
+  select:not([multiple]):not([size]) option:focus-visible {
+    background: var(--bg-card2);
+    outline: none;
+  }
+  select:not([multiple]):not([size]) option:checked {
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  select:not([multiple]):not([size]) option:disabled {
+    color: var(--text-muted);
+    cursor: default;
+  }
+}
+
 textarea.form-control,
 textarea.form-input {
   resize: vertical;

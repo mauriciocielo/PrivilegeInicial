@@ -449,7 +449,7 @@ export default function ImportarOFXPage() {
               </div>
               {syncStatusText && (
                 <div style={{ fontSize: 13.5, color: 'var(--purple)', marginTop: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="pulse-glow" style={{ fontSize: 15.5 }}>📡</span> {syncStatusText}
+                  {syncStatusText}
                 </div>
               )}
             </div>
