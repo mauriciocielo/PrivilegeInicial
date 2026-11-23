@@ -4,10 +4,11 @@ import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
+import Link from 'next/link';
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare, Users,
   Calendar, Clock, MapPin, Search, List, LayoutGrid, Columns, RefreshCw, CheckCircle2, Building2,
-  Video, Mail, History, RotateCw, Repeat,
+  Video, Mail, History, RotateCw, Repeat, Sparkles, FileText, Link2, Activity,
 } from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
@@ -127,6 +128,96 @@ export default function AgendaPage() {
       createdAt: string;
     }>
   >([]);
+
+  // Dossiê Pré-Reunião IA (#1)
+  const [dossieModal, setDossieModal] = useState<{ titulo: string; dados: any; pontosIA: string[] } | null>(null);
+  const [carregandoDossieTaskId, setCarregandoDossieTaskId] = useState<string | null>(null);
+
+  // Ata Pós-Reunião IA + Grupo (#2)
+  const [ataModalTask, setAtaModalTask] = useState<AgendaTask | null>(null);
+  const [ataTopicos, setAtaTopicos] = useState('');
+  const [ataEnviarGrupo, setAtaEnviarGrupo] = useState(true);
+  const [gerandoAta, setGerandoAta] = useState(false);
+
+  const abrirDossiePreReuniao = async (task: AgendaTask) => {
+    if (!task.empresaId) {
+      toast.info('Vincule uma empresa a este compromisso para gerar o Dossiê Pré-Reunião.');
+      return;
+    }
+    setCarregandoDossieTaskId(task.id);
+    try {
+      const res = await fetch('/api/agenda/dossie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: task.empresaId, titulo: task.title, data: task.dateStr, horario: task.horario }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro ao gerar dossiê');
+      setDossieModal({ titulo: task.title, dados: json.dados, pontosIA: json.pontosIA || [] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCarregandoDossieTaskId(null);
+    }
+  };
+
+  const gerarEEnviarAtaPosReuniao = async () => {
+    if (!ataModalTask || !ataModalTask.empresaId || !ataTopicos.trim()) {
+      toast.error('Escreva os tópicos discutidos na reunião.');
+      return;
+    }
+    setGerandoAta(true);
+    try {
+      const res = await fetch('/api/agenda/ata-pos-reuniao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresaId: ataModalTask.empresaId,
+          titulo: ataModalTask.title,
+          data: ataModalTask.dateStr,
+          topicos: ataTopicos,
+          participantes: (ataModalTask as any).clienteParticipante || 'Equipe Privilege e Cliente',
+          enviarNoGrupo: ataEnviarGrupo,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro ao gerar ata');
+      if (json.enviadoGrupo) {
+        toast.success(`Ata salva e enviada no grupo "${json.grupoNome}"!`);
+      } else if (ataEnviarGrupo && json.erroGrupo) {
+        toast.warning(`Ata salva no sistema, mas não foi enviada no grupo: ${json.erroGrupo}`);
+      } else {
+        toast.success('Ata salva no histórico de Atas da empresa!');
+      }
+      // Marca compromisso como concluído automaticamente
+      if (!ataModalTask.completed) {
+        saveTasks(tasks.map(t => (t.id === ataModalTask.id ? { ...t, completed: true } : t)));
+      }
+      setAtaModalTask(null);
+      setAtaTopicos('');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setGerandoAta(false);
+    }
+  };
+
+  const copiarMeuLinkAgendamento = async () => {
+    const me = store.getCurrentUser();
+    const slug = (me?.name || 'privilege')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'privilege';
+    const url = `${window.location.origin}/agendar/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(`Link de agendamento copiado: ${url}`);
+    } catch {
+      window.prompt('Copie seu link de agendamento:', url);
+    }
+  };
 
   const carregarLogsDisparos = async () => {
     setCarregandoLogs(true);
@@ -1108,6 +1199,31 @@ export default function AgendaPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            {task.empresaId && (
+              <>
+                <button
+                  className="agenda-icon-btn"
+                  title="Dossiê Pré-Reunião com IA (Caixa, Vencidos, NFS-e, Certificado)"
+                  disabled={carregandoDossieTaskId === task.id}
+                  onClick={() => abrirDossiePreReuniao(task)}
+                  style={{ color: '#600000', opacity: carregandoDossieTaskId === task.id ? 0.45 : 1 }}
+                >
+                  <Sparkles size={14} />
+                </button>
+                <button
+                  className="agenda-icon-btn"
+                  title="Gerar Ata Pós-Reunião com IA e enviar no grupo"
+                  onClick={() => {
+                    setAtaModalTask(task);
+                    setAtaTopicos('');
+                    setAtaEnviarGrupo(Boolean(grupoEmp?.groupJid));
+                  }}
+                  style={{ color: '#2563eb' }}
+                >
+                  <FileText size={14} />
+                </button>
+              </>
+            )}
             <button
               className="agenda-icon-btn"
               title={grupoEmp ? `Enviar no grupo "${grupoEmp.groupName}"` : 'Enviar no WhatsApp (via 46 99980-0010)'}
@@ -1263,6 +1379,18 @@ export default function AgendaPage() {
               Conectar Google
             </button>
           )}
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={copiarMeuLinkAgendamento}
+            title="Copiar link público estilo Calendly para clientes agendarem com você"
+          >
+            <Link2 size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Meu Link
+          </button>
+          <Link href="/consultor/carteira" className="btn btn-secondary btn-sm" title="Semáforo de saúde da carteira de clientes">
+            <Activity size={14} style={{ marginRight: 5, verticalAlign: -2 }} />
+            Carteira
+          </Link>
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => {
@@ -1958,6 +2086,111 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+      {/* Modal Dossiê Pré-Reunião com IA (#1) */}
+      {dossieModal && (
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setDossieModal(null)}
+        >
+          <div className="card modal-create" style={{ width: 580, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
+            <button onClick={() => setDossieModal(null)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={18} style={{ color: '#600000' }} /> Dossiê Pré-Reunião — {dossieModal.dados.empresa}
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>
+              Pauta: <strong>{dossieModal.titulo}</strong> • Dados financeiros e fiscais em tempo real
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
+              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Saldo em Caixa</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: dossieModal.dados.saldoCaixa < 0 ? '#dc2626' : '#15803d' }}>
+                  {Number(dossieModal.dados.saldoCaixa || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
+              </div>
+              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>NFS-e no Mês ({dossieModal.dados.qtdNotasMes})</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {Number(dossieModal.dados.faturamentoNfseMes || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
+              </div>
+              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Contas a Pagar Vencidas</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: dossieModal.dados.pagarVencido > 0 ? '#dc2626' : 'var(--text-primary)' }}>
+                  {Number(dossieModal.dados.pagarVencido || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
+              </div>
+              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Certificado Digital A1</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: dossieModal.dados.certAlerta ? '#dc2626' : '#15803d' }}>
+                  {dossieModal.dados.certStatus}
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 12, background: '#fef2f2', border: '1px solid #fecaca', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#600000', marginBottom: 8 }}>Pontos de Atenção &amp; Pauta (IA)</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+                {dossieModal.pontosIA.map((p, idx) => <li key={idx} style={{ marginBottom: 4 }}>{p}</li>)}
+              </ul>
+            </div>
+            {dossieModal.dados.ultimaAta && (
+              <div style={{ padding: 12, borderRadius: 10, background: 'var(--bg-base)', border: '1px solid var(--border-light)', fontSize: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>Última Ata ({dossieModal.dados.ultimaAta.data} — {dossieModal.dados.ultimaAta.titulo})</div>
+                <div style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{dossieModal.dados.ultimaAta.resumo}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ata Pós-Reunião com IA + Envio no Grupo (#2) */}
+      {ataModalTask && (
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setAtaModalTask(null)}
+        >
+          <div className="card modal-create" style={{ width: 540, maxWidth: '96vw', padding: 24, position: 'relative' }}>
+            <button onClick={() => setAtaModalTask(null)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FileText size={18} style={{ color: '#2563eb' }} /> Ata Pós-Reunião com IA
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>
+              Anote os tópicos principais de <strong>{ataModalTask.title}</strong>. A IA gera a ata executiva, salva no histórico da empresa e envia no grupo do cliente.
+            </p>
+            <textarea
+              className="form-control"
+              rows={5}
+              placeholder="- Revisamos DRE de outubro (margem subiu 3%)&#10;- Cliente vai enviar extratos até sexta&#10;- Próxima reunião dia 15 para planejamento tributário"
+              value={ataTopicos}
+              onChange={e => setAtaTopicos(e.target.value)}
+              autoFocus
+            />
+            {ataModalTask.empresaId && vinculosGrupos[ataModalTask.empresaId] && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 12.5, fontWeight: 600, color: '#15803d', cursor: 'pointer' }}>
+                <input type="checkbox" checked={ataEnviarGrupo} onChange={e => setAtaEnviarGrupo(e.target.checked)} />
+                <span>Enviar ata resumida no grupo <strong>{vinculosGrupos[ataModalTask.empresaId].groupName}</strong></span>
+              </label>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+              <button className="btn btn-secondary" onClick={() => setAtaModalTask(null)}>Cancelar</button>
+              <button
+                className="btn btn-primary"
+                onClick={gerarEEnviarAtaPosReuniao}
+                disabled={gerandoAta || !ataTopicos.trim()}
+                style={{ background: '#600000', borderColor: '#600000' }}
+              >
+                {gerandoAta ? 'Gerando Ata IA...' : 'Gerar Ata, Concluir e Enviar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Histórico de Disparos WhatsApp */}
       {showLogsModal && (
         <div
