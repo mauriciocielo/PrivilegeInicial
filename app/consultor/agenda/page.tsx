@@ -595,27 +595,43 @@ export default function AgendaPage() {
     const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia || emp.razaoSocial}` : 'A combinar / Online');
     const empNome = emp ? (emp.nomeFantasia || emp.razaoSocial) : 'Privilege';
 
-    let text = anterior
-      ? `🔄 *Alteração na Agenda — ${empNome}*\n\nOlá, pessoal! Houve um ajuste no nosso compromisso:\n`
-      : `Olá! 🌟 Tudo bem?\nPassando para confirmar nosso compromisso. Aqui estão os detalhes:\n\n`;
-
     if (anterior) {
       const pAnt = anterior.dateStr.split('-');
       const dataAnt = pAnt.length === 3 ? `${pAnt[2]}/${pAnt[1]}/${pAnt[0]}` : anterior.dateStr;
-      text += `\n❌ *Antes:* ${dataAnt} às ${anterior.horario}`;
-      text += `\n✅ *Novo horário:* ${dataFormatada} às ${task.horario}\n\n`;
-    } else {
-      text += `📅 *Data:* ${dataFormatada}\n`;
-      text += `⏰ *Horário:* ${task.horario}\n`;
+      return [
+        `🗓️ *Reagendamento — ${empNome}*`,
+        ``,
+        `Olá, equipe! Informamos que houve uma alteração no nosso compromisso:`,
+        ``,
+        `• *Horário anterior:* ${dataAnt} às ${anterior.horario}`,
+        `• *Novo horário:* ${dataFormatada} às ${task.horario}`,
+        `• *Assunto:* ${task.title}`,
+        `• *Local:* ${loc}`,
+        `• *Consultor(a):* ${partCons}`,
+        ...(partCli ? [`• *Participantes:* ${partCli}`] : []),
+        ``,
+        `Qualquer dúvida ou imprevisto, estamos à disposição por aqui.`,
+        ``,
+        `_Privilege Contabilidade e Consultoria_`,
+      ].join('\n');
     }
 
-    text += `📍 *Local:* ${loc}\n`;
-    text += `🏢 *Empresa:* ${empNome}\n`;
-    text += `👔 *Consultor:* ${partCons}\n`;
-    if (partCli) text += `🗣️ *Participante(s) do Cliente:* ${partCli}\n`;
-    text += `\n📌 *Assunto:* ${task.title}\n`;
-    text += `\nQualquer imprevisto, é só nos avisar por aqui. Até lá! 👋`;
-    return text;
+    return [
+      `🗓️ *Agendamento Confirmado — ${empNome}*`,
+      ``,
+      `Olá, equipe! Seguem os detalhes do nosso próximo compromisso:`,
+      ``,
+      `• *Assunto:* ${task.title}`,
+      `• *Data:* ${dataFormatada}`,
+      `• *Horário:* ${task.horario}`,
+      `• *Local:* ${loc}`,
+      `• *Consultor(a):* ${partCons}`,
+      ...(partCli ? [`• *Participantes:* ${partCli}`] : []),
+      ``,
+      `Caso precise de algum ajuste, é só nos avisar por aqui.`,
+      ``,
+      `_Privilege Contabilidade e Consultoria_`,
+    ].join('\n');
   };
 
   const enviarCompromissoWhatsApp = async (

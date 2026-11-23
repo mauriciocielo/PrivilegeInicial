@@ -172,9 +172,10 @@ export async function processarLembretesAgenda24h(): Promise<{ enviados24h: numb
       const texto =
         tipo === '24h'
           ? [
-              `📅 *Confirmação de Agenda — Amanhã!*`,
+              `🗓️ *Confirmação de Agenda — Amanhã*`,
               ``,
-              `Olá, pessoal da *${empNome}*! Passando para confirmar nosso compromisso de amanhã:`,
+              `Olá, equipe da *${empNome}*!`,
+              `Passando para confirmar nosso compromisso de amanhã:`,
               ``,
               `• *Assunto:* ${t.title}`,
               `• *Data:* ${dataBr}`,
@@ -182,19 +183,24 @@ export async function processarLembretesAgenda24h(): Promise<{ enviados24h: numb
               `• *Local:* ${local}`,
               ...(t.clienteParticipante ? [`• *Participantes:* ${t.clienteParticipante}`] : []),
               ``,
-              `Podemos manter confirmado? Qualquer ajuste, é só nos avisar por aqui! ✅`,
+              `Podemos manter confirmado? Caso precise remarcar, basta responder por aqui.`,
+              ``,
+              `_Privilege Contabilidade e Consultoria_`,
             ].join('\n')
           : [
-              `⏰ *Lembrete de Agenda — Daqui a 1 hora!*`,
+              `⏱️ *Lembrete — Compromisso em 1 hora*`,
               ``,
-              `Olá, pessoal da *${empNome}*! Lembrando do nosso compromisso de hoje:`,
+              `Olá, equipe da *${empNome}*!`,
+              `Lembrando do nosso compromisso de hoje:`,
               ``,
               `• *Assunto:* ${t.title}`,
               `• *Horário:* ${t.horario}`,
               `• *Local:* ${local}`,
               ...(t.clienteParticipante ? [`• *Participantes:* ${t.clienteParticipante}`] : []),
               ``,
-              `Nos vemos em breve! 👋`,
+              `Nos vemos em breve.`,
+              ``,
+              `_Privilege Contabilidade e Consultoria_`,
             ].join('\n');
 
       const res = await sendBaileysLiveMessage(grupo.group_jid, texto, undefined, ownerId);
