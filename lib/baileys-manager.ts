@@ -353,6 +353,10 @@ export async function resolveWhatsAppJid(
   phoneOrChatId: string,
   ownerId = 'default'
 ): Promise<string> {
+  if (phoneOrChatId.includes('@g.us') || phoneOrChatId.includes('@s.whatsapp.net') || phoneOrChatId.includes('@lid')) {
+    return phoneOrChatId;
+  }
+
   const pool = getEmailDbPool();
   const authDir = getAuthDir(ownerId);
 
@@ -1185,6 +1189,30 @@ export async function sendBaileysLiveMessage(
   } catch (err) {
     console.error(`[Baileys:${ownerId}] Erro ao enviar mensagem ao vivo:`, err);
     return { sent: false };
+  }
+}
+
+/**
+ * Lista os grupos do WhatsApp em que a sessão conectada participa.
+ */
+export async function listarGruposBaileys(ownerId = 'default'): Promise<Array<{ jid: string; nome: string; participantes: number }>> {
+  const sock = await ensureBaileysConnected(true, ownerId);
+  if (!sock || typeof sock.groupFetchAllParticipating !== 'function') {
+    return [];
+  }
+  try {
+    const groupsMap = await sock.groupFetchAllParticipating();
+    return Object.values(groupsMap || {})
+      .map((g: any) => ({
+        jid: String(g?.id || ''),
+        nome: String(g?.subject || 'Grupo sem nome'),
+        participantes: Array.isArray(g?.participants) ? g.participants.length : 0,
+      }))
+      .filter(g => g.jid.endsWith('@g.us'))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  } catch (err) {
+    console.warn(`[Baileys:${ownerId}] Falha ao listar grupos:`, err);
+    return [];
   }
 }
 

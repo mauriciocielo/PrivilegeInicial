@@ -4,7 +4,7 @@ import { store, Empresa, User, AgendaTask } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Copy, X, Edit2, MessageSquare, Users } from 'lucide-react';
 
 // A interface AgendaTask vive em lib/store.ts, junto com os métodos que
 // persistem a agenda — manter uma cópia local aqui já causou divergência de
@@ -84,6 +84,82 @@ export default function AgendaPage() {
   const [wppAgendaNumero, setWppAgendaNumero] = useState('');
   const [enviandoWppTaskId, setEnviandoWppTaskId] = useState<string | null>(null);
 
+  // Grupos de WhatsApp vinculados por empresa (envio no grupo: criação, alteração, 1 dia e 1 hora antes)
+  const [vinculosGrupos, setVinculosGrupos] = useState<
+    Record<string, { empresaId: string; groupJid: string; groupName: string; notificarAgenda: boolean }>
+  >({});
+  const [showGruposModal, setShowGruposModal] = useState(false);
+  const [carregandoGrupos, setCarregandoGrupos] = useState(false);
+  const [gruposWppDisponiveis, setGruposWppDisponiveis] = useState<Array<{ jid: string; nome: string; participantes: number }>>([]);
+  const [sessaoGruposOk, setSessaoGruposOk] = useState(true);
+  const [grupoEmpresaSel, setGrupoEmpresaSel] = useState('');
+  const [grupoJidSel, setGrupoJidSel] = useState('');
+  const [salvandoGrupo, setSalvandoGrupo] = useState(false);
+  const [avisarGrupoAoSalvar, setAvisarGrupoAoSalvar] = useState(true);
+
+  const carregarVinculosGrupos = async (live = false) => {
+    if (live) setCarregandoGrupos(true);
+    try {
+      const res = await fetch(`/api/agenda/grupos?live=${live ? '1' : '0'}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const map: Record<string, { empresaId: string; groupJid: string; groupName: string; notificarAgenda: boolean }> = {};
+      for (const v of data.vinculos || []) {
+        map[v.empresaId] = v;
+      }
+      setVinculosGrupos(map);
+      if (live) {
+        setSessaoGruposOk(Boolean(data.sessaoConectada));
+        setGruposWppDisponiveis(Array.isArray(data.gruposWhatsApp) ? data.gruposWhatsApp : []);
+      }
+    } catch {
+      // ignora
+    } finally {
+      if (live) setCarregandoGrupos(false);
+    }
+  };
+
+  const salvarVinculoGrupo = async () => {
+    if (!grupoEmpresaSel || !grupoJidSel) {
+      toast.error('Selecione a empresa e o grupo do WhatsApp.');
+      return;
+    }
+    const g = gruposWppDisponiveis.find(x => x.jid === grupoJidSel);
+    setSalvandoGrupo(true);
+    try {
+      const res = await fetch('/api/agenda/grupos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresaId: grupoEmpresaSel,
+          groupJid: grupoJidSel,
+          groupName: g?.nome || grupoJidSel,
+          notificarAgenda: true,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erro ao vincular grupo.');
+      toast.success('Grupo do cliente vinculado! Avisos de criação, alteração, 1 dia e 1 hora antes ativados.');
+      setGrupoEmpresaSel('');
+      setGrupoJidSel('');
+      await carregarVinculosGrupos(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSalvandoGrupo(false);
+    }
+  };
+
+  const removerVinculoGrupo = async (empId: string) => {
+    try {
+      await fetch(`/api/agenda/grupos?empresaId=${encodeURIComponent(empId)}`, { method: 'DELETE' });
+      toast.success('Vínculo de grupo removido.');
+      await carregarVinculosGrupos(false);
+    } catch {
+      toast.error('Falha ao remover vínculo.');
+    }
+  };
+
   const salvarPrefWppAgenda = (ativo: boolean, telefone: string) => {
     setEnviarWppAgenda(ativo);
     setWppAgendaNumero(telefone);
@@ -142,6 +218,7 @@ export default function AgendaPage() {
     obterTokenGoogleValido().then(t => {
       if (t) syncGoogle(t, baseDate, true);
     });
+    carregarVinculosGrupos(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -426,6 +503,7 @@ export default function AgendaPage() {
     
     // Se o newTask já tiver um ID, estamos editando. Senão, cria novo.
     const isEdit = !!newTask.id;
+    const anterior = isEdit ? tasks.find(t => t.id === newTask.id) : undefined;
     const task: AgendaTask = {
       id: newTask.id || Math.random().toString(36).slice(2, 11),
       title: newTask.title,
@@ -453,11 +531,49 @@ export default function AgendaPage() {
       if (gToken) setTimeout(() => syncGoogle(gToken, baseDate, true), 100);
     });
 
-    // Envio automático no WhatsApp configurado (via 46 99980-0010)
+    const partes = task.dateStr.split('-');
+    const dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : task.dateStr;
+
+    // 1. Envio automático no GRUPO DO CLIENTE (criação ou alteração de data/horário/assunto)
+    const grupoEmp = task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
+    if (grupoEmp?.groupJid && grupoEmp.notificarAgenda && avisarGrupoAoSalvar) {
+      const mudou =
+        isEdit &&
+        anterior &&
+        (anterior.dateStr !== task.dateStr ||
+          anterior.horario !== task.horario ||
+          anterior.title !== task.title);
+
+      if (!isEdit || mudou) {
+        const msgGrupo = montarMensagemCompromisso(task, dataFmt, isEdit ? anterior : undefined);
+        fetch('/api/agenda/enviar-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupJid: grupoEmp.groupJid,
+            groupName: grupoEmp.groupName,
+            mensagem: msgGrupo,
+          }),
+        })
+          .then(r => r.json().then(j => ({ ok: r.ok, j })))
+          .then(({ ok, j }) => {
+            if (ok) {
+              toast.success(
+                isEdit
+                  ? `Alteração de agenda enviada no grupo "${grupoEmp.groupName}"!`
+                  : `Compromisso enviado no grupo "${grupoEmp.groupName}"! Lembretes de 1 dia e 1 hora antes armados.`
+              );
+            } else {
+              toast.warning(`Compromisso salvo, mas não foi possível avisar no grupo: ${j?.error || 'WhatsApp offline'}`);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+
+    // 2. Envio automático no WhatsApp individual configurado (opcional)
     if (enviarWppAgenda && wppAgendaNumero.replace(/\D/g, '').length >= 10) {
-      const partes = task.dateStr.split('-');
-      const dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}` : task.dateStr;
-      enviarCompromissoWhatsApp(task, dataFmt, wppAgendaNumero, true);
+      enviarCompromissoWhatsApp(task, dataFmt, wppAgendaNumero, true, isEdit ? anterior : undefined);
     }
   };
 
@@ -470,7 +586,7 @@ export default function AgendaPage() {
     saveTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
   };
 
-  const montarMensagemCompromisso = (task: AgendaTask, dataFormatada: string) => {
+  const montarMensagemCompromisso = (task: AgendaTask, dataFormatada: string, anterior?: AgendaTask) => {
     const emp = empresas.find(e => e.id === task.empresaId);
     const multiIds = (task as any).consultoresIds || (task.consultorId ? [task.consultorId] : []);
     const nomes = multiIds.map((id: string) => users.find(u => u.id === id)?.name).filter(Boolean).join(', ');
@@ -479,15 +595,26 @@ export default function AgendaPage() {
     const loc = task.location || (emp ? `Sede - ${emp.nomeFantasia || emp.razaoSocial}` : 'A combinar / Online');
     const empNome = emp ? (emp.nomeFantasia || emp.razaoSocial) : 'Privilege';
 
-    let text = `Olá! 🌟 Tudo bem?\nPassando para confirmar nosso compromisso. Aqui estão os detalhes:\n\n`;
-    text += `📅 *Data:* ${dataFormatada}\n`;
-    text += `⏰ *Horário:* ${task.horario}\n`;
+    let text = anterior
+      ? `🔄 *Alteração na Agenda — ${empNome}*\n\nOlá, pessoal! Houve um ajuste no nosso compromisso:\n`
+      : `Olá! 🌟 Tudo bem?\nPassando para confirmar nosso compromisso. Aqui estão os detalhes:\n\n`;
+
+    if (anterior) {
+      const pAnt = anterior.dateStr.split('-');
+      const dataAnt = pAnt.length === 3 ? `${pAnt[2]}/${pAnt[1]}/${pAnt[0]}` : anterior.dateStr;
+      text += `\n❌ *Antes:* ${dataAnt} às ${anterior.horario}`;
+      text += `\n✅ *Novo horário:* ${dataFormatada} às ${task.horario}\n\n`;
+    } else {
+      text += `📅 *Data:* ${dataFormatada}\n`;
+      text += `⏰ *Horário:* ${task.horario}\n`;
+    }
+
     text += `📍 *Local:* ${loc}\n`;
     text += `🏢 *Empresa:* ${empNome}\n`;
     text += `👔 *Consultor:* ${partCons}\n`;
     if (partCli) text += `🗣️ *Participante(s) do Cliente:* ${partCli}\n`;
     text += `\n📌 *Assunto:* ${task.title}\n`;
-    text += `\nQualquer imprevisto, é só me avisar. Até lá! 👋`;
+    text += `\nQualquer imprevisto, é só nos avisar por aqui. Até lá! 👋`;
     return text;
   };
 
@@ -495,10 +622,13 @@ export default function AgendaPage() {
     task: AgendaTask,
     dataFormatada: string,
     telefoneAlvo?: string,
-    silencioso = false
+    silencioso = false,
+    anterior?: AgendaTask
   ) => {
+    const grupoEmp = !telefoneAlvo && task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
     let tel = (telefoneAlvo || wppAgendaNumero || '').trim();
-    if (tel.replace(/\D/g, '').length < 10) {
+
+    if (!grupoEmp?.groupJid && tel.replace(/\D/g, '').length < 10) {
       if (silencioso) return;
       const digitado = window.prompt('Informe o WhatsApp com DDD para enviar este compromisso (ex.: 46999016003):', tel);
       if (!digitado || digitado.replace(/\D/g, '').length < 10) return;
@@ -508,15 +638,22 @@ export default function AgendaPage() {
 
     setEnviandoWppTaskId(task.id);
     try {
-      const mensagem = montarMensagemCompromisso(task, dataFormatada);
+      const mensagem = montarMensagemCompromisso(task, dataFormatada, anterior);
+      const payload = grupoEmp?.groupJid
+        ? { groupJid: grupoEmp.groupJid, groupName: grupoEmp.groupName, mensagem }
+        : { telefone: tel, mensagem };
       const res = await fetch('/api/agenda/enviar-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefone: tel, mensagem }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Falha ao enviar compromisso no WhatsApp.');
-      toast.success(`Compromisso enviado no WhatsApp (${tel}) via 46 99980-0010!`);
+      toast.success(
+        json.isGrupo
+          ? `Compromisso enviado no grupo "${json.destinoNome}" via 46 99980-0010!`
+          : `Compromisso enviado no WhatsApp (${tel}) via 46 99980-0010!`
+      );
     } catch (e) {
       if (!silencioso) toast.error((e as Error).message);
       else toast.warning(`Compromisso salvo, mas o WhatsApp não foi enviado: ${(e as Error).message}`);
@@ -604,6 +741,17 @@ export default function AgendaPage() {
               Conectar Google
             </button>
           )}
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setShowGruposModal(true);
+              carregarVinculosGrupos(true);
+            }}
+            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600 }}
+          >
+            <Users size={15} style={{ marginRight: 5, verticalAlign: -3 }} />
+            Grupos dos Clientes ({Object.keys(vinculosGrupos).length})
+          </button>
           <button className="btn btn-primary" onClick={() => abrirNovo()}>
             <Plus size={15} style={{ marginRight: 4, verticalAlign: -3 }} /> Agendar
           </button>
@@ -873,6 +1021,25 @@ export default function AgendaPage() {
                 </div>
               </div>
 
+              {newTask.empresaId && vinculosGrupos[newTask.empresaId] && (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#15803d', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={avisarGrupoAoSalvar}
+                      onChange={e => setAvisarGrupoAoSalvar(e.target.checked)}
+                    />
+                    <span>
+                      {newTask.id ? 'Avisar alteração no grupo:' : 'Enviar no grupo do cliente:'}{' '}
+                      <strong>{vinculosGrupos[newTask.empresaId].groupName}</strong>
+                    </span>
+                  </label>
+                  <div style={{ fontSize: 11, color: '#166534', marginTop: 4 }}>
+                    Confirmações automáticas de <strong>1 dia antes</strong> e <strong>1 hora antes</strong> também serão disparadas 24h pelo servidor.
+                  </div>
+                </div>
+              )}
+
               <div style={{ padding: '10px 12px', borderRadius: 10, background: enviarWppAgenda ? '#f0fdf4' : 'var(--bg-base)', border: `1px solid ${enviarWppAgenda ? '#bbf7d0' : 'var(--border)'}` }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                   <input
@@ -899,6 +1066,112 @@ export default function AgendaPage() {
                 <button className="btn btn-primary" onClick={handleSaveTask}>Salvar</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Vínculo Empresa <-> Grupo WhatsApp */}
+      {showGruposModal && (
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setShowGruposModal(false)}
+        >
+          <div className="card" style={{ width: 620, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
+            <button onClick={() => setShowGruposModal(false)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 6px' }}>👥 Grupos de WhatsApp dos Clientes</h3>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.45 }}>
+              Vincule cada empresa ao seu grupo no WhatsApp <strong>(46) 99980-0010</strong>. O sistema enviará automaticamente no grupo: <strong>novo agendamento</strong>, <strong>alteração de data/horário</strong>, <strong>confirmação 1 dia antes</strong> e <strong>lembrete 1 hora antes</strong> (24h/dia no servidor).
+            </p>
+
+            {!sessaoGruposOk && !carregandoGrupos && (
+              <div style={{ padding: '10px 12px', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 12.5, marginBottom: 14 }}>
+                A sessão do WhatsApp <strong>(46) 99980-0010</strong> não está conectada no momento. Conecte em WhatsApp &amp; Bot IA para carregar a lista de grupos.
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label className="form-label" style={{ fontSize: 12 }}>Empresa</label>
+                <select className="form-control" value={grupoEmpresaSel} onChange={e => setGrupoEmpresaSel(e.target.value)}>
+                  <option value="">Selecione a empresa...</option>
+                  {empresas.map(e => (
+                    <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: 12 }}>
+                  Grupo no WhatsApp {carregandoGrupos ? '(carregando...)' : `(${gruposWppDisponiveis.length})`}
+                </label>
+                <select className="form-control" value={grupoJidSel} onChange={e => setGrupoJidSel(e.target.value)} disabled={carregandoGrupos}>
+                  <option value="">Selecione o grupo...</option>
+                  {gruposWppDisponiveis.map(g => (
+                    <option key={g.jid} value={g.jid}>{g.nome} ({g.participantes} membros)</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => carregarVinculosGrupos(true)} disabled={carregandoGrupos}>
+                {carregandoGrupos ? 'Carregando grupos...' : '↻ Atualizar grupos do WhatsApp'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={salvarVinculoGrupo}
+                disabled={salvandoGrupo || !grupoEmpresaSel || !grupoJidSel}
+                style={{ background: '#15803d', borderColor: '#15803d' }}
+              >
+                {salvandoGrupo ? 'Salvando...' : '+ Vincular Grupo'}
+              </button>
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 8 }}>
+              Empresas Vinculadas ({Object.keys(vinculosGrupos).length})
+            </div>
+
+            {Object.keys(vinculosGrupos).length === 0 ? (
+              <div style={{ padding: 18, textAlign: 'center', fontSize: 12.5, color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 10 }}>
+                Nenhuma empresa vinculada a um grupo ainda.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {Object.values(vinculosGrupos).map(v => {
+                  const emp = empresas.find(e => e.id === v.empresaId);
+                  return (
+                    <div
+                      key={v.empresaId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '10px 12px',
+                        borderRadius: 10,
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{emp?.nomeFantasia || emp?.razaoSocial || v.empresaId}</div>
+                        <div style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>👥 {v.groupName}</div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                        onClick={() => removerVinculoGrupo(v.empresaId)}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

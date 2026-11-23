@@ -3,6 +3,7 @@ import { bootAllSavedBaileysSessions } from '@/lib/baileys-manager';
 import { runWhatsAppBackgroundTick } from '@/lib/whatsapp-service';
 import { listCampaigns, startCampaignWorker } from '@/lib/campaign-manager';
 import { iniciarWorkerFilaEmail } from '@/lib/email-queue';
+import { processarLembretesAgenda24h } from '@/lib/agenda-lembretes';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,12 @@ async function executeDaemonTick() {
     startCampaignWorker().catch(() => { });
   }
   iniciarWorkerFilaEmail();
+  const lembretesAgenda = await processarLembretesAgenda24h().catch(() => ({ enviados24h: 0, enviados1h: 0 }));
   return {
     success: true,
     startedOwners,
     hasRunningCampaign,
+    lembretesAgenda,
     timestamp: new Date().toISOString(),
   };
 }
