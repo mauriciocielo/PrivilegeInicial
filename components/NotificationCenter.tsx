@@ -42,7 +42,10 @@ export default function NotificationCenter({
 
   useEffect(() => {
     carregar();
-    const timer = setInterval(carregar, 60_000);
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      carregar();
+    }, 60_000);
     return () => clearInterval(timer);
   }, [carregar]);
 

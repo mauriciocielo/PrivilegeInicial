@@ -2455,12 +2455,14 @@ table th {
 
 
 /* ============================================================
-   POLIMENTO GLOBAL UI/UX EXECUTIVO (PRIVILEGE PREMIUM)
+   POLIMENTO GLOBAL UI/UX EXECUTIVO (PRIVILEGE PREMIUM PLUS)
+   Eleva todas as 70+ telas (Consultor + Cliente) em um único lugar
    ============================================================ */
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
 /* Alinhamento tabular perfeito para números, valores monetários e datas em tabelas e KPIs */
@@ -2472,7 +2474,108 @@ table td {
   font-variant-numeric: tabular-nums;
 }
 
+/* Cabeçalhos de página mais limpos e equilibrados */
+.page-header {
+  padding: 18px 28px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.page-title {
+  letter-spacing: -0.025em;
+}
+.page-body {
+  padding: 22px 28px !important;
+}
+
+/* Cards & KPIs com acabamento estilo Private Banking / Linear */
+.card {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.03), 0 4px 12px rgba(20, 20, 19, 0.025);
+}
+.card:hover {
+  box-shadow: 0 2px 6px rgba(20, 20, 19, 0.045), 0 10px 24px rgba(20, 20, 19, 0.04);
+}
+.kpi-card,
+.stat-card {
+  border-radius: 14px !important;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+.kpi-card:hover,
+.stat-card:hover {
+  border-color: rgba(96, 0, 0, 0.28) !important;
+  box-shadow: 0 6px 20px rgba(96, 0, 0, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+/* Tabelas Executivas com cabeçalho sticky e leitura cristalina */
+.table-wrap {
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  overflow-x: auto;
+  background: var(--bg-card);
+}
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #faf9f6 !important;
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 11px 14px !important;
+  border-bottom: 1px solid var(--border) !important;
+  white-space: nowrap;
+}
+[data-theme="dark"] .data-table thead th {
+  background: #151822 !important;
+}
+.data-table tbody td {
+  padding: 11px 14px !important;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr {
+  transition: background-color 110ms ease;
+}
+.data-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Botões com profundidade sutil e resposta tátil */
+.btn {
+  border-radius: 9px;
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 90ms ease;
+}
+.btn-primary {
+  box-shadow: 0 1px 2px rgba(96, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(96, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+.btn-secondary {
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
 /* Foco acessível limpo e consistente em todos os controles */
+.form-control,
+.form-input {
+  border-radius: 9px;
+}
 .form-control:focus,
 .form-input:focus,
 input:focus-visible,
@@ -2482,14 +2585,6 @@ textarea:focus-visible {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(96, 0, 0, 0.12) !important;
   transition: border-color 140ms ease, box-shadow 140ms ease;
-}
-
-/* Hover sutil e elegante nas linhas de tabela */
-.data-table tbody tr {
-  transition: background-color 120ms ease;
-}
-.data-table tbody tr:hover {
-  background-color: var(--bg-hover);
 }
 
 /* Scrollbars refinadas e discretas */
@@ -2508,10 +2603,11 @@ textarea:focus-visible {
   background: rgba(96, 0, 0, 0.45);
 }
 
-/* Botões com resposta tátil suave sem exageros */
-.btn {
-  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
-}
-.btn:active:not(:disabled) {
-  transform: translateY(0.5px);
+@media (max-width: 768px) {
+  .page-header {
+    padding: 14px 16px !important;
+  }
+  .page-body {
+    padding: 16px !important;
+  }
 }
