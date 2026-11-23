@@ -531,7 +531,11 @@ export default function AgendaPage() {
         localStorage.setItem('cf_gcal_token', data.accessToken);
         if (data.expiresAt) localStorage.setItem('cf_gcal_expires_at', String(data.expiresAt));
         setGoogleConectado(true);
-        toast.success('Google Calendar conectado com renovação automática permanente!');
+        toast.success(
+          data.hasRefreshToken
+            ? 'Google Calendar conectado em modo PERMANENTE (refresh_token salvo)!'
+            : 'Google Calendar conectado! (Renovação automática ativa.)'
+        );
         syncGoogle(data.accessToken, baseDate, false);
       } catch (e) {
         toast.error((e as Error).message || 'Erro ao salvar conexão permanente com o Google.');
@@ -1369,9 +1373,14 @@ export default function AgendaPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {googleConectado ? (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '4px 10px' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>Google</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: googlePermanentSupported ? '#f0fdf4' : '#fffbeb', border: `1px solid ${googlePermanentSupported ? '#bbf7d0' : '#fde68a'}`, borderRadius: 10, padding: '4px 10px' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: googlePermanentSupported ? '#16a34a' : '#d97706' }} />
+              <span
+                title={googlePermanentSupported ? 'Conexão permanente ativa com refresh_token no PostgreSQL' : 'Modo temporário (1h) — adicione GOOGLE_CLIENT_SECRET no Railway e reconecte'}
+                style={{ fontSize: 12, fontWeight: 700, color: googlePermanentSupported ? '#15803d' : '#b45309' }}
+              >
+                {googlePermanentSupported ? 'Google Permanente' : 'Google (1h)'}
+              </span>
               <button
                 type="button"
                 onClick={sincronizarAgora}
