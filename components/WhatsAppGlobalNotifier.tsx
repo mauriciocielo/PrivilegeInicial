@@ -32,6 +32,8 @@ export default function WhatsAppGlobalNotifier({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const lastSoundRef = useRef<number>(0);
   const lastEventKeyRef = useRef<string>('');
+  const seenChatsRef = useRef<Map<string, string>>(new Map());
+  const pollInitializedRef = useRef<boolean>(false);
 
   function playBeep() {
     if (typeof window === 'undefined') return;
@@ -69,8 +71,16 @@ export default function WhatsAppGlobalNotifier({
 
   useEffect(() => {
     const user = store.getCurrentUser();
+    // Clientes não recebem notificações do painel WhatsApp
+    if (user?.role === 'cliente' || whatsappHref === '/cliente/whatsapp') {
+      return;
+    }
+
     if (user) {
-      ownerIdRef.current = user.role === 'administrador' ? 'default' : `user_${user.id}`;
+      ownerIdRef.current =
+        user.role === 'administrador' || (user.role === 'consultor' && (user as any).whatsappScope !== 'individual')
+          ? 'default'
+          : `user_${user.id}`;
     }
 
     fetch('/api/whatsapp/config', { cache: 'no-store' })
@@ -80,7 +90,57 @@ export default function WhatsAppGlobalNotifier({
       })
       .catch(() => {});
 
-    // Em produção os eventos vêm do servidor contínuo do WhatsApp (NEXT_PUBLIC_WHATSAPP_SOCKET_URL).
+    const dispararToast = (dados: {
+      chatId: string;
+      senderName: string;
+      phone: string;
+      preview: string;
+      mediaType?: string;
+      profilePic?: string;
+      dedupeKey: string;
+    }) => {
+      if (lastEventKeyRef.current === dados.dedupeKey) return;
+      lastEventKeyRef.current = dados.dedupeKey;
+
+      const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const item: ToastNotification = {
+        id,
+        chatId: dados.chatId,
+        senderName: dados.senderName,
+        phone: dados.phone,
+        preview: dados.preview,
+        mediaType: dados.mediaType,
+        profilePic: dados.profilePic,
+        createdAt: Date.now(),
+      };
+
+      setNotifications((prev) => [item, ...prev].slice(0, 4));
+
+      const onWhatsAppPage = pathnameRef.current?.includes('/whatsapp');
+      if (!onWhatsAppPage) {
+        playBeep();
+      }
+
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && (document.hidden || !onWhatsAppPage)) {
+        try {
+          const n = new Notification(`WhatsApp • ${dados.senderName}`, {
+            body: dados.preview,
+            tag: dados.chatId || 'whatsapp-msg',
+          });
+          n.onclick = () => {
+            window.focus();
+            openChat(item);
+            n.close();
+          };
+        } catch {}
+      }
+
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((x) => x.id !== id));
+      }, 8000);
+    };
+
+    // 1. Escuta em tempo real via Socket.IO
     const socketUrl = process.env.NEXT_PUBLIC_WHATSAPP_SOCKET_URL;
     const socketOpts = { path: '/socket.io', transports: ['websocket', 'polling'] };
     const socket: Socket = socketUrl ? io(socketUrl, socketOpts) : io(socketOpts);
@@ -100,68 +160,83 @@ export default function WhatsAppGlobalNotifier({
         profilePic?: string;
       }) => {
         if (!payload?.isNewMessage || payload.fromMe) return;
+        const myOwner = ownerIdRef.current;
         if (
           payload.ownerId &&
-          ownerIdRef.current &&
-          payload.ownerId !== ownerIdRef.current
+          myOwner &&
+          payload.ownerId !== myOwner &&
+          payload.ownerId !== `${myOwner}_linha2`
         ) {
           return;
         }
 
         const dedupeKey = `${payload.chatId || ''}_${payload.timestamp || 0}`;
-        if (lastEventKeyRef.current === dedupeKey) return;
-        lastEventKeyRef.current = dedupeKey;
+        if (payload.chatId) {
+          seenChatsRef.current.set(payload.chatId, String(payload.timestamp || Date.now()));
+        }
 
-        const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        const senderName = payload.senderName || payload.phone || 'Nova mensagem';
-        const preview = payload.preview || 'Nova mensagem recebida no WhatsApp';
-
-        const item: ToastNotification = {
-          id,
+        dispararToast({
           chatId: payload.chatId || '',
-          senderName,
+          senderName: payload.senderName || payload.phone || 'Nova mensagem',
           phone: payload.phone || '',
-          preview,
+          preview: payload.preview || 'Nova mensagem recebida no WhatsApp',
           mediaType: payload.mediaType,
           profilePic: payload.profilePic,
-          createdAt: Date.now(),
-        };
-
-        setNotifications((prev) => [item, ...prev].slice(0, 4));
-
-        const onWhatsAppPage = pathnameRef.current?.includes('/whatsapp');
-        if (!onWhatsAppPage) {
-          playBeep();
-        }
-
-        if (
-          typeof Notification !== 'undefined' &&
-          Notification.permission === 'granted' &&
-          document.hidden
-        ) {
-          try {
-            const n = new Notification(`WhatsApp • ${senderName}`, {
-              body: preview,
-              tag: payload.chatId || 'whatsapp-msg',
-            });
-            n.onclick = () => {
-              window.focus();
-              openChat(item);
-              n.close();
-            };
-          } catch {}
-        }
-
-        setTimeout(() => {
-          setNotifications((prev) => prev.filter((x) => x.id !== id));
-        }, 8000);
+          dedupeKey,
+        });
       }
     );
 
+    // 2. Fallback em 2º plano (polling leve a cada 10s) — garante que a notificação chegue
+    // em qualquer página do sistema mesmo se o WebSocket oscilar ou o usuário ainda não abriu a tela do WhatsApp.
+    const checarNovasMensagens = async () => {
+      if (pathnameRef.current?.includes('/whatsapp')) return;
+      try {
+        const res = await fetch('/api/whatsapp/chats?limit=15', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const chats = Array.isArray(data?.chats) ? data.chats : [];
+
+        if (!pollInitializedRef.current) {
+          for (const c of chats) {
+            if (c?.id) {
+              seenChatsRef.current.set(c.id, `${c.unread_count || 0}_${c.last_message_time || ''}`);
+            }
+          }
+          pollInitializedRef.current = true;
+          return;
+        }
+
+        for (const c of chats) {
+          if (!c?.id || Number(c.unread_count || 0) <= 0) continue;
+          const assinatura = `${c.unread_count || 0}_${c.last_message_time || ''}`;
+          const anterior = seenChatsRef.current.get(c.id);
+          if (anterior !== assinatura) {
+            seenChatsRef.current.set(c.id, assinatura);
+            dispararToast({
+              chatId: c.id,
+              senderName: c.name || c.phone || 'Nova mensagem',
+              phone: c.phone || '',
+              preview: c.last_message || 'Nova mensagem recebida no WhatsApp',
+              profilePic: c.profile_pic || undefined,
+              dedupeKey: `poll_${c.id}_${assinatura}`,
+            });
+          }
+        }
+      } catch {
+        // ignora erro pontual de rede
+      }
+    };
+
+    checarNovasMensagens();
+    const pollInterval = setInterval(checarNovasMensagens, 10000);
+
     return () => {
+      clearInterval(pollInterval);
       socket.disconnect();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatsappHref]);
 
   function openChat(item: ToastNotification) {
     setNotifications((prev) => prev.filter((x) => x.id !== item.id));

@@ -5,7 +5,9 @@ import { apenasDigitos } from './dps';
 import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } from './danfse';
 import {
   bootAllSavedBaileysSessions,
+  ensureBaileysConnected,
   getBaileysSocketForOwner,
+  listarSessoesBaileysAtivas,
   sendBaileysLiveMessage,
 } from '../baileys-manager';
 
@@ -21,52 +23,71 @@ export interface ResultadoWhatsappNfse {
  * Localiza a sessão Baileys conectada correspondente ao número do administrador
  * (padrão 46999800010). Faz fallback para qualquer sessão de administrador conectada.
  */
-export async function encontrarSessaoAdminPorNumero(numeroAlvo = NUMERO_ADMIN_PADRAO): Promise<string | null> {
+export async function encontrarSessaoAdminPorNumero(
+  numeroAlvo = NUMERO_ADMIN_PADRAO,
+  ownerIdPreferencial?: string
+): Promise<string | null> {
   const ult8 = apenasDigitos(numeroAlvo).slice(-8);
 
-  const candidatos = new Set<string>(['default']);
-  try {
-    const admins = await db.user.findMany({
-      where: { role: 'administrador' },
-      select: { id: true },
-    });
-    for (const a of admins) candidatos.add(a.id);
-  } catch {
-    // ignora
-  }
-
-  try {
-    const rows = await db.$queryRawUnsafe<Array<{ owner_id: string }>>(
-      `SELECT DISTINCT owner_id FROM whatsapp_auth_state WHERE owner_id IS NOT NULL`
-    );
-    for (const r of rows) {
-      if (r.owner_id) candidatos.add(r.owner_id);
-    }
-  } catch {
-    // ignora
-  }
-
-  const buscar = (): string | null => {
+  const buscarEmMemoria = (): string | null => {
+    const ativas = listarSessoesBaileysAtivas();
     let fallbackConectada: string | null = null;
-    for (const ownerId of candidatos) {
-      const sock = getBaileysSocketForOwner(ownerId);
-      const userId = String(sock?.user?.id || '');
-      if (!userId) continue;
-      const digitsSessao = userId.split(':')[0].replace(/\D/g, '');
+
+    for (const s of ativas) {
+      if (!s.connected && !s.userId) continue;
+      const digitsSessao = s.userId.split(':')[0].replace(/\D/g, '');
       if (ult8 && digitsSessao.endsWith(ult8)) {
-        return ownerId;
+        return s.ownerId;
       }
-      if (!fallbackConectada) fallbackConectada = ownerId;
+      if (ownerIdPreferencial && s.ownerId === ownerIdPreferencial) {
+        fallbackConectada = s.ownerId;
+      } else if (!fallbackConectada) {
+        fallbackConectada = s.ownerId;
+      }
     }
+
     return fallbackConectada;
   };
 
-  let encontrada = buscar();
-  if (!encontrada) {
-    await bootAllSavedBaileysSessions().catch(() => []);
-    encontrada = buscar();
+  let encontrada = buscarEmMemoria();
+  if (encontrada) return encontrada;
+
+  // Caso ainda não tenha subido ou esteja reconectando, inicializa e aguarda abrir
+  const booted = await bootAllSavedBaileysSessions().catch(() => [] as string[]);
+  const candidatos = new Set<string>();
+  if (ownerIdPreferencial) candidatos.add(ownerIdPreferencial);
+  candidatos.add('default');
+  candidatos.add('default_linha2');
+  for (const b of booted) candidatos.add(b);
+  for (const s of listarSessoesBaileysAtivas()) candidatos.add(s.ownerId);
+
+  try {
+    const rows = await db.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM whatsapp_config WHERE status = 'conectado'`
+    );
+    for (const r of rows) {
+      if (r.id) candidatos.add(r.id);
+    }
+  } catch {
+    // ignora
   }
-  return encontrada;
+
+  // Aguarda conexão real (sock?.user?.id) para cada candidato
+  for (const ownerId of candidatos) {
+    let sock = getBaileysSocketForOwner(ownerId);
+    if (!sock?.user?.id) {
+      sock = await ensureBaileysConnected(true, ownerId).catch(() => null);
+    }
+    const userId = String(sock?.user?.id || '');
+    if (!userId) continue;
+    const digitsSessao = userId.split(':')[0].replace(/\D/g, '');
+    if (ult8 && digitsSessao.endsWith(ult8)) {
+      return ownerId;
+    }
+    if (!encontrada) encontrada = ownerId;
+  }
+
+  return encontrada || buscarEmMemoria();
 }
 
 function limparNomeArquivo(texto: string): string {

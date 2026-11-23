@@ -120,68 +120,135 @@ export default function PessoasCargosSalariosPage() {
     return { fixa, extra, variavel, total };
   }, [listaFiltrada]);
 
+  // ============================================================================
+  // Cálculos Legais 2026:
+  // - INSS Progressivo: Portaria Interministerial MPS/MF nº 13/2026 (SM R$ 1.621,00 / Teto R$ 8.475,55)
+  // - IRRF: Lei nº 15.270/2025 (Isenção até R$ 5.000,00 + Redução gradual até R$ 7.350,00)
+  // - Encargos CLT: LP/LR (20% CPP + 2% RAT + 5,8% Terceiros = 27,8%) e Simples Nacional Anexos I–III/V (0% CPP)
+  // ============================================================================
+  const calcularInssClt2026 = (bruto: number): number => {
+    if (bruto <= 0) return 0;
+    const teto = 8475.55;
+    const base = Math.min(bruto, teto);
+    if (base <= 1621.0) return Number((base * 0.075).toFixed(2));
+    if (base <= 2902.84) return Number((base * 0.09 - 24.32).toFixed(2));
+    if (base <= 4354.27) return Number((base * 0.12 - 111.4).toFixed(2));
+    return Number((base * 0.14 - 198.49).toFixed(2));
+  };
+
+  const calcularInssRpa2026 = (bruto: number): number => {
+    if (bruto <= 0) return 0;
+    const base = Math.min(bruto, 8475.55);
+    return Number((base * 0.11).toFixed(2));
+  };
+
+  const calcularIrrf2026 = (bruto: number, inssDescontado: number): number => {
+    if (bruto <= 5000.0) return 0; // Lei nº 15.270/2025: isenção total mensal até R$ 5.000,00
+    const deducao = Math.max(inssDescontado, 607.2); // maior entre INSS oficial e desconto simplificado mensal
+    const base = Math.max(0, bruto - deducao);
+
+    let irrfBruto = 0;
+    if (base <= 2428.8) irrfBruto = 0;
+    else if (base <= 2826.65) irrfBruto = base * 0.075 - 182.16;
+    else if (base <= 3751.05) irrfBruto = base * 0.15 - 394.16;
+    else if (base <= 4664.68) irrfBruto = base * 0.225 - 675.49;
+    else irrfBruto = base * 0.275 - 908.73;
+
+    irrfBruto = Math.max(0, irrfBruto);
+
+    // Faixa de redução gradual da Lei nº 15.270/2025: R$ 5.000,01 a R$ 7.350,00
+    if (bruto <= 7350.0) {
+      const redutor = Math.max(0, 978.62 - 0.133145 * bruto);
+      return Number(Math.max(0, irrfBruto - redutor).toFixed(2));
+    }
+    return Number(irrfBruto.toFixed(2));
+  };
+
   const comp = useMemo(() => {
     const base = Math.max(0, salarioSimulacao || 0);
+    const inssCltVal = calcularInssClt2026(base);
+    const irrfCltVal = calcularIrrf2026(base, inssCltVal);
+
+    const inssRpaVal = calcularInssRpa2026(base);
+    const irrfRpaVal = calcularIrrf2026(base, inssRpaVal);
+    const issRpaVal = Number((base * 0.05).toFixed(2));
+
+    // PJ Simples Nacional Anexo III (6% Fator R >= 28%): pró-labore de 28% (mín. 1 SM R$ 1.621,00)
+    const simplesPjVal = Number((base * 0.06).toFixed(2));
+    const proLaborePj = base > 0 ? Math.max(1621.0, Math.min(base, base * 0.28)) : 0;
+    const inssPjVal = calcularInssRpa2026(proLaborePj);
+    const irrfPjVal = calcularIrrf2026(proLaborePj, inssPjVal);
+
+    // Encargos CLT reais (13º = 1/12, Férias+1/3 = 4/36, Multa 40% FGTS sobre salário + 13º + férias+1/3)
+    const inssPatronalLpLr = 0.278; // 20% CPP + 2% RAT médio + 5,8% Terceiros (Sistema S)
+    const fgtsPct = 0.08;
+    const decimoLpLr = (1 / 12) * (1 + fgtsPct + inssPatronalLpLr); // 11,3167%
+    const feriasLpLr = (4 / 36) * (1 + fgtsPct + inssPatronalLpLr); // 15,0889%
+    const decimoSimples = (1 / 12) * (1 + fgtsPct); // 9,00%
+    const feriasSimples = (4 / 36) * (1 + fgtsPct); // 12,00%
+    const multaFgtsPct = 0.4 * fgtsPct * (1 + 1 / 12 + 4 / 36); // 3,8222%
+
     const regimes = [
       {
         nome: 'CLT Lucro Presumido / Real',
-        inssEmp: 0.28,
-        fgts: 0.08,
-        decimoTerceiro: 0.1133,
-        ferias: 0.1507,
-        multaFgts: 0.03333333,
+        inssEmp: inssPatronalLpLr,
+        fgts: fgtsPct,
+        decimoTerceiro: decimoLpLr,
+        ferias: feriasLpLr,
+        multaFgts: multaFgtsPct,
         impostoPj: 0,
-        simplesContratado: 0,
-        issContratado: 0,
-        inssDesc: 0.1,
-        irpfDesc: 0.07,
+        simplesContratadoVal: 0,
+        issContratadoVal: 0,
+        inssDescVal: inssCltVal,
+        irpfDescVal: irrfCltVal,
       },
       {
-        nome: 'CLT Simples Nacional',
-        inssEmp: 0.11,
-        fgts: 0.08,
-        decimoTerceiro: 0.09,
-        ferias: 0.1197,
-        multaFgts: 0.03333333,
+        nome: 'CLT Simples Nacional (An. I–III/V)',
+        inssEmp: 0, // CPP embutida no DAS (exceto Anexo IV)
+        fgts: fgtsPct,
+        decimoTerceiro: decimoSimples,
+        ferias: feriasSimples,
+        multaFgts: multaFgtsPct,
         impostoPj: 0,
-        simplesContratado: 0,
-        issContratado: 0,
-        inssDesc: 0.1,
-        irpfDesc: 0.07,
+        simplesContratadoVal: 0,
+        issContratadoVal: 0,
+        inssDescVal: inssCltVal,
+        irpfDescVal: irrfCltVal,
       },
       {
         nome: 'Contrato Autônomo RPA',
-        inssEmp: 0.2,
+        inssEmp: 0.2, // 20% CPP patronal sem teto (LP/LR)
         fgts: 0,
         decimoTerceiro: 0,
         ferias: 0,
         multaFgts: 0,
         impostoPj: 0,
-        simplesContratado: 0,
-        issContratado: 0.05,
-        inssDesc: 0.1,
-        irpfDesc: 0.07,
+        simplesContratadoVal: 0,
+        issContratadoVal: issRpaVal,
+        inssDescVal: inssRpaVal,
+        irpfDescVal: irrfRpaVal,
       },
       {
-        nome: 'Contrato PJ / MEI',
+        nome: 'Contrato PJ (Simples An. III)',
         inssEmp: 0,
         fgts: 0,
         decimoTerceiro: 0,
         ferias: 0,
         multaFgts: 0,
-        impostoPj: 0.04,
-        simplesContratado: 0.045,
-        issContratado: 0,
-        inssDesc: 0,
-        irpfDesc: 0,
+        impostoPj: 0,
+        simplesContratadoVal: simplesPjVal,
+        issContratadoVal: 0,
+        inssDescVal: inssPjVal,
+        irpfDescVal: irrfPjVal,
       },
     ];
 
     return regimes.map((r) => {
       const encargoPct = r.inssEmp + r.fgts + r.decimoTerceiro + r.ferias + r.multaFgts + r.impostoPj;
       const custoTotal = base * (1 + encargoPct);
-      const descPct = r.simplesContratado + r.issContratado + r.inssDesc + r.irpfDesc;
-      const liquidoContratado = base * (1 - descPct);
+      const totalDescontos = r.simplesContratadoVal + r.issContratadoVal + r.inssDescVal + r.irpfDescVal;
+      const descPct = base > 0 ? totalDescontos / base : 0;
+      const liquidoContratado = Math.max(0, base - totalDescontos);
       return {
         ...r,
         base,
@@ -189,6 +256,10 @@ export default function PessoasCargosSalariosPage() {
         custoTotal,
         descPct,
         liquidoContratado,
+        simplesContratado: base > 0 ? r.simplesContratadoVal / base : 0,
+        issContratado: base > 0 ? r.issContratadoVal / base : 0,
+        inssDesc: base > 0 ? r.inssDescVal / base : 0,
+        irpfDesc: base > 0 ? r.irpfDescVal / base : 0,
       };
     });
   }, [salarioSimulacao]);
@@ -463,51 +534,55 @@ export default function PessoasCargosSalariosPage() {
                   </tr>
                   <tr>
                     <td>Provisão Multa FGTS (40% rescisão)</td>
-                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtBRL(c.base * c.multaFgts)}</td>)}
+                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.multaFgts)} · {fmtBRL(c.base * c.multaFgts)}</td>)}
                   </tr>
                   <tr>
                     <td>Imposto PJ / MEI (Contratante)</td>
                     {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.impostoPj)} · {fmtBRL(c.base * c.impostoPj)}</td>)}
                   </tr>
                   <tr style={{ background: 'rgba(59, 130, 246, 0.12)', fontWeight: 800 }}>
-                    <td style={{ color: '#60a5fa' }}>CUSTO TOTAL DO CONTRATANTE</td>
+                    <td style={{ color: '#2563eb' }}>CUSTO TOTAL DO CONTRATANTE</td>
                     {comp.map((c) => (
-                      <td key={c.nome} style={{ textAlign: 'right', color: '#60a5fa' }}>
+                      <td key={c.nome} style={{ textAlign: 'right', color: '#2563eb' }}>
                         {fmtBRL(c.custoTotal)} <span style={{ fontSize: 13, fontWeight: 600 }}>(+{fmtPct(c.encargoPct)})</span>
                       </td>
                     ))}
                   </tr>
                   <tr>
                     <td colSpan={5} style={{ background: 'var(--bg-secondary)', fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                      Provisão de Recebimento do Contratado
+                      Provisão de Recebimento do Contratado (Legislação 2026)
                     </td>
                   </tr>
                   <tr>
-                    <td>Simples Nacional do Contratado</td>
-                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.simplesContratado)} · {fmtBRL(c.base * c.simplesContratado)}</td>)}
+                    <td>Simples Nacional do Contratado (Anexo III — 6%)</td>
+                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.simplesContratado)} · {fmtBRL(c.simplesContratadoVal)}</td>)}
                   </tr>
                   <tr>
-                    <td>ISS do Contratado</td>
-                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.issContratado)} · {fmtBRL(c.base * c.issContratado)}</td>)}
+                    <td>ISS do Contratado (RPA — 5%)</td>
+                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.issContratado)} · {fmtBRL(c.issContratadoVal)}</td>)}
                   </tr>
                   <tr>
-                    <td>INSS Descontado do Contratado</td>
-                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.inssDesc)} · {fmtBRL(c.base * c.inssDesc)}</td>)}
+                    <td>INSS Descontado (Tabela Progressiva 2026 / 11% RPA e Pró-labore)</td>
+                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.inssDesc)} · {fmtBRL(c.inssDescVal)}</td>)}
                   </tr>
                   <tr>
-                    <td>IRPF Descontado do Contratado</td>
-                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.irpfDesc)} · {fmtBRL(c.base * c.irpfDesc)}</td>)}
+                    <td>IRRF Descontado (Lei nº 15.270/2025 — Isento até R$ 5.000)</td>
+                    {comp.map((c) => <td key={c.nome} style={{ textAlign: 'right' }}>{fmtPct(c.irpfDesc)} · {fmtBRL(c.irpfDescVal)}</td>)}
                   </tr>
                   <tr style={{ background: 'rgba(22, 163, 74, 0.12)', fontWeight: 800 }}>
-                    <td style={{ color: '#4ade80' }}>RECEBIMENTO LÍQUIDO DO CONTRATADO</td>
+                    <td style={{ color: '#15803d' }}>RECEBIMENTO LÍQUIDO DO CONTRATADO</td>
                     {comp.map((c) => (
-                      <td key={c.nome} style={{ textAlign: 'right', color: '#4ade80' }}>
+                      <td key={c.nome} style={{ textAlign: 'right', color: '#15803d' }}>
                         {fmtBRL(c.liquidoContratado)} <span style={{ fontSize: 13, fontWeight: 600 }}>(-{fmtPct(c.descPct)})</span>
                       </td>
                     ))}
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+              <strong>Base Legal 2026:</strong> INSS progressivo conforme Portaria Interministerial MPS/MF nº 13/2026 (SM R$ 1.621,00 / Teto R$ 8.475,55). IRRF conforme <strong>Lei nº 15.270/2025</strong> (isenção mensal até R$ 5.000,00 e redução gradual até R$ 7.350,00, aplicando o maior entre INSS e desconto simplificado de R$ 607,20). <strong>CLT LP/LR:</strong> 20% CPP + 2% RAT médio + 5,8% Terceiros (27,8%). <strong>Simples Nacional:</strong> Anexos I, II, III e V não recolhem CPP na folha (Anexo IV recolhe 20% + RAT). <strong>PJ:</strong> Anexo III (6% c/ Fator R ≥ 28% e INSS 11% sobre pró-labore mínimo de 1 SM); para MEI (limite R$ 6.750/mês), o custo fixo é o DAS mensal (~R$ 86,05).
             </div>
           </div>
         )}

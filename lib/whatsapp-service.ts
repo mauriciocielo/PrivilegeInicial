@@ -3,7 +3,6 @@ import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
 import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
-import { detectAndCreateDemandTask } from './whatsapp-agenda';
 import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
 import {
@@ -690,6 +689,7 @@ export async function checkAndDispatchDueFollowups(pool: any) {
         AND followup_status = 'pendente'
         AND followup_date IS NOT NULL
         AND followup_date <= NOW()
+        AND COALESCE(remote_jid, '') NOT LIKE '%@g.us'
       LIMIT 10
     `);
     for (const row of res.rows) {
@@ -1809,13 +1809,8 @@ export async function processIncomingMessage(params: {
     }
   }
 
-  // Se surgir uma demanda acionável (inclusive por áudio transcrito), registra tarefa na Agenda automaticamente
-  detectAndCreateDemandTask({
-    clientName: params.name || params.phone,
-    phone: params.phone,
-    messageText: cleanText,
-    ownerId,
-  }).catch(() => {});
+  // Criação automática de tarefas na Agenda a partir de mensagens do WhatsApp desativada
+  // para evitar poluição da Agenda; agendamentos devem ser feitos na tela Agenda ou via /agendar.
 
   const lowerText = cleanText.toLowerCase();
 
@@ -1904,6 +1899,17 @@ export async function processIncomingMessage(params: {
         params.waKey ? JSON.stringify(params.waKey) : null,
       ]
     );
+  }
+
+  const ehGrupo = Boolean(
+    params.isGroup ||
+    (params.remoteJid && params.remoteJid.includes('@g.us')) ||
+    (params.chatId && params.chatId.includes('@g.us'))
+  );
+
+  // Bot nunca responde automaticamente em grupos de WhatsApp (evita excesso de mensagens)
+  if (ehGrupo) {
+    return { source: 'none' };
   }
 
   if (!config.bot_enabled) {

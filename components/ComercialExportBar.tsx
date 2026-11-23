@@ -50,6 +50,8 @@ export default function ComercialExportBar({
   const [showWhatsModal, setShowWhatsModal] = useState(false);
   const [whatsTo, setWhatsTo] = useState('');
   const [sendingWhats, setSendingWhats] = useState(false);
+  const [grupoVinculado, setGrupoVinculado] = useState<{ groupJid: string; groupName: string } | null>(null);
+  const [modoDestinoWhats, setModoDestinoWhats] = useState<'grupo' | 'numero'>('numero');
 
   const getEmpresaInfo = () => {
     const empId = store.getSafeEmpresaId();
@@ -216,33 +218,55 @@ export default function ComercialExportBar({
     }
   }
 
-  function handleSendWhatsApp() {
+  async function handleSendWhatsApp() {
     const emp = getEmpresaInfo();
+    const empId = store.getSafeEmpresaId();
     const savedTel = typeof window !== 'undefined' ? (localStorage.getItem('cf_last_wpp_share') || '') : '';
     setWhatsTo(emp.telefone || savedTel || '');
+    setGrupoVinculado(null);
+    setModoDestinoWhats('numero');
     setShowWhatsModal(true);
+
+    if (empId && !empId.startsWith('grupo:')) {
+      try {
+        const res = await fetch(`/api/whatsapp/disparar-direto?empresaId=${encodeURIComponent(empId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.grupo?.groupJid) {
+            setGrupoVinculado(data.grupo);
+            setModoDestinoWhats('grupo');
+          }
+        }
+      } catch {
+        // ignora
+      }
+    }
   }
 
   async function handleSendWhatsSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const usarGrupo = modoDestinoWhats === 'grupo' && Boolean(grupoVinculado?.groupJid);
     const tel = whatsTo.trim();
-    if (tel.replace(/\D/g, '').length < 10 || sendingWhats) {
+    if (!usarGrupo && (tel.replace(/\D/g, '').length < 10 || sendingWhats)) {
       toast.error('Informe um número de WhatsApp válido com DDD.');
       return;
     }
+    if (sendingWhats) return;
     setSendingWhats(true);
     try {
       const emp = getEmpresaInfo();
       const pdf = await buildPdfDoc();
       const dataUrl = pdf.output('datauristring');
       const kpiText = kpis.map(k => `• *${k.label}:* ${k.value}`).join('\n');
-      const mensagem = `📊 *${title}* — ${emp.nome}\n\n${kpiText}\n\nSegue em anexo o relatório completo em PDF.`;
+      const mensagem = `📑 *${title} — ${emp.nome}*\n\n${kpiText}\n\nSegue em anexo o relatório completo em PDF.\n\n_Privilege Contabilidade e Consultoria_`;
 
       const res = await fetch('/api/whatsapp/disparar-direto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          telefone: tel,
+          ...(usarGrupo && grupoVinculado
+            ? { groupJid: grupoVinculado.groupJid, groupName: grupoVinculado.groupName, usarGrupo: true }
+            : { telefone: tel }),
           mensagem,
           pdfBase64: dataUrl,
           pdfFileName: `${fileNameBase}.pdf`,
@@ -250,8 +274,12 @@ export default function ComercialExportBar({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Falha ao enviar relatório no WhatsApp.');
-      if (typeof window !== 'undefined') localStorage.setItem('cf_last_wpp_share', tel);
-      toast.success(`Relatório PDF enviado para ${tel} via (46) 99980-0010!`);
+      if (!usarGrupo && typeof window !== 'undefined') localStorage.setItem('cf_last_wpp_share', tel);
+      toast.success(
+        json.isGrupo
+          ? `Relatório PDF enviado no grupo "${json.destinoNome}" via (46) 99980-0010!`
+          : `Relatório PDF enviado para ${tel} via (46) 99980-0010!`
+      );
       setShowWhatsModal(false);
     } catch (err) {
       toast.error((err as Error).message || 'Erro ao enviar no WhatsApp.');
@@ -445,20 +473,44 @@ export default function ComercialExportBar({
           >
             <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Enviar Relatório no WhatsApp</h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-              O resumo e o PDF oficial de <strong>{title}</strong> serão enviados diretamente via <strong>(46) 99980-0010</strong> para o número informado abaixo.
+              O resumo e o PDF oficial de <strong>{title}</strong> serão enviados diretamente via <strong>(46) 99980-0010</strong>.
             </p>
-            <div>
-              <label className="form-label">WhatsApp de destino (DDD + número)</label>
-              <input
-                type="tel"
-                className="form-control"
-                placeholder="Ex.: (46) 99901-6003"
-                value={whatsTo}
-                onChange={e => setWhatsTo(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
+            {grupoVinculado && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#15803d', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="destino-wpp-bar"
+                    checked={modoDestinoWhats === 'grupo'}
+                    onChange={() => setModoDestinoWhats('grupo')}
+                  />
+                  <span>Grupo do Cliente: <strong>{grupoVinculado.groupName}</strong></span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="destino-wpp-bar"
+                    checked={modoDestinoWhats === 'numero'}
+                    onChange={() => setModoDestinoWhats('numero')}
+                  />
+                  <span>Enviar para um número individual</span>
+                </label>
+              </div>
+            )}
+            {modoDestinoWhats === 'numero' && (
+              <div>
+                <label className="form-label">WhatsApp de destino (DDD + número)</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  placeholder="Ex.: (46) 99901-6003"
+                  value={whatsTo}
+                  onChange={e => setWhatsTo(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button type="button" onClick={() => setShowWhatsModal(false)} className="btn btn-secondary">Cancelar</button>
               <button

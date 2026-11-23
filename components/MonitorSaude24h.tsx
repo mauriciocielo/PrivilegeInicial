@@ -50,6 +50,8 @@ export default function MonitorSaude24h() {
   const [rodandoDaemon, setRodandoDaemon] = useState(false);
   const [enviandoAlerta, setEnviandoAlerta] = useState(false);
   const [telefoneGestao, setTelefoneGestao] = useState('46999048990');
+  const [telefoneCertificados, setTelefoneCertificados] = useState('4630351018');
+  const [enviandoCertificados, setEnviandoCertificados] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -105,6 +107,24 @@ export default function MonitorSaude24h() {
       toast.error((e as Error).message);
     } finally {
       setEnviandoAlerta(false);
+    }
+  };
+
+  const enviarAlertaCertificados = async () => {
+    setEnviandoCertificados(true);
+    try {
+      const res = await fetch('/api/system/saude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enviar_alerta_certificados', telefone: telefoneCertificados }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar aviso de certificados');
+      toast.success(`Aviso de certificados enviado no WhatsApp (${telefoneCertificados})!`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviandoCertificados(false);
     }
   };
 
@@ -258,7 +278,33 @@ export default function MonitorSaude24h() {
 
       {/* Certificados em atenção */}
       <div className="card">
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Certificados Digitais A1 (próximos 30 dias)</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Certificados Digitais A1 (próximos 30 dias)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+              Avisos automáticos (30, 15, 7, 3 e 1 dia antes + vencidos) enviados via (46) 99980-0010 para <strong>(46) 3035-1018</strong>.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              className="form-control"
+              value={telefoneCertificados}
+              onChange={e => setTelefoneCertificados(e.target.value)}
+              placeholder="4630351018"
+              style={{ width: 150, fontSize: 14, padding: '6px 10px' }}
+            />
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={enviarAlertaCertificados}
+              disabled={enviandoCertificados}
+              style={{ background: '#15803d', borderColor: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Send size={13} /> {enviandoCertificados ? 'Enviando...' : 'Enviar Aviso Agora'}
+            </button>
+          </div>
+        </div>
         {dados.fiscal.certificadosAlerta.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, color: '#15803d' }}>
             <CheckCircle2 size={16} /> Todos os certificados A1 estão com validade em dia.

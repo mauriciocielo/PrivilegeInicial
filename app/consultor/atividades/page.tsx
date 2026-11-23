@@ -34,10 +34,25 @@ export default function AtividadesTempoPage() {
   
   // Cronômetro
   const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [acumuladoSegundos, setAcumuladoSegundos] = useState(0);
   const [timePassed, setTimePassed] = useState(0);
   const [atividadeDesc, setAtividadeDesc] = useState('');
   const [modoAtividade, setModoAtividade] = useState<'avulsa' | 'agenda'>('avulsa');
   const [selectedAgendaTaskId, setSelectedAgendaTaskId] = useState<string | null>(null);
+
+  // Local do Atendimento (reverse geocoding + busca de endereço + endereço da empresa)
+  const [localTexto, setLocalTexto] = useState('');
+  const [buscaLocal, setBuscaLocal] = useState('');
+  const [buscandoLocal, setBuscandoLocal] = useState(false);
+  const [sugestoesLocal, setSugestoesLocal] = useState<Array<{ endereco: string; lat: number; lng: number }>>([]);
+
+  // Registro Manual de Tempo de Atendimento
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualData, setManualData] = useState(() => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10));
+  const [manualInicio, setManualInicio] = useState('09:00');
+  const [manualFim, setManualFim] = useState('10:00');
+  const [manualMinutos, setManualMinutos] = useState(60);
   
   // Fotos de Comprovação
   const [fotoInicio, setFotoInicio] = useState<string | null>(null);
@@ -74,14 +89,95 @@ export default function AtividadesTempoPage() {
     }
   };
 
+  const resolverEnderecoPorCoords = async (lat: number, lng: number) => {
+    setBuscandoLocal(true);
+    try {
+      const res = await fetch(`/api/atividades/geocode?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.endereco) setLocalTexto(json.endereco);
+      }
+    } catch {
+      // ignora
+    } finally {
+      setBuscandoLocal(false);
+    }
+  };
+
+  const capturarGpsAtual = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocalização não suportada no seu navegador.');
+      toast.error('Geolocalização não suportada neste navegador.');
+      return;
+    }
+    setBuscandoLocal(true);
+    setGeoError('');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setPosition(coords);
+        resolverEnderecoPorCoords(coords.lat, coords.lng);
+        toast.success('Localização atual capturada!');
+      },
+      () => {
+        setBuscandoLocal(false);
+        setGeoError('Não foi possível obter a localização. Verifique as permissões de GPS do navegador.');
+        toast.error('Permita o acesso ao GPS no navegador ou busque o endereço manualmente.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const buscarLocalPorTexto = async (termo?: string) => {
+    const q = (termo ?? buscaLocal).trim();
+    if (q.length < 3) {
+      toast.info('Digite pelo menos 3 caracteres para buscar o local.');
+      return;
+    }
+    setBuscandoLocal(true);
+    try {
+      const res = await fetch(`/api/atividades/geocode?q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      const lista = Array.isArray(json.resultados) ? json.resultados : [];
+      setSugestoesLocal(lista);
+      if (lista.length === 0) {
+        toast.info('Nenhum endereço encontrado. Você pode digitar o local manualmente.');
+      }
+    } catch {
+      toast.error('Falha ao buscar endereço.');
+    } finally {
+      setBuscandoLocal(false);
+    }
+  };
+
+  const usarEnderecoDaEmpresa = () => {
+    const emp = empresas.find(e => e.id === selectedEmpresaId);
+    if (!emp) {
+      toast.info('Selecione uma empresa primeiro.');
+      return;
+    }
+    const end = [emp.endereco, emp.cidade, emp.uf].filter(Boolean).join(', ');
+    if (!end) {
+      toast.info('Esta empresa não possui endereço cadastrado.');
+      return;
+    }
+    setLocalTexto(end);
+    setBuscaLocal(end);
+    buscarLocalPorTexto(end);
+  };
+
   useEffect(() => {
     setEmpresas(store.getEmpresas());
     loadFromLocal();
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        err => setGeoError('Não foi possível obter a localização. Verifique as permissões de GPS do navegador.')
+        pos => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setPosition(coords);
+          resolverEnderecoPorCoords(coords.lat, coords.lng);
+        },
+        () => setGeoError('Não foi possível obter a localização automática. Você pode buscar o endereço manualmente.')
       );
     } else {
       setGeoError('Geolocalização não suportada no seu navegador.');
@@ -130,12 +226,12 @@ export default function AtividadesTempoPage() {
     let interval: NodeJS.Timeout;
     
     const syncTime = () => {
-      if (isRunning && startTimeMs) {
-        setTimePassed(Math.floor((Date.now() - startTimeMs) / 1000));
+      if (isRunning && !isPaused && startTimeMs) {
+        setTimePassed(acumuladoSegundos + Math.floor((Date.now() - startTimeMs) / 1000));
       }
     };
 
-    if (isRunning && startTimeMs) {
+    if (isRunning && !isPaused && startTimeMs) {
       syncTime(); // Sincroniza de imediato
       interval = setInterval(syncTime, 1000);
       
@@ -147,7 +243,7 @@ export default function AtividadesTempoPage() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', syncTime);
     };
-  }, [isRunning, startTimeMs]);
+  }, [isRunning, isPaused, startTimeMs, acumuladoSegundos]);
   // ---------------------------------
 
   const handleSelectAgendaTask = (taskId: string) => {
@@ -222,34 +318,60 @@ export default function AtividadesTempoPage() {
   };
 
   const handleStart = () => {
-    if (!fotoInicio) {
-      toast.error('Bloqueado: É obrigatório anexar a Foto de Início para comprovar sua presença antes de iniciar a tarefa.');
-      return;
-    }
     if (!selectedEmpresaId) {
-      toast.error('Selecione uma empresa antes de iniciar o tempo.');
+      toast.error('Selecione uma empresa antes de iniciar o atendimento.');
       return;
     }
-    
-    // Background Persistency setup
+
+    // Se estava pausado, retoma a partir do acumulado
     const now = Date.now();
+    if (isPaused) {
+      setStartTimeMs(now);
+      setIsPaused(false);
+      setIsRunning(true);
+      toast.info('Atendimento retomado!');
+      return;
+    }
+
+    // Background Persistency setup
+    setAcumuladoSegundos(0);
     setStartTimeMs(now);
     setTimePassed(0);
+    setIsPaused(false);
     setIsRunning(true);
-    
+
     localStorage.setItem('cf_user_timer_state', JSON.stringify({
       isRunning: true,
       startTimeMs: now,
       empresaId: selectedEmpresaId,
       descricao: atividadeDesc,
-      fotoInicio: fotoInicio
+      fotoInicio: fotoInicio,
+      localTexto,
     }));
 
     updateEstadoEmAndamento(true);
+    toast.success('Cronômetro de atendimento iniciado!');
+  };
+
+  const handlePauseResume = () => {
+    if (!isRunning) return;
+    if (!isPaused) {
+      const atual = startTimeMs ? acumuladoSegundos + Math.floor((Date.now() - startTimeMs) / 1000) : timePassed;
+      setAcumuladoSegundos(atual);
+      setTimePassed(atual);
+      setStartTimeMs(null);
+      setIsPaused(true);
+      toast.info('Atendimento pausado.');
+    } else {
+      setStartTimeMs(Date.now());
+      setIsPaused(false);
+      toast.info('Atendimento retomado.');
+    }
   };
   
   const handleStopOperation = () => {
     setIsRunning(false);
+    setIsPaused(false);
     localStorage.removeItem('cf_user_timer_state'); 
     updateEstadoEmAndamento(false);
   };
@@ -257,6 +379,8 @@ export default function AtividadesTempoPage() {
   const handleReset = async () => {
     if ((await confirmAsync('Deseja realmente zerar o cronômetro e remover as fotos?'))) {
       setIsRunning(false);
+      setIsPaused(false);
+      setAcumuladoSegundos(0);
       setTimePassed(0);
       setStartTimeMs(null);
       setFotoInicio(null);
@@ -265,6 +389,54 @@ export default function AtividadesTempoPage() {
       localStorage.removeItem('cf_user_timer_state');
       updateEstadoEmAndamento(false);
     }
+  };
+
+  const handleSalvarManual = () => {
+    if (!selectedEmpresaId) {
+      toast.error('Selecione uma empresa.');
+      return;
+    }
+    if (!atividadeDesc.trim()) {
+      toast.error('Informe a descrição do atendimento.');
+      return;
+    }
+    let segundos = Math.max(60, Math.round(manualMinutos * 60));
+    if (manualInicio && manualFim) {
+      const [h1, m1] = manualInicio.split(':').map(Number);
+      const [h2, m2] = manualFim.split(':').map(Number);
+      const diffMin = (h2 * 60 + m2) - (h1 * 60 + m1);
+      if (diffMin > 0) segundos = diffMin * 60;
+    }
+
+    const descComLocal = localTexto.trim()
+      ? `${atividadeDesc.trim()} • Local: ${localTexto.trim()}`
+      : atividadeDesc.trim();
+
+    const novaAtividade: AtividadeLog = {
+      id: Math.random().toString(36).substr(2, 9),
+      empresaId: selectedEmpresaId,
+      descricao: descComLocal,
+      tempoSegundos: segundos,
+      data: new Date(`${manualData}T${manualInicio || '09:00'}:00-03:00`).toISOString(),
+      localizacao: position,
+      fotoInicio: fotoInicio || null,
+      fotoFim: fotoFim || null,
+    };
+
+    store.saveAtividadeLog(novaAtividade);
+    setAtividades(store.getAtividadesLog());
+    window.dispatchEvent(new CustomEvent('cfDataChange', { detail: { key: 'cf_atividades_log' } }));
+    store.logAction(selectedEmpresaId, 'Atividade', `Registrou atendimento manual "${descComLocal}" (${Math.round(segundos / 60)} min)`);
+
+    fetch('/api/atividades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novaAtividade),
+    }).catch(() => {});
+
+    setShowManualModal(false);
+    setAtividadeDesc('');
+    toast.success(`Atendimento de ${Math.round(segundos / 60)} min registrado!`);
   };
 
   const handleStopAndSave = () => {
@@ -277,22 +449,24 @@ export default function AtividadesTempoPage() {
       return;
     }
     if (timePassed === 0) {
-      toast.success('O tempo registrado está zerado.');
+      toast.info('O tempo registrado está zerado.');
       return;
     }
-    if (!fotoFim) {
-      toast.error('Bloqueado: É obrigatório anexar a Foto de Fim para comprovar a conclusão antes de salvar a tarefa.');
-      return;
-    }
-    
+
     setIsRunning(false);
+    setIsPaused(false);
+    setAcumuladoSegundos(0);
     localStorage.removeItem('cf_user_timer_state');
     updateEstadoEmAndamento(false);
-    
+
+    const descComLocal = localTexto.trim() && !atividadeDesc.includes('Local:')
+      ? `${atividadeDesc.trim()} • Local: ${localTexto.trim()}`
+      : atividadeDesc.trim();
+
     const novaAtividade: AtividadeLog = {
       id: Math.random().toString(36).substr(2, 9),
       empresaId: selectedEmpresaId,
-      descricao: atividadeDesc,
+      descricao: descComLocal,
       tempoSegundos: timePassed,
       data: new Date().toISOString(),
       localizacao: position,
@@ -472,7 +646,15 @@ export default function AtividadesTempoPage() {
           <div className="page-title">Atividades e Tempos</div>
           <div className="page-subtitle">Controle suas horas de consultoria, tarefas e localização</div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+           <button
+             type="button"
+             className="btn btn-primary"
+             style={{ background: '#600000', borderColor: '#600000', fontWeight: 700 }}
+             onClick={() => setShowManualModal(true)}
+           >
+             ⏱️ + Lançar Tempo Manual
+           </button>
            {deferredPrompt && (
               <button 
                 className="btn" 
@@ -489,6 +671,31 @@ export default function AtividadesTempoPage() {
       </div>
 
       <div className="page-body">
+        {/* Resumo Rápido de Tempo de Atendimento */}
+        {(() => {
+          const hojeIsoLocal = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+          const mesIsoLocal = hojeIsoLocal.slice(0, 7);
+          const ativsHoje = atividades.filter(a => String(a.data || '').slice(0, 10) === hojeIsoLocal);
+          const segHoje = ativsHoje.reduce((s, a) => s + (a.tempoSegundos || 0), 0);
+          const segMes = atividades.filter(a => String(a.data || '').slice(0, 7) === mesIsoLocal).reduce((s, a) => s + (a.tempoSegundos || 0), 0);
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+              <div className="card" style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Atendimentos Hoje</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#600000', marginTop: 2 }}>{ativsHoje.length}</div>
+              </div>
+              <div className="card" style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Tempo Registrado Hoje</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>{formatTime(segHoje)}</div>
+              </div>
+              <div className="card" style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Total no Mês Atual</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#15803d', marginTop: 2 }}>{formatTime(segMes)}</div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="atividades-layout">
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -690,30 +897,120 @@ export default function AtividadesTempoPage() {
                 )}
               </div>
 
+              {/* Bloco de Busca e Marcação do Local do Atendimento */}
+              <div style={{ marginBottom: 20, padding: 14, borderRadius: 12, background: 'var(--bg-base)', border: '1px solid var(--border-light)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    📍 Local do Atendimento {buscandoLocal ? '(buscando...)' : ''}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={capturarGpsAtual} disabled={buscandoLocal} style={{ fontSize: 11.5 }}>
+                      🎯 GPS Atual
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={usarEnderecoDaEmpresa} disabled={buscandoLocal || !selectedEmpresaId} style={{ fontSize: 11.5 }}>
+                      🏢 Endereço da Empresa
+                    </button>
+                    {position && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${position.lat},${position.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: 11.5, textDecoration: 'none' }}
+                      >
+                        🗺️ Maps
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Endereço atual ou local (ex.: Escritório, Sede do Cliente, Online)"
+                  value={localTexto}
+                  onChange={e => setLocalTexto(e.target.value)}
+                  style={{ marginBottom: 8, fontSize: 13 }}
+                />
+
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Buscar rua, bairro ou empresa no mapa..."
+                    value={buscaLocal}
+                    onChange={e => setBuscaLocal(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarLocalPorTexto(); } }}
+                    style={{ fontSize: 12.5 }}
+                  />
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => buscarLocalPorTexto()} disabled={buscandoLocal}>
+                    🔎 Buscar
+                  </button>
+                </div>
+
+                {sugestoesLocal.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 150, overflowY: 'auto' }}>
+                    {sugestoesLocal.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setLocalTexto(s.endereco);
+                          setPosition({ lat: s.lat, lng: s.lng });
+                          setSugestoesLocal([]);
+                          toast.success('Local do atendimento selecionado!');
+                        }}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: 7,
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg-card)',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        📍 {s.endereco}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="btn-group-timer">
                 {(!isRunning && timePassed === 0) ? (
                   <button 
                     className="btn btn-primary btn-lg btn-mobile-full pulse-bg" 
                     onClick={handleStart} 
-                    style={{ fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', background: '#3b82f6', border: 'none', color: '#fff', boxShadow: '0 8px 30px rgba(59, 130, 246, 0.4)', transition: 'all 0.3s' }}
+                    style={{ fontWeight: 800, fontSize: '18px', padding: '20px', borderRadius: '14px', background: '#600000', border: 'none', color: '#fff', boxShadow: '0 8px 24px rgba(96, 0, 0, 0.28)', transition: 'all 0.3s' }}
                   >
-                    ▶ INICIAR OPERAÇÃO AGORA
+                    ▶ INICIAR ATENDIMENTO AGORA
                   </button>
                 ) : isRunning ? (
-                  <button 
-                    className="btn btn-danger btn-lg btn-mobile-full" 
-                    onClick={handleStopOperation} 
-                    style={{ background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(239, 68, 68, 0.4)', transition: 'all 0.3s' }}
-                  >
-                    PARAR O TEMPO E ENCERRAR
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-lg btn-mobile-full"
+                      onClick={handlePauseResume}
+                      style={{ fontWeight: 700, fontSize: '16px', padding: '18px', borderRadius: '14px' }}
+                    >
+                      {isPaused ? 'RETOMAR TEMPO' : 'PAUSAR TEMPO'}
+                    </button>
+                    <button 
+                      className="btn btn-danger btn-lg btn-mobile-full" 
+                      onClick={handleStopOperation} 
+                      style={{ background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '16px', padding: '18px', borderRadius: '14px', boxShadow: '0 8px 24px rgba(239, 68, 68, 0.32)', transition: 'all 0.3s' }}
+                    >
+                      PARAR E SALVAR
+                    </button>
+                  </>
                 ) : (
                   <button 
                     className="btn btn-success btn-lg btn-mobile-full" 
                     onClick={handleStopAndSave} 
-                    style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '24px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(16, 185, 129, 0.4)', transition: 'all 0.3s' }}
+                    style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '20px', borderRadius: '14px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.32)', transition: 'all 0.3s' }}
                   >
-                    FINALIZAR CHECK-OUT E SALVAR
+                    FINALIZAR E SALVAR ATENDIMENTO
                   </button>
                 )}
               </div>
@@ -823,6 +1120,59 @@ export default function AtividadesTempoPage() {
           </div>
         </div>
       </div>
+      {/* Modal de Lançamento Manual de Tempo de Atendimento */}
+      {showManualModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setShowManualModal(false)}
+        >
+          <div className="card" style={{ width: 480, maxWidth: '96vw', padding: 24, position: 'relative' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 6px' }}>⏱️ Registrar Tempo de Atendimento</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>
+              Informe os horários ou a duração do atendimento realizado e o local.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label className="form-label">Empresa *</label>
+                <select className="form-control" value={selectedEmpresaId} onChange={e => setSelectedEmpresaId(e.target.value)}>
+                  <option value="">Selecione a empresa...</option>
+                  {empresas.map(e => <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Descrição do Atendimento *</label>
+                <input type="text" className="form-control" placeholder="Ex.: Reunião de fechamento financeiro" value={atividadeDesc} onChange={e => setAtividadeDesc(e.target.value)} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <div>
+                  <label className="form-label">Data</label>
+                  <input type="date" className="form-control" value={manualData} onChange={e => setManualData(e.target.value)} />
+                </div>
+                <div>
+                  <label className="form-label">Início</label>
+                  <input type="time" className="form-control" value={manualInicio} onChange={e => setManualInicio(e.target.value)} />
+                </div>
+                <div>
+                  <label className="form-label">Fim</label>
+                  <input type="time" className="form-control" value={manualFim} onChange={e => setManualFim(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Ou duração direta (minutos)</label>
+                <input type="number" min={1} className="form-control" value={manualMinutos} onChange={e => setManualMinutos(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className="form-label">Local do Atendimento</label>
+                <input type="text" className="form-control" placeholder="Ex.: Sede do cliente, Escritório, Google Meet..." value={localTexto} onChange={e => setLocalTexto(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowManualModal(false)}>Cancelar</button>
+                <button type="button" className="btn btn-primary" onClick={handleSalvarManual} style={{ background: '#600000', borderColor: '#600000' }}>Salvar Atendimento</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

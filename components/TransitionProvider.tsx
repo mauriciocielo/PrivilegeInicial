@@ -544,14 +544,16 @@ export default function TransitionProvider({ children }: { children: React.React
     
     let lastSyncTimeLancs = '';
     let counter = 0;
+    let lastVisibleCheckMs = 0;
 
     const tick = async (force = false) => {
+      if (!force && typeof document !== 'undefined' && document.hidden) return;
       if (sessionStorage.getItem('cf_postgres_synced') !== 'true') return;
       if (hasPendingChangesRef.current) return;
       if (sessionStorage.getItem('cf_sync_in_progress') === 'true') return;
-      
+
       counter++;
-      
+
       try {
         // 1. POLLING UNIVERSAL DE LANÇAMENTOS (O Pulso do Sistema)
         // Todos os dashboards e relatórios dependem de Lançamentos. Sincronizamos globalmente.
@@ -559,7 +561,6 @@ export default function TransitionProvider({ children }: { children: React.React
         if (statusRes.ok) {
           const statusData = await statusRes.json();
           if (statusData.lastUpdate && statusData.lastUpdate !== lastSyncTimeLancs) {
-            console.log('☁️ Polling [TEMPO REAL Global]: Detectada alteração remota em lançamentos! Buscando...');
             lastSyncTimeLancs = statusData.lastUpdate;
             sessionStorage.setItem('cf_last_sync_time', lastSyncTimeLancs);
 
@@ -572,24 +573,19 @@ export default function TransitionProvider({ children }: { children: React.React
                   if (canAccessEmpresa(l?.empresaId)) store.importSingleLancamento(l);
                 });
                 sessionStorage.setItem('cf_sync_in_progress', 'false');
-                console.log(`☁️ Polling: ${lancamentos.length} lançamentos sincronizados da nuvem.`);
               }
             }
           }
         }
 
         // 2. POLLING ESPECÍFICO ROTA ou DASHBOARD (Agenda, Empresas, etc)
-        // Só rodamos a cada ~15s (1 em cada 5 ticks) para poupar o banco, a menos que seja forçado
-        if (!force && counter % 5 !== 0) return;
+        // Roda a cada ~36s (1 em cada 3 ticks de 12s) para poupar o banco, a menos que seja forçado
+        if (!force && counter % 3 !== 0) return;
 
-        // 2.5 Sessão pode ter ficado desatualizada com a aba já aberta (ex:
-        // administrador mudou as empresas deste usuário durante o uso) —
-        // confere no mesmo ritmo de ~15s e recarrega os dados já com o
-        // escopo novo, sem exigir logout/login.
+        // 2.5 Sessão pode ter ficado desatualizada com a aba já aberta
         try {
           const mudou = await refreshUserSession();
           if (mudou) {
-            console.log('🔐 Acesso do usuário foi atualizado no servidor — recarregando dados...');
             sessionStorage.setItem('cf_sync_in_progress', 'true');
             const res = await fetch('/api/migrate-backup', { cache: 'no-store' });
             if (res.ok) {
@@ -620,19 +616,17 @@ export default function TransitionProvider({ children }: { children: React.React
         for (const col of collectionsToPoll) {
           const res = await fetch(`/api/migrate-backup?collection=${col}&t=${Date.now()}`, { cache: 'no-store' });
           if (!res.ok) continue;
-          
+
           const backup = await res.json();
           if (backup && backup.data && backup.data[col]) {
-            const localString = store.exportBackup();
-            const localParsed = JSON.parse(localString);
+            // Compara direto com a chave específica no localStorage (evita serializar o backup inteiro!)
             const remoteStr = JSON.stringify(backup.data[col] || []);
-            const localStr = JSON.stringify(localParsed.data[col] || []);
-            
+            const localStr = localStorage.getItem(col) || '[]';
+
             if (remoteStr !== localStr) {
-               console.log(`☁️ Polling: Sincronizando ${col} remotos...`);
-               sessionStorage.setItem('cf_sync_in_progress', 'true');
-               store.importBackup(JSON.stringify(backup));
-               sessionStorage.setItem('cf_sync_in_progress', 'false');
+              sessionStorage.setItem('cf_sync_in_progress', 'true');
+              store.importBackup(JSON.stringify(backup));
+              sessionStorage.setItem('cf_sync_in_progress', 'false');
             }
           }
         }
@@ -641,14 +635,15 @@ export default function TransitionProvider({ children }: { children: React.React
       }
     };
 
-    const pollInterval = setInterval(() => tick(), 3000);
+    const pollInterval = setInterval(() => tick(), 12000);
 
-    // Celulares suspendem a aba (e param os timers) quando o app vai para
-    // segundo plano ou a tela bloqueia. Ao voltar, o próximo "tick" do
-    // setInterval pode demorar — força uma checagem imediata nesse momento
-    // para não parecer que "não atualiza no celular".
+    // Ao voltar para a aba (com throttle de 5s para evitar disparos triplos de focus+visibility+pageshow)
     const handleVisible = () => {
-      if (document.visibilityState === 'visible') tick(true);
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastVisibleCheckMs < 5000) return;
+      lastVisibleCheckMs = now;
+      tick(true);
     };
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('focus', handleVisible);
@@ -686,33 +681,31 @@ export default function TransitionProvider({ children }: { children: React.React
   useEffect(() => {
     if (pathname !== prevPathnameRef.current) {
       prevPathnameRef.current = pathname;
-      setTransitionStage('fade-out');
+      setTransitionStage('navigating');
+      const timer = setTimeout(() => setTransitionStage('idle'), 260);
+      return () => clearTimeout(timer);
     }
   }, [pathname]);
 
-  useEffect(() => {
-    if (transitionStage === 'fade-out') {
-      const timer = setTimeout(() => {
-        setDisplayChildren(children);
-        setTransitionStage('fade-in');
-      }, 200); // Duration matches CSS transition
-      return () => clearTimeout(timer);
-    } else {
-      setDisplayChildren(children);
-    }
-  }, [transitionStage, children]);
-
   return (
-    <div
-      style={{
-        transition: 'opacity 0.2s ease-in-out, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-        opacity: transitionStage === 'fade-in' ? 1 : 0,
-        transform: transitionStage === 'fade-in' ? 'none' : 'translateY(4px) scale(0.995)',
-        width: '100%',
-        minHeight: '100vh',
-      }}
-    >
-      {displayChildren}
+    <div style={{ width: '100%', minHeight: '100vh' }}>
+      {transitionStage === 'navigating' && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2.5,
+            background: 'linear-gradient(90deg, #600000 0%, #a88948 55%, #600000 100%)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            animation: 'fadeIn 0.12s ease-out',
+          }}
+        />
+      )}
+      {children}
     </div>
   );
 }

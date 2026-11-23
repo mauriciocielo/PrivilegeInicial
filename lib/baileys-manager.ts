@@ -13,6 +13,12 @@ import QRCode from 'qrcode';
 import { getEmailDbPool } from './email-db';
 import { processIncomingMessage, ensureChatColumns } from './whatsapp-service';
 import { updateMessageDeliveryAndReadStatus } from './campaign-read-tracker';
+import {
+  clearPostgresAuthState,
+  hasPostgresAuthCreds,
+  listPostgresAuthOwners,
+  usePostgresAuthState,
+} from './baileys-pg-auth';
 
 interface BaileysSessionState {
   sock: WASocket | null;
@@ -353,6 +359,10 @@ export async function resolveWhatsAppJid(
   phoneOrChatId: string,
   ownerId = 'default'
 ): Promise<string> {
+  if (phoneOrChatId.includes('@g.us') || phoneOrChatId.includes('@s.whatsapp.net') || phoneOrChatId.includes('@lid')) {
+    return phoneOrChatId;
+  }
+
   const pool = getEmailDbPool();
   const authDir = getAuthDir(ownerId);
 
@@ -536,7 +546,8 @@ export async function ensureBaileysConnected(
   }
 
   const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
-  if (fs.existsSync(credsFile)) {
+  const hasSavedAuth = fs.existsSync(credsFile) || (await hasPostgresAuthCreds(ownerId));
+  if (hasSavedAuth) {
     if (!waitForOpen) {
       startBaileysSocket(false, ownerId).catch(err =>
         console.error(`[Baileys:${ownerId}] Auto-connect erro:`, err)
@@ -557,11 +568,16 @@ export async function ensureBaileysConnected(
 }
 
 /**
- * Inicializa automaticamente todas as sessões Baileys salvas em disco ou no banco
- * para que o sistema funcione em 2º plano mesmo sem nenhuma tela aberta.
+ * Inicializa automaticamente todas as sessões Baileys salvas em disco ou no PostgreSQL
+ * para que o sistema funcione em 2º plano 24h mesmo após deploys/restarts no Railway.
  */
 export async function bootAllSavedBaileysSessions(): Promise<string[]> {
   const owners = new Set<string>();
+
+  try {
+    const pgOwners = await listPostgresAuthOwners();
+    for (const o of pgOwners) owners.add(o);
+  } catch {}
 
   try {
     const rootDir = getAuthRoot();
@@ -595,7 +611,8 @@ export async function bootAllSavedBaileysSessions(): Promise<string[]> {
   const started: string[] = [];
   for (const ownerId of owners) {
     const credsFile = path.join(getAuthDir(ownerId), 'creds.json');
-    if (fs.existsSync(credsFile)) {
+    const hasAuth = fs.existsSync(credsFile) || (await hasPostgresAuthCreds(ownerId));
+    if (hasAuth) {
       ensureBaileysConnected(false, ownerId).catch(() => {});
       started.push(ownerId);
     }
@@ -659,6 +676,7 @@ export async function startBaileysSocket(
     if (forceReset) {
       st.qr = null;
       st.connected = false;
+      await clearPostgresAuthState(ownerId);
       if (fs.existsSync(authDir)) {
         try {
           fs.rmSync(authDir, { recursive: true, force: true });
@@ -666,11 +684,7 @@ export async function startBaileysSocket(
       }
     }
 
-    if (!fs.existsSync(authDir)) {
-      fs.mkdirSync(authDir, { recursive: true });
-    }
-
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    const { state, saveCreds } = await usePostgresAuthState(ownerId, authDir);
     const { version } = await fetchLatestBaileysVersion().catch(() => ({
       version: [2, 3000, 1015901307] as [number, number, number],
     }));
@@ -766,11 +780,12 @@ export async function startBaileysSocket(
                 const displayName = subject.startsWith('👥') ? subject : `👥 ${subject}`;
                 await pool
                   .query(
-                    `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, unread_count, bot_enabled, crm_stage, ticket_status)
-                     VALUES ($1, $2, $3, $4, $5, '', 0, FALSE, 'em_atendimento', 'encerrado')
+                    `INSERT INTO whatsapp_chats (id, owner_id, phone, name, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage, ticket_status)
+                     VALUES ($1, $2, $3, $4, $5, '', NOW(), 0, FALSE, 'em_atendimento', 'aberto')
                      ON CONFLICT (id) DO UPDATE SET
                        name = EXCLUDED.name,
-                       remote_jid = EXCLUDED.remote_jid`,
+                       remote_jid = EXCLUDED.remote_jid,
+                       bot_enabled = FALSE`,
                     [chatId, ownerId, cleanGroupPhone, displayName, gid]
                   )
                   .catch(() => {});
@@ -920,13 +935,13 @@ export async function startBaileysSocket(
             await pool
               .query(
                 `INSERT INTO whatsapp_chats (id, owner_id, phone, name, profile_pic, remote_jid, last_message, last_message_time, unread_count, bot_enabled, crm_stage)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 0, TRUE, 'em_atendimento')
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 0, $8, 'em_atendimento')
                  ON CONFLICT (id) DO UPDATE SET
                    profile_pic = COALESCE(EXCLUDED.profile_pic, whatsapp_chats.profile_pic),
                    remote_jid = COALESCE(EXCLUDED.remote_jid, whatsapp_chats.remote_jid),
                    last_message = EXCLUDED.last_message,
                    last_message_time = NOW()`,
-                [chatId, ownerId, cleanPhone, cleanPhone, profilePic, sendJid, text]
+                [chatId, ownerId, cleanPhone, cleanPhone, profilePic, sendJid, text, !isGroup]
               )
               .catch(() => {});
 
@@ -1085,6 +1100,24 @@ export function getBaileysSocketForOwner(ownerId = 'default'): WASocket | null {
   return getSessionState(ownerId).sock;
 }
 
+/**
+ * Lista todas as sessões Baileys atualmente carregadas em memória (independente do formato do ownerId).
+ */
+export function listarSessoesBaileysAtivas(): Array<{
+  ownerId: string;
+  connected: boolean;
+  userId: string;
+  sock: WASocket | null;
+}> {
+  const result: Array<{ ownerId: string; connected: boolean; userId: string; sock: WASocket | null }> = [];
+  for (const [ownerId, st] of g.__baileysSessions!.entries()) {
+    const userId = String(st.sock?.user?.id || '');
+    const connected = Boolean(st.connected || (st.sock && userId));
+    result.push({ ownerId, connected, userId, sock: st.sock });
+  }
+  return result;
+}
+
 export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void> {
   const st = getSessionState(ownerId);
   const authDir = getAuthDir(ownerId);
@@ -1097,6 +1130,7 @@ export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void
   }
   st.qr = null;
   st.connected = false;
+  await clearPostgresAuthState(ownerId);
   if (fs.existsSync(authDir)) {
     try {
       fs.rmSync(authDir, { recursive: true, force: true });
@@ -1125,12 +1159,12 @@ export async function sendBaileysLiveMessage(
     mimeType?: string;
   },
   ownerId = 'default'
-): Promise<{ sent: boolean; waKey?: any; profilePic?: string | null }> {
+): Promise<{ sent: boolean; waKey?: any; profilePic?: string | null; error?: string }> {
   const sock = await ensureBaileysConnected(true, ownerId);
   const st = getSessionState(ownerId);
   if (!sock) {
     console.warn(`[Baileys:${ownerId}] Socket não está conectado no momento do envio.`);
-    return { sent: false };
+    return { sent: false, error: `Socket da sessão "${ownerId}" não está conectado.` };
   }
 
   try {
@@ -1182,9 +1216,33 @@ export async function sendBaileysLiveMessage(
     notifySocketIoClients(chatId, ownerId);
 
     return { sent: true, waKey: sentMsg?.key, profilePic };
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[Baileys:${ownerId}] Erro ao enviar mensagem ao vivo:`, err);
-    return { sent: false };
+    return { sent: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Lista os grupos do WhatsApp em que a sessão conectada participa.
+ */
+export async function listarGruposBaileys(ownerId = 'default'): Promise<Array<{ jid: string; nome: string; participantes: number }>> {
+  const sock = await ensureBaileysConnected(true, ownerId);
+  if (!sock || typeof sock.groupFetchAllParticipating !== 'function') {
+    return [];
+  }
+  try {
+    const groupsMap = await sock.groupFetchAllParticipating();
+    return Object.values(groupsMap || {})
+      .map((g: any) => ({
+        jid: String(g?.id || ''),
+        nome: String(g?.subject || 'Grupo sem nome'),
+        participantes: Array.isArray(g?.participants) ? g.participants.length : 0,
+      }))
+      .filter(g => g.jid.endsWith('@g.us'))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  } catch (err) {
+    console.warn(`[Baileys:${ownerId}] Falha ao listar grupos:`, err);
+    return [];
   }
 }
 

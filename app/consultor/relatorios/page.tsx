@@ -42,6 +42,8 @@ export default function RelatoriosPage() {
   const [whatsappPhone, setWhatsappPhone] = useState('46999048990');
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [grupoWhatsRelatorio, setGrupoWhatsRelatorio] = useState<{ groupJid: string; groupName: string } | null>(null);
+  const [modoEnvioWhatsRelatorio, setModoEnvioWhatsRelatorio] = useState<'grupo' | 'numero'>('numero');
   const [viewPdfData, setViewPdfData] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -572,7 +574,21 @@ export default function RelatoriosPage() {
 
     setWhatsappMessage(msg);
     setWhatsappPhone(empresa.telefone ? empresa.telefone.replace(/\D/g, '') : '46999048990');
+    setGrupoWhatsRelatorio(null);
+    setModoEnvioWhatsRelatorio('numero');
     setShowWhatsAppModal(true);
+
+    if (empresa.id && !empresa.id.startsWith('grupo:')) {
+      fetch(`/api/whatsapp/disparar-direto?empresaId=${encodeURIComponent(empresa.id)}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (data?.grupo?.groupJid) {
+            setGrupoWhatsRelatorio(data.grupo);
+            setModoEnvioWhatsRelatorio('grupo');
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   const handleWhatsAppSend = async () => {
@@ -580,12 +596,36 @@ export default function RelatoriosPage() {
       toast.error('Por favor, informe a mensagem.');
       return;
     }
-    setShowWhatsAppModal(false);
-    redirectToWhatsAppShare({
-      phone: whatsappPhone,
-      name: empresa?.nomeFantasia || empresa?.razaoSocial,
-      text: whatsappMessage,
-    });
+    const usarGrupo = modoEnvioWhatsRelatorio === 'grupo' && Boolean(grupoWhatsRelatorio?.groupJid);
+    if (!usarGrupo && whatsappPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Informe um número de WhatsApp válido com DDD.');
+      return;
+    }
+    setSendingWhatsApp(true);
+    try {
+      const res = await fetch('/api/whatsapp/disparar-direto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(usarGrupo && grupoWhatsRelatorio
+            ? { groupJid: grupoWhatsRelatorio.groupJid, groupName: grupoWhatsRelatorio.groupName, usarGrupo: true }
+            : { telefone: whatsappPhone }),
+          mensagem: whatsappMessage,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Falha ao enviar relatório no WhatsApp.');
+      toast.success(
+        json.isGrupo
+          ? `Relatório enviado no grupo "${json.destinoNome}" via (46) 99980-0010!`
+          : `Relatório enviado para ${whatsappPhone} via (46) 99980-0010!`
+      );
+      setShowWhatsAppModal(false);
+    } catch (e) {
+      toast.error((e as Error).message || 'Erro ao enviar no WhatsApp.');
+    } finally {
+      setSendingWhatsApp(false);
+    }
   };
 
   const renderGroupRow = (id: string, group: any, months: Date[]) => {
@@ -1209,6 +1249,30 @@ export default function RelatoriosPage() {
               <button className="modal-close" onClick={() => setShowWhatsAppModal(false)}>✕</button>
             </div>
             
+            {grupoWhatsRelatorio && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', marginBottom: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#15803d', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="destino-wpp-relatorio"
+                    checked={modoEnvioWhatsRelatorio === 'grupo'}
+                    onChange={() => setModoEnvioWhatsRelatorio('grupo')}
+                  />
+                  <span>Grupo do Cliente: <strong>{grupoWhatsRelatorio.groupName}</strong></span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="destino-wpp-relatorio"
+                    checked={modoEnvioWhatsRelatorio === 'numero'}
+                    onChange={() => setModoEnvioWhatsRelatorio('numero')}
+                  />
+                  <span>Enviar para um número individual</span>
+                </label>
+              </div>
+            )}
+
+            {modoEnvioWhatsRelatorio === 'numero' && (
             <div className="form-group" style={{ marginBottom: 16 }}>
               <label className="form-label">Número do WhatsApp (DDD + Número)</label>
               <input 
@@ -1219,6 +1283,7 @@ export default function RelatoriosPage() {
                 placeholder="Ex: 46999048990"
               />
             </div>
+            )}
 
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label">Mensagem Formatada (Você pode editar se quiser)</label>

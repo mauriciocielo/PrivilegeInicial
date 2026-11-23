@@ -1,13 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getWhatsAppConfig } from '@/lib/whatsapp-service';
 import { getEmailDbPool } from '@/lib/email-db';
+import { getBaileysSocketForOwner } from '@/lib/baileys-manager';
+import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const config = await getWhatsAppConfig();
+    const ownerId = resolveWhatsAppOwnerId(req);
+    const config = await getWhatsAppConfig(ownerId);
     const pool = getEmailDbPool();
+
+    const sock = getBaileysSocketForOwner(ownerId);
+    const baileysLive = Boolean(sock?.user?.id);
+    const hasExternalApi = Boolean(
+      config.api_url && config.api_url.startsWith('http') && !config.api_url.includes('example')
+    );
+    const statusReal = baileysLive || hasExternalApi ? 'conectado' : 'desconectado';
 
     let unreadTotal = 0;
     let chatsTotal = 0;
@@ -27,7 +37,9 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      status: config.status,
+      status: statusReal,
+      baileys_live: baileysLive,
+      owner_id: ownerId,
       phone_number: config.phone_number,
       profile_name: config.profile_name,
       bot_enabled: config.bot_enabled,

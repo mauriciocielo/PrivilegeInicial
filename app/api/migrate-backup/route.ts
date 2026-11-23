@@ -2393,7 +2393,22 @@ export async function POST(request: Request) {
             case 'cf_atividades_log': await db.atividade.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
             case 'cf_audit_logs': await db.auditLog.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
             case 'cf_centros_custo': await db.centroCusto.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
-            case 'cf_agenda_semanal': await db.agendaTask.deleteMany({ where: { id: record.id, ...scopeFilter } }); break;
+            case 'cf_agenda_semanal':
+              await db.agendaTask.deleteMany({
+                where: {
+                  id: record.id,
+                  ...(isAdmin
+                    ? {}
+                    : {
+                        OR: [
+                          { empresaId: { in: auth.session.empresaIds } },
+                          { empresaId: 'empresa_default' },
+                          { empresaId: '' },
+                        ],
+                      }),
+                },
+              });
+              break;
             case 'cf_inteligencia_docs':
               if (auth.session.role !== 'cliente') await db.inteligenciaDoc.deleteMany({ where: { id: record.id } });
               break;

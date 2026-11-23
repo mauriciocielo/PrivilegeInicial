@@ -179,6 +179,7 @@ export default function HomePage() {
             <a href="#quem-somos" className="nav-link">Quem Somos</a>
             <a href="#cnds" className="nav-link">Certidões</a>
             <a href="#faq" className="nav-link">Dúvidas</a>
+            <Link href="/agendar" className="nav-link" style={{ color: 'var(--accent)', fontWeight: 700 }}>Agendar Reunião</Link>
             <Link href="/contato" className="nav-link">Contato</Link>
             <Link href="/login" className="client-btn">Área do Cliente</Link>
           </div>
@@ -203,22 +204,19 @@ export default function HomePage() {
           <p style={{ fontSize: '19px', color: 'var(--text-light)', maxWidth: '760px', margin: '0 auto 36px', lineHeight: 1.6 }}>
             Números que sustentam decisões estratégicas. Assessoria contábil completa, abertura de empresas, escrituração fiscal, folha de pagamento e gestão financeira integrada para quem busca conformidade e crescimento real no Paraná.
           </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/agendar" className="hero-btn">
+              Agendar Reunião Online
+            </Link>
             <a
               href={whatsAppMainUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="hero-btn"
+              style={{ background: '#fff', color: '#600000', border: '1px solid #600000' }}
               onClick={() => trackWhatsAppClick('Hero WhatsApp')}
             >
-              <MessageCircle size={20} /> Agendar Diagnóstico Consultivo
-            </a>
-            <a
-              href="#solucoes"
-              className="hero-btn"
-              style={{ background: '#fff', color: '#600000', border: '1px solid #600000' }}
-            >
-              Conhecer Serviços
+              <MessageCircle size={20} /> Falar no WhatsApp
             </a>
           </div>
         </section>

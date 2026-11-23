@@ -16,12 +16,14 @@ const ROTAS_PUBLICAS_EXPLICITAS = [
   '/bpo-financeiro-francisco-beltrao',
   '/abertura-de-empresa-francisco-beltrao',
   '/contabilidade-agronegocio',
+  '/agendar',
 ];
 
 export function ehRotaPublica(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return (
     ROTAS_PUBLICAS_EXPLICITAS.includes(pathname) ||
+    pathname.startsWith('/agendar') ||
     pathname.startsWith('/novo-layout') ||
     pathname.startsWith('/perfil/') ||
     pathname.startsWith('/planejamento-tributario') ||

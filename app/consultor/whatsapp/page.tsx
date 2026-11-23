@@ -491,6 +491,7 @@ export default function WhatsAppPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       loadChats(false);
       if (selectedChat) {
         loadMessages(selectedChat.id, false);
@@ -498,7 +499,7 @@ export default function WhatsAppPage() {
       if (activeTab === 'campaigns') {
         loadCampaigns();
       }
-    }, 2500);
+    }, 8000);
     const handleWaOpenChat = () => {
       loadChats(false);
     };
