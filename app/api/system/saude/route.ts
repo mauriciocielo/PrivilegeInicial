@@ -5,6 +5,7 @@ import { listCampaigns, startCampaignWorker } from '../../../../lib/campaign-man
 import {
   bootAllSavedBaileysSessions,
   getBaileysSocketForOwner,
+  listarSessoesBaileysAtivas,
   sendBaileysLiveMessage,
 } from '../../../../lib/baileys-manager';
 import { iniciarWorkerFilaEmail } from '../../../../lib/email-queue';
@@ -29,29 +30,42 @@ async function coletarSaude() {
   }
 
   // 2. Sessões WhatsApp (Baileys)
-  const sessoes: Array<{ ownerId: string; status: string; conectada: boolean }> = [];
+  const sessoesMap = new Map<string, { ownerId: string; status: string; conectada: boolean }>();
+  for (const s of listarSessoesBaileysAtivas()) {
+    sessoesMap.set(s.ownerId, {
+      ownerId: s.ownerId,
+      status: s.connected ? 'conectada' : 'desconectada',
+      conectada: s.connected,
+    });
+  }
   try {
-    const rows = await db.$queryRawUnsafe<Array<{ owner_id: string }>>(
-      `SELECT DISTINCT owner_id FROM whatsapp_auth_state WHERE owner_id IS NOT NULL`
+    const rows = await db.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM whatsapp_config WHERE status = 'conectado'`
     );
-    const owners = rows.length > 0 ? rows.map(r => r.owner_id || 'default') : ['default'];
-    for (const ownerId of owners) {
-      const sock = getBaileysSocketForOwner(ownerId);
-      const conectada = Boolean(sock?.user);
-      sessoes.push({
-        ownerId,
-        status: conectada ? 'conectada' : 'desconectada',
-        conectada,
-      });
+    for (const r of rows) {
+      const ownerId = r.id || 'default';
+      if (!sessoesMap.has(ownerId)) {
+        const sock = getBaileysSocketForOwner(ownerId);
+        const conectada = Boolean(sock?.user);
+        sessoesMap.set(ownerId, {
+          ownerId,
+          status: conectada ? 'conectada' : 'desconectada',
+          conectada,
+        });
+      }
     }
   } catch {
+    // tabela opcional
+  }
+  if (sessoesMap.size === 0) {
     const sock = getBaileysSocketForOwner('default');
-    sessoes.push({
+    sessoesMap.set('default', {
       ownerId: 'default',
       status: sock?.user ? 'conectada' : 'desconectada',
       conectada: Boolean(sock?.user),
     });
   }
+  const sessoes = Array.from(sessoesMap.values());
 
   // 3. Campanhas WhatsApp 24h
   let campanhasAtivas = 0;

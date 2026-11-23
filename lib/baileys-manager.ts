@@ -1089,6 +1089,24 @@ export function getBaileysSocketForOwner(ownerId = 'default'): WASocket | null {
   return getSessionState(ownerId).sock;
 }
 
+/**
+ * Lista todas as sessões Baileys atualmente carregadas em memória (independente do formato do ownerId).
+ */
+export function listarSessoesBaileysAtivas(): Array<{
+  ownerId: string;
+  connected: boolean;
+  userId: string;
+  sock: WASocket | null;
+}> {
+  const result: Array<{ ownerId: string; connected: boolean; userId: string; sock: WASocket | null }> = [];
+  for (const [ownerId, st] of g.__baileysSessions!.entries()) {
+    const userId = String(st.sock?.user?.id || '');
+    const connected = Boolean(st.connected || (st.sock && userId));
+    result.push({ ownerId, connected, userId, sock: st.sock });
+  }
+  return result;
+}
+
 export async function disconnectBaileysSocket(ownerId = 'default'): Promise<void> {
   const st = getSessionState(ownerId);
   const authDir = getAuthDir(ownerId);
