@@ -702,6 +702,7 @@ export default function AgendaPage() {
     setConvidadosEmails('');
     setGerarGoogleMeet(false);
     setRecorrenciaMeses(6);
+    setAvisarGrupoAoSalvar(true);
     setIsModalOpen(true);
   };
 
@@ -817,11 +818,15 @@ export default function AgendaPage() {
 
     // 1. Se Google conectado, cria/atualiza evento direto (com Invite + Google Meet se marcado)
     if (googleConectado) {
-      const gRes = await sincronizarEventoNoGoogle(task, emailsLista, gerarGoogleMeet);
-      if (gRes.googleEventId) (task as any).googleEventId = gRes.googleEventId;
-      if (gRes.meetLink) task.location = gRes.meetLink;
-      if (emailsLista.length > 0 && gRes.googleEventId) {
-        toast.success(`Invite do Google Calendar enviado para ${emailsLista.length} convidado(s)!`);
+      try {
+        const gRes = await sincronizarEventoNoGoogle(task, emailsLista, gerarGoogleMeet);
+        if (gRes.googleEventId) (task as any).googleEventId = gRes.googleEventId;
+        if (gRes.meetLink) task.location = gRes.meetLink;
+        if (emailsLista.length > 0 && gRes.googleEventId) {
+          toast.success(`Invite do Google Calendar enviado para ${emailsLista.length} convidado(s)!`);
+        }
+      } catch (gErr) {
+        console.warn('Falha pontual ao sincronizar evento no Google Calendar:', gErr);
       }
     }
 
@@ -866,7 +871,13 @@ export default function AgendaPage() {
 
     // 3. Envio automático no GRUPO DO CLIENTE (criação ou alteração de data/horário/assunto/local)
     const grupoEmp = task.empresaId ? vinculosGrupos[task.empresaId] : undefined;
-    if (grupoEmp?.groupJid && grupoEmp.notificarAgenda && avisarGrupoAoSalvar) {
+    const deveTentarGrupo = Boolean(
+      task.empresaId &&
+      avisarGrupoAoSalvar &&
+      (grupoEmp ? grupoEmp.notificarAgenda !== false : true)
+    );
+
+    if (deveTentarGrupo) {
       const mudou =
         isEdit &&
         anterior &&
@@ -881,25 +892,32 @@ export default function AgendaPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            groupJid: grupoEmp.groupJid,
-            groupName: grupoEmp.groupName,
+            empresaId: task.empresaId,
+            groupJid: grupoEmp?.groupJid || '',
+            groupName: grupoEmp?.groupName || '',
             mensagem: msgGrupo,
             categoria: isEdit ? 'agenda_alteracao' : 'agenda_criacao',
           }),
         })
-          .then(r => r.json().then(j => ({ ok: r.ok, j })))
-          .then(({ ok, j }) => {
+          .then(r => r.json().then(j => ({ ok: r.ok, status: r.status, j })))
+          .then(({ ok, status, j }) => {
             if (ok) {
               toast.success(
                 isEdit
-                  ? `Alteração de agenda enviada no grupo "${grupoEmp.groupName}"!`
-                  : `Compromisso enviado no grupo "${grupoEmp.groupName}"! Lembretes de 1 dia e 1 hora antes armados.`
+                  ? `Alteração de agenda enviada no grupo "${j?.destinoNome || grupoEmp?.groupName || 'do cliente'}"!`
+                  : `Compromisso enviado no grupo "${j?.destinoNome || grupoEmp?.groupName || 'do cliente'}"! Lembretes de 1 dia e 1 hora antes armados.`
               );
-            } else {
+            } else if (status !== 400 || grupoEmp?.groupJid) {
+              // Se não tinha grupo vinculado (400), não mostra erro falso; se tinha grupo, avisa o motivo real
               toast.warning(`Compromisso salvo, mas não foi possível avisar no grupo: ${j?.error || 'WhatsApp offline'}`);
             }
           })
-          .catch(() => { });
+          .catch(err => {
+            console.error('Erro ao disparar aviso de agenda no grupo:', err);
+            if (grupoEmp?.groupJid) {
+              toast.warning('Compromisso salvo, mas ocorreu um erro de rede ao avisar no grupo.');
+            }
+          });
       }
     }
 
