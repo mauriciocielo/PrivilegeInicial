@@ -5,6 +5,8 @@ import { uid } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { Brain as IcoBrain } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function PlanoContasPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -287,8 +289,8 @@ export default function PlanoContasPage() {
           <div className="page-subtitle">{plano.filter(p => p.ativo).length} contas ativas</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-warning" style={{ marginRight: '8px' }} onClick={handleAutoDeduplicate}>✨ Auto-Resolver Duplicadas</button>
-          <button className="btn btn-danger" style={{ marginRight: '8px' }} onClick={handleDeleteAll}>🗑️ Excluir Todo o Plano</button>
+          <button className="btn btn-warning" style={{ marginRight: '8px' }} onClick={handleAutoDeduplicate}>Auto-Resolver Duplicadas</button>
+          <button className="btn btn-danger" style={{ marginRight: '8px' }} onClick={handleDeleteAll}>Excluir Todo o Plano</button>
           <button className="btn btn-primary" onClick={() => openNew()}>＋ Nova Conta</button>
         </div>
       </div>
@@ -296,11 +298,11 @@ export default function PlanoContasPage() {
       <div className="page-body">
         {/* Abas Principais */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 10 }}>
-          <button className={`btn ${activePageTab === 'contas' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setActivePageTab('contas')}>
-            📋 Estrutura de Contas
+          <button className={`btn ${activePageTab === 'contas' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => setActivePageTab('contas')}>
+            Estrutura de Contas
           </button>
-          <button className={`btn ${activePageTab === 'regras' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setActivePageTab('regras')}>
-            🧠 Regras de Classificação IA
+          <button className={`btn ${activePageTab === 'regras' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => setActivePageTab('regras')}>
+            Regras de Classificação IA
           </button>
         </div>
 
@@ -311,7 +313,7 @@ export default function PlanoContasPage() {
                 <div className="tabs" style={{ margin: 0, border: 'none' }}>
                   {(['todos','receita','despesa','transferencia'] as const).map(t => (
                     <button key={t} className={`tab ${filtroTipo === t ? 'active' : ''}`} onClick={() => setFiltroTipo(t)} style={{ padding: '6px 14px' }}>
-                      {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : t === 'despesa' ? '↓ Despesas' : '🔄 Transferências'}
+                      {t === 'todos' ? 'Todos' : t === 'receita' ? '↑ Receitas' : t === 'despesa' ? '↓ Despesas' : 'Transferências'}
                     </button>
                   ))}
                 </div>
@@ -366,7 +368,7 @@ export default function PlanoContasPage() {
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, pc.id)}
                           >
-                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
+                            <td style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text-secondary)' }}>{pc.codigo}</td>
                             <td 
                               style={{ ...getNivelStyle(pc.nivel), cursor: 'pointer' }}
                               onClick={() => openEdit(pc)}
@@ -382,7 +384,7 @@ export default function PlanoContasPage() {
                                     cursor: 'pointer',
                                     padding: '0 4px',
                                     marginRight: 4,
-                                    fontSize: 10
+                                    fontSize: 12.5
                                   }}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -396,10 +398,10 @@ export default function PlanoContasPage() {
                             </td>
                             <td>
                               <span className={`badge ${pc.tipo === 'receita' ? 'badge-green' : pc.tipo === 'transferencia' ? 'badge-purple' : 'badge-red'}`}>
-                                {pc.tipo === 'receita' ? '↑ Receita' : pc.tipo === 'transferencia' ? '🔄 Transferência' : '↓ Despesa'}
+                                {pc.tipo === 'receita' ? '↑ Receita' : pc.tipo === 'transferencia' ? 'Transferência' : '↓ Despesa'}
                               </span>
                             </td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
+                            <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>Nível {pc.nivel}</td>
                             <td>
                               <span className={`badge ${pc.ativo ? 'badge-blue' : 'badge-gray'}`}>
                                 {pc.ativo ? 'Ativo' : 'Inativo'}
@@ -408,16 +410,16 @@ export default function PlanoContasPage() {
                             <td>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 {pc.nivel < 3 && (
-                                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
+                                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 13, padding: '4px 8px' }} title="Nova Subconta" onClick={() => openNew(pc)}>+ Sub</button>
                                 )}
-                                <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}>✏️</button>
+                                <button className="btn btn-ghost btn-sm btn-icon" title="Editar" onClick={() => openEdit(pc)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
                                 <button className="btn btn-ghost btn-sm btn-icon" title={pc.ativo ? 'Inativar' : 'Ativar'} onClick={() => toggleAtivo(pc)}>
                                   {pc.ativo ? '⏸️' : '▶️'}
                                 </button>
-                                <button className="btn btn-warning btn-sm" style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600 }} title="Se a conta duplicou, clique aqui para despachar os lançamentos para a original" onClick={() => openMerge(pc)}>
-                                  🔄 Resolver Duplicidade
+                                <button className="btn btn-warning btn-sm" style={{ padding: '4px 8px', fontSize: 13, fontWeight: 600 }} title="Se a conta duplicou, clique aqui para despachar os lançamentos para a original" onClick={() => openMerge(pc)}>
+                                  Resolver Duplicidade
                                 </button>
-                                <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}>🗑️</button>
+                                <button className="btn btn-danger btn-sm btn-icon" title="Excluir" onClick={() => handleDelete(pc.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                               </div>
                             </td>
                           </tr>
@@ -430,7 +432,7 @@ export default function PlanoContasPage() {
 
               {visibleRoots.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '14px 18px', borderTop: '1px solid var(--border-light)' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                     Mostrando <strong style={{ color: 'var(--text-secondary)' }}>{(pageSafe - 1) * pageSize + 1}–{Math.min(pageSafe * pageSize, visibleRoots.length)}</strong> de <strong style={{ color: 'var(--text-secondary)' }}>{visibleRoots.length}</strong> grupos principais
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -438,7 +440,7 @@ export default function PlanoContasPage() {
                       className="form-control form-control-sm"
                       value={pageSize}
                       onChange={e => setPageSize(Number(e.target.value))}
-                      style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                      style={{ width: 'auto', padding: '5px 8px', fontSize: 14 }}
                       title="Grupos principais por página"
                     >
                       {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n} grupos / página</option>)}
@@ -450,7 +452,7 @@ export default function PlanoContasPage() {
                       <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} title="Página anterior">
                         <ChevronLeft size={14} />
                       </button>
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
+                      <span style={{ fontSize: 14, color: 'var(--text-secondary)', padding: '0 8px', minWidth: 90, textAlign: 'center' }}>
                         Página {pageSafe} de {totalPages}
                       </span>
                       <button className="btn btn-ghost btn-sm btn-icon" disabled={pageSafe >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} title="Próxima página">
@@ -470,7 +472,7 @@ export default function PlanoContasPage() {
         {activePageTab === 'regras' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>
                 Regras automáticas aprendidas pelo sistema a partir dos seus lançamentos ou configuradas manualmente.
               </div>
               <button className="btn btn-primary btn-sm" onClick={() => { setRegraForm({}); setShowRegraModal(true); }}>
@@ -493,7 +495,7 @@ export default function PlanoContasPage() {
                       <tr>
                         <td colSpan={3}>
                           <div className="empty-state">
-                            <div className="empty-state-icon">🧠</div>
+                            <div className="empty-state-icon"><IcoBrain size={20} strokeWidth={2} aria-hidden /></div>
                             <h3>Nenhuma regra configurada</h3>
                             <p>O sistema cria regras automaticamente quando você categoriza transações no OFX.</p>
                           </div>
@@ -515,9 +517,7 @@ export default function PlanoContasPage() {
                               )}
                             </td>
                             <td>
-                              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteRegra(r.id)}>
-                                🗑️
-                              </button>
+                              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteRegra(r.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                             </td>
                           </tr>
                         );
@@ -586,7 +586,7 @@ export default function PlanoContasPage() {
                 <option value="despesas_bancarias">Despesas Bancárias</option>
                 <option value="despesas_terceiros">Despesas com Terceiros</option>
               </select>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Selecione em qual linha do DRE Gerencial esta conta deve aparecer.
               </div>
             </div>
@@ -614,7 +614,7 @@ export default function PlanoContasPage() {
                 value={regraForm.pattern || ''} 
                 onChange={e => setRegraForm(f => ({ ...f, pattern: e.target.value.toUpperCase() }))} 
               />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Ao importar um OFX, qualquer histórico que contenha este texto será sugerido para a categoria selecionada abaixo.
               </div>
             </div>
@@ -654,7 +654,7 @@ export default function PlanoContasPage() {
               <div style={{ padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 6, fontWeight: 500 }}>
                 {mergeSource.codigo} - {mergeSource.descricao}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 14.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
                 Os lançamentos desta conta serão reclassificados para a conta de destino, e em seguida esta cópia será apagada permanentemente.
                 <div style={{ marginTop: 6, color: 'var(--green)', fontWeight: 600 }}>
                   ✓ Auditoria Ativa: Será gravado um log na observação de cada lançamento para você não perder qual era a categoria anterior dessa transferência em lote.
@@ -682,7 +682,7 @@ export default function PlanoContasPage() {
 
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => setShowMergeModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleMerge}>🔄 Transferir e Mesclar</button>
+              <button className="btn btn-primary" onClick={handleMerge}>Transferir e Mesclar</button>
             </div>
           </div>
         </div>

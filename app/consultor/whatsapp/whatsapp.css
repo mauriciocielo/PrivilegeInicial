@@ -45,9 +45,9 @@
 }
 
 .wa-title {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 24px;
-  font-weight: 400;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-primary);
   margin: 0;
@@ -58,7 +58,7 @@
 }
 
 .wa-subtitle {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
   margin: 2px 0 0 0;
 }
@@ -70,7 +70,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   font-family: inherit;
 }
@@ -119,7 +119,7 @@
   gap: 7px;
   padding: 6px 13px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
@@ -145,7 +145,7 @@
   border-radius: 9999px;
   background: var(--accent);
   color: #fff;
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 700;
 }
 
@@ -198,7 +198,7 @@
 }
 
 .wa-chats-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -213,7 +213,7 @@
 .wa-search-input {
   width: 100%;
   padding: 8px 12px 8px 34px;
-  font-size: 13px;
+  font-size: 14.5px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-card);
@@ -241,7 +241,7 @@
 
 .wa-filter-chip {
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -295,7 +295,7 @@
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: #fff;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14.5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -315,7 +315,7 @@
 }
 
 .wa-chat-name {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -324,12 +324,12 @@
 }
 
 .wa-chat-time {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
 .wa-chat-snippet {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -345,7 +345,7 @@
 }
 
 .wa-tag {
-  font-size: 10px;
+  font-size: 12.5px;
   padding: 2px 6px;
   border-radius: 6px;
   font-weight: 600;
@@ -388,13 +388,13 @@
 }
 
 .wa-chat-partner-name {
-  font-size: 14px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .wa-chat-partner-phone {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
 }
 
@@ -427,7 +427,7 @@
   max-width: 70%;
   padding: 10px 14px;
   border-radius: 14px;
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.52;
   box-shadow: none;
   position: relative;
@@ -455,7 +455,7 @@
 }
 
 .wa-bubble-sender {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   margin-bottom: 4px;
   display: flex;
@@ -465,7 +465,7 @@
 }
 
 .wa-bubble-time {
-  font-size: 10px;
+  font-size: 12.5px;
   margin-top: 4px;
   display: flex;
   align-items: center;
@@ -489,7 +489,7 @@
 
 .wa-qr-chip {
   padding: 4px 10px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   background: var(--bg-card2);
   border: 1px solid var(--border);
   border-radius: 9999px;
@@ -523,7 +523,7 @@
   border: 1px solid var(--border);
   background: var(--bg-base);
   color: var(--text-primary);
-  font-size: 13.5px;
+  font-size: 15px;
   outline: none;
   transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
 }
@@ -541,7 +541,7 @@
   color: #fff;
   border: none;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14.5px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -572,15 +572,15 @@
 }
 
 .crm-stat-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 600;
 }
 
 .crm-stat-val {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 28px;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 24px;
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 4px;
@@ -617,7 +617,7 @@
   justify-content: space-between;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -643,19 +643,19 @@
 }
 
 .crm-card-title {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .crm-card-val {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--green);
 }
 
 .crm-card-followup {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--accent);
   background: var(--accent-glow);
   padding: 4px 8px;
@@ -715,7 +715,7 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--dur-fast);
@@ -789,7 +789,7 @@
 }
 
 .kb-badge-topic {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -801,13 +801,13 @@
 }
 
 .kb-question {
-  font-size: 14px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .kb-answer {
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--text-secondary);
   line-height: 1.5;
   background: var(--bg-card2);
@@ -824,7 +824,7 @@
 }
 
 .kb-kw-chip {
-  font-size: 10px;
+  font-size: 12.5px;
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--border-light);
@@ -856,7 +856,7 @@
 }
 
 .wa-triage-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: #785a1a;
   display: flex;
@@ -867,7 +867,7 @@
 }
 
 .wa-triage-text {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--text-primary);
   line-height: 1.5;
   white-space: pre-line;
@@ -939,7 +939,7 @@
 }
 
 .leo-agent-sub {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-muted);
   margin: 0;
 }
@@ -988,7 +988,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 12.5px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -1009,7 +1009,7 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   cursor: pointer;
@@ -1031,7 +1031,7 @@
 }
 
 .leo-nav-group-sub {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
   font-weight: 400;
   display: block;
@@ -1044,7 +1044,7 @@
 
 .leo-nav-subitem {
   padding: 5px 10px 5px 32px;
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: 8px;
@@ -1074,7 +1074,7 @@
 }
 
 .leo-autosave-hint {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
   margin: 0 0 2px;
 }
@@ -1113,7 +1113,7 @@
   background: var(--accent);
   color: #ffffff;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   padding: 8px 16px;
   border-radius: 10px;
   border: none;
@@ -1150,7 +1150,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14.5px;
   outline: none;
 }
 
@@ -1172,7 +1172,7 @@
 .leo-pill-ready {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   background: rgba(21, 128, 61, 0.12);
   color: var(--green);
@@ -1209,7 +1209,7 @@
 }
 
 .leo-mode-card-title {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 700;
   margin-bottom: 4px;
   color: var(--text-primary);
@@ -1220,7 +1220,7 @@
 }
 
 .leo-mode-card-desc {
-  font-size: 11.5px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   line-height: 1.4;
 }
@@ -1310,7 +1310,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14.5px;
   box-shadow: var(--shadow-sm);
   transition: opacity 0.15s, transform 0.15s;
   flex-shrink: 0;
@@ -1376,7 +1376,7 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 7px;
-  font-size: 12px;
+  font-size: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   display: inline-flex;
@@ -1451,7 +1451,7 @@
   background: rgba(185, 28, 28, 0.08);
   border: 1px solid rgba(185, 28, 28, 0.3);
   color: var(--red);
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
 }
 
@@ -1460,7 +1460,7 @@
    ============================================================ */
 .wa-mini-action-btn {
   padding: 2px 7px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   border-radius: 6px;
   border: 1px solid var(--border);

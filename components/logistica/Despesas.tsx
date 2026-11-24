@@ -64,7 +64,7 @@ export default function Despesas() {
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--border-light)', fontSize: 12, textTransform: 'uppercase' }}>
+            <tr style={{ background: 'var(--border-light)', fontSize: 14, textTransform: 'uppercase' }}>
               <th style={{ padding: '12px 16px' }}>Data</th>
               <th style={{ padding: '12px 16px' }}>Veículo</th>
               <th style={{ padding: '12px 16px' }}>Categoria</th>

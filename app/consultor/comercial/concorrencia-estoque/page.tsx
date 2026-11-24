@@ -162,13 +162,13 @@ export default function ConcorrenciaEstoquePage() {
               ])
             }
             className="btn btn-secondary"
-            style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}
           >
             <Plus size={14} /> Adicionar Concorrente
           </button>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Concorrente</th>
@@ -183,19 +183,19 @@ export default function ConcorrenciaEstoquePage() {
               {competitors.map((c, idx) => (
                 <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ fontSize: 12 }} value={c.name} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))} />
+                    <input className="form-control" style={{ fontSize: 14 }} value={c.name} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ fontSize: 12 }} value={c.avgPrice} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, avgPrice: e.target.value } : x)))} />
+                    <input className="form-control" style={{ fontSize: 14 }} value={c.avgPrice} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, avgPrice: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ fontSize: 12 }} value={c.strengths} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, strengths: e.target.value } : x)))} />
+                    <input className="form-control" style={{ fontSize: 14 }} value={c.strengths} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, strengths: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ fontSize: 12 }} value={c.weaknesses} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, weaknesses: e.target.value } : x)))} />
+                    <input className="form-control" style={{ fontSize: 14 }} value={c.weaknesses} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, weaknesses: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ fontSize: 12 }} value={c.ourEdge} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, ourEdge: e.target.value } : x)))} />
+                    <input className="form-control" style={{ fontSize: 14 }} value={c.ourEdge} onChange={e => setCompetitors(prev => prev.map((x, i) => (i === idx ? { ...x, ourEdge: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
                     <button type="button" onClick={() => setCompetitors(prev => prev.filter((_, i) => i !== idx))} className="btn btn-secondary" style={{ padding: '5px 8px', color: '#dc2626' }}>
@@ -224,13 +224,13 @@ export default function ConcorrenciaEstoquePage() {
               ])
             }
             className="btn btn-secondary"
-            style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}
           >
             <Plus size={14} /> Adicionar Grupo
           </button>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Grupo / Linha de Produto</th>
@@ -249,18 +249,18 @@ export default function ConcorrenciaEstoquePage() {
                 return (
                   <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: 6 }}>
-                      <input className="form-control" style={{ fontSize: 12 }} value={s.category} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, category: e.target.value } : x)))} />
+                      <input className="form-control" style={{ fontSize: 14 }} value={s.category} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, category: e.target.value } : x)))} />
                     </td>
                     <td style={{ padding: 6 }}>
-                      <input type="number" className="form-control" style={{ width: 120, fontSize: 12 }} value={s.stockValue} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, stockValue: Number(e.target.value) } : x)))} />
+                      <input type="number" className="form-control" style={{ width: 120, fontSize: 14 }} value={s.stockValue} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, stockValue: Number(e.target.value) } : x)))} />
                     </td>
                     <td style={{ padding: 6 }}>
-                      <input type="number" className="form-control" style={{ width: 120, fontSize: 12 }} value={s.monthlyCmv} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, monthlyCmv: Number(e.target.value) } : x)))} />
+                      <input type="number" className="form-control" style={{ width: 120, fontSize: 14 }} value={s.monthlyCmv} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, monthlyCmv: Number(e.target.value) } : x)))} />
                     </td>
                     <td style={{ padding: 6, fontWeight: 800, color: coverageDays > 60 ? '#dc2626' : '#16a34a' }}>{coverageDays} dias</td>
                     <td style={{ padding: 6, fontWeight: 700 }}>{giro}x</td>
                     <td style={{ padding: 6 }}>
-                      <input className="form-control" style={{ fontSize: 12 }} value={s.statusNote} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, statusNote: e.target.value } : x)))} />
+                      <input className="form-control" style={{ fontSize: 14 }} value={s.statusNote} onChange={e => setStockItems(prev => prev.map((x, i) => (i === idx ? { ...x, statusNote: e.target.value } : x)))} />
                     </td>
                     <td style={{ padding: 6 }}>
                       <button type="button" onClick={() => setStockItems(prev => prev.filter((_, i) => i !== idx))} className="btn btn-secondary" style={{ padding: '5px 8px', color: '#dc2626' }}>
@@ -273,7 +273,7 @@ export default function ConcorrenciaEstoquePage() {
             </tbody>
           </table>
         </div>
-        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ marginTop: 10, fontSize: 14, color: 'var(--text-muted)' }}>
           Capital total imobilizado em estoque:{' '}
           <strong style={{ color: 'var(--accent)' }}>
             {fmtBRL(stockItems.reduce((a, s) => a + Number(s.stockValue || 0), 0))}

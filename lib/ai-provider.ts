@@ -197,6 +197,10 @@ async function pickInstalledOllamaModel(url: string): Promise<string | null> {
   }
 }
 
+/** Nenhuma chave em lugar nenhum (variáveis de ambiente nem configuração do WhatsApp). */
+export const IA_NAO_CONFIGURADA =
+  'A IA ainda não está configurada. Cadastre uma chave (Groq, Gemini, Claude ou OpenAI) em WhatsApp → Configurações da IA.';
+
 export async function generateText(params: GenerateTextParams): Promise<GenerateTextResult> {
   const {
     prompt,
@@ -352,9 +356,8 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
 
   async function callClaude(): Promise<GenerateTextResult | null> {
     if (!keys.claude) return null;
-    const models = Array.from(
-      new Set([configuredModel(configs, 'claude-'), 'claude-sonnet-4-20250514', 'claude-3-5-haiku-latest'].filter(Boolean))
-    );
+    // Os modelos antigos (claude-sonnet-4-20250514, claude-3-5-haiku-latest) foram aposentados.
+    const models = Array.from(new Set([configuredModel(configs, 'claude-'), 'claude-opus-5-5'].filter(Boolean)));
     for (const model of models) {
       try {
         const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -366,17 +369,25 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
           },
           body: JSON.stringify({
             model,
-            max_tokens: maxTokens,
-            temperature,
+            // Os modelos atuais raciocinam antes de responder (thinking sempre ativo) e esse
+            // raciocínio conta no limite: com o teto antigo a resposta saía cortada ou vazia.
+            // Eles também recusam `temperature` (400); a profundidade vem de `effort`.
+            max_tokens: Math.max(maxTokens * 4, 8000),
+            output_config: { effort: 'low' },
             ...(sysText ? { system: sysText } : {}),
             messages,
           }),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: AbortSignal.timeout(Math.max(timeoutMs, 90000)),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          const text = finish(String(data?.content?.[0]?.text || ''));
+          // O primeiro bloco pode ser de raciocínio (type "thinking"): junta só os blocos de texto.
+          const blocos: Array<{ type?: string; text?: string }> = Array.isArray(data?.content) ? data.content : [];
+          const text = finish(blocos.filter(b => b?.type === 'text').map(b => b.text || '').join(''));
           if (text) return { text, provider: 'claude', model };
+          errors.claude = data?.stop_reason === 'refusal'
+            ? `${model}: a IA recusou responder a esta pergunta`
+            : `${model}: resposta vazia (${data?.stop_reason || 'sem motivo'})`;
         } else {
           errors.claude = `${model} (${res.status}): ${data?.error?.message || 'erro'}`;
           if (res.status === 401 || res.status === 403) break; // chave inválida: não adianta trocar de modelo
@@ -452,7 +463,7 @@ export async function generateText(params: GenerateTextParams): Promise<Generate
     order
       .filter(p => errors[p])
       .map(p => `${labels[p]}: ${errors[p]}`)
-      .join(' | ') || 'Nenhum provedor de IA disponível no momento.';
+      .join(' | ') || IA_NAO_CONFIGURADA;
 
   console.warn('[AI] Todos os provedores falharam:', error);
   return { text: null, error };

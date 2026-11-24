@@ -5,6 +5,8 @@ import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Landmark as IcoLandmark } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 const TIPO_LABELS: Record<string, string> = {
   conta_corrente: '🏦 Conta Corrente',
@@ -120,7 +122,7 @@ export default function PortadoresPage() {
         {/* Summary */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏦</div>
+            <div className="stat-icon blue"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo Total</div>
             <div className="stat-value" style={{ fontSize: 20, color: totalSaldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {fmt.currency(totalSaldo)}
@@ -133,7 +135,7 @@ export default function PortadoresPage() {
                 <div className={`stat-icon ${saldo >= 0 ? 'green' : 'red'}`}>💳</div>
                 <div className="stat-label">{p.nome}</div>
                 <div className="stat-value" style={{ fontSize: 18, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(saldo)}</div>
-                <div className="stat-change" style={{ color: 'var(--text-muted)', fontSize: 11 }}>{TIPO_LABELS[p.tipo]}</div>
+                <div className="stat-change" style={{ color: 'var(--text-muted)', fontSize: 13 }}>{TIPO_LABELS[p.tipo]}</div>
               </div>
             );
           })}
@@ -161,26 +163,26 @@ export default function PortadoresPage() {
                     <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                       <td style={{ fontWeight: 600 }}>{p.nome}</td>
                       <td><span className="badge badge-gray">{TIPO_LABELS[p.tipo]}</span></td>
-                      <td style={{ fontSize: 12 }}>{p.banco || '-'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                      <td style={{ fontSize: 14 }}>{p.banco || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                         {p.agencia ? `${p.agencia} / ${p.conta}` : '-'}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt.currency(p.saldoInicial)} ({fmt.date(p.saldoInicialData || '')})</td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 14.5 }}>{fmt.currency(p.saldoInicial)} ({fmt.date(p.saldoInicialData || '')})</td>
                       <td style={{ fontWeight: 700, color: saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(saldo)}</td>
                       <td>
                         <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(p)}>✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(p.id)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(p)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(p.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
                 {portadores.length === 0 && (
-                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">🏦</div><h3>Nenhum portador cadastrado</h3></div></td></tr>
+                  <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div><h3>Nenhum portador cadastrado</h3></div></td></tr>
                 )}
               </tbody>
             </table>
@@ -255,7 +257,7 @@ export default function PortadoresPage() {
                           style={{
                             padding: '8px 12px',
                             cursor: 'pointer',
-                            fontSize: '12.5px',
+                            fontSize: '14px',
                             borderBottom: '1px solid var(--border-light, #e2e8f0)',
                             display: 'flex',
                             gap: '8px',

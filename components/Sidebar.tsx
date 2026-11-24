@@ -14,7 +14,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, CheckSquare, type LucideIcon,
+  Bell, LogOut, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, CheckSquare, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -214,7 +214,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [appMode, setAppMode] = useState<'empresarial' | 'condominio'>('empresarial');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'idle'>('idle');
   const acessoNfse = useAcessoNfse(role === 'cliente');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     // Sincronização de status do banco
@@ -229,18 +228,12 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   }, []);
 
   useEffect(() => {
-    // Carregamento de tema
-    const saved = localStorage.getItem('cf_theme') || 'light';
-    setTheme(saved as 'light' | 'dark');
-    document.documentElement.setAttribute('data-theme', saved);
+    // Tema escuro desativado: as telas têm milhares de cores fixas em estilos inline e
+    // só uma parte se adaptava (textos escuros sobre fundo escuro, cartões brancos).
+    // Quem tinha escolhido o escuro volta ao claro até o tema ser refeito por completo.
+    localStorage.removeItem('cf_theme');
+    document.documentElement.setAttribute('data-theme', 'light');
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    localStorage.setItem('cf_theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-  };
 
   // Estados customizados para Premium UI
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -684,7 +677,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       </div>
 
       {!isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
-        <div ref={companyDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+        <div ref={companyDropdownRef} className="topbar-empresa" style={{ position: 'relative', flexShrink: 0 }}>
           <div
             onClick={() => {
               if (selectableEmpresas.length > 1 || isConsultorOrAdmin) {
@@ -700,7 +693,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             title={selectableEmpresas.length > 1 ? "Trocar de empresa" : "Empresa ativa"}
           >
             <Building2 size={13} style={{ flexShrink: 0, color: '#600000' }} />
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {activeEmpresa?.nomeFantasia || activeEmpresa?.razaoSocial || 'Selecionar empresa'}
             </span>
             {(selectableEmpresas.length > 1 || isConsultorOrAdmin) && (
@@ -725,7 +718,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                   value={searchEmpresa}
                   onChange={e => setSearchEmpresa(e.target.value)}
                   style={{
-                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 12.5, borderRadius: 10,
+                    width: '100%', padding: '8px 10px 8px 30px', fontSize: 14, borderRadius: 10,
                     border: '1px solid #e5e5e5', outline: 'none', color: '#171717',
                   }}
                 />
@@ -733,14 +726,14 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               {!searchEmpresa && recentEmpresas.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Clock size={11} /> Recentes
                   </div>
                   {recentEmpresas.map(id => {
                     const e = selectableEmpresas.find(x => x.id === id);
                     if (!e) return null;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         {e.nomeFantasia || e.razaoSocial}
                       </div>
                     );
@@ -750,13 +743,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
               {!searchEmpresa && gruposEconomicos.length > 0 && isConsultorOrAdmin && (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                     <Globe size={11} /> Grupos econômicos
                   </div>
                   {gruposEconomicos.map(g => {
                     const id = `grupo:${g}`;
                     return (
-                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: id === selectedEmpresa ? 600 : 400, background: id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                      <div key={id} onClick={() => handleEmpresaChange(id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: id === selectedEmpresa ? 600 : 400, background: id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                         Grupo {g}
                       </div>
                     );
@@ -765,18 +758,18 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
 
               <div>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#737373', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4, padding: '0 4px' }}>
                   {isConsultorOrAdmin ? `Todas as empresas (${selectableEmpresas.length})` : `Empresas autorizadas (${selectableEmpresas.length})`}
                 </div>
                 {selectableEmpresas
                   .filter(e => !searchEmpresa || `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase()))
                   .map(e => (
-                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 12.5, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
+                    <div key={e.id} onClick={() => handleEmpresaChange(e.id)} className="nav-item" style={{ borderRadius: 8, padding: '7px 10px', color: '#171717', fontSize: 14, fontWeight: e.id === selectedEmpresa ? 600 : 400, background: e.id === selectedEmpresa ? '#f4f4f5' : 'transparent' }}>
                       {e.nomeFantasia || e.razaoSocial}
                     </div>
                   ))}
                 {searchEmpresa && selectableEmpresas.filter(e => `${e.nomeFantasia} ${e.razaoSocial}`.toLowerCase().includes(searchEmpresa.toLowerCase())).length === 0 && (
-                  <div style={{ fontSize: 12, color: '#737373', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
+                  <div style={{ fontSize: 14, color: '#737373', padding: '8px 4px' }}>Nenhuma empresa encontrada.</div>
                 )}
               </div>
             </div>
@@ -863,7 +856,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           type="button"
           onClick={() => setShowCommandPalette(true)}
           title="Busca rápida de telas e empresas (Ctrl+K)"
-          className="cmd-trigger-btn"
+          className="cmd-trigger-btn topbar-busca"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -873,7 +866,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             background: '#ffffff',
             color: '#525252',
             border: '1px solid #e5e5e5',
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 500,
             cursor: 'pointer',
             flexShrink: 0,
@@ -881,22 +874,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           }}
         >
           <Search size={13} style={{ color: '#600000' }} />
-          {!isSidebarCompact && <span>Buscar</span>}
-          {!isSidebarCompact && (
-            <kbd
-              style={{
-                fontSize: 10,
-                padding: '1px 5px',
-                borderRadius: 5,
-                border: '1px solid #e5e5e5',
-                background: '#fafafa',
-                color: '#737373',
-                fontFamily: 'inherit',
-              }}
-            >
-              Ctrl K
-            </kbd>
-          )}
+          {!isSidebarCompact && <span className="topbar-rotulo">Buscar</span>}
         </button>
 
         {/* Central de Notificações & Status 24h */}
@@ -919,7 +897,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               borderRadius: 99,
               background: syncStatus === 'synced' ? 'transparent' : syncStatus === 'syncing' ? '#fffbeb' : '#fef2f2',
               color: syncStatus === 'synced' ? '#16a34a' : syncStatus === 'syncing' ? '#d97706' : '#dc2626',
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 500,
             }}
           >
@@ -950,14 +928,14 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             background: pathname?.includes('/whatsapp') ? '#15803d' : 'rgba(22, 163, 74, 0.1)',
             color: pathname?.includes('/whatsapp') ? '#ffffff' : '#15803d',
             border: '1px solid rgba(22, 163, 74, 0.3)',
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',
             flexShrink: 0,
           }}
         >
           <MessageSquare size={14} />
-          {!isSidebarCompact && <span>WhatsApp</span>}
+          {!isSidebarCompact && <span className="topbar-rotulo">WhatsApp</span>}
         </button>
         )}
 
@@ -993,7 +971,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 background: '#171717',
                 color: '#fff',
                 fontWeight: 600,
-                fontSize: 11,
+                fontSize: 13,
                 borderRadius: '50%',
                 border: 'none',
               }}
@@ -1009,7 +987,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
               )}
             </div>
             {!isSidebarCompact && (
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="topbar-rotulo" style={{ fontSize: 14, fontWeight: 500, color: '#171717', whiteSpace: 'nowrap', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user?.name?.split(' ')[0] || 'Conta'}
               </span>
             )}
@@ -1033,21 +1011,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
                 marginTop: 8
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 2 }}>{user?.name}</div>
-              <div style={{ fontSize: 11.5, color: '#737373', marginBottom: 8 }}>{user?.email}</div>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 2 }}>{user?.name}</div>
+              <div style={{ fontSize: 13.5, color: '#737373', marginBottom: 8 }}>{user?.email}</div>
               <div style={{ height: 1, background: '#f0f0f0', margin: '8px 0' }} />
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
-                  <span style={{ fontSize: 12, color: '#525252' }}>Tema</span>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '4px 10px', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                    onClick={toggleTheme}
-                  >
-                    {theme === 'dark' ? <><Sun size={12} /> Claro</> : <><Moon size={12} /> Escuro</>}
-                  </button>
-                </div>
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', textAlign: 'left', display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-start' }}
@@ -1107,8 +1075,6 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       selectedEmpresaId={selectedEmpresa}
       onSelectEmpresa={id => handleEmpresaChange(id)}
       onNavigate={href => router.push(href)}
-      theme={theme}
-      onToggleTheme={toggleTheme}
       onLogout={handleLogout}
     />
     </>

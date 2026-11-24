@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { store, CentroCusto, Empresa } from '../../../lib/store';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function CentrosCustoPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -81,8 +82,8 @@ export default function CentrosCustoPage() {
 
       <div className="page-body">
         <div className="card" style={{ marginBottom: 24, padding: 20, borderLeft: '4px solid var(--accent)' }}>
-           <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>💡 Como usar Centros de Custo (Unidades de Negócio)</h4>
-           <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+           <h4 style={{ fontSize: 15.5, fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Como usar Centros de Custo (Unidades de Negócio)</h4>
+           <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
              Crie <strong>Fazendas</strong> (ex: Fazenda Boa Esperança), <strong>Culturas/Safras</strong> (ex: Safra Soja 2025/2026), <strong>Projetos</strong> ou <strong>Filiais</strong>. Ao lançar uma despesa, você poderá vinculá-la a estes Centros independentemente da Categoria normal do Plano de Contas, gerando um grau altíssimo de precisão gerencial.
            </div>
         </div>
@@ -117,8 +118,8 @@ export default function CentrosCustoPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openForm(c)}>✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openForm(c)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
@@ -167,7 +168,7 @@ export default function CentrosCustoPage() {
 
               <div className="modal-footer" style={{ gridColumn: 'span 12' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">💾 Salvar Alterações</button>
+                <button type="submit" className="btn btn-primary">Salvar Alterações</button>
               </div>
             </form>
           </div>

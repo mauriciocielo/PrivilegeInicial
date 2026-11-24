@@ -6,6 +6,7 @@ import GeminiTips from '../../../components/GeminiTips';
 import { toast } from 'sonner';
 import { redirectToWhatsAppShare } from '@/lib/whatsapp-share';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { ClipboardList as IcoClipboardList } from 'lucide-react';
 
 const isContaRedutoraReceita = (descricao: string) => descricao.trim().startsWith('( - )');
 
@@ -785,16 +786,16 @@ export default function RelatoriosPage() {
           <div className="page-subtitle">Emissão e exportação de relatórios financeiros</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={handlePrint} disabled={!!generating}>🖨️ Imprimir</button>
+          <button className="btn btn-secondary" onClick={handlePrint} disabled={!!generating}>Imprimir</button>
           <button className="btn btn-success" onClick={handleXLS} disabled={!!generating}>
-            {generating === 'xls' ? '⏳...' : '📊 Excel'}
+            {generating === 'xls' ? '⏳...' : 'Excel'}
           </button>
           <button className="btn btn-primary" onClick={handlePDF} disabled={!!generating}>
-            {generating === 'pdf' ? '⏳...' : '📄 PDF'}
+            {generating === 'pdf' ? '⏳...' : 'PDF'}
           </button>
           {currentUser?.role === 'administrador' && (
             <button className="btn" onClick={handleWhatsAppClick} disabled={!!generating} style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 600 }}>
-              💬 WhatsApp
+              WhatsApp
             </button>
           )}
         </div>
@@ -1224,7 +1225,7 @@ export default function RelatoriosPage() {
                   {preview?.rows.length === 0 ? (
                     <tr><td colSpan={9}>
                       <div className="empty-state">
-                        <div className="empty-state-icon">📋</div>
+                        <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
                         <h3>Nenhum dado para o período</h3>
                       </div>
                     </td></tr>
@@ -1312,10 +1313,10 @@ export default function RelatoriosPage() {
         <div className="modal-overlay no-print" onClick={e => e.target === e.currentTarget && setViewPdfData(false)}>
           <div className="modal modal-lg ata-print-container" style={{ maxWidth: 850, background: 'var(--bg-card)', padding: 0 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header no-print" style={{ marginBottom: 0, padding: 24, borderBottom: '1px solid var(--border)' }}>
-              <h2 className="modal-title">📄 Visualizar PDF Analítico</h2>
+              <h2 className="modal-title">Visualizar PDF Analítico</h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-primary" onClick={generateRealPDF} disabled={isGeneratingPdf}>
-                  {isGeneratingPdf ? '⏳ Gerando...' : '🖨 Baixar PDF'}
+                  {isGeneratingPdf ? 'Gerando...' : 'Baixar PDF'}
                 </button>
                 <button className="modal-close" style={{ position: 'relative', top: 0, right: 0 }} onClick={() => setViewPdfData(false)}>✕</button>
               </div>
@@ -1328,7 +1329,7 @@ export default function RelatoriosPage() {
               }}>
                 <div style={{ borderBottom: '3px solid #8c1a22', paddingBottom: 24, marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, width: 165, marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
+                    <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Logo" style={{ height: 45, width: 'auto', marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
                     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>Privilege Contabilidade e Consultoria</div>
                     <h1 style={{ fontSize: 24, fontWeight: 700, color: '#000', margin: 0, lineHeight: 1.2 }}>Relatório Analítico Detalhado</h1>
                     <div style={{ fontSize: 14, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>{empresa?.nomeFantasia || empresa?.razaoSocial}</div>

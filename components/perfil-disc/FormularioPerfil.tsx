@@ -279,7 +279,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
         <p style={{ fontSize: 14.5, lineHeight: 1.55, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
           Este formulário ajuda a entender como você prefere trabalhar, se comunicar e decidir. O convite foi enviado por {PDF_BRAND_NAME} para a equipe de <strong>{dados.empresa}</strong>.
         </p>
-        <ul style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', margin: '0 0 18px', paddingLeft: 20 }}>
+        <ul style={{ fontSize: 15.5, lineHeight: 1.6, color: 'var(--text-secondary)', margin: '0 0 18px', paddingLeft: 20 }}>
           <li>Leva cerca de 15 minutos. Se puder, responda de uma vez só.</li>
           <li>Não há respostas certas ou erradas. Responda pelo que é verdade hoje, e não pelo que gostaria que fosse.</li>
           <li>Este link é pessoal, vale por 24 horas e aceita uma única resposta. Depois de enviar, não será possível responder de novo.</li>
@@ -296,14 +296,14 @@ export default function FormularioPerfil({ token }: { token: string }) {
           <input id="perfil-cargo" className="form-control" value={cargo} maxLength={120} onChange={e => setCargo(e.target.value)} autoComplete="organization-title" />
         </div>
 
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '14px 0 18px', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14.5, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '14px 0 18px', cursor: 'pointer' }}>
           <input type="checkbox" checked={consentimento} onChange={e => setConsentimento(e.target.checked)} style={{ marginTop: 3, flexShrink: 0 }} />
           <span>
             Autorizo o uso das minhas respostas para gerar meu relatório de perfil comportamental. O resultado fica guardado por {PDF_BRAND_NAME} e pode ser compartilhado com {dados.empresa}. Para corrigir ou excluir meus dados, posso falar com o escritório a qualquer momento.
           </span>
         </label>
 
-        {erro && <p role="alert" style={{ fontSize: 13.5, color: 'var(--red)', margin: '0 0 12px' }}>{erro}</p>}
+        {erro && <p role="alert" style={{ fontSize: 15, color: 'var(--red)', margin: '0 0 12px' }}>{erro}</p>}
 
         <button
           type="button"
@@ -363,7 +363,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
   return (
     <Moldura>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-muted)', marginBottom: 6 }}>
           <span>Parte {parte.numero} de 4</span>
           <span>{percentual}% respondido</span>
         </div>
@@ -380,7 +380,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
       </div>
 
       <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px' }}>{parte.titulo}</h1>
-      <p style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 16px' }}>{parte.instrucao}</p>
+      <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 16px' }}>{parte.instrucao}</p>
 
       {etapa.tipo === 'bloco' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -397,14 +397,14 @@ export default function FormularioPerfil({ token }: { token: string }) {
                   background: mais || menos ? 'var(--accent-glow)' : 'transparent',
                 }}
               >
-                <span style={{ flex: 1, fontSize: 14, lineHeight: 1.4, color: 'var(--text-primary)' }}>{texto}</span>
+                <span style={{ flex: 1, fontSize: 15.5, lineHeight: 1.4, color: 'var(--text-primary)' }}>{texto}</span>
                 <button
                   type="button"
                   aria-pressed={mais}
                   aria-label={`Mais parecido: ${texto}`}
                   onClick={() => marcarBloco('mais', i)}
                   className={`btn btn-sm ${mais ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 58, minHeight: 36, justifyContent: 'center', fontSize: 12 }}
+                  style={{ minWidth: 58, minHeight: 36, justifyContent: 'center', fontSize: 14 }}
                 >
                   Mais
                 </button>
@@ -414,7 +414,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
                   aria-label={`Menos parecido: ${texto}`}
                   onClick={() => marcarBloco('menos', i)}
                   className={`btn btn-sm ${menos ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 58, minHeight: 36, justifyContent: 'center', fontSize: 12 }}
+                  style={{ minWidth: 58, minHeight: 36, justifyContent: 'center', fontSize: 14 }}
                 >
                   Menos
                 </button>
@@ -435,7 +435,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
                   aria-pressed={marcada}
                   onClick={() => marcarEscolha(i as 0 | 1)}
                   style={{
-                    textAlign: 'left', fontSize: 14, lineHeight: 1.4, padding: '13px 14px', borderRadius: 12, cursor: 'pointer',
+                    textAlign: 'left', fontSize: 15.5, lineHeight: 1.4, padding: '13px 14px', borderRadius: 12, cursor: 'pointer',
                     color: 'var(--text-primary)', fontWeight: marcada ? 600 : 400, fontFamily: 'inherit',
                     border: `1px solid ${marcada ? 'var(--accent)' : 'var(--border)'}`,
                     background: marcada ? 'var(--accent-glow)' : 'transparent',
@@ -449,15 +449,15 @@ export default function FormularioPerfil({ token }: { token: string }) {
         </div>
       )}
 
-      {erro && <p role="alert" style={{ fontSize: 13.5, color: 'var(--red)', margin: '14px 0 0' }}>{erro}</p>}
+      {erro && <p role="alert" style={{ fontSize: 15, color: 'var(--red)', margin: '14px 0 0' }}>{erro}</p>}
 
       {ultima && faltando >= 0 && (
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '14px 0 0' }}>
+        <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: '14px 0 0' }}>
           Ainda faltam {etapas.length - respondidas} resposta(s).{' '}
           <button
             type="button"
             onClick={() => irPara(faltando)}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', textDecoration: 'underline' }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 14.5, fontFamily: 'inherit', textDecoration: 'underline' }}
           >
             Ir para a primeira pendente
           </button>
@@ -479,7 +479,7 @@ export default function FormularioPerfil({ token }: { token: string }) {
         )}
       </div>
       {ultima && faltando < 0 && (
-        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '10px 0 0', textAlign: 'right' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '10px 0 0', textAlign: 'right' }}>
           Depois de enviar, este link não abre mais.
         </p>
       )}

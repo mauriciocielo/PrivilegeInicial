@@ -235,7 +235,7 @@ export default function ClienteDashboard() {
     const subiu = pct >= 0;
     const favoravel = subiu === favoravelSeMaior;
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 11, fontWeight: 800, color: favoravel ? 'var(--green)' : 'var(--red)' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 13, fontWeight: 800, color: favoravel ? 'var(--green)' : 'var(--red)' }}>
         {subiu ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>vs. mês anterior</span>
       </div>
     );
@@ -379,13 +379,13 @@ export default function ClienteDashboard() {
                   <Icon size={18} />
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, #171717)' }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text-primary, #171717)' }}>
                     {card.titulo}
                   </span>
                   <span
                     style={{
                       display: 'block',
-                      fontSize: 11.5,
+                      fontSize: 13.5,
                       color: 'var(--text-muted, #737373)',
                       marginTop: 2,
                       whiteSpace: 'nowrap',
@@ -418,17 +418,17 @@ export default function ClienteDashboard() {
             justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a3a3a3' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a3a3a3' }}>
                 Saldo Disponível nas Contas
               </span>
-              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.1)', color: '#e5e5e5' }}>
+              <span style={{ fontSize: 13, padding: '3px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.1)', color: '#e5e5e5' }}>
                 {primeiroNome ? `${saudacao}, ${primeiroNome}` : mesAtualLabel}
               </span>
             </div>
             <div style={{
-              fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: 44,
-              fontWeight: 400,
+              fontVariantNumeric: 'tabular-nums',
+              fontSize: 38,
+              fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: '-0.02em',
               color: '#ffffff',
@@ -436,7 +436,7 @@ export default function ClienteDashboard() {
             }}>
               <AnimatedCounter target={totais.portadores} prefix="R$ " decimals={2} />
             </div>
-            <div style={{ fontSize: 12.5, color: '#a3a3a3' }}>
+            <div style={{ fontSize: 14, color: '#a3a3a3' }}>
               Posição consolidada de liquidez da <strong style={{ color: '#fff' }}>{empresa?.razaoSocial}</strong>.
             </div>
           </div>
@@ -449,23 +449,23 @@ export default function ClienteDashboard() {
             justifyContent: 'space-between',
           }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#600000', marginBottom: 6 }}>
                 Valuation Estimado do Negócio ({valuation.mult}x EBITDA)
               </div>
               <div style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 38,
-                fontWeight: 400,
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 32,
+                fontWeight: 700,
                 lineHeight: 1.1,
                 color: '#000000',
               }}>
                 <AnimatedCounter target={valuation.valor} prefix="R$ " decimals={2} />
               </div>
-              <div style={{ fontSize: 12.5, color: '#525252', marginTop: 8 }}>
+              <div style={{ fontSize: 14, color: '#525252', marginTop: 8 }}>
                 Valor estimado construindo um EBITDA médio consistente de <strong><AnimatedCounter target={valuation.ebitdaMedio} prefix="R$ " decimals={2} /></strong>/mês.
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 24, paddingTop: 14, marginTop: 14, borderTop: '1px solid #f0f0f0', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 24, paddingTop: 14, marginTop: 14, borderTop: '1px solid #f0f0f0', fontSize: 14 }}>
               <div>
                 <span style={{ color: '#737373' }}>Entradas na Semana: </span>
                 <strong style={{ color: 'var(--green)' }}>{fmt.currency(entradasSemana)}</strong>
@@ -483,16 +483,16 @@ export default function ClienteDashboard() {
           marginBottom: 28, padding: '22px 28px',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: agendasSemana.length > 0 ? 16 : 4, flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#000000', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: '#000000', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <CalendarDays size={18} style={{ color: 'var(--accent)' }} /> Próximos Compromissos
             </h3>
-            <a href="/cliente/agenda" style={{ fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+            <a href="/cliente/agenda" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
               Ver agenda completa →
             </a>
           </div>
 
           {agendasSemana.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0 4px' }}>
+            <div style={{ fontSize: 14.5, color: 'var(--text-muted)', padding: '8px 0 4px' }}>
               Nenhum compromisso agendado para os próximos 14 dias.
             </div>
           ) : (
@@ -505,11 +505,11 @@ export default function ClienteDashboard() {
                     padding: 16, borderRadius: 14, background: isHoje ? 'rgba(96,0,0,0.03)' : '#fafafa',
                     border: `1px solid ${isHoje ? 'rgba(96,0,0,0.2)' : '#e5e5e5'}`,
                   }}>
-                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 4, textTransform: 'capitalize' }}>
+                    <div style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600, marginBottom: 4, textTransform: 'capitalize' }}>
                       {rotulo} às {ag.horario}
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#171717', marginBottom: 4 }}>{ag.title}</div>
-                    {ag.location && <div style={{ fontSize: 11.5, color: '#737373' }}>{ag.location}</div>}
+                    <div style={{ fontSize: 15.5, fontWeight: 600, color: '#171717', marginBottom: 4 }}>{ag.title}</div>
+                    {ag.location && <div style={{ fontSize: 13.5, color: '#737373' }}>{ag.location}</div>}
                   </div>
                 );
               })}
@@ -517,7 +517,7 @@ export default function ClienteDashboard() {
                 <a href="/cliente/agenda" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none',
                   padding: 16, borderRadius: 14, background: '#fafafa', border: '1px dashed #d4d4d4',
-                  fontSize: 13, fontWeight: 600, color: '#525252',
+                  fontSize: 14.5, fontWeight: 600, color: '#525252',
                 }}>
                   +{agendasSemana.length - 6} mais →
                 </a>
@@ -575,20 +575,20 @@ export default function ClienteDashboard() {
             <div className="card-header">
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '20px', fontWeight: 800 }}>Evolução Financeira</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Receitas, despesas e resultado líquido mensal</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Receitas, despesas e resultado líquido mensal</div>
               </div>
             </div>
             <div className="chart-container" style={{ paddingTop: '12px' }}>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={resumo} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                  <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 13, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12.5 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
                   <Tooltip 
                     contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.8)', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
                     formatter={(v: any) => fmt.currency(Number(v || 0))} 
                   />
-                  <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }} />
+                  <Legend wrapperStyle={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600 }} />
                   <Bar dataKey="receitas" name="Receitas" fill="url(#colorRec)" radius={[6,6,0,0]} />
                   <Bar dataKey="despesas" name="Despesas" fill="url(#colorDesp)" radius={[6,6,0,0]} />
                   <defs>
@@ -622,7 +622,7 @@ export default function ClienteDashboard() {
                     formatter={(v: any) => fmt.currency(Number(v || 0))} 
                     contentStyle={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} 
                   />
-                  <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: '10px' }} />
+                  <Legend wrapperStyle={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -635,7 +635,7 @@ export default function ClienteDashboard() {
             <div className="card-header" style={{ marginBottom: 24 }}>
               <div>
                 <div className="card-title text-gradient" style={{ fontSize: '18px', fontWeight: 800 }}>Sua Central Financeira</div>
-                <div className="card-subtitle" style={{ fontSize: '13px' }}>Acesse rapidamente os demonstrativos completos</div>
+                <div className="card-subtitle" style={{ fontSize: '14.5px' }}>Acesse rapidamente os demonstrativos completos</div>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', flex: 1 }}>
@@ -645,7 +645,7 @@ export default function ClienteDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Fluxo de Caixa Mensal</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas e Saídas Efetivas (Despesas Pagas e Receitas Recebidas)</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Entradas e Saídas Efetivas (Despesas Pagas e Receitas Recebidas)</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3b82f6', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
@@ -656,7 +656,7 @@ export default function ClienteDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>DRE Gerencial</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Saúde Financeira pela Competência e Indicadores de Capacidade</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Saúde Financeira pela Competência e Indicadores de Capacidade</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
@@ -667,7 +667,7 @@ export default function ClienteDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Balanço Patrimonial</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Controle do Capital de Giro, Contas, Passivos e Valuation Estimado</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Controle do Capital de Giro, Contas, Passivos e Valuation Estimado</div>
                   </div>
                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f59e0b', color: '#fff', borderRadius: '50%', fontWeight: 800 }}>-&gt;</div>
                 </a>
@@ -686,8 +686,8 @@ export default function ClienteDashboard() {
                 return (
                   <div key={i} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}> {p.nome}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}> {p.nome}</span>
+                      <span style={{ fontSize: 14.5, fontWeight: 700, color: p.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {fmt.currency(p.saldo)}
                       </span>
                     </div>
@@ -702,22 +702,22 @@ export default function ClienteDashboard() {
             {/* Políticas e Diretrizes Estratégicas */}
             {(empresa?.politicaReceberName || empresa?.politicaComprasName || empresa?.politicaCobrancaName) && (
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px dashed var(--border-light)' }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas Estratégicas</h4>
+                <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>Políticas Estratégicas</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {empresa.politicaReceberName && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                         <span style={{ fontSize: 16 }}></span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>Contas a Receber</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaReceberName}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>Contas a Receber</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaReceberName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=receber`} 
                         download={empresa.politicaReceberName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 10, padding: '2px 8px' }}
+                        style={{ fontSize: 12.5, padding: '2px 8px' }}
                       >
                         Baixar
                       </a>
@@ -728,15 +728,15 @@ export default function ClienteDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                         <span style={{ fontSize: 16 }}></span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>Compras / Suprimentos</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaComprasName}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>Compras / Suprimentos</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaComprasName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=compras`} 
                         download={empresa.politicaComprasName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 10, padding: '2px 8px' }}
+                        style={{ fontSize: 12.5, padding: '2px 8px' }}
                       >
                         Baixar
                       </a>
@@ -747,15 +747,15 @@ export default function ClienteDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                         <span style={{ fontSize: 16 }}></span>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>Cobrança / Crédito</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaCobrancaName}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>Cobrança / Crédito</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{empresa.politicaCobrancaName}</div>
                         </div>
                       </div>
                       <a 
                         href={`/api/empresas/policy?id=${empresa.id}&type=cobranca`} 
                         download={empresa.politicaCobrancaName}
                         className="btn btn-secondary btn-sm"
-                        style={{ fontSize: 10, padding: '2px 8px' }}
+                        style={{ fontSize: 12.5, padding: '2px 8px' }}
                       >
                         Baixar
                       </a>

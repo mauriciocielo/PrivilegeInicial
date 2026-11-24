@@ -7,17 +7,18 @@ import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { SERVICOS_PADRAO } from '../../../lib/contrato-pdf';
 import ApiDocumentation from '../../../components/ApiDocumentation';
+import { Building2 as IcoBuilding2, Landmark as IcoLandmark, Users as IcoUsers } from 'lucide-react';
 
 type AdminTab = 'visao-geral' | 'agenda' | 'auditoria' | 'equipe' | 'inteligencia' | 'backup' | 'api-docs';
 
 const ADMIN_TABS: { key: AdminTab; label: string }[] = [
-  { key: 'visao-geral', label: '📊 Visão Geral' },
-  { key: 'agenda', label: '📅 Agenda' },
-  { key: 'auditoria', label: '🛡️ Auditoria & Fechamento' },
-  { key: 'equipe', label: '🗺️ Equipe em Campo' },
-  { key: 'inteligencia', label: '🧠 Inteligência' },
-  { key: 'backup', label: '📦 Backup & Integrações' },
-  { key: 'api-docs', label: '🔌 Documentação API' },
+  { key: 'visao-geral', label: 'Visão Geral' },
+  { key: 'agenda', label: 'Agenda' },
+  { key: 'auditoria', label: 'Auditoria & Fechamento' },
+  { key: 'equipe', label: 'Equipe em Campo' },
+  { key: 'inteligencia', label: 'Inteligência' },
+  { key: 'backup', label: 'Backup & Integrações' },
+  { key: 'api-docs', label: 'Documentação API' },
 ];
 
 export default function AdministrativoPage() {
@@ -848,7 +849,7 @@ export default function AdministrativoPage() {
             <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-glow)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🏢</div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Empresa / Ambiente Ativo</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>Selecione o ambiente de trabalho atual. Esta configuração afeta todas as outras telas do sistema.</p>
+              <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: 0 }}>Selecione o ambiente de trabalho atual. Esta configuração afeta todas as outras telas do sistema.</p>
             </div>
             <div style={{ minWidth: 320 }}>
               <select 
@@ -900,7 +901,7 @@ export default function AdministrativoPage() {
                 onClick={handleGerarContrato}
                 style={{ padding: '12px 20px', borderRadius: '10px', height: '100%', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                📄 Gerar Contrato BPO
+                Gerar Contrato BPO
               </button>
             </div>
           </div>
@@ -908,12 +909,12 @@ export default function AdministrativoPage() {
 
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏢</div>
+            <div className="stat-icon blue"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Empresas Ativas</div>
             <div className="stat-value">{empresas.length}</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">👥</div>
+            <div className="stat-icon purple"><IcoUsers size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Usuários</div>
             <div className="stat-value">{users.length}</div>
           </div>
@@ -933,7 +934,7 @@ export default function AdministrativoPage() {
             <div className="stat-value">{fmt.currency(data.resultado)}</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">🏦</div>
+            <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em Portadores</div>
             <div className="stat-value" style={{ color: data.portadoresTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt.currency(data.portadoresTotal)}</div>
           </div>
@@ -943,24 +944,24 @@ export default function AdministrativoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="card" style={{ display: activeTab === 'visao-geral' ? undefined : 'none', borderLeft: empresasAtencao.length > 0 ? '3px solid var(--yellow)' : undefined }}>
               <h3 style={{ fontSize: 15, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                ⚠️ Empresas que Precisam de Atenção
+                Empresas que Precisam de Atenção
                 {empresasAtencao.length > 0 && (
                   <span className="badge badge-yellow">{empresasAtencao.length}</span>
                 )}
               </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
                 Varredura automática: conciliação OFX pendente, Balanço Patrimonial desatualizado e empresas sem lançamentos recentes.
               </p>
               {empresasAtencao.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--green)', fontSize: 13, fontWeight: 600 }}>
-                  ✅ Tudo em dia — nenhuma empresa com pendências no momento.
+                <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--green)', fontSize: 14.5, fontWeight: 600 }}>
+                  Tudo em dia — nenhuma empresa com pendências no momento.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {empresasAtencao.map(({ empresa, motivos }) => (
                     <div key={empresa.id} style={{ padding: '10px 12px', background: 'var(--yellow-bg)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{empresa.nomeFantasia || empresa.razaoSocial}</div>
-                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary)' }}>
+                      <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 4 }}>{empresa.nomeFantasia || empresa.razaoSocial}</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: 'var(--text-secondary)' }}>
                         {motivos.map((m, i) => <li key={i}>{m}</li>)}
                       </ul>
                     </div>
@@ -1003,7 +1004,7 @@ export default function AdministrativoPage() {
             <div className="card" style={{ display: activeTab === 'agenda' ? undefined : 'none' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-                  📅 Agenda de Compromissos (Google Calendar)
+                  Agenda de Compromissos (Google Calendar)
                 </h3>
                 {gcalToken && (
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1012,7 +1013,7 @@ export default function AdministrativoPage() {
                       onClick={() => fetchCalendarEvents(gcalToken)}
                       disabled={calendarLoading}
                     >
-                      {calendarLoading ? '⏳ Atualizando...' : '🔄 Sincronizar'}
+                      {calendarLoading ? 'Atualizando...' : 'Sincronizar'}
                     </button>
                     <button 
                       className="btn btn-danger btn-sm"
@@ -1022,7 +1023,7 @@ export default function AdministrativoPage() {
                         setCalendarEvents([]);
                       }}
                     >
-                      🔌 Desconectar
+                      Desconectar
                     </button>
                   </div>
                 )}
@@ -1030,11 +1031,11 @@ export default function AdministrativoPage() {
 
               {!gcalToken ? (
                 <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                  <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 16 }}>
                     Conecte sua conta do Google Calendar para visualizar e buscar compromissos de clientes diretamente por aqui.
                   </p>
                   <button className="btn btn-primary" onClick={handleConnectGCal}>
-                    🔌 Conectar Google Calendar
+                    Conectar Google Calendar
                   </button>
                 </div>
               ) : (
@@ -1045,7 +1046,7 @@ export default function AdministrativoPage() {
                       placeholder="Pesquisar por cliente, título ou e-mail de participante..."
                       value={calendarSearch}
                       onChange={e => setCalendarSearch(e.target.value)}
-                      style={{ fontSize: 13 }}
+                      style={{ fontSize: 14.5 }}
                     />
                   </div>
 
@@ -1054,11 +1055,11 @@ export default function AdministrativoPage() {
                       Carregando compromissos do Google Calendar...
                     </div>
                   ) : calendarError ? (
-                    <div style={{ color: 'var(--red)', fontSize: 13, background: 'var(--red-bg)', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                    <div style={{ color: 'var(--red)', fontSize: 14.5, background: 'var(--red-bg)', padding: 12, borderRadius: 8, marginBottom: 16 }}>
                       {calendarError}
                     </div>
                   ) : filteredEvents.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 14.5 }}>
                       {calendarSearch ? 'Nenhum compromisso corresponde à pesquisa.' : 'Nenhum compromisso agendado para os próximos dias.'}
                     </div>
                   ) : (
@@ -1070,11 +1071,11 @@ export default function AdministrativoPage() {
                         return (
                           <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)', marginBottom: 4 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: isGroupToday ? 'var(--accent)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: isGroupToday ? 'var(--accent)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {isGroupToday && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }}></span>}
                                 {group.label}
                               </span>
-                              <span className="badge badge-gray" style={{ fontSize: 9, padding: '2px 6px', fontWeight: 600 }}>
+                              <span className="badge badge-gray" style={{ fontSize: 11.5, padding: '2px 6px', fontWeight: 600 }}>
                                 {group.events.length} {group.events.length === 1 ? 'evento' : 'eventos'}
                               </span>
                             </div>
@@ -1109,7 +1110,7 @@ export default function AdministrativoPage() {
                                         color: 'var(--accent-light)', 
                                         padding: '4px 8px', 
                                         borderRadius: 6, 
-                                        fontSize: 10,
+                                        fontSize: 12.5,
                                         fontWeight: 700,
                                         whiteSpace: 'nowrap'
                                       }}>
@@ -1117,11 +1118,11 @@ export default function AdministrativoPage() {
                                       </div>
 
                                       <div style={{ flex: 1, minWidth: 0 }}>
-                                        <h4 style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                           {event.summary || 'Sem título'}
                                         </h4>
                                         {event.description && (
-                                          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {event.description}
                                           </p>
                                         )}
@@ -1133,7 +1134,7 @@ export default function AdministrativoPage() {
                                           target="_blank" 
                                           rel="noopener noreferrer" 
                                           className="btn btn-secondary btn-sm"
-                                          style={{ padding: '3px 8px', fontSize: 10, alignSelf: 'center', whiteSpace: 'nowrap' }}
+                                          style={{ padding: '3px 8px', fontSize: 12.5, alignSelf: 'center', whiteSpace: 'nowrap' }}
                                         >
                                           Ver ↗
                                         </a>
@@ -1143,7 +1144,7 @@ export default function AdministrativoPage() {
                                 })}
                               </div>
                             ) : (
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4, fontStyle: 'italic', marginBottom: 4 }}>
+                              <div style={{ fontSize: 13, color: 'var(--text-muted)', paddingLeft: 4, fontStyle: 'italic', marginBottom: 4 }}>
                                 Nenhum compromisso.
                               </div>
                             )}
@@ -1159,17 +1160,17 @@ export default function AdministrativoPage() {
             {/* Card de Auditoria e Fechamento de Caixa */}
             <div className="card" style={{ display: activeTab === 'auditoria' ? undefined : 'none' }}>
               <h3 style={{ fontSize: 15, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                🛡️ Controle de Fechamento & Auditoria
+                Controle de Fechamento & Auditoria
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 16 }}>
                 <div>
-                  <label className="form-label" style={{ fontSize: 12 }}>Empresa Selecionada</label>
+                  <label className="form-label" style={{ fontSize: 14 }}>Empresa Selecionada</label>
                   <select 
                     className="form-control" 
                     value={selectedAuditEmpresaId} 
                     onChange={e => setSelectedAuditEmpresaId(e.target.value)}
-                    style={{ fontSize: 13 }}
+                    style={{ fontSize: 14.5 }}
                   >
                     <option value="">Selecione uma empresa...</option>
                     {empresas.map(e => (
@@ -1180,21 +1181,21 @@ export default function AdministrativoPage() {
                 
                 {selectedAuditEmpresaId && (
                   <div>
-                    <label className="form-label" style={{ fontSize: 12 }}>Bloquear Lançamentos Até</label>
+                    <label className="form-label" style={{ fontSize: 14 }}>Bloquear Lançamentos Até</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input 
                         type="date" 
                         className="form-control" 
                         value={fechamentoDateInput} 
                         onChange={e => setFechamentoDateInput(e.target.value)}
-                        style={{ fontSize: 13 }}
+                        style={{ fontSize: 14.5 }}
                       />
-                      <button className="btn btn-primary btn-sm" onClick={handleSaveFechamento} style={{ fontSize: 12, padding: '4px 10px' }}>✓ Salvar</button>
+                      <button className="btn btn-primary btn-sm" onClick={handleSaveFechamento} style={{ fontSize: 14, padding: '4px 10px' }}>✓ Salvar</button>
                       {fechamentoDateInput && (
-                        <button className="btn btn-danger btn-sm" onClick={handleClearFechamento} style={{ fontSize: 12, padding: '4px 10px' }} title="Desbloquear período">🔓</button>
+                        <button className="btn btn-danger btn-sm" onClick={handleClearFechamento} style={{ fontSize: 14, padding: '4px 10px' }} title="Desbloquear período">🔓</button>
                       )}
                     </div>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                    <span style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
                       Nenhum lançamento poderá ser criado, editado ou excluído igual ou antes desta data.
                     </span>
                   </div>
@@ -1204,18 +1205,18 @@ export default function AdministrativoPage() {
               {selectedAuditEmpresaId ? (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <h4 style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Histórico de Auditoria (Últimos 1000 logs)</h4>
+                    <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>Histórico de Auditoria (Últimos 1000 logs)</h4>
                     <input 
                       className="form-control" 
-                      placeholder="🔍 Filtrar logs..." 
+                      placeholder="Filtrar logs..." 
                       value={auditSearch} 
                       onChange={e => setAuditSearch(e.target.value)} 
-                      style={{ fontSize: 12, padding: '4px 10px', width: 200 }}
+                      style={{ fontSize: 14, padding: '4px 10px', width: 200 }}
                     />
                   </div>
                   
                   <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
-                    <table style={{ fontSize: 11.5 }}>
+                    <table style={{ fontSize: 13.5 }}>
                       <thead>
                         <tr>
                           <th>Data/Hora</th>
@@ -1254,7 +1255,7 @@ export default function AdministrativoPage() {
                   </div>
                 </>
               ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 14.5, padding: '20px 0' }}>
                   Selecione uma empresa acima para visualizar os logs de auditoria e configurar bloqueios.
                 </div>
               )}
@@ -1273,9 +1274,9 @@ export default function AdministrativoPage() {
                   }}>
                     <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-light)', zIndex: 10, position: 'relative', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}>
                        <h3 style={{ fontSize: 17, margin: 0, fontWeight: 800, color: 'var(--text-primary)' }}>
-                          📍 Radar Global de Operações
+                          Radar Global de Operações
                        </h3>
-                       <div style={{ background: 'var(--bg-body)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
+                       <div style={{ background: 'var(--bg-body)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 700 }}>
                           <span className="pulse-glow" style={{ width: 8, height: 8, borderRadius: '50%', background: activeActivities.length > 0 ? 'var(--green)' : 'var(--text-muted)' }} />
                           {activeActivities.length} consultores rastreados ativamente
                        </div>
@@ -1287,7 +1288,7 @@ export default function AdministrativoPage() {
                   {/* Bandeja de Atividades - Horizontal Scroll */}
                   {activeActivities.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <h4 style={{ fontSize: 14, margin: '8px 0 0 0', color: 'var(--text-secondary)' }}>Operações em Tempo Real:</h4>
+                      <h4 style={{ fontSize: 15.5, margin: '8px 0 0 0', color: 'var(--text-secondary)' }}>Operações em Tempo Real:</h4>
                       <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12 }}>
                         {activeActivities.map(ativ => {
                           const emp = empresas.find(e => e.id === ativ.empresaId);
@@ -1307,17 +1308,17 @@ export default function AdministrativoPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
                   <h3 style={{ fontSize: 16, marginBottom: 6, marginTop: 0 }}>Histórico de Atividades Diárias (Worklog)</h3>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                  <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
                     Histórico detalhado de todas as atividades realizadas e horas entregues.
                   </p>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={handleGerarRelatorioHoras} style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 600 }}>
-                  📊 Relatório de Horas
+                  Relatório de Horas
                 </button>
               </div>
               
               <div className="table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
-                <table style={{ fontSize: 11.5 }}>
+                <table style={{ fontSize: 13.5 }}>
                   <thead>
                     <tr>
                       <th>Data/Hora</th>
@@ -1364,14 +1365,14 @@ export default function AdministrativoPage() {
                 ))}
               </div>
               <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Endividamento global em aberto</div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Endividamento global em aberto</div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: '#b45309', marginTop: 4 }}>{fmt.currency(data.dividaTotal)}</div>
               </div>
             </div>
 
             <div className="card" style={{ display: activeTab === 'inteligencia' ? undefined : 'none' }}>
-              <h3 style={{ fontSize: 15, marginBottom: 16 }}>🧠 Base de Conhecimento Copilot</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>Base de Conhecimento Copilot</h3>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
                 Suba documentos contábeis, estratégias ou planilhas (TXT, PDF, JSON). Eles serão analisados pelo robô Privilege AI Copilot para inteligência avançada.
               </p>
 
@@ -1393,7 +1394,7 @@ export default function AdministrativoPage() {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    fontSize: 13
+                    fontSize: 14.5
                   }}
                 >
                   ＋ Subir Arquivo de Inteligência
@@ -1401,7 +1402,7 @@ export default function AdministrativoPage() {
               </div>
 
               {intelDocs.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, padding: '12px 0', border: '1px dashed var(--border-light)', borderRadius: 8 }}>
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '12px 0', border: '1px dashed var(--border-light)', borderRadius: 8 }}>
                   Nenhum documento carregado na base de conhecimento.
                 </div>
               ) : (
@@ -1416,10 +1417,10 @@ export default function AdministrativoPage() {
                     return (
                       <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
                         <div style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
-                          <div style={{ fontSize: 11.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }} title={doc.name}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }} title={doc.name}>
                             📄 {doc.name}
                           </div>
-                          <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             {sizeKB} KB • {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
                           </div>
                         </div>
@@ -1428,14 +1429,14 @@ export default function AdministrativoPage() {
                             href={downloadUrl} 
                             download={doc.name}
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: 10, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ fontSize: 12.5, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             ⬇️
                           </a>
                           <button 
                             onClick={() => handleIntelDocDelete(doc.id)}
                             className="btn btn-danger btn-sm"
-                            style={{ fontSize: 10, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ fontSize: 12.5, padding: '3px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             🗑️
                           </button>
@@ -1448,8 +1449,8 @@ export default function AdministrativoPage() {
             </div>
 
             <div className="card" style={{ display: activeTab === 'backup' ? undefined : 'none' }}>
-              <h3 style={{ fontSize: 15, marginBottom: 16 }}>📦 Backup e Restauração</h3>
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>Backup e Restauração</h3>
+      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: '1.4' }}>
                 Salve e restaure uma cópia dos seus dados localmente ou ative a sincronização com o Google Drive.
               </p>
               
@@ -1459,7 +1460,7 @@ export default function AdministrativoPage() {
                   onClick={handleExportBackup}
                   style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
                 >
-                  📥 Exportar Backup Local
+                  Exportar Backup Local
                 </button>
 
                 <button 
@@ -1468,7 +1469,7 @@ export default function AdministrativoPage() {
                   disabled={migrating}
                   style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
                 >
-                  {migrating ? `⏳ ${migrationProgress || 'Enviando Dados...'}` : '☁️ Enviar Dados Locais para PostgreSQL'}
+                  {migrating ? `⏳ ${migrationProgress || 'Enviando Dados...'}` : 'Enviar Dados Locais para PostgreSQL'}
                 </button>
                 
                 <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 12, marginTop: 4 }}>
@@ -1492,32 +1493,32 @@ export default function AdministrativoPage() {
                       borderRadius: 'var(--radius)',
                       display: 'flex',
                       alignItems: 'center',
-                      fontSize: 13,
+                      fontSize: 14.5,
                       transition: 'all 0.2s'
                     }}
                   >
-                    📤 Restaurar de Arquivo Local
+                    Restaurar de Arquivo Local
                   </label>
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 12, marginTop: 12 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px 0' }}>
-                    🤖 Sincronização Google Drive
+                  <h4 style={{ fontSize: 14.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px 0' }}>
+                    Sincronização Google Drive
                   </h4>
                   
                   <div className="form-group" style={{ marginBottom: 12 }}>
-                    <label className="form-label" style={{ fontSize: 11 }}>Client ID Google OAuth</label>
+                    <label className="form-label" style={{ fontSize: 13 }}>Client ID Google OAuth</label>
                     <input 
                       className="form-control" 
                       placeholder="Cole seu Client ID..." 
-                      style={{ fontSize: 12, padding: '6px 10px' }}
+                      style={{ fontSize: 14, padding: '6px 10px' }}
                       value={clientId} 
                       onChange={e => {
                         setClientId(e.target.value);
                         localStorage.setItem('cf_gdrive_client_id', e.target.value);
                       }} 
                     />
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.3 }}>
                       Configurações OAuth autorizadas para o seu domínio no Cloud Console.
                     </div>
                   </div>
@@ -1526,23 +1527,23 @@ export default function AdministrativoPage() {
                     <button 
                       className={`btn ${gdriveToken ? 'btn-secondary' : 'btn-primary'}`}
                       onClick={handleConnectGDrive}
-                      style={{ flex: 1, fontSize: 12, padding: '8px 12px', justifyContent: 'center' }}
+                      style={{ flex: 1, fontSize: 14, padding: '8px 12px', justifyContent: 'center' }}
                     >
-                      {gdriveToken ? '🔄 Reconectar Drive' : '🔌 Conectar Drive'}
+                      {gdriveToken ? 'Reconectar Drive' : 'Conectar Drive'}
                     </button>
                     {gdriveToken && (
                       <button 
                         className="btn btn-ghost"
                         onClick={() => triggerGDriveBackup(gdriveToken)}
                         disabled={syncStatus === 'syncing'}
-                        style={{ border: '1px solid var(--border)', fontSize: 12, padding: '8px 12px' }}
+                        style={{ border: '1px solid var(--border)', fontSize: 14, padding: '8px 12px' }}
                       >
-                        {syncStatus === 'syncing' ? '⏳...' : '☁️ Backup Já'}
+                        {syncStatus === 'syncing' ? '⏳...' : 'Backup Já'}
                       </button>
                     )}
                   </div>
 
-                  <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', padding: 10, borderRadius: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+                  <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border-light)', padding: 10, borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span>Status:</span>
                       <strong style={{ color: gdriveToken ? 'var(--green)' : 'var(--red)' }}>
@@ -1568,7 +1569,7 @@ export default function AdministrativoPage() {
                     </div>
 
                     {lastSyncTime && (
-                      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>
                         Último backup: {lastSyncTime}
                       </div>
                     )}
@@ -1581,7 +1582,7 @@ export default function AdministrativoPage() {
               <ApiDocumentation />
             </div>
 
-            <div style={{ marginTop: 24, fontSize: 13, color: 'var(--text-muted)' }}>
+            <div style={{ marginTop: 24, fontSize: 14.5, color: 'var(--text-muted)' }}>
               <strong>Ambiente Sandbox:</strong> Configurações temporárias que afetam apenas o cliente/empresa selecionada pelo consultor na sua máquina. Sincronização Serverless em teste.
             </div>
           </div>
@@ -1597,12 +1598,12 @@ export default function AdministrativoPage() {
               <button className="modal-close" onClick={() => setShowContrato(false)}>✕</button>
             </div>
 
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 18 }}>
+            <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 18 }}>
               Os dados vêm do cadastro de <strong>{contratoEmpresa.razaoSocial}</strong> (CNPJ {contratoEmpresa.cnpj}).
               Confira antes de emitir — o que você ajustar aqui é salvo de volta no cadastro.
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
               Endereço do cliente
             </div>
             <div className="form-row">
@@ -1626,7 +1627,7 @@ export default function AdministrativoPage() {
               </div>
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
               Remuneração
             </div>
             <div className="form-row">
@@ -1654,7 +1655,7 @@ export default function AdministrativoPage() {
               </div>
             </div>
             {Number(contratoForm.parcelas) > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: -6, marginBottom: 6 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: -6, marginBottom: 6 }}>
                 Resulta em {contratoForm.parcelas} parcelas de{' '}
                 <strong>
                   {((Number(contratoForm.valorTotal) - Number(contratoForm.valorEntrada)) / Number(contratoForm.parcelas))
@@ -1663,7 +1664,7 @@ export default function AdministrativoPage() {
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
               Prazo
             </div>
             <div className="form-row">
@@ -1681,7 +1682,7 @@ export default function AdministrativoPage() {
               </div>
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', margin: '18px 0 10px' }}>
               Anexo I — serviços que serão prestados
             </div>
             <div className="form-group">
@@ -1691,13 +1692,13 @@ export default function AdministrativoPage() {
                 value={contratoForm.servicos}
                 onChange={e => setContratoForm(f => ({ ...f, servicos: e.target.value }))}
               />
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
                 Uma linha por serviço. Linha no formato <strong>1.2 - TÍTULO</strong> vira subtítulo de seção;
                 <strong> Rótulo: descrição</strong> destaca o rótulo em negrito no PDF; linha em branco separa blocos.
               </div>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, color: 'var(--text-secondary)', marginTop: 8 }}>
               <input
                 type="checkbox"
                 checked={contratoForm.incluirConfidencialidade}
@@ -1746,13 +1747,13 @@ function RealTimeActivityCard({ ativ, emp }: { ativ: any; emp: any }) {
     <div style={{ padding: '16px', background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', background: 'var(--accent)' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>👤 {ativ.consultorNome}</strong>
-        <span style={{ background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+        <strong style={{ fontSize: '15.5px', color: 'var(--text-primary)' }}>👤 {ativ.consultorNome}</strong>
+        <span style={{ background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '13px', fontWeight: 800 }}>
           Em Execução: {h}:{m}:{s}
         </span>
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>🏢 {emp?.nomeFantasia || emp?.razaoSocial || 'Cliente Desconhecido'}</div>
-      <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '4px' }}>📋 {ativ.descricao}</div>
+      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>🏢 {emp?.nomeFantasia || emp?.razaoSocial || 'Cliente Desconhecido'}</div>
+      <div style={{ fontSize: '14.5px', color: 'var(--text-primary)', marginTop: '4px' }}>📋 {ativ.descricao}</div>
     </div>
   );
 }

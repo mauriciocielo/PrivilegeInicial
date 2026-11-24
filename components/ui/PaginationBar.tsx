@@ -39,7 +39,7 @@ export default function PaginationBar({
         padding: '12px 16px',
         borderTop: '1px solid var(--border, #e5e5e5)',
         background: 'var(--bg-base, #fafafa)',
-        fontSize: 12.5,
+        fontSize: 14,
         color: 'var(--text-muted, #525252)',
       }}
     >
@@ -50,7 +50,7 @@ export default function PaginationBar({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         {onPageSizeChange && (
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
             <span>Por página:</span>
             <select
               value={pageSize}
@@ -61,7 +61,7 @@ export default function PaginationBar({
                 border: '1px solid var(--border, #d4d4d8)',
                 background: 'var(--bg-card, #ffffff)',
                 color: 'var(--text-primary, #171717)',
-                fontSize: 12,
+                fontSize: 14,
                 cursor: 'pointer',
               }}
             >
@@ -87,7 +87,7 @@ export default function PaginationBar({
               background: 'var(--bg-card, #ffffff)',
               color: safePage <= 1 ? 'var(--text-muted, #a3a3a3)' : 'var(--text-primary, #171717)',
               cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               opacity: safePage <= 1 ? 0.55 : 1,
             }}
@@ -95,7 +95,7 @@ export default function PaginationBar({
             <ChevronLeft size={14} /> Anterior
           </button>
 
-          <span style={{ fontSize: 12, fontWeight: 600, padding: '0 4px', color: 'var(--text-primary, #171717)' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, padding: '0 4px', color: 'var(--text-primary, #171717)' }}>
             {safePage} / {totalPages}
           </span>
 
@@ -113,7 +113,7 @@ export default function PaginationBar({
               background: 'var(--bg-card, #ffffff)',
               color: safePage >= totalPages ? 'var(--text-muted, #a3a3a3)' : 'var(--text-primary, #171717)',
               cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               opacity: safePage >= totalPages ? 0.55 : 1,
             }}

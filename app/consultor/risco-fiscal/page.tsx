@@ -40,7 +40,7 @@ export default function RiscoFiscalPage() {
           </div>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>Malha Fina & Auditoria de Risco</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Motor de detecção de fraudes contábeis e passivos invisíveis de {empresa.nomeFantasia}</p>
+            <p style={{ fontSize: 15.5, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Motor de detecção de fraudes contábeis e passivos invisíveis de {empresa.nomeFantasia}</p>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function RiscoFiscalPage() {
              <p style={{ color: infracoes.length > 0 ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>O robô Privilege cruzou a ausência de XMLs baseados contra depósitos/Pix superiores a limite base.</p>
           </div>
           <div style={{ textAlign: 'right' }}>
-             <div style={{ fontSize: 12, color: infracoes.length > 0 ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Passivo Oculto Mapeado</div>
+             <div style={{ fontSize: 14, color: infracoes.length > 0 ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>Passivo Oculto Mapeado</div>
              <div style={{ fontSize: 36, fontWeight: 900, color: infracoes.length > 0 ? '#fca5a5' : 'var(--green)' }}>
                 {infracoes.length > 0 ? fmt.currency(riscoTotal) : 'Zero'}
              </div>
@@ -65,7 +65,7 @@ export default function RiscoFiscalPage() {
         <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}>
            <BadgeInfo size={32} color="var(--green)" style={{ marginBottom: 16 }} />
            <p style={{ fontWeight: 700 }}>Nenhum risco severo de Evasão/Sonegação detectado.</p>
-           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>As transações acima de R$ 4.500 no caixa possuem aderência fiscal ou descritivo rastreável.</p>
+           <p style={{ color: 'var(--text-muted)', fontSize: 14.5 }}>As transações acima de R$ 4.500 no caixa possuem aderência fiscal ou descritivo rastreável.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -77,11 +77,11 @@ export default function RiscoFiscalPage() {
                      <span style={{ fontWeight: 800, color: '#ef4444' }}>Retenção de Tributo Possível vs Despesa Indocumentada</span>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{inf.descricao}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Data da Evasão: {fmt.date(inf.data)} | Banco Origem Omitido | ID: {inf.id.substring(0,8)}</div>
+                  <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>Data da Evasão: {fmt.date(inf.data)} | Banco Origem Omitido | ID: {inf.id.substring(0,8)}</div>
                </div>
                <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--red)' }}>{fmt.currency(inf.valor)}</div>
-                  <button className="btn btn-secondary" style={{ marginTop: 8, padding: '4px 12px', fontSize: 11 }}>Investigar / Requisitar Prova</button>
+                  <button className="btn btn-secondary" style={{ marginTop: 8, padding: '4px 12px', fontSize: 13 }}>Investigar / Requisitar Prova</button>
                </div>
             </div>
           ))}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { instrumentSerif as serif } from '../app/fonts';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, AlertCircle, Copy, Check,
   Download, RefreshCw, Search, ArrowLeftRight, Sparkles, Filter, ChevronRight,
@@ -372,7 +371,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
         <div>
           <div
             style={{
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
@@ -386,19 +385,18 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
             <ShieldCheck size={14} /> AUDITORIA & CONCILIAÇÃO FISCAL AVANÇADA
           </div>
           <h1
-            className={serif.className}
             style={{
-              fontSize: 34,
-              fontWeight: 400,
+              fontSize: 28,
+              fontWeight: 700,
               color: '#000',
               margin: 0,
               lineHeight: 1.05,
-              letterSpacing: '-0.01em',
+              letterSpacing: '-0.02em',
             }}
           >
             Comparador de SPED Fiscal
           </h1>
-          <p style={{ margin: '6px 0 0', fontSize: 13.5, color: '#525252' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 15, color: '#525252' }}>
             Cruze arquivos SPED (.txt EFD ICMS/IPI e EFD Contribuições) com os documentos fiscais (NF-e, CT-e, NFS-e) do sistema e identifique omissões e divergências.
           </p>
 
@@ -410,7 +408,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#171717',
                   padding: '3px 10px',
                   borderRadius: 6,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   border: '1px solid #e5e7eb',
                 }}
@@ -423,14 +421,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#1d4ed8',
                   padding: '3px 10px',
                   borderRadius: 6,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   border: '1px solid #bfdbfe',
                 }}
               >
                 Competência: {resultado.metricas.mesCompetencia || `${resultado.metricas.periodoInicio} a ${resultado.metricas.periodoFim}`}
               </span>
-              <span style={{ fontSize: 12, color: '#737373' }}>
+              <span style={{ fontSize: 14, color: '#737373' }}>
                 Arquivo: <strong>{nomeArquivo}</strong>
               </span>
             </div>
@@ -449,7 +447,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#171717',
                   borderRadius: 8,
                   fontWeight: 500,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -472,7 +470,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#171717',
                   borderRadius: 8,
                   fontWeight: 500,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -493,7 +491,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#6b21a8',
                   borderRadius: 8,
                   fontWeight: 600,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -521,7 +519,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   color: '#991b1b',
                   borderRadius: 8,
                   fontWeight: 500,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
@@ -591,15 +589,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
               </div>
 
               <h2
-                className={serif.className}
-                style={{ fontSize: 26, fontWeight: 400, color: '#171717', margin: '0 0 8px' }}
+                style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#171717', margin: '0 0 8px' }}
               >
                 {processando
                   ? 'Auditando e Cruzando Registros SPED...'
                   : 'Selecione ou Arraste o Arquivo SPED (.txt)'}
               </h2>
 
-              <p style={{ fontSize: 14, color: '#525252', maxWidth: 560, margin: '0 auto 20px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 15.5, color: '#525252', maxWidth: 560, margin: '0 auto 20px', lineHeight: 1.5 }}>
                 {processando
                   ? 'Processando blocos 0000, 0150, C100 (NF-e/NFC-e), D100 (CT-e) e A100 (NFS-e) e comparando com as notas autorizadas no sistema.'
                   : 'Carregue o arquivo do SPED Fiscal (EFD ICMS/IPI) ou EFD Contribuições. O sistema identificará automaticamente o CNPJ e o mês de competência para o cruzamento.'}
@@ -614,7 +611,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                       background: '#600000',
                       borderColor: '#600000',
                       padding: '10px 24px',
-                      fontSize: 14,
+                      fontSize: 15.5,
                       fontWeight: 600,
                       borderRadius: 8,
                     }}
@@ -642,7 +639,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                     <h3 style={{ fontSize: 15, fontWeight: 600, color: '#92400e', margin: '0 0 4px' }}>
                       CNPJ do SPED não vinculado automaticamente
                     </h3>
-                    <p style={{ fontSize: 13.5, color: '#78350f', margin: '0 0 12px' }}>
+                    <p style={{ fontSize: 15, color: '#78350f', margin: '0 0 12px' }}>
                       O arquivo SPED informado pertence ao CNPJ <strong>{metaSpedSemEmpresa.cnpjSped}</strong> ({metaSpedSemEmpresa.razaoSocialSped || 'Empresa'}), período {metaSpedSemEmpresa.dataInicio} a {metaSpedSemEmpresa.dataFim}.
                       Para cruzar com as notas fiscais do sistema, selecione a qual empresa da sua carteira este arquivo corresponde:
                     </p>
@@ -652,7 +649,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                         className="form-input"
                         value={empresaIdSelecionada}
                         onChange={e => setEmpresaIdSelecionada(e.target.value)}
-                        style={{ maxWidth: 380, fontSize: 13, padding: '7px 12px', background: '#fff' }}
+                        style={{ maxWidth: 380, fontSize: 14.5, padding: '7px 12px', background: '#fff' }}
                       >
                         <option value="">Selecione uma empresa do sistema...</option>
                         {empresas.map(e => (
@@ -665,7 +662,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                       <button
                         type="button"
                         className="btn btn-primary"
-                        style={{ background: '#b45309', borderColor: '#b45309', fontSize: 13, padding: '7px 16px' }}
+                        style={{ background: '#b45309', borderColor: '#b45309', fontSize: 14.5, padding: '7px 16px' }}
                         disabled={!empresaIdSelecionada || !arquivo}
                         onClick={() => {
                           if (arquivo && empresaIdSelecionada) {
@@ -685,36 +682,36 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
             <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 4, fontSize: 13, fontWeight: 700 }}>
                     REGISTRO C100
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#171717' }}>NF-e e NFC-e</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 600, color: '#171717' }}>NF-e e NFC-e</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: '#525252', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#525252', lineHeight: 1.4 }}>
                   Cruza notas modelo 55 e 65 de compras (entradas) e vendas (saídas) pela chave de 44 dígitos e valores totais.
                 </p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: 4, fontSize: 13, fontWeight: 700 }}>
                     REGISTRO D100
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#171717' }}>CT-e (Transportes)</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 600, color: '#171717' }}>CT-e (Transportes)</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: '#525252', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#525252', lineHeight: 1.4 }}>
                   Audita conhecimentos de transporte eletrônico modelo 57 tomados e emitidos vinculados às operações da empresa.
                 </p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: 4, fontSize: 13, fontWeight: 700 }}>
                     REGISTRO A100
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#171717' }}>NFS-e (Serviços)</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 600, color: '#171717' }}>NFS-e (Serviços)</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: '#525252', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#525252', lineHeight: 1.4 }}>
                   Compara notas de serviços tomados e prestados (EFD Contribuições / PIS-COFINS) com as notas da plataforma ADN.
                 </p>
               </div>
@@ -738,26 +735,26 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
             >
               {/* Card 1: SPED Total */}
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.04em' }}>
                   Escriturado no SPED
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#111827', marginTop: 4 }}>
-                  {resultado.metricas.totalDocsSped} <span style={{ fontSize: 13, fontWeight: 500, color: '#6b7280' }}>docs</span>
+                  {resultado.metricas.totalDocsSped} <span style={{ fontSize: 14.5, fontWeight: 500, color: '#6b7280' }}>docs</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>
+                <div style={{ fontSize: 14.5, color: '#4b5563', marginTop: 2 }}>
                   {fmt.currency(resultado.metricas.valorTotalSped)}
                 </div>
               </div>
 
               {/* Card 2: Sistema Total */}
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.04em' }}>
                   Autorizado no Sistema / SEFAZ
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#111827', marginTop: 4 }}>
-                  {resultado.metricas.totalDocsSistema} <span style={{ fontSize: 13, fontWeight: 500, color: '#6b7280' }}>docs</span>
+                  {resultado.metricas.totalDocsSistema} <span style={{ fontSize: 14.5, fontWeight: 500, color: '#6b7280' }}>docs</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>
+                <div style={{ fontSize: 14.5, color: '#4b5563', marginTop: 2 }}>
                   {fmt.currency(resultado.metricas.valorTotalSistema)}
                 </div>
               </div>
@@ -776,17 +773,17 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 title="Clique para filtrar apenas as notas que constam no sistema/SEFAZ mas faltam no SPED"
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#991b1b', letterSpacing: '0.04em' }}>
-                    🚨 Faltando no SPED (Omissão)
+                  <div style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'uppercase', color: '#991b1b', letterSpacing: '0.04em' }}>
+                    Faltando no SPED (Omissão)
                   </div>
-                  <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>
+                  <span style={{ background: '#fee2e2', color: '#991b1b', padding: '1px 6px', borderRadius: 4, fontSize: 13, fontWeight: 700 }}>
                     RISCO ALTO
                   </span>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: '#991b1b', marginTop: 4 }}>
-                  {resultado.metricas.totalFaltandoNoSped} <span style={{ fontSize: 13, fontWeight: 600 }}>notas</span>
+                  {resultado.metricas.totalFaltandoNoSped} <span style={{ fontSize: 14.5, fontWeight: 600 }}>notas</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#b91c1c', fontWeight: 600, marginTop: 2 }}>
+                <div style={{ fontSize: 14.5, color: '#b91c1c', fontWeight: 600, marginTop: 2 }}>
                   {fmt.currency(resultado.metricas.valorFaltandoNoSped)}
                 </div>
               </div>
@@ -804,13 +801,13 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 onClick={() => setAbaAtiva('faltando_no_sistema')}
                 title="Clique para filtrar apenas notas escrituradas no SPED que ainda não foram baixadas no sistema"
               >
-                <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#92400e', letterSpacing: '0.04em' }}>
-                  📥 Faltando no Sistema
+                <div style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'uppercase', color: '#92400e', letterSpacing: '0.04em' }}>
+                  Faltando no Sistema
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#92400e', marginTop: 4 }}>
-                  {resultado.metricas.totalFaltandoNoSistema} <span style={{ fontSize: 13, fontWeight: 500 }}>notas</span>
+                  {resultado.metricas.totalFaltandoNoSistema} <span style={{ fontSize: 14.5, fontWeight: 500 }}>notas</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#b45309', marginTop: 2 }}>
+                <div style={{ fontSize: 14.5, color: '#b45309', marginTop: 2 }}>
                   {fmt.currency(resultado.metricas.valorFaltandoNoSistema)}
                 </div>
               </div>
@@ -828,13 +825,13 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 onClick={() => setAbaAtiva('valor_divergente')}
                 title="Clique para filtrar divergências de valor ou situação"
               >
-                <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#86198f', letterSpacing: '0.04em' }}>
-                  ⚠️ Divergências
+                <div style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'uppercase', color: '#86198f', letterSpacing: '0.04em' }}>
+                  Divergências
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#86198f', marginTop: 4 }}>
-                  {resultado.metricas.totalDivergenciasValor + resultado.metricas.totalDivergenciasSituacao} <span style={{ fontSize: 13, fontWeight: 500 }}>docs</span>
+                  {resultado.metricas.totalDivergenciasValor + resultado.metricas.totalDivergenciasSituacao} <span style={{ fontSize: 14.5, fontWeight: 500 }}>docs</span>
                 </div>
-                <div style={{ fontSize: 12, color: '#a21caf', marginTop: 2 }}>
+                <div style={{ fontSize: 14, color: '#a21caf', marginTop: 2 }}>
                   {resultado.metricas.totalDivergenciasValor} de valor · {resultado.metricas.totalDivergenciasSituacao} de status
                 </div>
               </div>
@@ -852,13 +849,13 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 onClick={() => setAbaAtiva('conciliado')}
                 title="Clique para filtrar apenas notas 100% conciliadas"
               >
-                <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#15803d', letterSpacing: '0.04em' }}>
-                  🟢 Conciliadas 100%
+                <div style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'uppercase', color: '#15803d', letterSpacing: '0.04em' }}>
+                  Conciliadas 100%
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: '#15803d', marginTop: 4 }}>
-                  {resultado.metricas.totalConciliadas} <span style={{ fontSize: 13, fontWeight: 500 }}>notas</span>
+                  {resultado.metricas.totalConciliadas} <span style={{ fontSize: 14.5, fontWeight: 500 }}>notas</span>
                 </div>
-                <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>
+                <div style={{ fontSize: 14, color: '#166534', marginTop: 2 }}>
                   Chave, valor e status idênticos
                 </div>
               </div>
@@ -879,7 +876,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
               }}
             >
               <div style={{ minWidth: 200 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
                   Índice de Aderência Fiscal
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -897,7 +894,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   >
                     {resultado.metricas.indiceAderenciaPct.toFixed(1)}%
                   </span>
-                  <span style={{ fontSize: 12, color: '#6b7280' }}>
+                  <span style={{ fontSize: 14, color: '#6b7280' }}>
                     {resultado.metricas.indiceAderenciaPct >= 95
                       ? 'Conformidade Alta'
                       : resultado.metricas.indiceAderenciaPct >= 80
@@ -924,7 +921,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ca3af', marginTop: 4 }}>
                   <span>0% (Divergência Total)</span>
                   <span>50%</span>
                   <span>100% (SPED e SEFAZ Espelhados)</span>
@@ -933,21 +930,21 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
 
               {/* Mini resumo por tipo de documento */}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}>
+                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}>
                   <span style={{ fontWeight: 600, color: '#171717' }}>NF-e: </span>
                   <span style={{ color: '#059669' }}>{resultado.resumoPorTipo.nfe.conciliadas} ok</span>
                   {resultado.resumoPorTipo.nfe.divergencias > 0 && (
                     <span style={{ color: '#dc2626', fontWeight: 600 }}> · {resultado.resumoPorTipo.nfe.divergencias} div.</span>
                   )}
                 </div>
-                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}>
+                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}>
                   <span style={{ fontWeight: 600, color: '#171717' }}>CT-e: </span>
                   <span style={{ color: '#059669' }}>{resultado.resumoPorTipo.cte.conciliadas} ok</span>
                   {resultado.resumoPorTipo.cte.divergencias > 0 && (
                     <span style={{ color: '#dc2626', fontWeight: 600 }}> · {resultado.resumoPorTipo.cte.divergencias} div.</span>
                   )}
                 </div>
-                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}>
+                <div style={{ padding: '6px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}>
                   <span style={{ fontWeight: 600, color: '#171717' }}>NFS-e: </span>
                   <span style={{ color: '#059669' }}>{resultado.resumoPorTipo.nfse.conciliadas} ok</span>
                   {resultado.resumoPorTipo.nfse.divergencias > 0 && (
@@ -988,12 +985,12 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 {gerandoIa ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6b21a8', padding: '16px 0' }}>
                     <RefreshCw size={18} className="animate-spin" />
-                    <span style={{ fontSize: 14 }}>Auditor IA analisando os riscos tributários e gerando parecer fiscal...</span>
+                    <span style={{ fontSize: 15.5 }}>Auditor IA analisando os riscos tributários e gerando parecer fiscal...</span>
                   </div>
                 ) : analiseIaGerada ? (
                   <div
                     style={{
-                      fontSize: 14,
+                      fontSize: 15.5,
                       lineHeight: 1.6,
                       color: '#3b0764',
                       whiteSpace: 'pre-wrap',
@@ -1027,7 +1024,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 }}
                 style={{
                   padding: '10px 16px',
-                  fontSize: 13.5,
+                  fontSize: 15,
                   fontWeight: 600,
                   border: 'none',
                   borderBottom: abaAtiva === 'faltando_no_sped' ? '3px solid #991b1b' : '3px solid transparent',
@@ -1039,14 +1036,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   gap: 8,
                 }}
               >
-                <span>🚨 Faltando no SPED</span>
+                <span>Faltando no SPED</span>
                 <span
                   style={{
                     background: abaAtiva === 'faltando_no_sped' ? '#fee2e2' : '#f3f4f6',
                     color: abaAtiva === 'faltando_no_sped' ? '#991b1b' : '#374151',
                     padding: '2px 8px',
                     borderRadius: 99,
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1062,7 +1059,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 }}
                 style={{
                   padding: '10px 16px',
-                  fontSize: 13.5,
+                  fontSize: 15,
                   fontWeight: 600,
                   border: 'none',
                   borderBottom: abaAtiva === 'faltando_no_sistema' ? '3px solid #b45309' : '3px solid transparent',
@@ -1074,14 +1071,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   gap: 8,
                 }}
               >
-                <span>📥 Faltando no Sistema</span>
+                <span>Faltando no Sistema</span>
                 <span
                   style={{
                     background: abaAtiva === 'faltando_no_sistema' ? '#fef3c7' : '#f3f4f6',
                     color: abaAtiva === 'faltando_no_sistema' ? '#92400e' : '#374151',
                     padding: '2px 8px',
                     borderRadius: 99,
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1097,7 +1094,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 }}
                 style={{
                   padding: '10px 16px',
-                  fontSize: 13.5,
+                  fontSize: 15,
                   fontWeight: 600,
                   border: 'none',
                   borderBottom: abaAtiva === 'valor_divergente' ? '3px solid #86198f' : '3px solid transparent',
@@ -1109,14 +1106,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   gap: 8,
                 }}
               >
-                <span>⚠️ Divergências de Valor/Status</span>
+                <span>Divergências de Valor/Status</span>
                 <span
                   style={{
                     background: abaAtiva === 'valor_divergente' ? '#fae8ff' : '#f3f4f6',
                     color: abaAtiva === 'valor_divergente' ? '#86198f' : '#374151',
                     padding: '2px 8px',
                     borderRadius: 99,
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1132,7 +1129,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 }}
                 style={{
                   padding: '10px 16px',
-                  fontSize: 13.5,
+                  fontSize: 15,
                   fontWeight: 600,
                   border: 'none',
                   borderBottom: abaAtiva === 'conciliado' ? '3px solid #15803d' : '3px solid transparent',
@@ -1144,14 +1141,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   gap: 8,
                 }}
               >
-                <span>🟢 Conciliadas (100%)</span>
+                <span>Conciliadas (100%)</span>
                 <span
                   style={{
                     background: abaAtiva === 'conciliado' ? '#dcfce7' : '#f3f4f6',
                     color: abaAtiva === 'conciliado' ? '#15803d' : '#374151',
                     padding: '2px 8px',
                     borderRadius: 99,
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1167,7 +1164,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                 }}
                 style={{
                   padding: '10px 16px',
-                  fontSize: 13.5,
+                  fontSize: 15,
                   fontWeight: 600,
                   border: 'none',
                   borderBottom: abaAtiva === 'todas' ? '3px solid #1f2937' : '3px solid transparent',
@@ -1179,14 +1176,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   gap: 8,
                 }}
               >
-                <span>📋 Todas as Notas</span>
+                <span>Todas as Notas</span>
                 <span
                   style={{
                     background: '#f3f4f6',
                     color: '#374151',
                     padding: '2px 8px',
                     borderRadius: 99,
-                    fontSize: 11.5,
+                    fontSize: 13.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1220,7 +1217,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                     setBusca(e.target.value);
                     setPaginaAtual(1);
                   }}
-                  style={{ paddingLeft: 36, width: '100%', fontSize: 13 }}
+                  style={{ paddingLeft: 36, width: '100%', fontSize: 14.5 }}
                 />
                 {busca && (
                   <button
@@ -1250,7 +1247,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   setFiltroTipo(e.target.value as any);
                   setPaginaAtual(1);
                 }}
-                style={{ width: 'auto', minWidth: 140, fontSize: 13 }}
+                style={{ width: 'auto', minWidth: 140, fontSize: 14.5 }}
               >
                 <option value="todos">Todos os Documentos</option>
                 <option value="nfe">NF-e / NFC-e</option>
@@ -1266,14 +1263,14 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                   setFiltroOperacao(e.target.value as any);
                   setPaginaAtual(1);
                 }}
-                style={{ width: 'auto', minWidth: 130, fontSize: 13 }}
+                style={{ width: 'auto', minWidth: 130, fontSize: 14.5 }}
               >
                 <option value="todas">Entradas e Saídas</option>
                 <option value="entrada">Apenas Entradas (Compras/Tomados)</option>
                 <option value="saida">Apenas Saídas (Vendas/Prestados)</option>
               </select>
 
-              <div style={{ fontSize: 13, color: '#6b7280', marginLeft: 'auto' }}>
+              <div style={{ fontSize: 14.5, color: '#6b7280', marginLeft: 'auto' }}>
                 Exibindo <strong>{itensFiltrados.length}</strong> de {resultado.itens.length} registros
               </div>
             </div>
@@ -1281,7 +1278,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
             {/* TABELA DE RESULTADOS */}
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
-                <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.5 }}>
                   <thead>
                     <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Status / Apontamento</th>
@@ -1332,7 +1329,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     color: '#991b1b',
                                     padding: '3px 8px',
                                     borderRadius: 6,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
                                   }}
                                 >
@@ -1349,7 +1346,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     color: '#92400e',
                                     padding: '3px 8px',
                                     borderRadius: 6,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
                                   }}
                                 >
@@ -1366,7 +1363,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     color: '#86198f',
                                     padding: '3px 8px',
                                     borderRadius: 6,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
                                   }}
                                 >
@@ -1383,7 +1380,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     color: '#9a3412',
                                     padding: '3px 8px',
                                     borderRadius: 6,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
                                   }}
                                 >
@@ -1400,7 +1397,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     color: '#15803d',
                                     padding: '3px 8px',
                                     borderRadius: 6,
-                                    fontSize: 11.5,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
                                   }}
                                 >
@@ -1427,7 +1424,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                       : '#065f46',
                                   padding: '2px 7px',
                                   borderRadius: 4,
-                                  fontSize: 11,
+                                  fontSize: 13,
                                   fontWeight: 700,
                                 }}
                               >
@@ -1438,7 +1435,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                             {/* NUMERO / SERIE */}
                             <td style={{ padding: '12px 14px', fontWeight: 600, color: '#111827' }}>
                               {item.numero || 'S/N'}
-                              {item.serie && <span style={{ fontSize: 11, color: '#6b7280' }}> / {item.serie}</span>}
+                              {item.serie && <span style={{ fontSize: 13, color: '#6b7280' }}> / {item.serie}</span>}
                             </td>
 
                             {/* EMISSAO */}
@@ -1449,11 +1446,11 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                             {/* OPERAÇÃO */}
                             <td style={{ padding: '12px 14px' }}>
                               {item.operacao === 'entrada' ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#1d4ed8', fontSize: 12, fontWeight: 500 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#1d4ed8', fontSize: 14, fontWeight: 500 }}>
                                   <ArrowDownLeft size={13} /> Entrada
                                 </span>
                               ) : (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#047857', fontSize: 12, fontWeight: 500 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#047857', fontSize: 14, fontWeight: 500 }}>
                                   <ArrowUpRight size={13} /> Saída
                                 </span>
                               )}
@@ -1465,7 +1462,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                 {item.participanteNome || 'Não identificado'}
                               </div>
                               {item.participanteCnpjCpf && (
-                                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                                <div style={{ fontSize: 13, color: '#6b7280' }}>
                                   {item.participanteCnpjCpf}
                                 </div>
                               )}
@@ -1501,7 +1498,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                     title={item.chave}
                                     style={{
                                       fontFamily: 'monospace',
-                                      fontSize: 11,
+                                      fontSize: 13,
                                       color: '#4b5563',
                                       maxWidth: 120,
                                       overflow: 'hidden',
@@ -1527,12 +1524,12 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                                   </button>
                                 </div>
                               ) : (
-                                <span style={{ fontSize: 11, color: '#9ca3af' }}>Sem chave</span>
+                                <span style={{ fontSize: 13, color: '#9ca3af' }}>Sem chave</span>
                               )}
                             </td>
 
                             {/* MOTIVO */}
-                            <td style={{ padding: '12px 16px', maxWidth: 260, fontSize: 12, color: '#4b5563' }}>
+                            <td style={{ padding: '12px 16px', maxWidth: 260, fontSize: 14, color: '#4b5563' }}>
                               {item.motivo}
                             </td>
                           </tr>
@@ -1553,7 +1550,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                     padding: '12px 20px',
                     borderTop: '1px solid #e5e7eb',
                     background: '#f9fafb',
-                    fontSize: 13,
+                    fontSize: 14.5,
                   }}
                 >
                   <div style={{ color: '#6b7280' }}>
@@ -1566,7 +1563,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                       className="btn btn-secondary btn-sm"
                       disabled={paginaAtual <= 1}
                       onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
-                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      style={{ fontSize: 14, padding: '4px 10px' }}
                     >
                       Anterior
                     </button>
@@ -1575,7 +1572,7 @@ Responda em Português do Brasil com linguagem profissional e objetiva de audito
                       className="btn btn-secondary btn-sm"
                       disabled={paginaAtual >= totalPaginas}
                       onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
-                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      style={{ fontSize: 14, padding: '4px 10px' }}
                     >
                       Próxima
                     </button>

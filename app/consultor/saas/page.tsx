@@ -365,43 +365,43 @@ export default function SaasBackofficePage() {
       {/* KPIs do SaaS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 20 }}>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>MRR (Receita Mensal)</span>
             <DollarSign size={15} color="var(--accent)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: 'var(--accent)' }}>{fmtBRL(kpis.mrr)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>ARR projetado: {fmtBRL(kpis.arr)}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>ARR projetado: {fmtBRL(kpis.arr)}</div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Recebido no Mês</span>
             <CheckCircle2 size={15} color="#16a34a" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: '#16a34a' }}>{fmtBRL(kpis.monthPaid)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>A receber: {fmtBRL(kpis.totalPending)}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>A receber: {fmtBRL(kpis.totalPending)}</div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Carteira de Assinantes</span>
             <Building2 size={15} color="var(--gold)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{kpis.activeCount} ativos</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 2 }}>
             {kpis.trialCount} em trial · {tenants.length} total
           </div>
         </div>
 
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Uso Real da Plataforma</span>
             <Users size={15} color="var(--accent)" />
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, marginTop: 8, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 15.5, fontWeight: 800, marginTop: 8, lineHeight: 1.5 }}>
             {platformStats.empresasCount} empresas · {platformStats.usersCount} usuários
             <br />
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>
               {platformStats.whatsappConnectedCount} WhatsApp(s) online · {platformStats.quizzesCount} quizzes
             </span>
           </div>
@@ -414,7 +414,7 @@ export default function SaasBackofficePage() {
           type="button"
           onClick={() => setActiveTab('cadastros')}
           className={activeTab === 'cadastros' ? 'btn btn-primary' : 'btn btn-secondary'}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 14.5 }}
         >
           <Building2 size={15} /> Cadastros SaaS ({tenants.length})
         </button>
@@ -422,7 +422,7 @@ export default function SaasBackofficePage() {
           type="button"
           onClick={() => setActiveTab('movimentacoes')}
           className={activeTab === 'movimentacoes' ? 'btn btn-primary' : 'btn btn-secondary'}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 14.5 }}
         >
           <Receipt size={15} /> Movimentações SaaS ({movements.length})
         </button>
@@ -448,7 +448,7 @@ export default function SaasBackofficePage() {
                 <input
                   type="text"
                   className="form-control"
-                  style={{ paddingLeft: 30, width: 250, fontSize: 12.5 }}
+                  style={{ paddingLeft: 30, width: 250, fontSize: 14 }}
                   placeholder="Buscar empresa, CNPJ ou plano..."
                   value={searchTenant}
                   onChange={e => setSearchTenant(e.target.value)}
@@ -456,7 +456,7 @@ export default function SaasBackofficePage() {
               </div>
               <select
                 className="form-control"
-                style={{ width: 150, fontSize: 12.5 }}
+                style={{ minWidth: 150, width: 'auto', fontSize: 14 }}
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
               >
@@ -470,17 +470,17 @@ export default function SaasBackofficePage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={handleSyncEmpresas} className="btn btn-secondary" style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" onClick={handleSyncEmpresas} className="btn btn-secondary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <RefreshCw size={14} /> Importar Empresas da Base
               </button>
-              <button type="button" onClick={openNewTenant} className="btn btn-primary" style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" onClick={openNewTenant} className="btn btn-primary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Plus size={14} /> Novo Cadastro SaaS
               </button>
             </div>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px 8px' }}>Empresa / Assinante</th>
@@ -506,7 +506,7 @@ export default function SaasBackofficePage() {
                     <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px 8px' }}>
                         <div style={{ fontWeight: 700 }}>{t.company_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                           {t.cnpj || 'Sem CNPJ'} {t.contact_name ? `· ${t.contact_name}` : ''}
                         </div>
                       </td>
@@ -519,7 +519,7 @@ export default function SaasBackofficePage() {
                             <span
                               key={m}
                               style={{
-                                fontSize: 10.5,
+                                fontSize: 13,
                                 padding: '2px 7px',
                                 borderRadius: 999,
                                 background: 'var(--bg-card2)',
@@ -535,7 +535,7 @@ export default function SaasBackofficePage() {
                       <td style={{ padding: '10px 8px' }}>
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: 700,
                             padding: '3px 9px',
                             borderRadius: 999,
@@ -567,7 +567,7 @@ export default function SaasBackofficePage() {
                             type="button"
                             onClick={() => openNewMovement(t)}
                             className="btn btn-secondary"
-                            style={{ padding: '5px 8px', fontSize: 11 }}
+                            style={{ padding: '5px 8px', fontSize: 13 }}
                             title="Lançar movimentação/cobrança"
                           >
                             <DollarSign size={13} />
@@ -608,7 +608,7 @@ export default function SaasBackofficePage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <select
                 className="form-control"
-                style={{ width: 170, fontSize: 12.5 }}
+                style={{ minWidth: 170, width: 'auto', fontSize: 14 }}
                 value={movTypeFilter}
                 onChange={e => setMovTypeFilter(e.target.value)}
               >
@@ -623,7 +623,7 @@ export default function SaasBackofficePage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 150, fontSize: 12.5 }}
+                style={{ minWidth: 150, width: 'auto', fontSize: 14 }}
                 value={movStatusFilter}
                 onChange={e => setMovStatusFilter(e.target.value)}
               >
@@ -636,17 +636,17 @@ export default function SaasBackofficePage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={handleGenerateBilling} className="btn btn-secondary" style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" onClick={handleGenerateBilling} className="btn btn-secondary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Zap size={14} /> Gerar Mensalidades do Mês
               </button>
-              <button type="button" onClick={() => openNewMovement()} className="btn btn-primary" style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" onClick={() => openNewMovement()} className="btn btn-primary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Plus size={14} /> Nova Movimentação
               </button>
             </div>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px 8px' }}>Assinante</th>
@@ -670,7 +670,7 @@ export default function SaasBackofficePage() {
                     <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px 8px' }}>
                         <div style={{ fontWeight: 700 }}>{m.tenant_name}</div>
-                        {m.description && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.description}</div>}
+                        {m.description && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{m.description}</div>}
                       </td>
                       <td style={{ padding: '10px 8px', textTransform: 'capitalize', fontWeight: 600 }}>
                         {String(m.movement_type || '').replace('_', ' ')}
@@ -683,7 +683,7 @@ export default function SaasBackofficePage() {
                       <td style={{ padding: '10px 8px' }}>
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: 700,
                             padding: '3px 9px',
                             borderRadius: 999,
@@ -712,7 +712,7 @@ export default function SaasBackofficePage() {
                               type="button"
                               onClick={() => handleMarkPaid(m)}
                               className="btn btn-secondary"
-                              style={{ padding: '5px 9px', fontSize: 11, color: '#16a34a', fontWeight: 700 }}
+                              style={{ padding: '5px 9px', fontSize: 13, color: '#16a34a', fontWeight: 700 }}
                             >
                               ✓ Baixar
                             </button>
@@ -914,7 +914,7 @@ export default function SaasBackofficePage() {
                         borderRadius: 8,
                         border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
                         background: checked ? 'var(--accent-glow)' : 'transparent',
-                        fontSize: 12,
+                        fontSize: 14,
                         cursor: 'pointer',
                       }}
                     >

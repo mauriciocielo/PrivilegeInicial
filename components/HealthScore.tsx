@@ -5,6 +5,13 @@ import { store } from '../lib/store';
 export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: string, mesSelecionado: string }) {
   const [score, setScore] = useState(0);
   const [details, setDetails] = useState<{ label: string; points: number; max: number }[]>([]);
+  // Recalcula quando os lançamentos terminam de carregar ou mudam.
+  const [versaoDados, setVersaoDados] = useState(0);
+  useEffect(() => {
+    const aoMudar = () => setVersaoDados(v => v + 1);
+    window.addEventListener('cfDataChange', aoMudar);
+    return () => window.removeEventListener('cfDataChange', aoMudar);
+  }, []);
 
   useEffect(() => {
     if (!empresaId || !mesSelecionado) return;
@@ -64,7 +71,7 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
 
     setScore(totalScore);
     setDetails(items);
-  }, [empresaId, mesSelecionado]);
+  }, [empresaId, mesSelecionado, versaoDados]);
 
   // Determine color based on score (Serasa style)
   let healthColor = 'var(--red)';
@@ -80,10 +87,10 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
   return (
     <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 24, height: '100%' }}>
       <div>
-         <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-            🌡️ Score de Saúde da Empresa
+         <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+            Score de Saúde da Empresa
          </div>
-         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+         <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
             Pontuação de solidez baseada em caixa e reservas.
          </div>
       </div>
@@ -100,8 +107,9 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
          <div style={{
             position: 'absolute', top: 20, width: 220, height: 110,
             borderTopLeftRadius: 120, borderTopRightRadius: 120,
-            border: `12px solid ${healthColor}`, 
-            borderBottom: 'none',
+            borderTop: `12px solid ${healthColor}`,
+            borderLeft: `12px solid ${healthColor}`,
+            borderRight: `12px solid ${healthColor}`,
             boxSizing: 'border-box'
          }} />
          
@@ -125,14 +133,14 @@ export default function HealthScore({ empresaId, mesSelecionado }: { empresaId: 
       </div>
       
       <div style={{ textAlign: 'center' }}>
-         <div style={{ fontSize: 13, fontWeight: 700, color: healthColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{healthLabel}</div>
-         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Meta de Excelência: 800+</div>
+         <div style={{ fontSize: 14.5, fontWeight: 700, color: healthColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{healthLabel}</div>
+         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Meta de Excelência: 800+</div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
          {details.map((d, i) => (
            <div key={i}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
                  <span style={{ color: 'var(--text-secondary)' }}>{d.label}</span>
                  <span style={{ fontWeight: 600, color: d.points === d.max ? 'var(--green)' : d.points > 0 ? 'var(--yellow)' : 'var(--text-muted)' }}>
                    {d.points} / {d.max}

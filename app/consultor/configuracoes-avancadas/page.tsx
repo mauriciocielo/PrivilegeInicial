@@ -94,13 +94,13 @@ export default function ConfiguracoesAvancadasPage() {
       <div className="page-body">
         <div className="tabs" style={{ marginBottom: 20 }}>
           <button className={`tab ${abaAtiva === 'saude' ? 'active' : ''}`} onClick={() => setAbaAtiva('saude')}>
-            🛡️ Monitor 24h &amp; Alertas
+            Monitor 24h &amp; Alertas
           </button>
           <button className={`tab ${abaAtiva === 'cofre' ? 'active' : ''}`} onClick={() => setAbaAtiva('cofre')}>
-            🔒 Cofre (Fechamento)
+            Cofre (Fechamento)
           </button>
           <button className={`tab ${abaAtiva === 'auditoria' ? 'active' : ''}`} onClick={() => setAbaAtiva('auditoria')}>
-            🕵️‍♂️ Auditoria de Logs
+            Auditoria de Logs
           </button>
         </div>
 
@@ -129,7 +129,7 @@ export default function ConfiguracoesAvancadasPage() {
                 style={{ maxWidth: 200, borderColor: fechamentoData ? 'var(--red)' : '' }}
                 onChange={e => setFechamentoData(e.target.value)}
               />
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
+              <p style={{ fontSize: 14.5, color: 'var(--text-muted)', marginTop: 8 }}>
                 Qualquer lançamento financeiro com data ANTERIOR ou IGUAL à data escolhida, estará blindado. Ninguém (nem você nem o cliente) poderá adicionar, editar ou deletar registros nesse período.
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function ConfiguracoesAvancadasPage() {
             {fechamentoData && fechamentoData !== empresa?.fechamentoData && (
               <div className="form-group" style={{ marginTop: 24, padding: 16, background: '#fee2e2', borderRadius: 8, border: '1px solid #fca5a5' }}>
                 <label className="form-label" style={{ color: '#991b1b' }}>Confirmação de Segurança</label>
-                <p style={{ fontSize: 13, color: '#991b1b', marginBottom: 10 }}>Ao travar esse período, relatórios gerados serão definitivos. Para prosseguir, digite <strong>bloquear</strong> no campo abaixo:</p>
+                <p style={{ fontSize: 14.5, color: '#991b1b', marginBottom: 10 }}>Ao travar esse período, relatórios gerados serão definitivos. Para prosseguir, digite <strong>bloquear</strong> no campo abaixo:</p>
                 <input 
                   type="text"
                   className="form-control"
@@ -154,7 +154,7 @@ export default function ConfiguracoesAvancadasPage() {
                 setFechamentoData('');
                 setFechamentoConfirmText('');
               }}>Desativar Bloqueio</button>
-              <button className="btn btn-danger" onClick={handleSalvarCofre}>💾 Salvar Bloqueio</button>
+              <button className="btn btn-danger" onClick={handleSalvarCofre}>Salvar Bloqueio</button>
             </div>
           </div>
         )}
@@ -191,7 +191,7 @@ export default function ConfiguracoesAvancadasPage() {
                     <tr key={log.id}>
                       <td style={{ width: 140 }}>
                         <span style={{ fontWeight: 600 }}>{fmt.date(log.timestamp.split('T')[0])}</span><br />
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{log.timestamp.split('T')[1].slice(0,5)}</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{log.timestamp.split('T')[1].slice(0,5)}</span>
                       </td>
                       <td style={{ width: 200, fontWeight: 500 }}>
                         {log.userName}

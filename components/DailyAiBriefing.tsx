@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ArrowRight, Lightbulb } from 'lucide-react';
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { store } from '../lib/store';
 import type { BriefingDiaPayload, PrioridadeBriefing } from '../app/api/ai/briefing-dia/route';
 
@@ -90,7 +90,7 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
             border: '1px solid rgba(96, 0, 0, 0.2)',
             background: 'var(--bg-card, #ffffff)',
             color: '#600000',
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -134,12 +134,12 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
           </span>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <strong style={{ fontSize: 14, color: 'var(--text-primary, #171717)' }}>
+              <strong style={{ fontSize: 15.5, color: 'var(--text-primary, #171717)' }}>
                 {data?.saudacao || 'Briefing do Dia'}
               </strong>
               <span
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 13,
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: 99,
@@ -170,7 +170,7 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
               border: '1px solid var(--border, #e5e5e5)',
               background: 'var(--bg-card, #ffffff)',
               color: 'var(--text-muted, #525252)',
-              fontSize: 11.5,
+              fontSize: 13.5,
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -199,10 +199,10 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
       </div>
 
       {loading && !data ? (
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Gerando seus insights executivos do dia...</div>
+        <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>Gerando seus insights executivos do dia...</div>
       ) : data && (
         <>
-          <p style={{ fontSize: 13.5, color: 'var(--text-primary, #262626)', margin: '0 0 12px', lineHeight: 1.45 }}>
+          <p style={{ fontSize: 15, color: 'var(--text-primary, #262626)', margin: '0 0 12px', lineHeight: 1.45 }}>
             {data.resumoExecutivo}
           </p>
 
@@ -232,8 +232,8 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: st.color }}>{p.titulo}</div>
-                    <div style={{ fontSize: 11.5, color: '#3f3f46', marginTop: 3, lineHeight: 1.35 }}>{p.detalhe}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: st.color }}>{p.titulo}</div>
+                    <div style={{ fontSize: 13.5, color: '#3f3f46', marginTop: 3, lineHeight: 1.35 }}>{p.detalhe}</div>
                   </div>
                   <button
                     type="button"
@@ -248,7 +248,7 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
                       border: `1px solid ${st.border}`,
                       borderRadius: 8,
                       padding: '4px 9px',
-                      fontSize: 11.5,
+                      fontSize: 13.5,
                       fontWeight: 700,
                       cursor: 'pointer',
                     }}
@@ -260,24 +260,6 @@ export default function DailyAiBriefing({ empresaId = '' }: DailyAiBriefingProps
             })}
           </div>
 
-          {/* Dica estratégica */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
-              padding: '9px 12px',
-              borderRadius: 10,
-              background: 'var(--bg-base, #fafafa)',
-              border: '1px solid var(--border, #ececec)',
-              fontSize: 12,
-              color: 'var(--text-secondary, #525252)',
-              lineHeight: 1.4,
-            }}
-          >
-            <Lightbulb size={15} style={{ color: '#b45309', flexShrink: 0, marginTop: 1 }} />
-            <span><strong>Dica do dia:</strong> {data.dicaEstrategica}</span>
-          </div>
         </>
       )}
     </div>

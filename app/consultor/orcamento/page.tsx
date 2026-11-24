@@ -137,7 +137,7 @@ export default function OrcamentoPage() {
             style={{ width: 170, fontWeight: 600 }}
           />
           <button className="btn btn-primary" onClick={handleSave}>
-            💾 Salvar Orçamento
+            Salvar Orçamento
           </button>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function OrcamentoPage() {
           <div>
              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                 <Target size={18} color="var(--accent)" />
-                <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--text-secondary)', fontWeight: 700 }}>Meta de Gastos: {mesAtualLabel}</div>
+                <div style={{ fontSize: 14.5, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--text-secondary)', fontWeight: 700 }}>Meta de Gastos: {mesAtualLabel}</div>
              </div>
              <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>
                 {fmt.currency(resumoContas.totalRealizado)} <span style={{ fontSize: 20, color: 'var(--text-muted)', fontWeight: 600 }}>/ {fmt.currency(resumoContas.totalOrcado)}</span>
@@ -160,7 +160,7 @@ export default function OrcamentoPage() {
           </div>
           
           <div style={{ minWidth: 250 }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, fontWeight: 700 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8, fontWeight: 700 }}>
                  <span style={{ color: 'var(--text-secondary)' }}>Burn Rate (Mensal)</span>
                  <span style={{ color: resumoContas.burnRateGlobal > 100 ? 'var(--red)' : resumoContas.burnRateGlobal > 85 ? 'var(--yellow)' : 'var(--green)' }}>
                    {resumoContas.burnRateGlobal.toFixed(1)}%
@@ -175,7 +175,7 @@ export default function OrcamentoPage() {
                  }} />
              </div>
              {resumoContas.burnRateGlobal > 100 && (
-               <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+               <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
                  <AlertTriangle size={12} /> Orçamento Geral Estourado
                </div>
              )}
@@ -232,12 +232,12 @@ export default function OrcamentoPage() {
                                   background: exceeds ? 'var(--red)' : burn > 80 ? 'var(--amber)' : 'var(--green)'
                                 }} />
                              </div>
-                             <div style={{ fontSize: 12, fontWeight: 700, width: 45, color: exceeds ? 'var(--red)' : 'var(--text-secondary)' }}>
+                             <div style={{ fontSize: 14, fontWeight: 700, width: 45, color: exceeds ? 'var(--red)' : 'var(--text-secondary)' }}>
                                 {burn.toFixed(0)}%
                              </div>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Não orçado</span>
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Não orçado</span>
                         )}
                       </td>
                     </tr>

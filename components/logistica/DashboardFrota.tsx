@@ -53,25 +53,25 @@ export default function DashboardFrota() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 30 }}>
         <div style={{ padding: 20, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total Gasto (Geral)</div>
+          <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Total Gasto (Geral)</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--red)' }}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalGastos)}
           </div>
         </div>
         <div style={{ padding: 20, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Combustível</div>
+          <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Combustível</div>
           <div style={{ fontSize: 24, fontWeight: 700 }}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCombustivel)}
           </div>
         </div>
         <div style={{ padding: 20, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Manutenção</div>
+          <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Manutenção</div>
           <div style={{ fontSize: 24, fontWeight: 700 }}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalManutencao)}
           </div>
         </div>
         <div style={{ padding: 20, background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Veículos Ativos</div>
+          <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Veículos Ativos</div>
           <div style={{ fontSize: 24, fontWeight: 700 }}>{veiculos.length}</div>
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function DashboardFrota() {
 
             return (
               <div key={v.id} style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 4 }}>
                   <span>{v.placa}</span>
                   <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(gastosMes)} / {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(orc.limiteGasto)}</span>
                 </div>

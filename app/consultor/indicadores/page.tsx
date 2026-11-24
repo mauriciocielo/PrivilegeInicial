@@ -5,6 +5,8 @@ import { uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { BarChart3 as IcoBarChart3 } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function IndicadoresPage() {
   const [empresaId, setEmpresaId] = useState('e1');
@@ -106,7 +108,7 @@ export default function IndicadoresPage() {
                 {indicadores.length === 0 ? (
                   <tr><td colSpan={5}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">📊</div>
+                      <div className="empty-state-icon"><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhum indicador registrado</h3>
                       <p>Adicione os indicadores mensais para melhor acompanhamento.</p>
                     </div>
@@ -122,8 +124,8 @@ export default function IndicadoresPage() {
                       <td style={{ textAlign: 'right', color: 'var(--orange)', fontWeight: 600 }}>{i.inadimplencia}%</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(i)} title="Editar">✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(i.id)} title="Excluir">🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(i)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(i.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
@@ -162,7 +164,7 @@ export default function IndicadoresPage() {
             <div className="form-group">
               <label className="form-label">Inadimplência do Mês (%)</label>
               <input type="number" step="0.1" className="form-control" value={form.inadimplencia||0} onChange={e=>setForm(f=>({...f,inadimplencia:Number(e.target.value)}))} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                 Ex: Se você faturou R$ 100 mil e teve R$ 5 mil inadimplentes, informe 5.0
               </div>
             </div>

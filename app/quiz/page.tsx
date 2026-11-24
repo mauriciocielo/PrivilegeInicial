@@ -202,13 +202,13 @@ export default function PublicQuizPlayerPage() {
             <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#600000' }}>
               Privilege Quiz Arena
             </h1>
-            <p style={{ fontSize: 13, color: '#666666', margin: 0 }}>
+            <p style={{ fontSize: 14.5, color: '#666666', margin: 0 }}>
               Entre com o PIN exibido na tela para jogar ao vivo!
             </p>
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
               PIN do Jogo
             </label>
             <input
@@ -235,7 +235,7 @@ export default function PublicQuizPlayerPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
               Seu Nome / Apelido
             </label>
             <input
@@ -259,7 +259,7 @@ export default function PublicQuizPlayerPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
               Escolha seu Avatar
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
@@ -291,7 +291,7 @@ export default function PublicQuizPlayerPage() {
                 color: '#b91c1c',
                 padding: '10px 12px',
                 borderRadius: 10,
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
                 textAlign: 'center',
               }}
@@ -343,12 +343,12 @@ export default function PublicQuizPlayerPage() {
           borderBottom: '1px solid rgba(255,255,255,0.12)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15.5 }}>
           <span style={{ fontSize: 20 }}>{me?.avatar || avatar}</span>
           <span>{me?.nickname || nickname}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 12, opacity: 0.8 }}>PIN: {session.pin}</span>
+          <span style={{ fontSize: 14, opacity: 0.8 }}>PIN: {session.pin}</span>
           <span
             style={{
               background: '#a88948',
@@ -356,7 +356,7 @@ export default function PublicQuizPlayerPage() {
               padding: '4px 12px',
               borderRadius: 999,
               fontWeight: 800,
-              fontSize: 13,
+              fontSize: 14.5,
             }}
           >
             {me?.score ?? 0} pts
@@ -395,7 +395,7 @@ export default function PublicQuizPlayerPage() {
                 padding: '10px 18px',
                 borderRadius: 999,
                 background: 'rgba(255,255,255,0.12)',
-                fontSize: 13,
+                fontSize: 14.5,
                 fontWeight: 600,
               }}
             >
@@ -407,7 +407,7 @@ export default function PublicQuizPlayerPage() {
         {session.status === 'question' && currentQ && (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.85 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 700, opacity: 0.85 }}>
                 Pergunta {session.current_question_index + 1} de {session.total_questions}
               </span>
               <span
@@ -419,7 +419,7 @@ export default function PublicQuizPlayerPage() {
                   padding: '5px 12px',
                   borderRadius: 999,
                   fontWeight: 900,
-                  fontSize: 14,
+                  fontSize: 15.5,
                 }}
               >
                 <Clock size={14} /> {timeLeft < 0 ? 'Sem limite' : `${timeLeft}s`}
@@ -452,7 +452,7 @@ export default function PublicQuizPlayerPage() {
               >
                 <div style={{ fontSize: 42, marginBottom: 8 }}>⏳</div>
                 <h3 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px' }}>Resposta enviada!</h3>
-                <p style={{ fontSize: 14, opacity: 0.85, margin: 0 }}>
+                <p style={{ fontSize: 15.5, opacity: 0.85, margin: 0 }}>
                   Aguardando os demais participantes ou o fim do tempo...
                 </p>
               </div>
@@ -528,7 +528,7 @@ export default function PublicQuizPlayerPage() {
                   background: 'rgba(0,0,0,0.25)',
                   padding: '6px 14px',
                   borderRadius: 999,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   fontWeight: 700,
                   marginBottom: 12,
                 }}
@@ -536,7 +536,7 @@ export default function PublicQuizPlayerPage() {
                 <Flame size={16} color="#fde047" /> Sequência de {me.streak} acertos!
               </div>
             )}
-            <div style={{ fontSize: 14, opacity: 0.92 }}>
+            <div style={{ fontSize: 15.5, opacity: 0.92 }}>
               Você está em <strong>{myRank}º lugar</strong> com <strong>{me?.score ?? 0} pts</strong>
             </div>
           </div>
@@ -557,11 +557,11 @@ export default function PublicQuizPlayerPage() {
             <h2 style={{ fontSize: 30, fontWeight: 900, margin: '0 0 8px' }}>Fim de Jogo!</h2>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#fde047', marginBottom: 6 }}>
               {myRank === 1
-                ? '🥇 1º Lugar — Campeão!'
+                ? '1º Lugar — Campeão!'
                 : myRank === 2
-                  ? '🥈 2º Lugar!'
+                  ? '2º Lugar!'
                   : myRank === 3
-                    ? '🥉 3º Lugar!'
+                    ? '3º Lugar!'
                     : `${myRank}º Lugar`}
             </div>
             <p style={{ fontSize: 16, margin: '0 0 20px', opacity: 0.9 }}>
@@ -584,7 +584,7 @@ export default function PublicQuizPlayerPage() {
                 background: '#fff',
                 color: '#600000',
                 fontWeight: 800,
-                fontSize: 14,
+                fontSize: 15.5,
                 cursor: 'pointer',
               }}
             >

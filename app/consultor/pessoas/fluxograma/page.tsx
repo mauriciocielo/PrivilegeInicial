@@ -318,17 +318,17 @@ export default function PessoasFluxogramaRhPage() {
               onClick={() => setModelTab('conectado')}
               className={modelTab === 'conectado' ? 'btn btn-primary' : 'btn btn-secondary'}
             >
-              🌐 Projeto Conectado (100 Dias · Online)
+              Projeto Conectado (100 Dias · Online)
             </button>
             <button
               type="button"
               onClick={() => setModelTab('presencial')}
               className={modelTab === 'presencial' ? 'btn btn-primary' : 'btn btn-secondary'}
             >
-              🏢 Assessoria Presencial
+              Assessoria Presencial
             </button>
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
             {stats.done} concluídas · {stats.doing} em andamento · {stats.pct}%
           </span>
         </div>
@@ -360,8 +360,8 @@ export default function PessoasFluxogramaRhPage() {
                 {visibleMilestones.map(m => (
                   <tr key={m.id}>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 700, fontSize: 12 }}>{m.windowDays}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.meetingLabel}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{m.windowDays}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{m.meetingLabel}</div>
                     </td>
                     <td style={{ fontWeight: 700, minWidth: 200 }}>{m.title}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
@@ -375,7 +375,7 @@ export default function PessoasFluxogramaRhPage() {
                         style={{
                           padding: '4px 10px',
                           borderRadius: 999,
-                          fontSize: 11.5,
+                          fontSize: 13.5,
                           fontWeight: 700,
                           border: '1px solid var(--border)',
                           cursor: 'pointer',
@@ -393,12 +393,12 @@ export default function PessoasFluxogramaRhPage() {
                               : 'var(--text-secondary)',
                         }}
                       >
-                        <option value="pendente">⏳ Pendente</option>
-                        <option value="em_andamento">🔄 Em Andamento</option>
-                        <option value="concluido">✅ Concluído</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="concluido">Concluído</option>
                       </select>
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 280 }}>
+                    <td style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 280 }}>
                       {m.agendaMessage || <span style={{ opacity: 0.5 }}>Sem texto definido</span>}
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -491,7 +491,7 @@ export default function PessoasFluxogramaRhPage() {
                     <td>{c.setor}</td>
                     <td>{c.reportaA}</td>
                     <td style={{ fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{c.faixaSalarial}</td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 240 }}>{c.descritivo}</td>
+                    <td style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 240 }}>{c.descritivo}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', gap: 6 }}>
                         <button type="button" onClick={() => setEditingCargo({ ...c })} className="btn btn-secondary btn-sm">

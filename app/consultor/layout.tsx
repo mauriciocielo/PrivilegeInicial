@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { store, User } from '../../lib/store';
 import Sidebar from '../../components/Sidebar';
@@ -13,24 +13,27 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [selectedEmpresaId, setSelectedEmpresaId] = useState('');
+  // Último valor conhecido, para comparar sem disparar eventos dentro do setState
+  // (o React roda a função de atualização durante a renderização).
+  const empresaAtualRef = useRef('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setSelectedEmpresaId(sessionStorage.getItem('cf_empresa_sel') || '');
+      empresaAtualRef.current = sessionStorage.getItem('cf_empresa_sel') || '';
+      setSelectedEmpresaId(empresaAtualRef.current);
     }
 
     const handleEmpresaChange = (e: any) => {
-      setSelectedEmpresaId(e.detail || '');
+      empresaAtualRef.current = e.detail || '';
+      setSelectedEmpresaId(empresaAtualRef.current);
     };
 
     const handleDataChange = () => {
       const current = sessionStorage.getItem('cf_empresa_sel') || '';
-      setSelectedEmpresaId(prev => {
-        if (prev !== current) {
-          window.dispatchEvent(new CustomEvent('empresaChange', { detail: current }));
-        }
-        return current;
-      });
+      if (current === empresaAtualRef.current) return;
+      empresaAtualRef.current = current;
+      setSelectedEmpresaId(current);
+      window.dispatchEvent(new CustomEvent('empresaChange', { detail: current }));
     };
 
     window.addEventListener('empresaChange', handleEmpresaChange);

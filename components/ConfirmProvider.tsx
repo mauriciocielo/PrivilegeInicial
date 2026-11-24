@@ -55,7 +55,7 @@ export default function ConfirmProvider() {
           <h2>{state.options.title || 'Confirmar ação'}</h2>
         </div>
         <div className="modal-body">
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+          <p style={{ margin: 0, fontSize: 15.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
             {state.message}
           </p>
         </div>

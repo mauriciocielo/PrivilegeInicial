@@ -79,7 +79,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
               <h2 className="modal-title" style={{ margin: 0, fontSize: 18 }}>
                 Relatório para Cálculo do DIFAL
               </h2>
-              <span style={{ fontSize: 12.5, color: '#6b7280' }}>
+              <span style={{ fontSize: 14, color: '#6b7280' }}>
                 {empresaNome} • Diferencial de Alíquota do ICMS (Entradas Interestaduais)
               </span>
             </div>
@@ -93,25 +93,25 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
           margin: '16px 0', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center'
         }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#4b5563', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#4b5563', display: 'block', marginBottom: 4 }}>
               Mês de Apuração:
             </label>
             <input
               type="month"
               value={mes}
               onChange={(e) => { setMes(e.target.value); setDe(''); setAte(''); }}
-              style={{ padding: '6px 10px', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 6, background: '#fff' }}
+              style={{ padding: '6px 10px', fontSize: 14.5, border: '1px solid #d1d5db', borderRadius: 6, background: '#fff' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#4b5563', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#4b5563', display: 'block', marginBottom: 4 }}>
               UF de Destino:
             </label>
             <select
               value={ufDestino}
               onChange={(e) => setUfDestino(e.target.value)}
-              style={{ padding: '6px 10px', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 6, background: '#fff' }}
+              style={{ padding: '6px 10px', fontSize: 14.5, border: '1px solid #d1d5db', borderRadius: 6, background: '#fff' }}
             >
               {Object.keys(ALIQUOTAS_INTERNAS_PADRAO).sort().map(uf => (
                 <option key={uf} value={uf}>
@@ -121,7 +121,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
             </select>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#4b5563', cursor: 'pointer', marginTop: 18 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#4b5563', cursor: 'pointer', marginTop: 18 }}>
             <input
               type="checkbox"
               checked={apenasInterestaduais}
@@ -136,7 +136,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
               onClick={exportarCsv}
               disabled={!dados || dados.itens.length === 0}
               className="btn btn-secondary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}
             >
               <FileSpreadsheet size={14} color="#16a34a" /> Exportar CSV
             </button>
@@ -144,7 +144,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
               onClick={carregarRelatorio}
               disabled={carregando}
               className="btn btn-primary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}
             >
               <RefreshCw size={13} className={carregando ? 'animate-spin' : ''} />
               Recalcular
@@ -156,40 +156,40 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
         {dados && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Notas Sujeitas a DIFAL</div>
+              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Notas Sujeitas a DIFAL</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginTop: 2 }}>
                 {dados.totais.totalInterestaduais}
               </div>
-              <span style={{ fontSize: 11, color: '#6b7280' }}>de {dados.totais.totalNotas} analisadas</span>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>de {dados.totais.totalNotas} analisadas</span>
             </div>
 
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Total das Compras</div>
+              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Total das Compras</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginTop: 2 }}>
                 {formatMoney(dados.totais.valorTotalNotas)}
               </div>
             </div>
 
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Base de Cálculo ICMS</div>
+              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Base de Cálculo ICMS</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb', marginTop: 2 }}>
                 {formatMoney(dados.totais.baseCalculoTotal)}
               </div>
             </div>
 
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 11, color: '#166534', fontWeight: 600, textTransform: 'uppercase' }}>DIFAL a Recolher (Estimado)</div>
+              <div style={{ fontSize: 13, color: '#166534', fontWeight: 600, textTransform: 'uppercase' }}>DIFAL a Recolher (Estimado)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: '#15803d', marginTop: 2 }}>
                 {formatMoney(dados.totais.difalTotalEstimado)}
               </div>
-              <span style={{ fontSize: 11, color: '#166534' }}>Alíquota UF {ufDestino}: {dados.aliquotaInternaPadrao}%</span>
+              <span style={{ fontSize: 13, color: '#166534' }}>Alíquota UF {ufDestino}: {dados.aliquotaInternaPadrao}%</span>
             </div>
           </div>
         )}
 
         {/* Tabela de Itens e Cálculos */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, textAlign: 'left' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#4b5563' }}>
                 <th style={{ padding: '10px 12px' }}>Emissão</th>
@@ -226,7 +226,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
                       {item.dataEmissao ? new Date(item.dataEmissao + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
                     </td>
                     <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                      NF {item.numero} <span style={{ color: '#6b7280', fontSize: 11 }}>({item.serie})</span>
+                      NF {item.numero} <span style={{ color: '#6b7280', fontSize: 13 }}>({item.serie})</span>
                     </td>
                     <td style={{ padding: '8px 12px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.emitenteNome}>
                       {item.emitenteNome || item.emitenteCnpj}
@@ -235,7 +235,7 @@ export default function NfeDifalModal({ empresaId, empresaNome, cnpj, mesPadrao,
                       <span className="badge" style={{
                         background: item.isInterestadual ? '#fef3c7' : '#f3f4f6',
                         color: item.isInterestadual ? '#92400e' : '#4b5563',
-                        fontWeight: 600, fontSize: 11
+                        fontWeight: 600, fontSize: 13
                       }}>
                         {item.ufOrigem || '??'} → {item.ufDestino}
                       </span>

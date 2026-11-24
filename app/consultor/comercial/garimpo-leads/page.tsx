@@ -886,7 +886,7 @@ export default function GarimpoLeadsPage() {
                 style={{
                   padding: '10px 18px',
                   fontWeight: active ? 600 : 500,
-                  fontSize: 13.5,
+                  fontSize: 15,
                   border: 'none',
                   background: 'none',
                   cursor: 'pointer',
@@ -928,7 +928,7 @@ export default function GarimpoLeadsPage() {
                     type="button"
                     className={segmento === seg ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
                     onClick={() => setSegmento(seg)}
-                    style={{ padding: '4px 11px', fontSize: 12 }}
+                    style={{ padding: '4px 11px', fontSize: 14 }}
                   >
                     {seg}
                   </button>
@@ -947,7 +947,7 @@ export default function GarimpoLeadsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <div className="form-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                     <label className="form-label" style={{ margin: 0 }}>Cidade(s) — separe por vírgula para região</label>
                     <button
                       type="button"
@@ -959,7 +959,7 @@ export default function GarimpoLeadsPage() {
                         background: 'none',
                         border: 'none',
                         color: 'var(--accent)',
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         fontWeight: 600,
                         cursor: 'pointer',
                         padding: 0,
@@ -1006,7 +1006,7 @@ export default function GarimpoLeadsPage() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={enriquecerSites}
@@ -1086,11 +1086,11 @@ export default function GarimpoLeadsPage() {
                           </td>
                           <td>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{lead.nome}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                               {lead.categoria} · {lead.endereco || `${lead.cidade}/${lead.estado}`}
                             </div>
                             {lead.nota && (
-                              <div style={{ fontSize: 11.5, color: 'var(--yellow)', display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                              <div style={{ fontSize: 13.5, color: 'var(--yellow)', display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
                                 <Star size={11} fill="currentColor" /> {lead.nota.toFixed(1)} ({lead.avaliacoes || 0})
                               </div>
                             )}
@@ -1110,7 +1110,7 @@ export default function GarimpoLeadsPage() {
                                   padding: 0,
                                   color: 'var(--green)',
                                   fontWeight: 600,
-                                  fontSize: 12.5,
+                                  fontSize: 14,
                                   cursor: 'pointer',
                                   textAlign: 'left',
                                 }}
@@ -1119,25 +1119,25 @@ export default function GarimpoLeadsPage() {
                                 {enviandoWhatsId === lead.id ? 'Enviando...' : lead.telefone || lead.whatsapp}
                               </button>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>—</span>
                             )}
                           </td>
                           <td>
                             {lead.email && (
-                              <div style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>{lead.email}</div>
+                              <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>{lead.email}</div>
                             )}
                             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                               {lead.website && (
-                                <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--blue)' }}>
+                                <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: 'var(--blue)' }}>
                                   Site ↗
                                 </a>
                               )}
                               {lead.instagram && (
-                                <a href={lead.instagram} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--accent)' }}>
+                                <a href={lead.instagram} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: 'var(--accent)' }}>
                                   Instagram ↗
                                 </a>
                               )}
-                              <a href={lead.mapsUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                              <a href={lead.mapsUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                                 Maps ↗
                               </a>
                             </div>
@@ -1224,20 +1224,20 @@ export default function GarimpoLeadsPage() {
                         <tr key={lead.id}>
                           <td>
                             <div style={{ fontWeight: 600 }}>{lead.nome}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                               {lead.cnpj} · {lead.cidade}/{lead.estado}
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontSize: 12.5 }}>{lead.socios || '—'}</div>
-                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: 14 }}>{lead.socios || '—'}</div>
+                            <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                               {lead.porte || 'Porte N/I'}
                               {lead.capitalSocial ? ` · Capital R$ ${lead.capitalSocial.toLocaleString('pt-BR')}` : ''}
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontSize: 12.5 }}>{lead.telefone || '—'}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lead.email || '—'}</div>
+                            <div style={{ fontSize: 14 }}>{lead.telefone || '—'}</div>
+                            <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{lead.email || '—'}</div>
                           </td>
                           <td><span className={scoreBadgeClass(lead.score)}>{lead.score} pts</span></td>
                           <td>
@@ -1276,7 +1276,7 @@ export default function GarimpoLeadsPage() {
                     onClick={() => setModoBase('kanban')}
                     style={{
                       padding: '6px 11px',
-                      fontSize: 12.5,
+                      fontSize: 14,
                       fontWeight: 600,
                       border: 'none',
                       cursor: 'pointer',
@@ -1294,7 +1294,7 @@ export default function GarimpoLeadsPage() {
                     onClick={() => setModoBase('tabela')}
                     style={{
                       padding: '6px 11px',
-                      fontSize: 12.5,
+                      fontSize: 14,
                       fontWeight: 600,
                       border: 'none',
                       cursor: 'pointer',
@@ -1359,7 +1359,7 @@ export default function GarimpoLeadsPage() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 12,
-                  fontSize: 13,
+                  fontSize: 14.5,
                   color: 'var(--green)',
                 }}
               >
@@ -1384,7 +1384,7 @@ export default function GarimpoLeadsPage() {
               />
               <select
                 className="form-control"
-                style={{ width: 165 }}
+                style={{ minWidth: 165, width: 'auto' }}
                 value={filtroStatus}
                 onChange={e => setFiltroStatus(e.target.value)}
               >
@@ -1395,7 +1395,7 @@ export default function GarimpoLeadsPage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 155 }}
+                style={{ minWidth: 155, width: 'auto' }}
                 value={filtroIcp}
                 onChange={e => setFiltroIcp(e.target.value as any)}
               >
@@ -1406,7 +1406,7 @@ export default function GarimpoLeadsPage() {
               </select>
               <select
                 className="form-control"
-                style={{ width: 135 }}
+                style={{ minWidth: 135, width: 'auto' }}
                 value={filtroNotaMin}
                 onChange={e => setFiltroNotaMin(Number(e.target.value))}
               >
@@ -1414,11 +1414,11 @@ export default function GarimpoLeadsPage() {
                 <option value={4}>Nota ≥ 4.0★</option>
                 <option value={4.5}>Nota ≥ 4.5★</option>
               </select>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={apenasCelular} onChange={e => setApenasCelular(e.target.checked)} />
                 Só Celular/WhatsApp
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={apenasEmail} onChange={e => setApenasEmail(e.target.checked)} />
                 Só E-mail
               </label>
@@ -1469,11 +1469,11 @@ export default function GarimpoLeadsPage() {
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                             {col.label}
                           </div>
                           {mrrCol > 0 && (
-                            <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                               R$ {mrrCol.toLocaleString('pt-BR')}/mês
                             </div>
                           )}
@@ -1482,7 +1482,7 @@ export default function GarimpoLeadsPage() {
                       </div>
 
                       {cardsCol.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '24px 8px' }}>
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)', textAlign: 'center', padding: '24px 8px' }}>
                           Sem leads nesta etapa
                         </div>
                       ) : (
@@ -1509,7 +1509,7 @@ export default function GarimpoLeadsPage() {
                                   }
                                   style={{ marginTop: 2 }}
                                 />
-                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                                <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>
                                   {lead.nome}
                                 </span>
                               </label>
@@ -1518,12 +1518,12 @@ export default function GarimpoLeadsPage() {
                               </span>
                             </div>
 
-                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                               {lead.categoria} · {lead.cidade}/{lead.estado}
                             </div>
 
                             {(lead.valorMensal || lead.proximoFollowup) && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 11 }}>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 13 }}>
                                 {lead.valorMensal ? (
                                   <span className="badge badge-gold">
                                     R$ {Number(lead.valorMensal).toLocaleString('pt-BR')}/mês
@@ -1542,7 +1542,7 @@ export default function GarimpoLeadsPage() {
                                 <button
                                   type="button"
                                   className="btn btn-success btn-sm"
-                                  style={{ padding: '4px 7px', fontSize: 11 }}
+                                  style={{ padding: '4px 7px', fontSize: 13 }}
                                   disabled={enviandoWhatsId === lead.id}
                                   onClick={() => enviarWhatsappInterno(lead)}
                                   title="Enviar WhatsApp interno"
@@ -1553,7 +1553,7 @@ export default function GarimpoLeadsPage() {
                               <button
                                 type="button"
                                 className="btn btn-primary btn-sm"
-                                style={{ padding: '4px 7px', fontSize: 11 }}
+                                style={{ padding: '4px 7px', fontSize: 13 }}
                                 onClick={() => (lead.iaCorpoEmail ? setLeadModal(lead) : qualificarLeadIA(lead))}
                                 title="Abrir IA Script / Enviar E-mail / Editar MRR"
                               >
@@ -1562,7 +1562,7 @@ export default function GarimpoLeadsPage() {
                               <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
-                                style={{ padding: '4px 7px', fontSize: 11 }}
+                                style={{ padding: '4px 7px', fontSize: 13 }}
                                 onClick={() => gerarDossieLeadPdf(lead)}
                                 title="Baixar Pré-Diagnóstico 360º em PDF"
                               >
@@ -1637,12 +1637,12 @@ export default function GarimpoLeadsPage() {
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{lead.nome}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                             {lead.categoria} · {lead.cidade}/{lead.estado}
                             {lead.cnpj ? ` · ${lead.cnpj}` : ''}
                           </div>
                           {lead.socios && (
-                            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 2 }}>
                               Sócios: {lead.socios}
                             </div>
                           )}
@@ -1652,7 +1652,7 @@ export default function GarimpoLeadsPage() {
                             <span className={scoreBadgeClass(lead.score)}>{lead.score} pts</span>
                             <span
                               style={{
-                                fontSize: 10.5,
+                                fontSize: 13,
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
@@ -1669,7 +1669,7 @@ export default function GarimpoLeadsPage() {
                         <td>
                           <select
                             className="form-control"
-                            style={{ padding: '4px 8px', fontSize: 12, width: 145 }}
+                            style={{ padding: '4px 8px', fontSize: 14, minWidth: 145, width: 'auto' }}
                             value={lead.status}
                             onChange={e => atualizarStatusLead(lead.id, e.target.value as LeadGarimpado['status'])}
                           >
@@ -1679,7 +1679,7 @@ export default function GarimpoLeadsPage() {
                           </select>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12.5 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 14 }}>
                             {lead.whatsapp && (
                               <button
                                 type="button"
@@ -1691,7 +1691,7 @@ export default function GarimpoLeadsPage() {
                                   padding: 0,
                                   color: 'var(--green)',
                                   fontWeight: 600,
-                                  fontSize: 12.5,
+                                  fontSize: 14,
                                   cursor: 'pointer',
                                   textAlign: 'left',
                                 }}
@@ -1705,11 +1705,11 @@ export default function GarimpoLeadsPage() {
                             {lead.email && <span>{lead.email}</span>}
                             <div style={{ display: 'flex', gap: 8 }}>
                               {lead.website && (
-                                <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--blue)' }}>
+                                <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: 'var(--blue)' }}>
                                   Site ↗
                                 </a>
                               )}
-                              <a href={lead.mapsUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                              <a href={lead.mapsUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
                                 Maps ↗
                               </a>
                             </div>
@@ -1851,7 +1851,7 @@ export default function GarimpoLeadsPage() {
                   border: '1px solid var(--border)',
                   borderRadius: 8,
                   padding: '12px 14px',
-                  fontSize: 12,
+                  fontSize: 14,
                   overflowX: 'auto',
                   color: 'var(--text-primary)',
                   margin: 0,
@@ -1877,7 +1877,7 @@ export default function GarimpoLeadsPage() {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">{leadModal.nome}</h2>
-                <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 2 }}>
                   {leadModal.categoria} · {leadModal.cidade}/{leadModal.estado} · Score {leadModal.score}/100
                 </div>
               </div>
@@ -1895,7 +1895,7 @@ export default function GarimpoLeadsPage() {
                     border: '1px solid var(--border)',
                     borderRadius: 10,
                     padding: 14,
-                    fontSize: 13.5,
+                    fontSize: 15,
                     lineHeight: 1.6,
                   }}
                 >
@@ -2040,7 +2040,7 @@ export default function GarimpoLeadsPage() {
                       <div
                         key={i}
                         style={{
-                          fontSize: 12,
+                          fontSize: 14,
                           padding: '7px 10px',
                           borderRadius: 8,
                           background: 'var(--bg-card2)',

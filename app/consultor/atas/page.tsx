@@ -309,8 +309,8 @@ export default function AtasConsultorPage() {
                       <td>{ata.participantes || '-'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>👁 Ver</button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => handlePrintAta(ata)}>🖨 PDF</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setViewAta(ata)}>Ver</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => handlePrintAta(ata)}>PDF</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => openEdit(ata)}>✏️</button>
                           <button className="btn btn-danger btn-sm" onClick={() => handleDelete(ata.id)}>🗑️</button>
                         </div>
@@ -387,14 +387,14 @@ export default function AtasConsultorPage() {
           >
             {/* Cabeçalho da modal — oculto na impressão */}
             <div className="modal-header no-print" style={{ marginBottom: 24 }}>
-              <h2 className="modal-title">📄 Visualizar Ata</h2>
+              <h2 className="modal-title">Visualizar Ata</h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-primary"
                   onClick={generateRealPDF}
                   disabled={isGeneratingPdf}
                 >
-                  {isGeneratingPdf ? 'Gerando PDF...' : '🖨 Baixar PDF'}
+                  {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                 </button>
                 <button className="modal-close" onClick={() => setViewAta(null)}>✕</button>
               </div>
@@ -428,17 +428,17 @@ export default function AtasConsultorPage() {
                   {/* logo.png é 1024x442 (2,32:1). Fixar 165x45 (3,67:1) espremia a
                       marca; a largura agora acompanha a altura na proporção real. */}
                   <img src={typeof window !== "undefined" ? window.location.origin + "/logo.png" : "/logo.png"} alt="Privilege Contabilidade e Consultoria" style={{ height: 45, width: 'auto', marginBottom: 8, display: 'block' }} crossOrigin="anonymous" />
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8c1a22', marginBottom: 12 }}>
                     Privilege Contabilidade e Consultoria
                   </div>
                   <h1 style={{ fontSize: 24, fontWeight: 700, color: '#000', margin: 0, lineHeight: 1.2 }}>
                     Ata de Atendimento
                   </h1>
-                  <div style={{ fontSize: 14, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 15.5, color: '#4b5563', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>
                     {empresa?.nomeFantasia || empresa?.razaoSocial}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: 13, color: '#4b5563' }}>
+                <div style={{ textAlign: 'right', fontSize: 14.5, color: '#4b5563' }}>
                   <div style={{ fontWeight: 700, color: '#000', fontSize: 15, marginBottom: 2 }}>
                     {new Date(viewAta.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </div>
@@ -448,31 +448,31 @@ export default function AtasConsultorPage() {
 
               {/* Título */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Assunto / Pauta</div>
+                <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Assunto / Pauta</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{viewAta.titulo}</div>
               </div>
 
               {/* Informações */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Consultor Responsável</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{consultorNome(viewAta.consultorId)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Consultor Responsável</div>
+                  <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary)' }}>{consultorNome(viewAta.consultorId)}</div>
                 </div>
                 <div style={{ background: 'var(--bg-base)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Participantes</div>
-                  <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>{viewAta.participantes || '—'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Participantes</div>
+                  <div style={{ fontSize: 15.5, color: 'var(--text-primary)' }}>{viewAta.participantes || '—'}</div>
                 </div>
               </div>
 
               {/* Conteúdo */}
               <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Conteúdo / Deliberações</div>
+                <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Conteúdo / Deliberações</div>
                 <div style={{
                   background: '#f9fafb',
                   borderRadius: 10,
                   padding: '18px 20px',
                   border: '1px solid #e5e7eb',
-                  fontSize: 14,
+                  fontSize: 15.5,
                   lineHeight: 1.8,
                   whiteSpace: 'pre-wrap',
                   color: '#1f2937',
@@ -485,23 +485,23 @@ export default function AtasConsultorPage() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, marginTop: 8 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
                   <div>
-                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: '#4b5563' }}>
+                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 14, textAlign: 'center', color: '#4b5563' }}>
                       Assinatura do Consultor Responsável
                     </div>
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: '#111827' }}>
+                    <div style={{ textAlign: 'center', fontSize: 14.5, fontWeight: 600, marginTop: 4, color: '#111827' }}>
                       {consultorNome(viewAta.consultorId)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 12, textAlign: 'center', color: '#4b5563' }}>
+                    <div style={{ borderTop: '1px solid #9ca3af', paddingTop: 8, marginTop: 48, fontSize: 14, textAlign: 'center', color: '#4b5563' }}>
                       Assinatura do Representante da Empresa
                     </div>
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, marginTop: 4, color: '#111827' }}>
+                    <div style={{ textAlign: 'center', fontSize: 14.5, fontWeight: 600, marginTop: 4, color: '#111827' }}>
                       {empresa?.nomeFantasia}
                     </div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'var(--text-muted)' }}>
+                <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'var(--text-muted)' }}>
                   Documento gerado em {new Date().toLocaleDateString('pt-BR')} — Privilege Contabilidade e Consultoria
                 </div>
               </div>
@@ -511,7 +511,7 @@ export default function AtasConsultorPage() {
             {assinaturaDisponivel && (
               <div className="no-print" style={{ marginTop: 24, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                     Assinatura eletrônica
                   </div>
                   {viewAta.assinaturaId && (
@@ -527,18 +527,18 @@ export default function AtasConsultorPage() {
 
                 {!viewAta.assinaturaId ? (
                   <>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                    <div style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginBottom: 10 }}>
                       Envie esta ata para assinatura. Cada pessoa recebe o documento por e-mail
                       com um link próprio para assinar.
                     </div>
                     <div style={{
-                      fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 10,
+                      fontSize: 14, color: 'var(--text-secondary)', marginBottom: 10,
                       background: 'var(--bg-card2)', border: '1px solid var(--border-light)',
                       borderRadius: 8, padding: '8px 12px',
                     }}>
                       {consultorAssinante?.email
                         ? <>✓ O consultor <strong>{consultorAssinante.name}</strong> ({consultorAssinante.email}) assina junto, automaticamente.</>
-                        : <span style={{ color: 'var(--red)' }}>⚠️ O consultor desta ata não tem e-mail cadastrado — atualize o cadastro dele antes de enviar.</span>}
+                        : <span style={{ color: 'var(--red)' }}>O consultor desta ata não tem e-mail cadastrado — atualize o cadastro dele antes de enviar.</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <input
@@ -559,7 +559,7 @@ export default function AtasConsultorPage() {
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 10 }}>
                       Enviado em {viewAta.assinaturaEnviadaEm ? new Date(viewAta.assinaturaEnviadaEm).toLocaleString('pt-BR') : '—'}
                     </div>
 
@@ -571,12 +571,12 @@ export default function AtasConsultorPage() {
                         className="btn btn-primary"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, background: 'var(--green)', borderColor: 'var(--green)' }}
                       >
-                        📄 Baixar PDF assinado (versão final)
+                        Baixar PDF assinado (versão final)
                       </a>
                     )}
 
                     {assinaturas.length === 0 ? (
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>
                         {carregandoAssinatura ? 'Consultando o Autentique...' : 'Nenhum signatário retornado.'}
                       </div>
                     ) : (
@@ -589,11 +589,11 @@ export default function AtasConsultorPage() {
                             const cor = rejeitado ? 'var(--red)' : assinado ? 'var(--green)' : 'var(--text-muted)';
                             return (
                               <tr key={s.public_id || i} style={{ borderTop: i ? '1px solid var(--border-light)' : 'none' }}>
-                                <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '8px 0' }}>
+                                <td style={{ fontSize: 14.5, color: 'var(--text-primary)', padding: '8px 0' }}>
                                   {s.name || s.email || '—'}
                                   {s.email && s.name ? <span style={{ color: 'var(--text-muted)' }}> · {s.email}</span> : null}
                                 </td>
-                                <td style={{ fontSize: 13, padding: '8px 0', textAlign: 'right', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                <td style={{ fontSize: 14.5, padding: '8px 0', textAlign: 'right', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>
                                   {rotulo}
                                   {s.link && !assinado && !rejeitado && (
                                     <a href={s.link} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 10, fontWeight: 500 }}>abrir link</a>
@@ -613,16 +613,16 @@ export default function AtasConsultorPage() {
             {/* Registro de acessos — fora da área de impressão, é controle interno */}
             <div className="no-print" style={{ marginTop: 24, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                   Quem visualizou esta ata
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                   {acessos.length} {acessos.length === 1 ? 'registro' : 'registros'}
                 </div>
               </div>
 
               {acessos.length === 0 ? (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>
                   Nenhuma visualização registrada além desta.
                 </div>
               ) : (
@@ -630,15 +630,15 @@ export default function AtasConsultorPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Usuário</th>
-                        <th style={{ textAlign: 'right', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Data e hora</th>
+                        <th style={{ textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Usuário</th>
+                        <th style={{ textAlign: 'right', fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', padding: '6px 0', fontWeight: 600 }}>Data e hora</th>
                       </tr>
                     </thead>
                     <tbody>
                       {acessos.map(a => (
                         <tr key={a.id} style={{ borderTop: '1px solid var(--border-light)' }}>
-                          <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '8px 0' }}>{a.userName}</td>
-                          <td style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '8px 0', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <td style={{ fontSize: 14.5, color: 'var(--text-primary)', padding: '8px 0' }}>{a.userName}</td>
+                          <td style={{ fontSize: 14.5, color: 'var(--text-secondary)', padding: '8px 0', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {new Date(a.timestamp).toLocaleString('pt-BR')}
                           </td>
                         </tr>
@@ -647,7 +647,7 @@ export default function AtasConsultorPage() {
                   </table>
                 </div>
               )}
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10 }}>
                 Controle interno — não aparece no PDF exportado.
               </div>
             </div>

@@ -10,7 +10,6 @@ import {
   Building2, ReceiptText, Coins, ShieldCheck, FileWarning, RefreshCw,
   ChevronDown, ChevronUp, ArrowRight, BrainCircuit, Lightbulb, type LucideIcon
 } from 'lucide-react';
-import { instrumentSerif as serif } from '../app/fonts';
 
 export interface NfseInsightItem {
   id: string;
@@ -85,7 +84,7 @@ export default function NfseInsights({
         tipo: 'alerta',
         icone: FileWarning,
         titulo: `${notasRascunho.length} Rascunho(s) Aguardando Transmissão`,
-        descricao: `Existem R$ ${fmt.currency(totalRascunho)} em notas salvas que ainda não foram enviadas ao Sefin Nacional. Verifique antes do fechamento da competência.`,
+        descricao: `Existem ${fmt.currency(totalRascunho)} em notas salvas que ainda não foram enviadas ao Sefin Nacional. Verifique antes do fechamento da competência.`,
         badge: 'Ação Recomendada',
         acaoRotulo: 'Ver rascunhos',
         aoClicarAcao: onFiltrarRascunhos,
@@ -118,7 +117,7 @@ export default function NfseInsights({
             tipo: pct >= 60 ? 'alerta' : 'estrategico',
             icone: Building2,
             titulo: `Concentração de Receita: ${pct.toFixed(0)}% com ${maiorTomador.nome}`,
-            descricao: `O cliente ${maiorTomador.nome} representa R$ ${fmt.currency(maiorTomador.valor)} (${maiorTomador.qtd} nota(s)). Alto índice de dependência econômica nesta competência.`,
+            descricao: `O cliente ${maiorTomador.nome} representa ${fmt.currency(maiorTomador.valor)} (${maiorTomador.qtd} nota(s)). Alto índice de dependência econômica nesta competência.`,
             badge: pct >= 60 ? 'Risco Alto' : 'Concentrado',
             acaoRotulo: 'Filtrar cliente',
             aoClicarAcao: () => onBuscarTomador?.(maiorTomador.doc || maiorTomador.nome),
@@ -146,8 +145,8 @@ export default function NfseInsights({
         id: 'retencoes_tributarias',
         tipo: 'estrategico',
         icone: Coins,
-        titulo: `R$ ${fmt.currency(totalRetencoes + totalIssRetido)} Retidos na Fonte`,
-        descricao: `Tributos federais (R$ ${fmt.currency(totalRetencoes)}) e ISS retido (R$ ${fmt.currency(totalIssRetido)}) deduzem o valor a pagar na guia mensal da Receita/Prefeitura e preservam seu caixa contra bitributação.`,
+        titulo: `${fmt.currency(totalRetencoes + totalIssRetido)} Retidos na Fonte`,
+        descricao: `Tributos federais (${fmt.currency(totalRetencoes)}) e ISS retido (${fmt.currency(totalIssRetido)}) deduzem o valor a pagar na guia mensal da Receita/Prefeitura e preservam seu caixa contra bitributação.`,
         badge: 'Crédito Fiscal',
       });
     }
@@ -162,8 +161,8 @@ export default function NfseInsights({
           id: 'saldo_servicos_positivo',
           tipo: 'positivo',
           icone: TrendingUp,
-          titulo: `Superávit em Serviços: R$ ${fmt.currency(saldoServicos)}`,
-          descricao: `A empresa faturou R$ ${fmt.currency(totalFaturado)} e terceirizou R$ ${fmt.currency(totalTomado)} (${proporcaoTomados.toFixed(1)}% de terceirização sobre o faturamento).`,
+          titulo: `Superávit em Serviços: ${fmt.currency(saldoServicos)}`,
+          descricao: `A empresa faturou ${fmt.currency(totalFaturado)} e terceirizou ${fmt.currency(totalTomado)} (${proporcaoTomados.toFixed(1)}% de terceirização sobre o faturamento).`,
           badge: 'Equilíbrio Saudável',
           acaoRotulo: 'Ver tomadas',
           aoClicarAcao: onFiltrarTomadas,
@@ -173,8 +172,8 @@ export default function NfseInsights({
           id: 'saldo_servicos_negativo',
           tipo: 'perigo',
           icone: TrendingDown,
-          titulo: `Volume Tomado Supera Emitido (-R$ ${fmt.currency(Math.abs(saldoServicos))})`,
-          descricao: `Neste período, os serviços tomados de fornecedores (R$ ${fmt.currency(totalTomado)}) foram superiores às notas de serviços prestadas (R$ ${fmt.currency(totalFaturado)}).`,
+          titulo: `Volume Tomado Supera Emitido (-${fmt.currency(Math.abs(saldoServicos))})`,
+          descricao: `Neste período, os serviços tomados de fornecedores (${fmt.currency(totalTomado)}) foram superiores às notas de serviços prestadas (${fmt.currency(totalFaturado)}).`,
           badge: 'Atenção aos Custos',
           acaoRotulo: 'Ver notas tomadas',
           aoClicarAcao: onFiltrarTomadas,
@@ -219,7 +218,7 @@ export default function NfseInsights({
         tipo: 'positivo',
         icone: CheckCircle2,
         titulo: 'Operação Fiscal Regular e Saudável',
-        descricao: `${notasPrestadas.length} nota(s) emitida(s) somando R$ ${fmt.currency(totalFaturado)} com sequência e retenções em conformidade.`,
+        descricao: `${notasPrestadas.length} nota(s) emitida(s) somando ${fmt.currency(totalFaturado)} com sequência e retenções em conformidade.`,
         badge: 'Tudo em Ordem',
       });
     }
@@ -314,7 +313,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                 style={{
                   background: '#fef2f2',
                   color: '#991b1b',
-                  fontSize: 10,
+                  fontSize: 12.5,
                   fontWeight: 700,
                   textTransform: 'uppercase',
                   padding: '2px 8px',
@@ -324,15 +323,15 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               >
                 Inteligência Fiscal IA
               </span>
-              <span style={{ fontSize: 11, color: '#6b7280' }}>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>
                 {insightsDeterministas.length} diagnóstico(s) identificado(s)
               </span>
             </div>
             <h2
-              className={serif.className}
               style={{
                 fontSize: 22,
-                fontWeight: 400,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
                 color: '#111827',
                 margin: '2px 0 0',
                 lineHeight: 1.1,
@@ -354,7 +353,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               border: 'none',
               padding: '8px 16px',
               borderRadius: 10,
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
@@ -377,7 +376,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                 border: '1px solid #e5e7eb',
                 padding: '8px 14px',
                 borderRadius: 10,
-                fontSize: 12.5,
+                fontSize: 14,
                 fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -462,14 +461,14 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                         >
                           <Icone size={15} />
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 700, color: '#111827' }}>
                           {item.titulo}
                         </span>
                       </div>
                       {item.badge && (
                         <span
                           style={{
-                            fontSize: 10,
+                            fontSize: 12.5,
                             fontWeight: 700,
                             padding: '2px 7px',
                             borderRadius: 99,
@@ -482,7 +481,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                         </span>
                       )}
                     </div>
-                    <p style={{ margin: 0, fontSize: 12.5, color: '#4b5563', lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: 14, color: '#4b5563', lineHeight: 1.5 }}>
                       {item.descricao}
                     </p>
                   </div>
@@ -497,7 +496,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                           border: 'none',
                           padding: 0,
                           color: '#600000',
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 600,
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -529,7 +528,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <BrainCircuit size={18} color="#a5b4fc" />
-                  <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c7d2fe' }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c7d2fe' }}>
                     Parecer do Auditor Fiscal IA (Gemini 2.5 Flash)
                   </span>
                 </div>
@@ -541,7 +540,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                     border: 'none',
                     color: '#94a3b8',
                     cursor: 'pointer',
-                    fontSize: 12,
+                    fontSize: 14,
                   }}
                 >
                   ✕ Fechar
@@ -549,7 +548,7 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
               </div>
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14.5,
                   lineHeight: 1.6,
                   color: '#e2e8f0',
                   whiteSpace: 'pre-line',

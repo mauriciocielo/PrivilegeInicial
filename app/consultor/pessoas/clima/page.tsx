@@ -264,9 +264,9 @@ export default function PessoasClimaPage() {
           </div>
         </div>
         <div className="header-actions">
-          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {saving && <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Salvando...</span>}
           {!saving && lastSaved && (
-            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 14, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
               <CheckCircle2 size={14} /> Salvo às {lastSaved}
             </span>
           )}
@@ -308,11 +308,11 @@ export default function PessoasClimaPage() {
         <div className="card" style={{ padding: '16px 20px', border: '1px solid var(--accent-border)', background: 'var(--accent-glow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: 15.5, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
                 <Smartphone size={17} color="var(--accent)" />
                 Link Público da Pesquisa (Celular ou Computador)
               </div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
                 Compartilhe este link com os colaboradores — não precisa de login e as respostas caem automaticamente nesta tabulação.
               </div>
             </div>
@@ -338,7 +338,7 @@ export default function PessoasClimaPage() {
               value={publicSurveyUrl}
               onClick={(e) => (e.target as HTMLInputElement).select()}
               className="form-input"
-              style={{ fontSize: 12.5, fontFamily: 'monospace' }}
+              style={{ fontSize: 14, fontFamily: 'monospace' }}
             />
           </div>
         </div>
@@ -352,7 +352,7 @@ export default function PessoasClimaPage() {
           <div className="kpi-card">
             <div className="kpi-label">Média Geral de Clima</div>
             <div className="kpi-value" style={{ color: 'var(--accent)' }}>
-              {stats.mediaGeral.toFixed(2)} <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/ 10</span>
+              {stats.mediaGeral.toFixed(2)} <span style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>/ 10</span>
             </div>
           </div>
           <div className="kpi-card">
@@ -363,7 +363,7 @@ export default function PessoasClimaPage() {
           </div>
           <div className="kpi-card">
             <div className="kpi-label">Distribuição Geral</div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, display: 'flex', gap: 10 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 6, display: 'flex', gap: 10 }}>
               <span style={{ color: '#16a34a' }}>Prom: {stats.totalRespostas ? Math.round((stats.promotores / stats.totalRespostas) * 100) : 0}%</span>
               <span style={{ color: '#eab308' }}>Pass: {stats.totalRespostas ? Math.round((stats.passivos / stats.totalRespostas) * 100) : 0}%</span>
               <span style={{ color: '#dc2626' }}>Detr: {stats.totalRespostas ? Math.round((stats.detratores / stats.totalRespostas) * 100) : 0}%</span>
@@ -396,7 +396,7 @@ export default function PessoasClimaPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {stats.porCategoria.map((c) => (
                   <div key={c.categoria}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
                       <strong>
                         {c.categoria} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({c.count} perguntas)</span>
                       </strong>
@@ -439,7 +439,7 @@ export default function PessoasClimaPage() {
                         background: 'rgba(22, 163, 74, 0.08)',
                         border: '1px solid rgba(22, 163, 74, 0.25)',
                         borderRadius: 8,
-                        fontSize: 12.5,
+                        fontSize: 14,
                       }}
                     >
                       <span><strong>#{idx + 1}</strong> ({q.categoria}) — {q.texto}</span>
@@ -465,7 +465,7 @@ export default function PessoasClimaPage() {
                         background: 'rgba(220, 38, 38, 0.08)',
                         border: '1px solid rgba(220, 38, 38, 0.25)',
                         borderRadius: 8,
-                        fontSize: 12.5,
+                        fontSize: 14,
                       }}
                     >
                       <span><strong>#{idx + 1}</strong> ({q.categoria}) — {q.texto}</span>
@@ -493,7 +493,7 @@ export default function PessoasClimaPage() {
 
             {CATEGORIAS.map((cat) => (
               <div key={cat} style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 8, marginBottom: 10 }}>
+                <h3 style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--accent)', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 8, marginBottom: 10 }}>
                   {cat}
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -501,7 +501,7 @@ export default function PessoasClimaPage() {
                     .filter((q) => q.categoria === cat)
                     .map((q) => (
                       <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: 13.5, flex: '1 1 360px' }}>
+                        <span style={{ fontSize: 15, flex: '1 1 360px' }}>
                           <strong>{q.id}ª.</strong> {q.texto}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -525,7 +525,7 @@ export default function PessoasClimaPage() {
                                     : 'var(--bg-secondary)',
                                 color: formNotas[q.id] === n ? '#fff' : 'var(--text-primary)',
                                 fontWeight: 700,
-                                fontSize: 12,
+                                fontSize: 14,
                                 cursor: 'pointer',
                               }}
                             >
@@ -565,11 +565,11 @@ export default function PessoasClimaPage() {
                     {responses.map((r) => (
                       <th key={r.id} style={{ textAlign: 'center', minWidth: 110 }}>
                         <div>{r.respondente}</div>
-                        <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>{r.setor}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 400, color: 'var(--text-muted)' }}>{r.setor}</div>
                         <button
                           onClick={() => handleDeleteResponse(r.id)}
                           title="Remover respondente"
-                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, marginTop: 2 }}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 13, marginTop: 2 }}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -585,8 +585,8 @@ export default function PessoasClimaPage() {
                     return (
                       <tr key={q.id}>
                         <td>{q.id}ª</td>
-                        <td style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{q.categoria}</td>
-                        <td style={{ fontSize: 12.5 }}>{q.texto}</td>
+                        <td style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>{q.categoria}</td>
+                        <td style={{ fontSize: 14 }}>{q.texto}</td>
                         {responses.map((r) => {
                           const v = r.notas[q.id];
                           return (
@@ -615,7 +615,7 @@ export default function PessoasClimaPage() {
         {tab === 'parecer' && (
           <div className="card" style={{ padding: 20 }}>
             <div className="card-title" style={{ marginBottom: 4 }}>Parecer da Pesquisa de Clima & Plano de Ação</div>
-            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
               Registre a análise qualitativa do consultor, pontos críticos e ações corretivas para apresentação à diretoria.
             </p>
             <textarea
@@ -626,7 +626,7 @@ export default function PessoasClimaPage() {
                 setParecer(e.target.value);
                 persist(questions, responses, e.target.value);
               }}
-              style={{ lineHeight: 1.6, fontSize: 13.5 }}
+              style={{ lineHeight: 1.6, fontSize: 15 }}
             />
           </div>
         )}

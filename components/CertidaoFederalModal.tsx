@@ -97,14 +97,14 @@ export default function CertidaoFederalModal({ empresaIdInicial, onFechar, empre
           </select>
         </div>
 
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 14.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Gera o Relatório de Situação Fiscal (SITFIS) pelo Integra Contador. Ele mostra as pendências na Receita e na PGFN, mas não é uma certidão.
         </p>
 
         {resultado && rotulo && (
           <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
             <span className={`badge ${rotulo.classe}`}>{rotulo.texto}</span>
-            {resultado.mensagem && <div style={{ fontSize: 13, marginTop: 8 }}>{resultado.mensagem}</div>}
+            {resultado.mensagem && <div style={{ fontSize: 14.5, marginTop: 8 }}>{resultado.mensagem}</div>}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               {temPdfRelatorio(resultado.situacao) && (
                 <a className="btn btn-secondary btn-sm" href={`/api/certidoes/${resultado.certidaoId}/download`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>

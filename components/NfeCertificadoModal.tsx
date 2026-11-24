@@ -209,7 +209,7 @@ export default function NfeCertificadoModal({
               <h3 style={{ fontSize: 17, fontWeight: 600, color: '#111827', margin: 0 }}>
                 Certificado Digital para Busca de Notas (NF-e)
               </h3>
-              <span style={{ fontSize: 12.5, color: '#6b7280' }}>
+              <span style={{ fontSize: 14, color: '#6b7280' }}>
                 {empresaNome} • CNPJ {formatCnpj(empresaCnpj)}
               </span>
             </div>
@@ -233,7 +233,7 @@ export default function NfeCertificadoModal({
             <>
               {/* Opções de Origem da Busca de Notas */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11.5, fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 10 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '.05em', display: 'block', marginBottom: 10 }}>
                   Como esta empresa busca as notas na SEFAZ:
                 </label>
 
@@ -253,29 +253,29 @@ export default function NfeCertificadoModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13.5, color: !dados?.usarProcuracao ? '#1e40af' : '#111827' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15, color: !dados?.usarProcuracao ? '#1e40af' : '#111827' }}>
                         <ShieldCheck size={16} color={!dados?.usarProcuracao ? '#2563eb' : '#6b7280'} />
                         Certificado Próprio A1
                       </div>
                       {!dados?.usarProcuracao && (
-                        <span className="badge badge-blue" style={{ fontSize: 10.5, padding: '2px 6px' }}>Ativo</span>
+                        <span className="badge badge-blue" style={{ fontSize: 13, padding: '2px 6px' }}>Ativo</span>
                       )}
                     </div>
 
                     {dados?.certProprio.cadastrado ? (
-                      <div style={{ fontSize: 12, color: '#4b5563' }}>
+                      <div style={{ fontSize: 14, color: '#4b5563' }}>
                         <div style={{ fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {dados.certProprio.titular}
                         </div>
                         <div style={{ color: dados.certProprio.vencido ? '#dc2626' : '#16a34a', marginTop: 3, fontWeight: 500 }}>
-                          {dados.certProprio.vencido ? '⚠️ Certificado Vencido' : `Válido até ${formatData(dados.certProprio.validoAte)}`}
+                          {dados.certProprio.vencido ? 'Certificado Vencido' : `Válido até ${formatData(dados.certProprio.validoAte)}`}
                         </div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                        <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                           Arquivo: {dados.certProprio.nomeArquivo || 'certificado.pfx'}
                         </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', marginTop: 6 }}>
+                      <div style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic', marginTop: 6 }}>
                         Nenhum certificado A1 próprio enviado ainda.
                       </div>
                     )}
@@ -296,29 +296,29 @@ export default function NfeCertificadoModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13.5, color: dados?.usarProcuracao ? '#166534' : '#111827' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15, color: dados?.usarProcuracao ? '#166534' : '#111827' }}>
                         <Building size={16} color={dados?.usarProcuracao ? '#16a34a' : '#6b7280'} />
                         Procuração Escritório
                       </div>
                       {dados?.usarProcuracao && (
-                        <span className="badge badge-green" style={{ fontSize: 10.5, padding: '2px 6px' }}>Ativo</span>
+                        <span className="badge badge-green" style={{ fontSize: 13, padding: '2px 6px' }}>Ativo</span>
                       )}
                     </div>
 
                     {dados?.certEscritorio.cadastrado ? (
-                      <div style={{ fontSize: 12, color: '#4b5563' }}>
+                      <div style={{ fontSize: 14, color: '#4b5563' }}>
                         <div style={{ fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {dados.certEscritorio.titular}
                         </div>
                         <div style={{ color: dados.certEscritorio.vencido ? '#dc2626' : '#16a34a', marginTop: 3, fontWeight: 500 }}>
-                          {dados.certEscritorio.vencido ? '⚠️ Certificado Vencido' : `Válido até ${formatData(dados.certEscritorio.validoAte)}`}
+                          {dados.certEscritorio.vencido ? 'Certificado Vencido' : `Válido até ${formatData(dados.certEscritorio.validoAte)}`}
                         </div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                        <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                           Status: {dados.certEscritorio.procuracaoStatus === 'ativa' ? 'Procuração Confirmada' : 'Cadastrada no escritório'}
                         </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', marginTop: 6 }}>
+                      <div style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic', marginTop: 6 }}>
                         Escritório sem certificado cadastrado.
                       </div>
                     )}
@@ -332,7 +332,7 @@ export default function NfeCertificadoModal({
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   background: '#f8fafc', padding: '10px 16px', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 20
                 }}>
-                  <div style={{ fontSize: 12.5, color: '#334155' }}>
+                  <div style={{ fontSize: 14, color: '#334155' }}>
                     Origem selecionada: <strong>{dados.usarProcuracao ? 'Procuração do Escritório' : 'Certificado Próprio A1'}</strong>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -341,7 +341,7 @@ export default function NfeCertificadoModal({
                       disabled={alternandoModo}
                       onClick={() => handleAlternarModo(!dados.usarProcuracao)}
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 12 }}
+                      style={{ fontSize: 14 }}
                     >
                       {dados.usarProcuracao ? 'Mudar para Certificado Próprio' : 'Mudar para Procuração'}
                     </button>
@@ -350,7 +350,7 @@ export default function NfeCertificadoModal({
                         type="button"
                         onClick={handleRemoverCertProprio}
                         className="btn btn-secondary btn-sm"
-                        style={{ color: '#dc2626', fontSize: 12 }}
+                        style={{ color: '#dc2626', fontSize: 14 }}
                         title="Remover arquivo do certificado próprio"
                       >
                         <Trash2 size={13} />
@@ -366,7 +366,7 @@ export default function NfeCertificadoModal({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <Upload size={16} color="#2563eb" />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                  <span style={{ fontSize: 15.5, fontWeight: 600, color: '#111827' }}>
                     {dados?.certProprio.cadastrado ? 'Substituir / Atualizar Certificado A1' : 'Cadastrar Certificado A1 da Empresa'}
                   </span>
                 </div>
@@ -394,16 +394,16 @@ export default function NfeCertificadoModal({
                     {arquivo ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#1e40af' }}>
                         <FileCheck size={20} />
-                        <span style={{ fontWeight: 500, fontSize: 13.5 }}>{arquivo.name}</span>
-                        <span style={{ fontSize: 11.5, color: '#6b7280' }}>({(arquivo.size / 1024).toFixed(1)} KB)</span>
+                        <span style={{ fontWeight: 500, fontSize: 15 }}>{arquivo.name}</span>
+                        <span style={{ fontSize: 13.5, color: '#6b7280' }}>({(arquivo.size / 1024).toFixed(1)} KB)</span>
                       </div>
                     ) : (
                       <div>
                         <Upload size={22} style={{ margin: '0 auto 6px', color: '#64748b' }} />
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 500, color: '#334155' }}>
                           Clique para selecionar ou arraste o arquivo <strong>.pfx</strong> ou <strong>.p12</strong>
                         </div>
-                        <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2 }}>
+                        <div style={{ fontSize: 13.5, color: '#94a3b8', marginTop: 2 }}>
                           O arquivo é criptografado em cofre AES-256 e nunca é exposto
                         </div>
                       </div>
@@ -412,7 +412,7 @@ export default function NfeCertificadoModal({
 
                   {/* Campo de Senha */}
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: 14, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 4 }}>
                       Senha do Certificado Digital
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -422,7 +422,7 @@ export default function NfeCertificadoModal({
                         onChange={(e) => setSenha(e.target.value)}
                         placeholder="Digite a senha do arquivo PFX"
                         style={{
-                          width: '100%', padding: '9px 36px 9px 12px', fontSize: 13,
+                          width: '100%', padding: '9px 36px 9px 12px', fontSize: 14.5,
                           border: '1px solid #d1d5db', borderRadius: 6, outline: 'none'
                         }}
                       />
@@ -445,7 +445,7 @@ export default function NfeCertificadoModal({
                     disabled={enviando || !arquivo || !senha}
                     className="btn btn-primary"
                     style={{
-                      width: '100%', padding: '10px 16px', fontSize: 13.5,
+                      width: '100%', padding: '10px 16px', fontSize: 15,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       opacity: enviando || !arquivo || !senha ? 0.6 : 1
                     }}
@@ -476,7 +476,7 @@ export default function NfeCertificadoModal({
           <button
             onClick={onClose}
             className="btn btn-secondary"
-            style={{ fontSize: 13 }}
+            style={{ fontSize: 14.5 }}
           >
             Fechar
           </button>

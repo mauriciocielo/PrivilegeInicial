@@ -4,6 +4,9 @@ import { store, type Cliente, type Lancamento, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { formatarCpfCnpj } from '../../../lib/formatar-documento';
+import { Banknote as IcoBanknote, BarChart3 as IcoBarChart3, Building2 as IcoBuilding2, CheckCircle2 as IcoCheckCircle2, Factory as IcoFactory, Inbox as IcoInbox, Landmark as IcoLandmark, User as IcoUser, Users as IcoUsers, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 type Tab = 'lista' | 'historico';
 type TipoFiltro = '' | 'cliente' | 'fornecedor' | 'ambos';
@@ -175,7 +178,7 @@ export default function ClientesPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
         <p>Use o seletor no menu lateral para escolher a empresa.</p>
       </div>
@@ -186,7 +189,7 @@ export default function ClientesPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">👥 Clientes & Fornecedores</div>
+          <div className="page-title">Clientes & Fornecedores</div>
           <div className="page-subtitle">{filtered.length} cadastro(s) encontrado(s)</div>
         </div>
         <div className="header-actions">
@@ -199,12 +202,12 @@ export default function ClientesPage() {
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card green">
-            <div className="stat-icon green">👤</div>
+            <div className="stat-icon green"><IcoUser size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Clientes Ativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{totalClientes}</div>
           </div>
           <div className="stat-card blue">
-            <div className="stat-icon blue">🏭</div>
+            <div className="stat-icon blue"><IcoFactory size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Fornecedores Ativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{totalFornecedores}</div>
           </div>
@@ -214,7 +217,7 @@ export default function ClientesPage() {
             <div className="stat-value" style={{ fontSize: 24 }}>{clientes.length}</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid var(--accent)' }}>
-            <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--accent)' }}>📊</div>
+            <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--accent)' }}><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Inativos</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{clientes.filter(c => !c.ativo).length}</div>
           </div>
@@ -227,7 +230,7 @@ export default function ClientesPage() {
               ← Voltar à Lista
             </button>
             <span style={{ fontWeight: 700, fontSize: 15 }}>
-              📋 Histórico: {selectedCliente.nomeFantasia || selectedCliente.nome}
+              Histórico: {selectedCliente.nomeFantasia || selectedCliente.nome}
             </span>
             {badgeTipo(selectedCliente.tipo)}
           </div>
@@ -238,22 +241,22 @@ export default function ClientesPage() {
           <>
             <div className="stat-grid" style={{ marginBottom: 20 }}>
               <div className="stat-card green">
-                <div className="stat-icon green">💰</div>
+                <div className="stat-icon green"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Receber (pendente)</div>
                 <div className="stat-value" style={{ fontSize: 16, color: 'var(--green)' }}>{fmt.currency(totalReceber)}</div>
               </div>
               <div className="stat-card blue">
-                <div className="stat-icon blue">✅</div>
+                <div className="stat-icon blue"><IcoCheckCircle2 size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Já Recebido</div>
                 <div className="stat-value" style={{ fontSize: 16 }}>{fmt.currency(totalRecebido)}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">💸</div>
+                <div className="stat-icon red"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Pagar (pendente)</div>
                 <div className="stat-value" style={{ fontSize: 16, color: 'var(--red)' }}>{fmt.currency(totalPagar)}</div>
               </div>
               <div className="stat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
-                <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>🏦</div>
+                <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Total Pago a Fornecedor</div>
                 <div className="stat-value" style={{ fontSize: 16 }}>{fmt.currency(totalPago)}</div>
               </div>
@@ -271,13 +274,13 @@ export default function ClientesPage() {
                   { label: 'Limite de Crédito', value: selectedCliente.limiteCredito ? fmt.currency(selectedCliente.limiteCredito) : '—' },
                 ].map(({ label, value }) => value ? (
                   <div key={label}>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-                    <div style={{ fontSize: 13, marginTop: 2 }}>{value}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+                    <div style={{ fontSize: 14.5, marginTop: 2 }}>{value}</div>
                   </div>
                 ) : null)}
               </div>
               {selectedCliente.observacao && (
-                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)', borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 6, fontSize: 14, color: 'var(--text-secondary)', borderLeft: '3px solid var(--accent)' }}>
                   💬 {selectedCliente.observacao}
                 </div>
               )}
@@ -285,7 +288,7 @@ export default function ClientesPage() {
 
             {/* Lançamentos vinculados */}
             <div className="card">
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontWeight: 700, fontSize: 14 }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontWeight: 700, fontSize: 15.5 }}>
                 Lançamentos Vinculados ({historicoLancs.length})
               </div>
               <div className="table-wrap">
@@ -303,14 +306,14 @@ export default function ClientesPage() {
                     {historicoLancs.length === 0 ? (
                       <tr><td colSpan={5}>
                         <div className="empty-state" style={{ padding: 30 }}>
-                          <div className="empty-state-icon">📭</div>
+                          <div className="empty-state-icon"><IcoInbox size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhum lançamento vinculado</h3>
                           <p>Vincule este cadastro ao criar ou editar lançamentos em Contas a Pagar/Receber.</p>
                         </div>
                       </td></tr>
                     ) : historicoLancs.map(l => (
                       <tr key={l.id}>
-                        <td style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmt.date(l.data)}</td>
+                        <td style={{ fontSize: 14, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmt.date(l.data)}</td>
                         <td style={{ fontWeight: 500 }}>{l.descricao}</td>
                         <td>{l.tipo === 'receita' ? <span className="badge badge-green">Receita</span> : <span className="badge badge-red">Despesa</span>}</td>
                         <td><span className={`badge ${l.status === 'realizado' ? 'badge-blue' : 'badge-yellow'}`}>{l.status === 'realizado' ? 'Realizado' : 'Previsto'}</span></td>
@@ -346,7 +349,7 @@ export default function ClientesPage() {
                     <option value="ambos">Ambos</option>
                   </select>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14.5, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
                   <input type="checkbox" checked={apenasAtivos} onChange={e => setApenasAtivos(e.target.checked)} />
                   Apenas Ativos
                 </label>
@@ -372,7 +375,7 @@ export default function ClientesPage() {
                     {filtered.length === 0 ? (
                       <tr><td colSpan={8}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">👥</div>
+                          <div className="empty-state-icon"><IcoUsers size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhum cadastro encontrado</h3>
                           <p>Clique em "＋ Novo Cadastro" para adicionar um cliente ou fornecedor.</p>
                         </div>
@@ -382,19 +385,19 @@ export default function ClientesPage() {
                         <td>
                           <div style={{ fontWeight: 600 }}>{c.nome}</div>
                           {c.nomeFantasia && c.nomeFantasia !== c.nome && (
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{c.nomeFantasia}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{c.nomeFantasia}</div>
                           )}
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{c.cpfCnpj}</td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14 }}>{formatarCpfCnpj(c.cpfCnpj)}</td>
                         <td>{badgeTipo(c.tipo)}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           {[c.cidade, c.estado].filter(Boolean).join(' / ') || '—'}
                         </td>
-                        <td style={{ fontSize: 12 }}>
+                        <td style={{ fontSize: 14 }}>
                           <div>{c.contato || '—'}</div>
-                          {c.email && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.email}</div>}
+                          {c.email && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{c.email}</div>}
                         </td>
-                        <td style={{ fontSize: 12, textAlign: 'right' }}>
+                        <td style={{ fontSize: 14, textAlign: 'right' }}>
                           {c.limiteCredito ? fmt.currency(c.limiteCredito) : '—'}
                         </td>
                         <td>
@@ -406,13 +409,13 @@ export default function ClientesPage() {
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => openHistorico(c)}
                               title="Ver histórico de lançamentos"
                             >
-                              📋 Histórico
+                              Histórico
                             </button>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(c)} title="Editar">✏️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(c)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
                             <button
                               className="btn btn-ghost btn-sm btn-icon"
                               onClick={() => toggleAtivo(c)}
@@ -420,7 +423,7 @@ export default function ClientesPage() {
                             >
                               {c.ativo ? '🔕' : '✅'}
                             </button>
-                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)} title="Excluir">🗑️</button>
+                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(c.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                           </div>
                         </td>
                       </tr>
@@ -451,7 +454,7 @@ export default function ClientesPage() {
                   style={{ flex: 1, justifyContent: 'center' }}
                   onClick={() => setForm(f => ({ ...f, tipo: t }))}
                 >
-                  {t === 'cliente' ? '👤 Cliente' : t === 'fornecedor' ? '🏭 Fornecedor' : '🔄 Ambos'}
+                  {t === 'cliente' ? 'Cliente' : t === 'fornecedor' ? 'Fornecedor' : 'Ambos'}
                 </button>
               ))}
             </div>
@@ -470,11 +473,11 @@ export default function ClientesPage() {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      style={{ padding: '8px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+                      style={{ padding: '8px 12px', fontSize: 14, whiteSpace: 'nowrap' }}
                       onClick={fetchCnpj}
                       disabled={fetchingDoc}
                     >
-                      {fetchingDoc ? '⏳' : '🔍 Buscar CNPJ'}
+                      {fetchingDoc ? '⏳' : 'Buscar CNPJ'}
                     </button>
                   )}
                 </div>

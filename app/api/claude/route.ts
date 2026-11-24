@@ -3,11 +3,15 @@ import { getWhatsAppConfig } from '@/lib/whatsapp-service';
 import { resolveWhatsAppOwnerId } from '@/lib/whatsapp-owner';
 import { getEmailDbPool } from '@/lib/email-db';
 import { generateText, type AiConfigSource } from '@/lib/ai-provider';
+import { requireAuth } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // Sem login, qualquer pessoa na internet poderia consumir as chaves de IA do escritório.
+    const auth = await requireAuth(req);
+    if (auth.error) return auth.error;
     const body = await req.json();
     const {
       prompt,

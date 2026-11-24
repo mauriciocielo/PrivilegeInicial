@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   X, ChevronDown, LayoutDashboard, NotebookPen, ReceiptText, MessageSquare, Menu,
-  Building2, Sun, Moon, LogOut, Search, BarChart3, type LucideIcon,
+  Building2, LogOut, Search, BarChart3, type LucideIcon,
 } from 'lucide-react';
 import type { Empresa } from '../lib/store';
 
@@ -26,10 +26,7 @@ interface MobileNavShellProps {
   selectableEmpresas: Empresa[];
   selectedEmpresaId: string;
   onSelectEmpresa: (id: string) => void;
-  onNavigate: (href: string) => void;
-  theme: string;
-  onToggleTheme: () => void;
-  onLogout: () => void;
+  onNavigate: (href: string) => void;  onLogout: () => void;
 }
 
 export default function MobileNavShell({
@@ -46,10 +43,7 @@ export default function MobileNavShell({
   selectableEmpresas,
   selectedEmpresaId,
   onSelectEmpresa,
-  onNavigate,
-  theme,
-  onToggleTheme,
-  onLogout,
+  onNavigate,  onLogout,
 }: MobileNavShellProps) {
   const [expandedSection, setExpandedSection] = useState<string>(navSections[0]?.section || '');
   const prefixo = role === 'cliente' ? '/cliente' : '/consultor';
@@ -94,11 +88,11 @@ export default function MobileNavShell({
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary, #171717)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--text-primary, #171717)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {userName || 'Privilege Gestão'}
                 </div>
                 {userEmail && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted, #737373)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted, #737373)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {userEmail}
                   </div>
                 )}
@@ -143,7 +137,7 @@ export default function MobileNavShell({
                   border: '1px solid var(--border, #e5e5e5)',
                   background: 'var(--bg-base, #fafafa)',
                   color: 'var(--text-muted, #525252)',
-                  fontSize: 13,
+                  fontSize: 14.5,
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
@@ -154,7 +148,7 @@ export default function MobileNavShell({
 
               {selectableEmpresas.length > 0 && (
                 <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted, #737373)', marginBottom: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted, #737373)', marginBottom: 4 }}>
                     <Building2 size={11} style={{ color: '#600000' }} /> Empresa Ativa
                   </label>
                   <select
@@ -170,7 +164,7 @@ export default function MobileNavShell({
                       border: '1px solid var(--border, #e5e5e5)',
                       background: 'var(--bg-card, #ffffff)',
                       color: 'var(--text-primary, #171717)',
-                      fontSize: 13,
+                      fontSize: 14.5,
                       fontWeight: 600,
                     }}
                   >
@@ -203,7 +197,7 @@ export default function MobileNavShell({
                         border: 'none',
                         background: isOpen ? 'rgba(96, 0, 0, 0.06)' : 'transparent',
                         color: isOpen ? '#600000' : 'var(--text-primary, #171717)',
-                        fontSize: 13,
+                        fontSize: 14.5,
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
@@ -241,7 +235,7 @@ export default function MobileNavShell({
                                 border: 'none',
                                 background: active ? '#600000' : 'transparent',
                                 color: active ? '#ffffff' : 'var(--text-primary, #262626)',
-                                fontSize: 13.5,
+                                fontSize: 15,
                                 fontWeight: active ? 600 : 500,
                                 cursor: 'pointer',
                                 textAlign: 'left',
@@ -270,14 +264,6 @@ export default function MobileNavShell({
                 gap: 8,
               }}
             >
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="btn btn-secondary btn-sm"
-                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                {theme === 'dark' ? <><Sun size={14} /> Claro</> : <><Moon size={14} /> Escuro</>}
-              </button>
               <button
                 type="button"
                 onClick={() => {

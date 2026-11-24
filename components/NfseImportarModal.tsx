@@ -70,17 +70,17 @@ export default function NfseImportarModal({ notas, clientes, padroes, portadores
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onFechar()}>
+    <div className="modal-overlay nfse-ui" onClick={e => e.target === e.currentTarget && onFechar()}>
       <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h2 className="modal-title">📥 Importar lista de notas</h2>
+          <h2 className="modal-title">Importar lista de notas</h2>
           <button className="modal-close" onClick={onFechar}>✕</button>
         </div>
 
         <div className="form-row">
           <div className="form-group" style={{ flex: 2 }}>
             <label className="form-label">Planilha (.xlsx, .xls ou .csv)</label>
-            <input type="file" accept=".xlsx,.xls,.csv" style={{ fontSize: 12 }} onChange={e => {
+            <input type="file" accept=".xlsx,.xls,.csv" style={{ fontSize: 14 }} onChange={e => {
               const selecionado = e.target.files?.[0] || null;
               setArquivo(selecionado);
               setLinhas(null);
@@ -95,17 +95,17 @@ export default function NfseImportarModal({ notas, clientes, padroes, portadores
             }} />
           </div>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+        <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
           Obrigatórios: documento e nome do tomador, valor e descrição. Código do serviço e município usam o padrão da configuração se ficarem vazios.{' '}
-          <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => baixarModeloImportacao()}>⬇️ Baixar modelo</button>
+          <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 13, padding: '2px 8px' }} onClick={() => baixarModeloImportacao()}>⬇️ Baixar modelo</button>
         </div>
 
-        {lendo && <div style={{ fontSize: 13, marginBottom: 16 }}>⏳ Lendo a planilha...</div>}
+        {lendo && <div style={{ fontSize: 14.5, marginBottom: 16 }}>Lendo a planilha...</div>}
 
         {linhas && linhas.length > 0 && !lendo && (
           <>
             {comErro > 0 && (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
+              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 14.5 }}>
                 {comErro} linha(s) com erro não serão importadas. Corrija na planilha e envie de novo.
               </div>
             )}
@@ -124,14 +124,14 @@ export default function NfseImportarModal({ notas, clientes, padroes, portadores
                   {linhas.map(l => (
                     <tr key={l.linha} onClick={() => l.erros.length === 0 && alternar(l.linha)} style={{ cursor: l.erros.length === 0 ? 'pointer' : 'default' }}>
                       <td><input type="checkbox" disabled={l.erros.length > 0} checked={selecionadas.has(l.linha)} onChange={() => alternar(l.linha)} onClick={e => e.stopPropagation()} /></td>
-                      <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{l.linha}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 14 }}>{l.linha}</td>
                       <td>
                         <div style={{ fontWeight: 500 }}>{l.dados.tomadorRazaoSocial || '—'}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{l.dados.tomadorCnpjCpf}</div>
-                        {l.erros.length > 0 && <div style={{ fontSize: 11, color: 'var(--red)' }}>{l.erros.join('; ')}</div>}
-                        {l.erros.length === 0 && jaExiste(l) && <div style={{ fontSize: 11, color: '#f59e0b' }}>Já existe nota igual nesta competência</div>}
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{l.dados.tomadorCnpjCpf}</div>
+                        {l.erros.length > 0 && <div style={{ fontSize: 13, color: 'var(--red)' }}>{l.erros.join('; ')}</div>}
+                        {l.erros.length === 0 && jaExiste(l) && <div style={{ fontSize: 13, color: '#f59e0b' }}>Já existe nota igual nesta competência</div>}
                       </td>
-                      <td style={{ fontSize: 12 }}>{l.dados.dataCompetencia}</td>
+                      <td style={{ fontSize: 14 }}>{l.dados.dataCompetencia}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(l.dados.valorServicos)}</td>
                     </tr>
                   ))}
@@ -152,7 +152,7 @@ export default function NfseImportarModal({ notas, clientes, padroes, portadores
         </div>
 
         <div className="form-actions" style={{ marginTop: 20 }}>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginRight: 'auto' }}>
+          <span style={{ fontSize: 14.5, color: 'var(--text-muted)', marginRight: 'auto' }}>
             As notas viram rascunhos: nada é enviado ao Sefin nesta etapa.
           </span>
           <button className="btn btn-secondary" onClick={onFechar}>Cancelar</button>

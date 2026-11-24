@@ -72,7 +72,7 @@ export default function BrandLogo({ size = 48, showText = true, subtitle }: Bran
               </div>
               {subtitle && (
                 <div className="logo-sub" style={{
-                  fontSize: 10,
+                  fontSize: 12.5,
                   color: 'var(--text-secondary)',
                   letterSpacing: '1px',
                   textTransform: 'uppercase',

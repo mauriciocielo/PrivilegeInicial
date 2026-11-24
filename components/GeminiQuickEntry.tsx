@@ -235,23 +235,23 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <span style={{ fontSize: 20 }}>🤖</span>
         <div>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>Privilege AI Lançador Multimodal</h3>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>Anexe um comprovante de pagamento/fatura (imagem/pdf) ou digite a transação em linguagem natural</p>
+          <h3 style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--accent)' }}>Privilege AI Lançador Multimodal</h3>
+          <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Anexe um comprovante de pagamento/fatura (imagem/pdf) ou digite a transação em linguagem natural</p>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="gemini-entrada" style={{ display: 'flex', gap: 8 }}>
           <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
             <input
               type="text"
               className="form-control"
-              placeholder={isListening ? "Ouvindo... Fale o lançamento e eu identificarei 🎙️" : "Ex: Recebi R$ 350,00 via Pix ontem para o Caixa Geral..."}
+              placeholder={isListening ? "Ouvindo... Fale o lançamento e eu identificarei " : "Ex: Recebi R$ 350,00 via Pix ontem para o Caixa Geral..."}
               value={text}
               onChange={e => setText(e.target.value)}
               disabled={loading}
               style={{ 
-                fontSize: 13, 
+                fontSize: 14.5, 
                 flex: 1, 
                 paddingRight: '40px',
                 borderColor: isListening ? 'var(--red)' : undefined, 
@@ -301,7 +301,7 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
             onClick={() => document.getElementById('gemini-file-upload')?.click()}
             disabled={loading}
             title="Anexar Comprovante ou Nota Fiscal (Imagem/PDF)"
-            style={{ padding: '10px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ padding: '10px 14px', fontSize: 14.5, display: 'flex', alignItems: 'center', gap: 6 }}
           >
             📎 {fileData ? 'Alterar' : 'Anexar'}
           </button>
@@ -312,17 +312,17 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
             disabled={loading || (!text.trim() && !fileData)}
             style={{ padding: '10px 18px' }}
           >
-            {loading ? '⏳ Processando...' : '→ Identificar'}
+            {loading ? 'Processando...' : '→ Identificar'}
           </button>
         </div>
 
         {fileData && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(96,0,0,0.06)', padding: '6px 12px', borderRadius: 20, width: 'fit-content', border: '1px solid rgba(96,0,0,0.1)' }}>
-            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>📄 {fileData.name}</span>
+            <span style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600 }}>📄 {fileData.name}</span>
             <button
               type="button"
               onClick={handleClearFile}
-              style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
               title="Remover anexo"
             >
               ✕
@@ -333,26 +333,26 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
 
       {detected && (
         <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', letterSpacing: 0.5, marginBottom: 8 }}>
-            🔍 Lançamento Identificado com Sucesso
+          <div style={{ fontSize: 14, fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', letterSpacing: 0.5, marginBottom: 8 }}>
+            Lançamento Identificado com Sucesso
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Descrição</div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{detected.descricao}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Descrição</div>
+              <div style={{ fontSize: 14.5, fontWeight: 600 }}>{detected.descricao}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Valor</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: detected.tipo === 'receita' ? 'var(--green)' : 'var(--red)' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Valor</div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: detected.tipo === 'receita' ? 'var(--green)' : 'var(--red)' }}>
                 {detected.tipo === 'receita' ? '+' : '-'}{fmt.currency(detected.valor || 0)}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Data</div>
-              <div style={{ fontSize: 13 }}>{detected.data ? fmt.date(detected.data) : '-'}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Data</div>
+              <div style={{ fontSize: 14.5 }}>{detected.data ? fmt.date(detected.data) : '-'}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Tipo</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Tipo</div>
               <div>
                 <span className={`badge ${detected.tipo === 'receita' ? 'badge-green' : 'badge-red'}`}>
                   {detected.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
@@ -360,12 +360,12 @@ Se o documento/texto não especificar o portador ou plano de contas, escolha a c
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Plano de Contas</div>
-              <div style={{ fontSize: 12, fontWeight: 500 }}>{selectedPc ? `${selectedPc.codigo} - ${selectedPc.descricao}` : '-'}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Plano de Contas</div>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedPc ? `${selectedPc.codigo} - ${selectedPc.descricao}` : '-'}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Portador</div>
-              <div style={{ fontSize: 12, fontWeight: 500 }}>{selectedPort?.nome || '-'}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Portador</div>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedPort?.nome || '-'}</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

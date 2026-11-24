@@ -5,6 +5,8 @@ import { store, type Imobilizado, uid } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { Building2 as IcoBuilding2, HardHat as IcoHardHat, Package as IcoPackage, TrendingDown as IcoTrendingDown, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 export default function ImobilizadoPage() {
   const [empresaId, setEmpresaId] = useState('');
@@ -160,7 +162,7 @@ export default function ImobilizadoPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
       </div>
     </div>
@@ -170,13 +172,13 @@ export default function ImobilizadoPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">🏗️ Ativo Imobilizado</div>
+          <div className="page-title">Ativo Imobilizado</div>
           <div className="page-subtitle">Controle de bens, patrimônios e depreciação acumulada</div>
         </div>
         <div className="header-actions">
           <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
-          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>📥 Importar planilha</button>
+          <button className="btn btn-secondary" onClick={() => fileRef.current?.click()}>Importar planilha</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Novo Bem</button>
         </div>
       </div>
@@ -185,17 +187,17 @@ export default function ImobilizadoPage() {
         
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card blue">
-            <div className="stat-icon blue">📦</div>
+            <div className="stat-icon blue"><IcoPackage size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Valor Total de Aquisição</div>
             <div className="stat-value">{fmt.currency(calculos.totalAquisicao)}</div>
           </div>
           <div className="stat-card orange">
-            <div className="stat-icon orange">📉</div>
+            <div className="stat-icon orange"><IcoTrendingDown size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Depreciação Acumulada</div>
             <div className="stat-value">{fmt.currency(calculos.totalDepreciado)}</div>
           </div>
           <div className="stat-card green">
-            <div className="stat-icon green">💰</div>
+            <div className="stat-icon green"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Valor Residual (Atual)</div>
             <div className="stat-value">{fmt.currency(calculos.totalAtual)}</div>
           </div>
@@ -221,7 +223,7 @@ export default function ImobilizadoPage() {
                 {calculos.list.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">🏗️</div>
+                      <div className="empty-state-icon"><IcoHardHat size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhum bem imobilizado cadastrado</h3>
                       <p>Clique em "+ Novo Bem" para começar o controle.</p>
                     </div>
@@ -230,16 +232,16 @@ export default function ImobilizadoPage() {
                   <tr key={i.id}>
                     <td style={{ fontWeight: 600 }}>{i.nome}</td>
                     <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.quantidade ?? 1}</td>
-                    <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{fmt.date(i.dataAquisicao)}</td>
+                    <td style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>{fmt.date(i.dataAquisicao)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 500 }}>{i.taxaDepreciacao}% a.a.</td>
-                    <td style={{ textAlign: 'right', fontSize: 13 }}>{i.mesesUso} meses</td>
+                    <td style={{ textAlign: 'right', fontSize: 14.5 }}>{i.mesesUso} meses</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--blue)' }}>{fmt.currency(i.valorAquisicao)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--orange)' }}>{fmt.currency(i.depAcumulada)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--green)' }}>{fmt.currency(i.valorAtual)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(i)}>✏️</button>
-                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(i.id)}>🗑️</button>
+                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(i)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(i.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                       </div>
                     </td>
                   </tr>
@@ -282,7 +284,7 @@ export default function ImobilizadoPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-muted)' }}>
               Lembretes de Taxas Anuais: Veículos (20%), Computadores (20%), Máquinas (10%), Móveis (10%), Imóveis (4%), Terrenos (0%).
             </div>
 

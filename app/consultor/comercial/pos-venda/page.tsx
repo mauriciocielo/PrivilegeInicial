@@ -148,28 +148,28 @@ export default function PosVendaCsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 20 }}>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Nota Média NPS</span>
             <Smile size={15} color="#16a34a" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: '#16a34a' }}>{stats.avgNps.toFixed(1)} / 10</div>
         </div>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
             <span>Clientes Promotores (NPS 9–10)</span>
             <RefreshCw size={15} color="var(--accent)" />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{stats.promoters}</div>
         </div>
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Contas em Risco (Churn)</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>Contas em Risco (Churn)</div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6, color: stats.atRisk > 0 ? '#dc2626' : '#16a34a' }}>{stats.atRisk}</div>
         </div>
       </div>
 
       <div className="card" style={{ padding: 18 }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                 <th style={{ padding: 8 }}>Cliente</th>
@@ -186,29 +186,29 @@ export default function PosVendaCsPage() {
               {rows.map((r, idx) => (
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ width: 155, fontSize: 12 }} value={r.clientName} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, clientName: e.target.value } : x)))} />
+                    <input className="form-control" style={{ width: 155, fontSize: 14 }} value={r.clientName} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, clientName: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input type="date" className="form-control" style={{ width: 130, fontSize: 12 }} value={r.lastPurchase} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, lastPurchase: e.target.value } : x)))} />
+                    <input type="date" className="form-control" style={{ width: 130, fontSize: 14 }} value={r.lastPurchase} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, lastPurchase: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input type="number" className="form-control" style={{ width: 70, fontSize: 12 }} value={r.repurchaseCount} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, repurchaseCount: Number(e.target.value) } : x)))} />
+                    <input type="number" className="form-control" style={{ width: 70, fontSize: 14 }} value={r.repurchaseCount} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, repurchaseCount: Number(e.target.value) } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input type="number" min={0} max={10} className="form-control" style={{ width: 65, fontSize: 12 }} value={r.nps} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, nps: Number(e.target.value) } : x)))} />
+                    <input type="number" min={0} max={10} className="form-control" style={{ width: 65, fontSize: 14 }} value={r.nps} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, nps: Number(e.target.value) } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <select className="form-control" style={{ width: 110, fontSize: 12 }} value={r.healthScore} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, healthScore: e.target.value as any } : x)))}>
-                      <option value="verde">🟢 Saudável</option>
-                      <option value="amarelo">🟡 Atenção</option>
-                      <option value="vermelho">🔴 Risco</option>
+                    <select className="form-control" style={{ minWidth: 110, width: 'auto', fontSize: 14 }} value={r.healthScore} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, healthScore: e.target.value as any } : x)))}>
+                      <option value="verde">Saudável</option>
+                      <option value="amarelo">Atenção</option>
+                      <option value="vermelho">Risco</option>
                     </select>
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ width: 180, fontSize: 12 }} value={r.upsellOpportunity} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, upsellOpportunity: e.target.value } : x)))} />
+                    <input className="form-control" style={{ width: 180, fontSize: 14 }} value={r.upsellOpportunity} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, upsellOpportunity: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
-                    <input className="form-control" style={{ width: 210, fontSize: 12 }} value={r.nextAction} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, nextAction: e.target.value } : x)))} />
+                    <input className="form-control" style={{ width: 210, fontSize: 14 }} value={r.nextAction} onChange={e => setRows(prev => prev.map((x, i) => (i === idx ? { ...x, nextAction: e.target.value } : x)))} />
                   </td>
                   <td style={{ padding: 6 }}>
                     <button type="button" onClick={() => setRows(prev => prev.filter((_, i) => i !== idx))} className="btn btn-secondary" style={{ padding: '5px 8px', color: '#dc2626' }}>

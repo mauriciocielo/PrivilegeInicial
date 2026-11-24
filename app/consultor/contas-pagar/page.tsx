@@ -5,6 +5,8 @@ import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { downloadCsv } from '../../../lib/csv';
+import { AlertTriangle as IcoAlertTriangle, Banknote as IcoBanknote, BarChart3 as IcoBarChart3, Building2 as IcoBuilding2, CheckCircle2 as IcoCheckCircle2, Hourglass as IcoHourglass } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 type Filtros = { portadorId: string; search: string; mes: string; planoContaId: string; clienteId: string; vencimento: 'todos' | 'vencidos' | 'hoje' | 'proximos7' | 'proximos30' };
 
@@ -248,7 +250,7 @@ export default function ContasPagarPage() {
   if (!empresaId) return (
     <div className="page-body">
       <div className="empty-state">
-        <div className="empty-state-icon">🏢</div>
+        <div className="empty-state-icon"><IcoBuilding2 size={20} strokeWidth={2} aria-hidden /></div>
         <h3>Selecione uma empresa</h3>
         <p>Use o seletor no menu lateral para escolher a empresa.</p>
       </div>
@@ -259,14 +261,14 @@ export default function ContasPagarPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">💸 Contas a Pagar</div>
+          <div className="page-title">Contas a Pagar</div>
           <div className="page-subtitle">{empresa?.nomeFantasia || empresa?.razaoSocial} — {pendentes.length} pendente(s)</div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
           {selectedIds.length > 0 && (
             <>
               <button className="btn btn-primary" onClick={marcarPagoLote}>
-                ✅ Pagar {selectedIds.length} Selecionado(s) · {fmt.currency(totalSelecionado)}
+                Pagar {selectedIds.length} Selecionado(s) · {fmt.currency(totalSelecionado)}
               </button>
               <button className="btn btn-danger btn-sm" onClick={async () => {
                 if (!(await confirmAsync(`Excluir ${selectedIds.length} lançamento(s)?`))) return;
@@ -274,7 +276,7 @@ export default function ContasPagarPage() {
                 setSelectedIds([]);
                 load(empresaId);
               }}>
-                🗑️ Excluir ({selectedIds.length})
+                Excluir ({selectedIds.length})
               </button>
             </>
           )}
@@ -287,44 +289,44 @@ export default function ContasPagarPage() {
         {/* KPI Cards */}
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card red">
-            <div className="stat-icon red">⏳</div>
+            <div className="stat-icon red"><IcoHourglass size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Pendente</div>
             <div className="stat-value" style={{ fontSize: 18, color: 'var(--red)' }}>{fmt.currency(totalPendente)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pendentes.length} conta(s)</div>
           </div>
           <div className="stat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
-            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>⚠️</div>
+            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}><IcoAlertTriangle size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Vencidas</div>
             <div className="stat-value" style={{ fontSize: 18, color: '#f59e0b' }}>{fmt.currency(vencidos.reduce((a, l) => a + l.valor, 0))}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{vencidos.length} conta(s)</div>
           </div>
           <div className="stat-card blue">
-            <div className="stat-icon blue">✅</div>
+            <div className="stat-icon blue"><IcoCheckCircle2 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Pago (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPago)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{pagos.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{pagos.length} conta(s)</div>
           </div>
           <div className="stat-card purple">
-            <div className="stat-icon purple">📊</div>
+            <div className="stat-icon purple"><IcoBarChart3 size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Total Geral (filtro)</div>
             <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(totalPendente + totalPago)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{filtered.length} conta(s)</div>
           </div>
         </div>
 
         {/* Quick Filters */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {([
-            { key: 'todos', label: '📋 Todos' },
-            { key: 'vencidos', label: '🔴 Vencidos' },
-            { key: 'hoje', label: '🟡 Vence Hoje' },
-            { key: 'proximos7', label: '📅 Próx. 7 dias' },
-            { key: 'proximos30', label: '📆 Próx. 30 dias' },
+            { key: 'todos', label: 'Todos' },
+            { key: 'vencidos', label: 'Vencidos' },
+            { key: 'hoje', label: 'Vence Hoje' },
+            { key: 'proximos7', label: 'Próx. 7 dias' },
+            { key: 'proximos30', label: 'Próx. 30 dias' },
           ] as const).map(f => (
             <button
               key={f.key}
               className={`btn ${filtros.vencimento === f.key ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: 12.5 }}
+              style={{ fontSize: 14 }}
               onClick={() => setFiltros(x => ({ ...x, vencimento: f.key }))}
             >
               {f.label}
@@ -400,7 +402,7 @@ export default function ContasPagarPage() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">💸</div>
+                      <div className="empty-state-icon"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                       <h3>Nenhuma conta a pagar encontrada</h3>
                       <p>Ajuste os filtros ou cadastre uma nova conta.</p>
                     </div>
@@ -415,20 +417,20 @@ export default function ContasPagarPage() {
                       <td style={{ textAlign: 'center' }}>
                         <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggleSelect(l.id)} />
                       </td>
-                      <td style={{ fontSize: 12, whiteSpace: 'nowrap', color: isVencido ? 'var(--red)' : 'var(--text-secondary)', fontWeight: isVencido ? 700 : 400 }}>
+                      <td style={{ fontSize: 14, whiteSpace: 'nowrap', color: isVencido ? 'var(--red)' : 'var(--text-secondary)', fontWeight: isVencido ? 700 : 400 }}>
                         {fmt.date(l.data)}
                       </td>
                       <td style={{ fontWeight: 500, maxWidth: 220 }}>
                         <div>
                           {l.descricao}
-                          {l.origem === 'api' && <span title="Lançado automaticamente via integração de API" className="badge badge-blue" style={{ marginLeft: 6, fontSize: 9.5 }}>🔌 API</span>}
+                          {l.origem === 'api' && <span title="Lançado automaticamente via integração de API" className="badge badge-blue" style={{ marginLeft: 6, fontSize: 12 }}>API</span>}
                         </div>
-                        {l.clienteId && (() => { const c = clientes.find(x => x.id === l.clienteId); return c ? <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 2, fontWeight: 600 }}>🏭 {c.nomeFantasia || c.nome}</div> : null; })()}
-                        {l.observacao && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{l.observacao}</div>}
+                        {l.clienteId && (() => { const c = clientes.find(x => x.id === l.clienteId); return c ? <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2, fontWeight: 600 }}>🏭 {c.nomeFantasia || c.nome}</div> : null; })()}
+                        {l.observacao && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{l.observacao}</div>}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
-                      <td style={{ fontSize: 12 }}>{port?.nome || '-'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
+                      <td style={{ fontSize: 14 }}>{port?.nome || '-'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>{l.numeroDocumento || '-'}</td>
                       <td><span className={`badge ${cls}`}>{label}</span></td>
                       <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--red)', whiteSpace: 'nowrap' }}>
                         -{fmt.currency(l.valor)}
@@ -438,24 +440,24 @@ export default function ContasPagarPage() {
                           {l.status === 'previsto' ? (
                             <button
                               className="btn btn-primary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => marcarPago(l.id)}
                               title="Marcar como pago"
                             >
-                              ✅ Pagar
+                              Pagar
                             </button>
                           ) : (
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px' }}
+                              style={{ fontSize: 13, padding: '4px 8px' }}
                               onClick={() => marcarPendente(l.id)}
                               title="Desfazer pagamento"
                             >
                               ↩ Desfazer
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar">✏️</button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir">🗑️</button>
+                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(l)} title="Editar"><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(l.id)} title="Excluir"><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                         </div>
                       </td>
                     </tr>
@@ -465,7 +467,7 @@ export default function ContasPagarPage() {
               {filtered.length > 0 && (
                 <tfoot>
                   <tr style={{ background: 'var(--bg-card2)' }}>
-                    <td colSpan={7} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', paddingLeft: 12 }}>
+                    <td colSpan={7} style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', paddingLeft: 12 }}>
                       {filtered.length} registro(s) | {pendentes.length} pendente(s) | {pagos.length} pago(s)
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--red)' }}>
@@ -523,7 +525,7 @@ export default function ContasPagarPage() {
                 <option value="">— Sem vínculo com cadastro —</option>
                 {clientes.map(c => <option key={c.id} value={c.id}>{c.nomeFantasia || c.nome} ({c.cpfCnpj})</option>)}
               </select>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Vincule ao fornecedor cadastrado para rastrear o histórico financeiro.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Vincule ao fornecedor cadastrado para rastrear o histórico financeiro.</div>
             </div>
 
             <div className="form-group">

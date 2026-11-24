@@ -7,7 +7,7 @@ import Image from 'next/image';
 import BrandLogo from '../../components/BrandLogo';
 import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
-import { inter as sans, instrumentSerif as serif } from '../fonts';
+import { inter as sans } from '../fonts';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -243,7 +243,7 @@ export default function LoginPage() {
       background: '#fdfdfd', color: '#171717'
     }}>
       <style>{`
-        h3, h2, h1 { font-family: ${serif.style.fontFamily}; }
+        h3, h2, h1 { font-family: ${sans.style.fontFamily}; font-weight: 700; letter-spacing: -0.02em; }
         .login-card {
           background: #fff;
           border: 1px solid #e5e5e5;
@@ -314,7 +314,7 @@ export default function LoginPage() {
             <Link href="/novo-layout#servicos" className="nav-link">Serviços</Link>
             <Link href="/novo-layout#quem-somos" className="nav-link">Quem Somos</Link>
             <Link href="/novo-layout#contato" className="nav-link">Contato</Link>
-            <Link href="/novo-layout" style={{ background: '#600000', color: '#fff', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontWeight: 500, fontSize: 14, transition: 'background 0.2s' }}>
+            <Link href="/novo-layout" style={{ background: '#600000', color: '#fff', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontWeight: 500, fontSize: 15.5, transition: 'background 0.2s' }}>
               ← Voltar ao Site
             </Link>
           </div>
@@ -325,12 +325,12 @@ export default function LoginPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
         <div className="login-card" style={{ width: '100%', maxWidth: '480px', padding: '48px' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <h1 className="serif" style={{ fontSize: 40, marginBottom: 8, color: '#000', letterSpacing: '-0.02em' }}>Área do Cliente</h1>
+            <h1 style={{ fontSize: 32, marginBottom: 8, color: '#000', letterSpacing: '-0.02em' }}>Área do Cliente</h1>
             <p style={{ fontSize: 15, color: '#525252' }}>Acesse sua conta para gerenciar relatórios, documentos e BPO.</p>
           </div>
 
           {error && (
-            <div style={{ marginBottom: 20, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: '12px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ marginBottom: 20, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: '12px', fontSize: 15.5, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>⚠️</span> {error}
             </div>
           )}
@@ -340,14 +340,14 @@ export default function LoginPage() {
             <form onSubmit={handleTwoFactorSubmit}>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🔐</div>
-                <h3 className="serif" style={{ fontSize: 24, marginBottom: 8, color: '#000' }}>Verificação em duas etapas</h3>
-                <p style={{ fontSize: 14, color: '#525252' }}>
+                <h3 style={{ fontSize: 21, marginBottom: 8, color: '#000' }}>Verificação em duas etapas</h3>
+                <p style={{ fontSize: 15.5, color: '#525252' }}>
                   Digite o código de 6 dígitos do seu aplicativo autenticador ou código de backup.
                 </p>
               </div>
 
               <div className="form-group" style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>Código de Acesso</label>
+                <label style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>Código de Acesso</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -362,7 +362,7 @@ export default function LoginPage() {
               </div>
 
               <button type="submit" className="btn-primary-custom" disabled={loading}>
-                {loading ? '⏳ Verificando...' : 'Confirmar Código →'}
+                {loading ? 'Verificando...' : 'Confirmar Código →'}
               </button>
 
               {lockedUser && (
@@ -374,7 +374,7 @@ export default function LoginPage() {
                   }}
                   style={{
                     width: '100%', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'center',
-                    alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, border: '1.5px solid #e5e5e5', cursor: 'pointer',
+                    alignItems: 'center', gap: 8, fontSize: 15.5, fontWeight: 600, border: '1.5px solid #e5e5e5', cursor: 'pointer',
                     background: 'transparent', color: '#525252', transition: 'all 0.2s', marginTop: 12
                   }}
                 >
@@ -386,7 +386,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setTwoFactorToken(null); setTwoFactorCode(''); setError(''); setLockedUser(null); }}
-                  style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}
+                  style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', fontSize: 15.5, textDecoration: 'underline' }}
                 >
                   Voltar para o Login
                 </button>
@@ -396,14 +396,14 @@ export default function LoginPage() {
             <form onSubmit={handleLinkCnpj}>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
                 {googleUserData?.picture && <img src={googleUserData.picture} alt="Avatar" style={{width: 60, height: 60, borderRadius: 30, marginBottom: 12}} />}
-                <h3 className="serif" style={{ fontSize: 24, marginBottom: 8, color: '#000' }}>Olá, {googleUserData?.name}!</h3>
-                <p style={{ fontSize: 14, color: '#525252' }}>
+                <h3 style={{ fontSize: 21, marginBottom: 8, color: '#000' }}>Olá, {googleUserData?.name}!</h3>
+                <p style={{ fontSize: 15.5, color: '#525252' }}>
                   Primeiro acesso detectado. Por favor, informe o CNPJ da sua empresa para vincular:
                 </p>
               </div>
 
               <div className="form-group" style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>CNPJ da Empresa</label>
+                <label style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>CNPJ da Empresa</label>
                 <input
                   type="text"
                   className="form-control-custom"
@@ -416,14 +416,14 @@ export default function LoginPage() {
               </div>
 
               <button type="submit" className="btn-primary-custom" disabled={loading}>
-                {loading ? '⏳ Verificando...' : 'Vincular Conta →'}
+                {loading ? 'Verificando...' : 'Vincular Conta →'}
               </button>
 
               <div style={{ marginTop: 20, textAlign: 'center' }}>
                 <button
                   type="button"
                   onClick={() => { setRequiresCnpj(false); setGoogleUserData(null); }}
-                  style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}
+                  style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', fontSize: 15.5, textDecoration: 'underline' }}
                 >
                   Voltar para o Login
                 </button>
@@ -434,7 +434,7 @@ export default function LoginPage() {
             <>
               <form onSubmit={handleLogin}>
                 <div className="form-group" style={{ marginBottom: 20 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>E-mail corporativo</label>
+                  <label style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>E-mail corporativo</label>
                   <input
                     type="email"
                     className="form-control-custom"
@@ -446,7 +446,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="form-group" style={{ marginBottom: 28 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>Senha</label>
+                  <label style={{ fontSize: 14.5, fontWeight: 600, color: '#171717', marginBottom: 8, display: 'block' }}>Senha</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -471,13 +471,13 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <button type="submit" className="btn-primary-custom" disabled={loading}>
-                  {loading ? '⏳ Conectando...' : 'Entrar no Sistema →'}
+                  {loading ? 'Conectando...' : 'Entrar no Sistema →'}
                 </button>
               </form>
 
               <div style={{ margin: '28px 0', display: 'flex', alignItems: 'center', color: '#a3a3a3' }}>
                 <div style={{ flex: 1, height: 1, background: '#e5e5e5' }}></div>
-                <div style={{ padding: '0 12px', fontSize: 12, fontWeight: 500, color: '#737373' }}>Ou continue com</div>
+                <div style={{ padding: '0 12px', fontSize: 14, fontWeight: 500, color: '#737373' }}>Ou continue com</div>
                 <div style={{ flex: 1, height: 1, background: '#e5e5e5' }}></div>
               </div>
 
@@ -529,7 +529,7 @@ export default function LoginPage() {
                       setLoading(false);
                     }
                   }}
-                  style={{ color: '#600000', fontSize: '13px', textDecoration: 'none', fontWeight: 600 }}
+                  style={{ color: '#600000', fontSize: '14.5px', textDecoration: 'none', fontWeight: 600 }}
                   onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
                   onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                 >

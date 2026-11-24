@@ -544,16 +544,16 @@ INSTRUÇÕES DE COMPORTAMENTO:
         {/* Abas */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid var(--border-light)', paddingBottom: 12 }}>
           <button className={`btn ${activeTab === 'geral' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('geral')}>
-            📊 Projeções & Simulador
+            Projeções & Simulador
           </button>
           <button className={`btn ${activeTab === 'dre' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('dre')}>
-            📋 DRE por Competência
+            DRE por Competência
           </button>
           <button className={`btn ${activeTab === 'capital' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('capital')}>
-            ⛓️ Capital de Giro (NCG)
+            Capital de Giro (NCG)
           </button>
           <button className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('chat')}>
-            💬 Privilege AI Copilot
+            Privilege AI Copilot
           </button>
         </div>
 
@@ -563,15 +563,15 @@ INSTRUÇÕES DE COMPORTAMENTO:
             <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 16 }}>Simulador de Cenários (Projeção de Caixa de 6 Meses)</h3>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Projetado com base nas médias operacionais</span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Projetado com base nas médias operacionais</span>
               </div>
 
               <div style={{ width: '100%', height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={projecoesData} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                    <XAxis dataKey="name" stroke="var(--text-muted)" style={{ fontSize: 11 }} />
-                    <YAxis stroke="var(--text-muted)" style={{ fontSize: 11 }} />
+                    <XAxis dataKey="name" stroke="var(--text-muted)" style={{ fontSize: 13 }} />
+                    <YAxis stroke="var(--text-muted)" style={{ fontSize: 13 }} />
                     <Tooltip formatter={(value) => fmt.currency(value as number)} />
                     <Legend />
                     <Line type="monotone" dataKey="Saldo Baseline" stroke="#64748b" strokeWidth={2} activeDot={{ r: 6 }} />
@@ -581,10 +581,10 @@ INSTRUÇÕES DE COMPORTAMENTO:
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-light)', marginTop: 20, paddingTop: 16 }}>
-                <h4 style={{ fontSize: 13, marginBottom: 16, color: 'var(--text-secondary)' }}>Ajuste os parâmetros para simular novos cenários operacionais:</h4>
+                <h4 style={{ fontSize: 14.5, marginBottom: 16, color: 'var(--text-secondary)' }}>Ajuste os parâmetros para simular novos cenários operacionais:</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 6 }}>
                       <span>Variação de Receitas</span>
                       <strong style={{ color: simReceitasDelta >= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {simReceitasDelta >= 0 ? '+' : ''}{simReceitasDelta}%
@@ -601,7 +601,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 6 }}>
                       <span>Variação de Custos & Despesas</span>
                       <strong style={{ color: simCustosDelta <= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {simCustosDelta >= 0 ? '+' : ''}{simCustosDelta}%
@@ -618,7 +618,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 6 }}>
                       <span>Alteração no Recebimento (PMR)</span>
                       <strong style={{ color: simPmrShift <= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {simPmrShift >= 0 ? '+' : ''}{simPmrShift} dias
@@ -635,7 +635,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, marginBottom: 6 }}>
                       <span>Alteração no Pagamento (PMP)</span>
                       <strong style={{ color: simPmpShift >= 0 ? 'var(--green)' : 'var(--red)' }}>
                         {simPmpShift >= 0 ? '+' : ''}{simPmpShift} dias
@@ -661,14 +661,14 @@ INSTRUÇÕES DE COMPORTAMENTO:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>⏳</span>
                   <div>
-                    <h4 style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Cofre de Sobrevivência (Runway)</h4>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Média baseada nas despesas fixas</span>
+                    <h4 style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Cofre de Sobrevivência (Runway)</h4>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Média baseada nas despesas fixas</span>
                   </div>
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: runway.mesesRunway >= 3 ? 'var(--green)' : '#d97706', margin: '8px 0' }}>
                   {runway.mesesRunway === Infinity ? 'Sem custos fixos' : runway.mesesRunway.toFixed(1) + ' meses'}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
                   A empresa dispõe de um caixa total de <strong>{fmt.currency(runway.caixaTotal)}</strong> para cobrir sua estrutura média fixa sem novas receitas.
                 </div>
               </div>
@@ -678,14 +678,14 @@ INSTRUÇÕES DE COMPORTAMENTO:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>⚖️</span>
                   <div>
-                    <h4 style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Ponto de Equilíbrio (Break-Even)</h4>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Faturamento operacional necessário</span>
+                    <h4 style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Ponto de Equilíbrio (Break-Even)</h4>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Faturamento operacional necessário</span>
                   </div>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', margin: '8px 0' }}>
                   {fmt.currency(breakEven.pontoEquilibrio)}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
                   Margem de contribuição média de <strong>{Math.round(breakEven.margemContribPct * 100)}%</strong>. Faturamento diário necessário médio: <strong>{fmt.currency(breakEven.pontoEquilibrio / 30)}</strong>.
                 </div>
               </div>
@@ -695,14 +695,14 @@ INSTRUÇÕES DE COMPORTAMENTO:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>⛓️</span>
                   <div>
-                    <h4 style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Necessidade de Giro (Simulado)</h4>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Impacto imediato no fluxo de caixa</span>
+                    <h4 style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0 }}>Necessidade de Giro (Simulado)</h4>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Impacto imediato no fluxo de caixa</span>
                   </div>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: simulacoes.ncgDelta <= 0 ? 'var(--green)' : 'var(--red)', margin: '8px 0' }}>
                   {simulacoes.ncgDelta > 0 ? '+' : ''}{fmt.currency(simulacoes.ncgDelta)}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: '1.4' }}>
                   A alteração proposta nos prazos de recebimento e pagamento demanda uma injeção de capital de <strong>{fmt.currency(simulacoes.ncgSim)}</strong> no caixa (anterior: {fmt.currency(prazosOriginais.ncg)}).
                 </div>
               </div>
@@ -715,7 +715,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                   <h3 style={{ fontSize: 16, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent)' }}>
                     <span>🧠</span> Inteligência Artificial do Simulador
                   </h3>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
                     Gere recomendações contábeis e financeiras automáticas de acordo com os parâmetros simulados nos sliders.
                   </p>
                 </div>
@@ -725,7 +725,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                   disabled={aiLoading}
                   style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                 >
-                  {aiLoading ? '⏳ Analisando...' : '🔮 Analisar Cenário com IA'}
+                  {aiLoading ? 'Analisando...' : 'Analisar Cenário com IA'}
                 </button>
               </div>
 
@@ -735,9 +735,9 @@ INSTRUÇÕES DE COMPORTAMENTO:
                     <div key={idx} className="card" style={{ background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: 8, padding: 16, margin: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 20 }}>{insight.icon}</span>
-                        <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>{insight.title}</h4>
+                        <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>{insight.title}</h4>
                       </div>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{insight.text}</p>
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{insight.text}</p>
                     </div>
                   ))}
                 </div>
@@ -752,7 +752,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ fontSize: 16, margin: 0 }}>Demonstrativo do Resultado do Exercício (Histórico Recente)</h3>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0 0' }}>Exibição baseada no regime de competência (data dos eventos realizados)</p>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '4px 0 0 0' }}>Exibição baseada no regime de competência (data dos eventos realizados)</p>
               </div>
             </div>
 
@@ -785,7 +785,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                       <td key={m.mes} style={{ textAlign: 'right' }}>{fmt.currency(m.margemContrib)}</td>
                     ))}
                   </tr>
-                  <tr style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                  <tr style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                     <td style={{ paddingLeft: 24 }}>Margem de Contribuição (%)</td>
                     {dreMeses.map(m => (
                       <td key={m.mes} style={{ textAlign: 'right' }}>{m.margemContribPct.toFixed(1)}%</td>
@@ -834,32 +834,32 @@ INSTRUÇÕES DE COMPORTAMENTO:
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ padding: 16, background: 'var(--bg-card2)', borderRadius: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Prazo Médio de Recebimento (PMR)</span>
+                    <span style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Prazo Médio de Recebimento (PMR)</span>
                     <strong style={{ fontSize: 15 }}>{prazosOriginais.pmr} dias</strong>
                   </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
                     Média de dias entre o cadastro de uma venda/receita e o recebimento efetivo no caixa.
                   </p>
                 </div>
 
                 <div style={{ padding: 16, background: 'var(--bg-card2)', borderRadius: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Prazo Médio de Pagamento (PMP)</span>
+                    <span style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>Prazo Médio de Pagamento (PMP)</span>
                     <strong style={{ fontSize: 15 }}>{prazosOriginais.pmp} dias</strong>
                   </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
                     Média de dias de prazo que a empresa usufrui para pagar seus fornecedores e despesas operacionais.
                   </p>
                 </div>
 
                 <div style={{ padding: 16, background: 'var(--border-light)', borderRadius: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Ciclo Financeiro (Ciclo de Caixa)</span>
+                    <span style={{ fontSize: 14.5, color: 'var(--text-secondary)', fontWeight: 600 }}>Ciclo Financeiro (Ciclo de Caixa)</span>
                     <strong style={{ fontSize: 15, color: prazosOriginais.pmr - prazosOriginais.pmp >= 0 ? 'var(--red)' : 'var(--green)' }}>
                       {prazosOriginais.pmr - prazosOriginais.pmp} dias
                     </strong>
                   </div>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
                     Espaço de tempo em dias que a empresa precisa financiar seus custos operacionais antes de receber o dinheiro de suas vendas.
                   </p>
                 </div>
@@ -871,23 +871,23 @@ INSTRUÇÕES DE COMPORTAMENTO:
               <h3 style={{ fontSize: 15, marginBottom: 16 }}>Necessidade de Capital de Giro (NCG)</h3>
               
               <div style={{ textAlign: 'center', padding: '24px 0', borderBottom: '1px solid var(--border-light)', marginBottom: 20 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Necessidade Estimada</div>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Necessidade Estimada</div>
                 <div style={{ fontSize: 32, fontWeight: 800, color: prazosOriginais.ncg >= 0 ? 'var(--red)' : 'var(--green)', margin: '8px 0' }}>
                   {fmt.currency(prazosOriginais.ncg)}
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: '80%', margin: '0 auto' }}>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: '80%', margin: '0 auto' }}>
                   Com base no faturamento médio mensal, este é o saldo operacional de liquidez necessário para manter a empresa saudável.
                 </p>
               </div>
 
               <div>
-                <h4 style={{ fontSize: 13, marginBottom: 12 }}>Diagnóstico do Consultor:</h4>
+                <h4 style={{ fontSize: 14.5, marginBottom: 12 }}>Diagnóstico do Consultor:</h4>
                 {prazosOriginais.ncg > 0 ? (
-                  <div style={{ padding: 12, background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, fontSize: 12, color: '#b91c1c', lineHeight: '1.5' }}>
+                  <div style={{ padding: 12, background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, fontSize: 14, color: '#b91c1c', lineHeight: '1.5' }}>
                     ⚠️ <strong>Atenção:</strong> Seu ciclo financeiro é positivo. A empresa precisa adiantar <strong>{prazosOriginais.pmr - prazosOriginais.pmp} dias</strong> de recursos antes do recebimento. Recomenda-se negociar prazos maiores com fornecedores ou acelerar o recebimento de clientes (ex: PIX/Antecipações).
                   </div>
                 ) : (
-                  <div style={{ padding: 12, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 8, fontSize: 12, color: '#15803d', lineHeight: '1.5' }}>
+                  <div style={{ padding: 12, background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 8, fontSize: 14, color: '#15803d', lineHeight: '1.5' }}>
                     ✓ <strong>Excelente:</strong> Ciclo financeiro negativo. Os fornecedores estão financiando a sua operação em <strong>{Math.abs(prazosOriginais.pmr - prazosOriginais.pmp)} dias</strong>. O faturamento entra em caixa antes do vencimento médio dos pagamentos.
                   </div>
                 )}
@@ -906,7 +906,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                 <span style={{ fontSize: 24 }}>💬</span>
                 <div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>Privilege AI Copilot</h3>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CFO Virtual de Elite — Conectado em tempo real ao seu caixa</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>CFO Virtual de Elite — Conectado em tempo real ao seu caixa</span>
                 </div>
               </div>
 
@@ -930,13 +930,13 @@ INSTRUÇÕES DE COMPORTAMENTO:
                         color: isAi ? 'var(--text-main)' : '#ffffff',
                         border: isAi ? '1px solid var(--border-light)' : 'none',
                         boxShadow: 'var(--shadow-sm)',
-                        fontSize: 13,
+                        fontSize: 14.5,
                         lineHeight: 1.5,
                         whiteSpace: 'pre-wrap'
                       }}>
                         {msg.text}
                       </div>
-                      <span style={{ fontSize: 9, color: 'var(--text-muted)', margin: '0 4px' }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '0 4px' }}>
                         {msg.timestamp}
                       </span>
                     </div>
@@ -952,10 +952,10 @@ INSTRUÇÕES DE COMPORTAMENTO:
                     padding: '12px 16px',
                     borderRadius: '16px 16px 16px 4px',
                     border: '1px solid var(--border-light)',
-                    fontSize: 13,
+                    fontSize: 14.5,
                     color: 'var(--text-muted)'
                   }}>
-                    <span className="animate-pulse">🧠 Analisando dados da empresa...</span>
+                    <span className="animate-pulse">Analisando dados da empresa...</span>
                   </div>
                 )}
               </div>
@@ -970,7 +970,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
                     disabled={chatLoading}
-                    style={{ fontSize: 13 }}
+                    style={{ fontSize: 14.5 }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !chatLoading) {
                         sendChatMessage(chatInput);
@@ -981,7 +981,7 @@ INSTRUÇÕES DE COMPORTAMENTO:
                     className="btn btn-primary"
                     onClick={() => sendChatMessage(chatInput)}
                     disabled={chatLoading || !chatInput.trim()}
-                    style={{ padding: '0 20px', fontSize: 13 }}
+                    style={{ padding: '0 20px', fontSize: 14.5 }}
                   >
                     Enviar
                   </button>
@@ -994,74 +994,74 @@ INSTRUÇÕES DE COMPORTAMENTO:
               
               {/* Quick Suggestions */}
               <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>💡</span> Sugestões Rápidas
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    style={{ textAlign: 'left', fontSize: 14, justifyContent: 'flex-start', padding: '8px 12px' }}
                     onClick={() => {
                       setChatInput('O que acontece se eu perder 20% das minhas receitas nos próximos meses?');
                     }}
                   >
-                    📉 Cenário: Perda de 20% de Receita
+                    Cenário: Perda de 20% de Receita
                   </button>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    style={{ textAlign: 'left', fontSize: 14, justifyContent: 'flex-start', padding: '8px 12px' }}
                     onClick={() => {
                       setChatInput('Qual é o meu ponto de equilíbrio (Break-Even) e como posso melhorá-lo?');
                     }}
                   >
-                    ⚖️ Como melhorar meu Break-Even?
+                    Como melhorar meu Break-Even?
                   </button>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    style={{ textAlign: 'left', fontSize: 14, justifyContent: 'flex-start', padding: '8px 12px' }}
                     onClick={() => {
                       setChatInput('Analise a necessidade de capital de giro (NCG) simulada. Que ações devo tomar?');
                     }}
                   >
-                    ⛓️ Diagnóstico de Capital de Giro (NCG)
+                    Diagnóstico de Capital de Giro (NCG)
                   </button>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ textAlign: 'left', fontSize: 12, justifyContent: 'flex-start', padding: '8px 12px' }}
+                    style={{ textAlign: 'left', fontSize: 14, justifyContent: 'flex-start', padding: '8px 12px' }}
                     onClick={() => {
                       setChatInput('Qual é o runway da empresa em meses e que medidas garantem mais estabilidade?');
                     }}
                   >
-                    ⏳ Análise de Sobrevivência (Runway)
+                    Análise de Sobrevivência (Runway)
                   </button>
                 </div>
               </div>
 
               {/* Sidebar Summary Card */}
               <div className="card" style={{ background: 'linear-gradient(135deg, rgba(96,0,0,0.02) 0%, var(--bg-card) 100%)', border: '1px solid var(--border-light)' }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>📊</span> Resumo de Contexto
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Empresa Ativa:</span>
                     <strong style={{ maxWidth: '160px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={companyName}>{companyName}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Saldo em Caixa:</span>
                     <strong>{fmt.currency(runway.caixaTotal)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Break-Even:</span>
                     <strong>{fmt.currency(breakEven.pontoEquilibrio)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Runway:</span>
                     <strong style={{ color: runway.mesesRunway >= 3 ? 'var(--green)' : '#d97706' }}>
                       {runway.mesesRunway === Infinity ? 'Sem custos' : runway.mesesRunway.toFixed(1) + ' meses'}
                     </strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderBottom: '1px solid var(--border-light)', paddingBottom: 6 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Ciclo Financeiro:</span>
                     <strong style={{ color: prazosOriginais.pmr - prazosOriginais.pmp >= 0 ? 'var(--red)' : 'var(--green)' }}>
                       {prazosOriginais.pmr - prazosOriginais.pmp} dias

@@ -159,7 +159,7 @@ export default function MonitorSaude24h() {
               {dados.banco.ok ? `Online • Uptime ${formatUptime(dados.uptimeSegundos)}` : 'Atenção no Banco'}
             </StatusBadge>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
             Última verificação: {new Date(dados.atualizadoEm).toLocaleTimeString('pt-BR')}
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function MonitorSaude24h() {
       {/* Integrações + Alerta WhatsApp */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         <div className="card">
-          <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 12 }}>Integrações &amp; Variáveis</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Integrações &amp; Variáveis</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
               { nome: 'Google Gemini (IA Server-side)', ok: dados.integracoes.gemini },
@@ -237,7 +237,7 @@ export default function MonitorSaude24h() {
                   padding: '8px 10px',
                   borderRadius: 8,
                   background: 'var(--bg-base)',
-                  fontSize: 12.5,
+                  fontSize: 14,
                 }}
               >
                 <span>{item.nome}</span>
@@ -250,8 +250,8 @@ export default function MonitorSaude24h() {
         </div>
 
         <div className="card">
-          <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 6 }}>Alerta no WhatsApp da Gestão</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Alerta no WhatsApp da Gestão</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>
             Dispare agora um resumo executivo da saúde do servidor, lotes 24h e certificados A1 para o WhatsApp do gestor.
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -280,8 +280,8 @@ export default function MonitorSaude24h() {
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>Certificados Digitais A1 (próximos 30 dias)</div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Certificados Digitais A1 (próximos 30 dias)</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               Avisos automáticos (30, 15, 7, 3 e 1 dia antes + vencidos) enviados via (46) 99980-0010 para <strong>(46) 3035-1018</strong>.
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function MonitorSaude24h() {
               value={telefoneCertificados}
               onChange={e => setTelefoneCertificados(e.target.value)}
               placeholder="4630351018"
-              style={{ width: 150, fontSize: 12.5, padding: '6px 10px' }}
+              style={{ width: 150, fontSize: 14, padding: '6px 10px' }}
             />
             <button
               type="button"
@@ -306,7 +306,7 @@ export default function MonitorSaude24h() {
           </div>
         </div>
         {dados.fiscal.certificadosAlerta.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#15803d' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, color: '#15803d' }}>
             <CheckCircle2 size={16} /> Todos os certificados A1 estão com validade em dia.
           </div>
         ) : (
@@ -323,7 +323,7 @@ export default function MonitorSaude24h() {
                   borderRadius: 8,
                   background: c.vencido ? '#fef2f2' : '#fffbeb',
                   border: `1px solid ${c.vencido ? '#fecaca' : '#fde68a'}`,
-                  fontSize: 12.5,
+                  fontSize: 14,
                 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>

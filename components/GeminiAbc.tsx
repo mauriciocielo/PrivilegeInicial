@@ -86,13 +86,13 @@ Retorne estritamente um array JSON válido (e nada mais) no formato:
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
          <div style={{ fontSize: 24 }}>🧠</div>
          <div>
-           <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>Insights ABC - Privilege Copilot</h3>
-           <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Análise automática da sua concentração de faturamento</p>
+           <h3 style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--accent)' }}>Insights ABC - Privilege Copilot</h3>
+           <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Análise automática da sua concentração de faturamento</p>
          </div>
       </div>
       {loading ? (
-        <div className="card" style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>
-           ⏳ Analisando padrão de dependência e vendas...
+        <div className="card" style={{ padding: 20, textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
+           Analisando padrão de dependência e vendas...
         </div>
       ) : (
         <div className="grid-3">
@@ -100,9 +100,9 @@ Retorne estritamente um array JSON válido (e nada mais) no formato:
              <div key={idx} className="card" style={{ background: 'var(--bg-card)', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 20 }}>{item.icon}</span>
-                  <strong style={{ fontSize: 13, color: 'var(--text-main)' }}>{item.title}</strong>
+                  <strong style={{ fontSize: 14.5, color: 'var(--text-main)' }}>{item.title}</strong>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{item.text}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{item.text}</div>
              </div>
           ))}
         </div>

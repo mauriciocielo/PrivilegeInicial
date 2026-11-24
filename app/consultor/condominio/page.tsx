@@ -8,6 +8,8 @@ import { uid } from '../../../lib/store';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { AlertTriangle as IcoAlertTriangle, Banknote as IcoBanknote, Check as IcoCheck, ClipboardList as IcoClipboardList, DoorOpen as IcoDoorOpen, Landmark as IcoLandmark, ShieldCheck as IcoShieldCheck, Wallet as IcoWallet } from 'lucide-react';
+import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 
 // Recharts dynamically imported without SSR to prevent Next.js hydration errors
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -447,8 +449,8 @@ export default function CondominioHubPage() {
       <div className="card" style={{ padding: 40, textAlign: 'center', marginTop: 30 }}>
         <div style={{ fontSize: 40, marginBottom: 20 }}>🏘️</div>
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Selecione um Condomínio Ativo</h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 13, maxWidth: 450, margin: '0 auto 20px auto' }}>
-          Para acessar os controles de condomínio, altere o Modo no topo do menu lateral para <strong>🏘️ Condomínios</strong> e selecione um condomínio de sua carteira.
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14.5, maxWidth: 450, margin: '0 auto 20px auto' }}>
+          Para acessar os controles de condomínio, altere o Modo no topo do menu lateral para <strong>Condomínios</strong> e selecione um condomínio de sua carteira.
         </p>
       </div>
     );
@@ -466,23 +468,23 @@ export default function CondominioHubPage() {
       <div className="page-body">
         {/* Abas */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid var(--border-light)', paddingBottom: 12, overflowX: 'auto' }}>
-          <button className={`btn ${activeTab === 'geral' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('geral')}>
-            📊 Painel Geral
+          <button className={`btn ${activeTab === 'geral' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('geral')}>
+            Painel Geral
           </button>
-          <button className={`btn ${activeTab === 'unidades' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('unidades')}>
-            🚪 Unidades ({unidades.length})
+          <button className={`btn ${activeTab === 'unidades' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('unidades')}>
+            Unidades ({unidades.length})
           </button>
-          <button className={`btn ${activeTab === 'taxas' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('taxas')}>
-            💰 Gerar Taxas / Boletos
+          <button className={`btn ${activeTab === 'taxas' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('taxas')}>
+            Gerar Taxas / Boletos
           </button>
-          <button className={`btn ${activeTab === 'prestacao' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('prestacao')}>
-            ⚖️ Prestação de Contas
+          <button className={`btn ${activeTab === 'prestacao' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('prestacao')}>
+            Prestação de Contas
           </button>
-          <button className={`btn ${activeTab === 'inadimplencia' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('inadimplencia')}>
-            ⚠️ Inadimplência ({inadimplenciaLista.length})
+          <button className={`btn ${activeTab === 'inadimplencia' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('inadimplencia')}>
+            Inadimplência ({inadimplenciaLista.length})
           </button>
-          <button className={`btn ${activeTab === 'financeiro' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 12.5 }} onClick={() => setActiveTab('financeiro')}>
-            💸 Contas a Pagar/Receber
+          <button className={`btn ${activeTab === 'financeiro' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14 }} onClick={() => setActiveTab('financeiro')}>
+            Contas a Pagar/Receber
           </button>
         </div>
 
@@ -491,22 +493,22 @@ export default function CondominioHubPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="stat-grid">
               <div className="stat-card blue">
-                <div className="stat-icon blue">🚪</div>
+                <div className="stat-icon blue"><IcoDoorOpen size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Total Unidades</div>
                 <div className="stat-value">{metricas.totalUnidades}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">⚠️</div>
+                <div className="stat-icon red"><IcoAlertTriangle size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Inadimplência</div>
                 <div className="stat-value">{metricas.inadimplenciaPct}%</div>
               </div>
               <div className="stat-card green">
-                <div className="stat-icon green">🛡️</div>
+                <div className="stat-icon green"><IcoShieldCheck size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Fundo de Reserva</div>
                 <div className="stat-value">{fmt.currency(metricas.reserveBalance)}</div>
               </div>
               <div className="stat-card purple">
-                <div className="stat-icon purple">🏦</div>
+                <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Caixa Total</div>
                 <div className="stat-value">{fmt.currency(metricas.totalCaixa)}</div>
               </div>
@@ -519,8 +521,8 @@ export default function CondominioHubPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="mes" stroke="var(--text-muted)" style={{ fontSize: 11 }} />
-                      <YAxis stroke="var(--text-muted)" style={{ fontSize: 11 }} />
+                      <XAxis dataKey="mes" stroke="var(--text-muted)" style={{ fontSize: 13 }} />
+                      <YAxis stroke="var(--text-muted)" style={{ fontSize: 13 }} />
                       <Tooltip formatter={(value) => fmt.currency(value as number)} />
                       <Legend />
                       <Bar dataKey="Receitas" fill="var(--green)" radius={[4, 4, 0, 0]} />
@@ -534,13 +536,13 @@ export default function CondominioHubPage() {
                 <h3 style={{ fontSize: 15, marginBottom: 12 }}>Atalhos Rápidos</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setActiveTab('unidades')}>
-                    🚪 Cadastrar Nova Unidade
+                    Cadastrar Nova Unidade
                   </button>
                   <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setActiveTab('taxas')}>
-                    💰 Faturar Taxas do Mês
+                    Faturar Taxas do Mês
                   </button>
                   <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setActiveTab('inadimplencia')}>
-                    ⚠️ Verificar Devedores
+                    Verificar Devedores
                   </button>
                 </div>
               </div>
@@ -554,7 +556,7 @@ export default function CondominioHubPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <h3 style={{ fontSize: 15, margin: 0 }}>Cadastro de Unidades / Condôminos</h3>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Mapeamento de apartamentos, frações ideais e moradores</span>
+                <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Mapeamento de apartamentos, frações ideais e moradores</span>
               </div>
               <button className="btn btn-primary" onClick={handleOpenNewUni}>＋ Cadastrar Unidade</button>
             </div>
@@ -576,7 +578,7 @@ export default function CondominioHubPage() {
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">🚪</div>
+                          <div className="empty-state-icon"><IcoDoorOpen size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Nenhuma unidade cadastrada</h3>
                           <p>Cadastre as unidades para faturar as mensalidades ordinárias.</p>
                         </div>
@@ -589,19 +591,19 @@ export default function CondominioHubPage() {
                         <td>
                           <div style={{ fontWeight: 600 }}>{u.proprietario}</div>
                           {u.moradorNome && u.moradorNome !== u.proprietario && (
-                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                              👤 Morador: {u.moradorNome}
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                              Morador: {u.moradorNome}
                             </div>
                           )}
                         </td>
                         <td style={{ fontFamily: 'monospace' }}>{(u.fracaoIdeal * 100).toFixed(2)}%</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           <div>Prop: {u.email || '-'}</div>
                           {u.moradorEmail && u.moradorEmail !== u.email && (
                             <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>Mor: {u.moradorEmail}</div>
                           )}
                         </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <td style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                           <div>Prop: {u.telefone || '-'}</div>
                           {u.moradorTelefone && u.moradorTelefone !== u.telefone && (
                             <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>Mor: {u.moradorTelefone}</div>
@@ -609,8 +611,8 @@ export default function CondominioHubPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditUni(u)}>✏️</button>
-                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteUnidade(u.id)}>🗑️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditUni(u)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteUnidade(u.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                           </div>
                         </td>
                       </tr>
@@ -626,7 +628,7 @@ export default function CondominioHubPage() {
         {activeTab === 'taxas' && (
           <div className="grid-12">
             <div className="card" style={{ gridColumn: 'span 5' }}>
-              <h3 style={{ fontSize: 15, marginBottom: 16 }}>💰 Gerar Boletos de Taxas</h3>
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>Gerar Boletos de Taxas</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Mês da Competência *</label>
@@ -638,14 +640,14 @@ export default function CondominioHubPage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       className={`btn ${tipoRateio === 'fixo' ? 'btn-primary' : 'btn-secondary'}`}
-                      style={{ flex: 1, fontSize: 12 }}
+                      style={{ flex: 1, fontSize: 14 }}
                       onClick={() => setTipoRateio('fixo')}
                     >
                       Valor Fixo Igual
                     </button>
                     <button
                       className={`btn ${tipoRateio === 'fracao' ? 'btn-primary' : 'btn-secondary'}`}
-                      style={{ flex: 1, fontSize: 12 }}
+                      style={{ flex: 1, fontSize: 14 }}
                       onClick={() => setTipoRateio('fracao')}
                     >
                       Por Fração Ideal
@@ -662,27 +664,27 @@ export default function CondominioHubPage() {
                   <div className="form-group">
                     <label className="form-label">Orçamento Total Despesas do Mês (R$)</label>
                     <input type="number" className="form-control" value={orcamentoTotal} onChange={e => setOrcamentoTotal(Number(e.target.value))} />
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                       Este valor total será rateado proporcionalmente à fração de cada unidade.
                     </div>
                   </div>
                 )}
 
                 <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
                     <input type="checkbox" checked={fundoReservaCheck} onChange={e => setFundoReservaCheck(e.target.checked)} />
                     Cobrar provisão Fundo de Reserva ({condo.fundoReservaPct || 10}%) adicional
                   </label>
                 </div>
 
                 <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }} onClick={handleGerarTaxas}>
-                  ⚡ Gerar Lançamentos de Cobrança
+                  Gerar Lançamentos de Cobrança
                 </button>
               </div>
             </div>
 
             <div className="card" style={{ gridColumn: 'span 7' }}>
-              <h3 style={{ fontSize: 15, marginBottom: 16 }}>📋 Prévia do Faturamento</h3>
+              <h3 style={{ fontSize: 15, marginBottom: 16 }}>Prévia do Faturamento</h3>
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -737,7 +739,7 @@ export default function CondominioHubPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ fontSize: 15, margin: 0 }}>Demonstrativo Mensal do Condomínio (Balancete)</h3>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Resumo de receitas arrecadadas e despesas líquidas liquidadas</span>
+                <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Resumo de receitas arrecadadas e despesas líquidas liquidadas</span>
               </div>
               <div className="form-group" style={{ margin: 0 }}>
                 <input type="month" className="form-control" value={mesPrestacao} onChange={e => setMesPrestacao(e.target.value)} />
@@ -748,8 +750,8 @@ export default function CondominioHubPage() {
               <table className="table-compact">
                 <thead>
                   <tr style={{ background: 'var(--bg-card2)' }}>
-                    <th style={{ fontSize: 13, fontWeight: 700 }}>Histórico da Conta</th>
-                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 700 }}>Valores Recebidos / Pagos</th>
+                    <th style={{ fontSize: 14.5, fontWeight: 700 }}>Histórico da Conta</th>
+                    <th style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 700 }}>Valores Recebidos / Pagos</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -807,7 +809,7 @@ export default function CondominioHubPage() {
 
                   <tr style={{ height: 20 }}></tr>
 
-                  <tr style={{ background: 'var(--border-light)', fontWeight: 900, fontSize: 13.5 }}>
+                  <tr style={{ background: 'var(--border-light)', fontWeight: 900, fontSize: 15 }}>
                     <td>(=) SUPERÁVIT / SALDO FINANCEIRO LÍQUIDO DO MÊS</td>
                     <td style={{ textAlign: 'right', color: prestacaoData.saldoMes >= 0 ? 'var(--green)' : 'var(--red)' }}>
                       {fmt.currency(prestacaoData.saldoMes)}
@@ -822,8 +824,8 @@ export default function CondominioHubPage() {
         {/* 5. INADIMPLENCIA */}
         {activeTab === 'inadimplencia' && (
           <div className="card">
-            <h3 style={{ fontSize: 15, marginBottom: 12 }}>⚠️ Relação de Unidades Devedoras (Em aberto)</h3>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, marginBottom: 12 }}>Relação de Unidades Devedoras (Em aberto)</h3>
+            <span style={{ fontSize: 14, color: 'var(--text-secondary)', display: 'block', marginBottom: 16 }}>
               Abaixo são listados os condôminos que possuem taxas ordinárias com status "Previsto" (não reconciliadas no banco).
             </span>
 
@@ -844,7 +846,7 @@ export default function CondominioHubPage() {
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state">
-                          <div className="empty-state-icon">✓</div>
+                          <div className="empty-state-icon"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
                           <h3>Excelente! Nenhuma inadimplência encontrada</h3>
                           <p>Todas as unidades estão com as taxas condominiais quitadas.</p>
                         </div>
@@ -859,16 +861,16 @@ export default function CondominioHubPage() {
                           <td>
                             <div style={{ fontWeight: 600 }}>{item.unidade.proprietario}</div>
                             {item.unidade.moradorNome && item.unidade.moradorNome !== item.unidade.proprietario && (
-                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Morador: {item.unidade.moradorNome}</div>
+                              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Morador: {item.unidade.moradorNome}</div>
                             )}
                           </td>
                           <td>
                             {item.parcelas.map(p => (
-                              <span key={p} className="badge badge-gray" style={{ marginRight: 4, fontSize: 10 }}>{p}</span>
+                              <span key={p} className="badge badge-gray" style={{ marginRight: 4, fontSize: 12.5 }}>{p}</span>
                             ))}
                           </td>
                           <td style={{ fontWeight: 800, color: 'var(--red)' }}>{fmt.currency(item.totalDevido)}</td>
-                          <td style={{ fontSize: 11, lineHeight: '14px' }}>
+                          <td style={{ fontSize: 13, lineHeight: '14px' }}>
                             <div>Prop: {item.unidade.telefone || '-'}</div>
                             {item.unidade.moradorTelefone && item.unidade.moradorTelefone !== item.unidade.telefone && (
                               <div style={{ marginTop: 2 }}>Mor: {item.unidade.moradorTelefone}</div>
@@ -886,9 +888,9 @@ export default function CondominioHubPage() {
                                   })
                                 }
                                 className="btn btn-secondary btn-sm"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '4px 10px', justifyContent: 'center' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '4px 10px', justifyContent: 'center' }}
                               >
-                                💬 Cobrar Proprietário
+                                Cobrar Proprietário
                               </button>
                               {item.unidade.moradorTelefone && item.unidade.moradorTelefone !== item.unidade.telefone && (
                                 <button
@@ -901,9 +903,9 @@ export default function CondominioHubPage() {
                                     })
                                   }
                                   className="btn btn-ghost btn-sm"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '3px 8px', border: '1px solid var(--border)', justifyContent: 'center' }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '3px 8px', border: '1px solid var(--border)', justifyContent: 'center' }}
                                 >
-                                  💬 Cobrar Morador
+                                  Cobrar Morador
                                 </button>
                               )}
                             </div>
@@ -924,22 +926,22 @@ export default function CondominioHubPage() {
             {/* Overview cards */}
             <div className="stat-grid">
               <div className="stat-card blue">
-                <div className="stat-icon blue">💰</div>
+                <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Receber (Pendente)</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.aReceberPendente)}</div>
               </div>
               <div className="stat-card red">
-                <div className="stat-icon red">💸</div>
+                <div className="stat-icon red"><IcoBanknote size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">A Pagar (Pendente)</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.aPagarPendente)}</div>
               </div>
               <div className="stat-card green">
-                <div className="stat-icon green">✓</div>
+                <div className="stat-icon green"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Recebido no Mês</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.recebidoMes)}</div>
               </div>
               <div className="stat-card purple">
-                <div className="stat-icon purple">🏦</div>
+                <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
                 <div className="stat-label">Pago no Mês</div>
                 <div className="stat-value" style={{ fontSize: 18 }}>{fmt.currency(finSummary.pagoMes)}</div>
               </div>
@@ -958,7 +960,7 @@ export default function CondominioHubPage() {
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Mês</label>
+                    <label className="form-label" style={{ fontSize: 13, marginBottom: 4 }}>Mês</label>
                     <input
                       type="month"
                       className="form-control"
@@ -968,7 +970,7 @@ export default function CondominioHubPage() {
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Tipo</label>
+                    <label className="form-label" style={{ fontSize: 13, marginBottom: 4 }}>Tipo</label>
                     <select className="form-control" style={{ height: 38 }} value={finTipoFilter} onChange={e => setFinTipoFilter(e.target.value as any)}>
                       <option value="">Todos os tipos</option>
                       <option value="receita">Receitas (A Receber)</option>
@@ -976,7 +978,7 @@ export default function CondominioHubPage() {
                     </select>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
+                    <label className="form-label" style={{ fontSize: 13, marginBottom: 4 }}>Status</label>
                     <select className="form-control" style={{ height: 38 }} value={finStatusFilter} onChange={e => setFinStatusFilter(e.target.value as any)}>
                       <option value="">Todos os status</option>
                       <option value="previsto">Pendente</option>
@@ -984,7 +986,7 @@ export default function CondominioHubPage() {
                     </select>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Unidade</label>
+                    <label className="form-label" style={{ fontSize: 13, marginBottom: 4 }}>Unidade</label>
                     <select className="form-control" style={{ height: 38 }} value={finUnidadeFilter} onChange={e => setFinUnidadeFilter(e.target.value)}>
                       <option value="">Todas as unidades</option>
                       {unidades.map(u => (
@@ -1026,7 +1028,7 @@ export default function CondominioHubPage() {
                       <tr>
                         <td colSpan={8}>
                           <div className="empty-state">
-                            <div className="empty-state-icon">📋</div>
+                            <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
                             <h3>Nenhum lançamento financeiro encontrado</h3>
                             <p>Adicione um lançamento manual ou utilize a aba "Gerar Taxas".</p>
                           </div>
@@ -1039,14 +1041,14 @@ export default function CondominioHubPage() {
                         const uni = unidades.find(u => u.id === l.unidadeId);
                         return (
                           <tr key={l.id}>
-                            <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
+                            <td style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmt.date(l.data)}</td>
                             <td style={{ fontWeight: 600 }}>
                               <div>{l.descricao}</div>
-                              {l.observacao && <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 'normal', marginTop: 4 }}>{l.observacao}</div>}
+                              {l.observacao && <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 'normal', marginTop: 4 }}>{l.observacao}</div>}
                             </td>
                             <td>{uni ? <span className="badge badge-gray">{uni.identificacao}</span> : '-'}</td>
-                            <td style={{ fontSize: 12 }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
-                            <td style={{ fontSize: 12 }}>{port?.nome || '-'}</td>
+                            <td style={{ fontSize: 14 }}>{pc ? `${pc.codigo} - ${pc.descricao}` : '-'}</td>
+                            <td style={{ fontSize: 14 }}>{port?.nome || '-'}</td>
                             <td>
                               <span className={`badge ${l.status === 'realizado' ? 'badge-green' : 'badge-yellow'}`}>
                                 {l.status === 'realizado' ? 'Liquidado' : 'Pendente'}
@@ -1061,7 +1063,7 @@ export default function CondominioHubPage() {
                                   <>
                                     <button
                                       className="btn btn-ghost btn-sm"
-                                      style={{ padding: '4px 8px', fontSize: 11, border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                      style={{ padding: '4px 8px', fontSize: 13, border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                       onClick={() => handleQuickPayReceive(l)}
                                     >
                                       ✓ Liquidar
@@ -1069,16 +1071,16 @@ export default function CondominioHubPage() {
                                     {l.tipo === 'receita' && (
                                       <button
                                         className="btn btn-secondary btn-sm"
-                                        style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                        style={{ padding: '4px 8px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                         onClick={() => handleOpenBoleto(l)}
                                       >
-                                        📄 Boleto
+                                        Boleto
                                       </button>
                                     )}
                                   </>
                                 )}
-                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditFin(l)}>✏️</button>
-                                <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteFinLanc(l.id)}>🗑️</button>
+                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleOpenEditFin(l)}><IcoPencil size={16} strokeWidth={2} aria-hidden /></button>
+                                <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteFinLanc(l.id)}><IcoTrash2 size={16} strokeWidth={2} aria-hidden /></button>
                               </div>
                             </td>
                           </tr>
@@ -1126,7 +1128,7 @@ export default function CondominioHubPage() {
             </div>
 
             <fieldset style={{ border: '1px solid var(--border-light)', borderRadius: 8, padding: '12px 16px', margin: '12px 0' }}>
-              <legend style={{ fontSize: 11.5, fontWeight: 700, padding: '0 8px', color: 'var(--primary)' }}>Dados do Proprietário</legend>
+              <legend style={{ fontSize: 13.5, fontWeight: 700, padding: '0 8px', color: 'var(--primary)' }}>Dados do Proprietário</legend>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Nome do Proprietário *</label>
@@ -1171,7 +1173,7 @@ export default function CondominioHubPage() {
               </div>
             </fieldset>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 13, userSelect: 'none', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 14.5, userSelect: 'none', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 id="moradorMesmo"
@@ -1184,7 +1186,7 @@ export default function CondominioHubPage() {
 
             {!moradorMesmo && (
               <fieldset style={{ border: '1px solid var(--border-light)', borderRadius: 8, padding: '12px 16px', margin: '12px 0' }}>
-                <legend style={{ fontSize: 11.5, fontWeight: 700, padding: '0 8px', color: 'var(--primary)' }}>Dados do Morador</legend>
+                <legend style={{ fontSize: 13.5, fontWeight: 700, padding: '0 8px', color: 'var(--primary)' }}>Dados do Morador</legend>
 
                 <div className="form-row">
                   <div className="form-group">
@@ -1383,7 +1385,7 @@ export default function CondominioHubPage() {
             <div className="modal-header no-print" style={{ fontFamily: 'var(--font-sans)', borderBottom: '1px solid var(--border-light)', paddingBottom: 12, marginBottom: 20 }}>
               <h2 className="modal-title">Visualizar Boleto Bancário</h2>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
+                <button className="btn btn-primary" onClick={() => window.print()}>Imprimir / Salvar PDF</button>
                 <button className="modal-close" onClick={() => setShowBoletoModal(false)}>✕</button>
               </div>
             </div>
@@ -1398,7 +1400,7 @@ export default function CondominioHubPage() {
                 <div style={{ borderLeft: '2px solid #000', borderRight: '2px solid #000', padding: '0 15px', fontSize: 18, fontWeight: 900 }}>
                   001-9
                 </div>
-                <div style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: 900, fontFamily: 'monospace' }}>
+                <div style={{ flex: 1, textAlign: 'right', fontSize: 14.5, fontWeight: 900, fontFamily: 'monospace' }}>
                   00190.00009 01234.567894 00000.120002 8 980100000{Math.floor(boletoLanc.valor).toString().padStart(4, '0')}
                 </div>
               </div>
@@ -1406,88 +1408,88 @@ export default function CondominioHubPage() {
               {/* Row 1 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Local de Pagamento</div>
-                  <div style={{ fontSize: 10 }}>PAGÁVEL EM QUALQUER BANCO OU VIA PIX</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Local de Pagamento</div>
+                  <div style={{ fontSize: 12.5 }}>PAGÁVEL EM QUALQUER BANCO OU VIA PIX</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Vencimento</div>
-                  <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>{fmt.date(boletoLanc.data)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Vencimento</div>
+                  <div style={{ fontSize: 13, fontWeight: 'bold', textAlign: 'right' }}>{fmt.date(boletoLanc.data)}</div>
                 </div>
               </div>
 
               {/* Row 2 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Beneficiário</div>
-                  <div style={{ fontSize: 10, fontWeight: 'bold' }}>{condo?.razaoSocial} — CNPJ: {condo?.cnpj}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Beneficiário</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 'bold' }}>{condo?.razaoSocial} — CNPJ: {condo?.cnpj}</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Agência / Código do Beneficiário</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>1234-5 / 987654-3</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Agência / Código do Beneficiário</div>
+                  <div style={{ fontSize: 12.5, textAlign: 'right' }}>1234-5 / 987654-3</div>
                 </div>
               </div>
 
               {/* Row 3 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data do Documento</div>
-                  <div style={{ fontSize: 10 }}>{new Date(boletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Data do Documento</div>
+                  <div style={{ fontSize: 12.5 }}>{new Date(boletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Número do Documento</div>
-                  <div style={{ fontSize: 10 }}>{boletoLanc.numeroDocumento || boletoLanc.id.slice(0, 8).toUpperCase()}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Número do Documento</div>
+                  <div style={{ fontSize: 12.5 }}>{boletoLanc.numeroDocumento || boletoLanc.id.slice(0, 8).toUpperCase()}</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie Doc.</div>
-                  <div style={{ fontSize: 10 }}>RC</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Espécie Doc.</div>
+                  <div style={{ fontSize: 12.5 }}>RC</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Aceite</div>
-                  <div style={{ fontSize: 10 }}>N</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Aceite</div>
+                  <div style={{ fontSize: 12.5 }}>N</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Data Processamento</div>
-                  <div style={{ fontSize: 10 }}>{new Date(boletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Data Processamento</div>
+                  <div style={{ fontSize: 12.5 }}>{new Date(boletoLanc.createdAt || Date.now()).toISOString().split('T')[0]}</div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Nosso Número</div>
-                  <div style={{ fontSize: 10, textAlign: 'right' }}>09/12345678-9</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Nosso Número</div>
+                  <div style={{ fontSize: 12.5, textAlign: 'right' }}>09/12345678-9</div>
                 </div>
               </div>
 
               {/* Row 4 */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Uso do Banco</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Uso do Banco</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Carteira</div>
-                  <div style={{ fontSize: 10 }}>09</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Carteira</div>
+                  <div style={{ fontSize: 12.5 }}>09</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Espécie</div>
-                  <div style={{ fontSize: 10 }}>R$</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Espécie</div>
+                  <div style={{ fontSize: 12.5 }}>R$</div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Quantidade</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Quantidade</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, borderRight: '1px solid #000', padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Valor</div>
-                  <div style={{ fontSize: 10 }}></div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Valor</div>
+                  <div style={{ fontSize: 12.5 }}></div>
                 </div>
                 <div style={{ flex: 1, padding: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor do Documento</div>
-                  <div style={{ fontSize: 11, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(boletoLanc.valor)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>(=) Valor do Documento</div>
+                  <div style={{ fontSize: 13, fontWeight: 'bold', textAlign: 'right' }}>{fmt.currency(boletoLanc.valor)}</div>
                 </div>
               </div>
 
               {/* Row 5 Instructions & Details */}
               <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                 <div style={{ flex: 3, borderRight: '1px solid #000', padding: 6, minHeight: 120 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>Instruções (Texto de responsabilidade do Beneficiário)</div>
-                  <div style={{ fontSize: 10, marginTop: 5, lineHeight: '14px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>Instruções (Texto de responsabilidade do Beneficiário)</div>
+                  <div style={{ fontSize: 12.5, marginTop: 5, lineHeight: '14px' }}>
                     • COBRANÇA REFERENTE A TAXA CONDOMINIAL DO MÊS DE COMPETÊNCIA DO CONDOMÍNIO.<br />
                     • APÓS O VENCIMENTO COBRAR MULTA DE 2,0% E JUROS DE 1,0% AO MÊS.<br />
                     • EM CASO DE DÚVIDAS ENTRAR EM CONTATO COM A ADMINISTRADORA PRIVILEGE.<br />
@@ -1498,31 +1500,31 @@ export default function CondominioHubPage() {
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Desconto / Abatimento</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(-) Desconto / Abatimento</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(-) Outras Deduções</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(-) Outras Deduções</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4, borderBottom: '1px solid #000' }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(+) Mora / Multa</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(+) Mora / Multa</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                   <div style={{ padding: 4 }}>
-                    <div style={{ fontSize: 8, fontWeight: 'bold' }}>(=) Valor Cobrado</div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>-</div>
+                    <div style={{ fontSize: 11, fontWeight: 'bold' }}>(=) Valor Cobrado</div>
+                    <div style={{ fontSize: 12.5, textAlign: 'right' }}>-</div>
                   </div>
                 </div>
               </div>
 
               {/* Row 6 Payer info */}
               <div style={{ padding: 6, borderBottom: '1px solid #000' }}>
-                <div style={{ fontSize: 8, fontWeight: 'bold' }}>Pagador</div>
+                <div style={{ fontSize: 11, fontWeight: 'bold' }}>Pagador</div>
                 {(() => {
                   const uni = unidades.find(u => u.id === boletoLanc.unidadeId);
                   return (
-                    <div style={{ fontSize: 10, lineHeight: '14px' }}>
+                    <div style={{ fontSize: 12.5, lineHeight: '14px' }}>
                       <strong>{uni ? uni.proprietario : 'Morador Geral'}</strong> — Unidade: {uni ? uni.identificacao : 'N/A'}<br />
                       E-mail: {uni?.email || 'N/A'} — Fone: {uni?.telefone || 'N/A'}<br />
                       {condo?.razaoSocial} — CEP: 95000-000 — RS
@@ -1534,7 +1536,7 @@ export default function CondominioHubPage() {
               {/* Barcode & Pix Code Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, padding: '0 10px' }}>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 5 }}>Ficha de Compensação (Código de Barras Bancário)</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 'bold', marginBottom: 5 }}>Ficha de Compensação (Código de Barras Bancário)</div>
                   {/* Simulated Barcode */}
                   <div style={{ display: 'flex', height: 45, width: 420, alignItems: 'stretch' }}>
                     {Array.from({ length: 55 }).map((_, idx) => {
@@ -1555,7 +1557,7 @@ export default function CondominioHubPage() {
                 </div>
 
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ fontSize: 8, fontWeight: 'bold' }}>PAGAR VIA PIX:</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold' }}>PAGAR VIA PIX:</div>
                   {/* Pix QR Code simulation */}
                   <div style={{ width: 80, height: 80, border: '2px solid #000', padding: 3, display: 'flex', flexWrap: 'wrap', background: '#fff' }}>
                     {Array.from({ length: 64 }).map((_, idx) => {
@@ -1572,7 +1574,7 @@ export default function CondominioHubPage() {
                       );
                     })}
                   </div>
-                  <div style={{ fontSize: 7, fontWeight: 'bold', color: 'var(--green)' }}>PIX COBRANÇA</div>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--green)' }}>PIX COBRANÇA</div>
                 </div>
               </div>
             </div>

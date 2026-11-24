@@ -305,9 +305,9 @@ export default function PessoasCargosSalariosPage() {
           </div>
         </div>
         <div className="header-actions">
-          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {saving && <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Salvando...</span>}
           {!saving && lastSaved && (
-            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 14, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
               <CheckCircle2 size={14} /> Salvo às {lastSaved}
             </span>
           )}
@@ -405,7 +405,7 @@ export default function PessoasCargosSalariosPage() {
           <div className="card" style={{ padding: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar Setor:</span>
+                <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar Setor:</span>
                 <select className="form-input" style={{ width: 'auto' }} value={filtroSetor} onChange={(e) => setFiltroSetor(e.target.value)}>
                   {setores.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -479,12 +479,12 @@ export default function PessoasCargosSalariosPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 18, padding: 16, background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)' }}>
               <div>
                 <div className="card-title">Levantamento dos Custos de Contratação</div>
-                <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
                   Informe o salário / remuneração base para comparar o custo total da empresa e o líquido recebido pelo profissional.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <label style={{ fontWeight: 700, fontSize: 13 }}>SALÁRIO FIXO (R$):</label>
+                <label style={{ fontWeight: 700, fontSize: 14.5 }}>SALÁRIO FIXO (R$):</label>
                 <input
                   type="number"
                   min={0}
@@ -544,12 +544,12 @@ export default function PessoasCargosSalariosPage() {
                     <td style={{ color: '#2563eb' }}>CUSTO TOTAL DO CONTRATANTE</td>
                     {comp.map((c) => (
                       <td key={c.nome} style={{ textAlign: 'right', color: '#2563eb' }}>
-                        {fmtBRL(c.custoTotal)} <span style={{ fontSize: 11, fontWeight: 600 }}>(+{fmtPct(c.encargoPct)})</span>
+                        {fmtBRL(c.custoTotal)} <span style={{ fontSize: 13, fontWeight: 600 }}>(+{fmtPct(c.encargoPct)})</span>
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td colSpan={5} style={{ background: 'var(--bg-secondary)', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    <td colSpan={5} style={{ background: 'var(--bg-secondary)', fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                       Provisão de Recebimento do Contratado (Legislação 2026)
                     </td>
                   </tr>
@@ -573,7 +573,7 @@ export default function PessoasCargosSalariosPage() {
                     <td style={{ color: '#15803d' }}>RECEBIMENTO LÍQUIDO DO CONTRATADO</td>
                     {comp.map((c) => (
                       <td key={c.nome} style={{ textAlign: 'right', color: '#15803d' }}>
-                        {fmtBRL(c.liquidoContratado)} <span style={{ fontSize: 11, fontWeight: 600 }}>(-{fmtPct(c.descPct)})</span>
+                        {fmtBRL(c.liquidoContratado)} <span style={{ fontSize: 13, fontWeight: 600 }}>(-{fmtPct(c.descPct)})</span>
                       </td>
                     ))}
                   </tr>

@@ -133,7 +133,7 @@ export default function NotificationCenter({
           background: bgBotao,
           color: corBadge,
           border: `1px solid ${borderBotao}`,
-          fontSize: 11.5,
+          fontSize: 13.5,
           fontWeight: 700,
           cursor: 'pointer',
           transition: 'all 0.15s',
@@ -178,8 +178,8 @@ export default function NotificationCenter({
             }}
           >
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Central de Alertas &amp; 24h</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted, #737373)' }}>
+              <div style={{ fontSize: 14.5, fontWeight: 700 }}>Central de Alertas &amp; 24h</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted, #737373)' }}>
                 {itens.length === 0 ? 'Tudo operando normalmente' : `${itens.length} aviso${itens.length > 1 ? 's' : ''} ativo${itens.length > 1 ? 's' : ''}`}
               </div>
             </div>
@@ -206,8 +206,8 @@ export default function NotificationCenter({
             {itens.length === 0 ? (
               <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted, #737373)' }}>
                 <CheckCircle2 size={24} style={{ color: '#16a34a', marginBottom: 6 }} />
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary, #171717)' }}>Nenhuma pendência crítica</div>
-                <div style={{ fontSize: 11.5, marginTop: 3 }}>Certificados, notas fiscais e robôs 24h estão em dia.</div>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary, #171717)' }}>Nenhuma pendência crítica</div>
+                <div style={{ fontSize: 13.5, marginTop: 3 }}>Certificados, notas fiscais e robôs 24h estão em dia.</div>
               </div>
             ) : (
               itens.map(item => {
@@ -253,10 +253,10 @@ export default function NotificationCenter({
                       {iconeItem(item)}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, lineHeight: 1.3 }}>
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>
                         {item.titulo}
                       </span>
-                      <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-muted, #737373)', marginTop: 2, lineHeight: 1.35 }}>
+                      <span style={{ display: 'block', fontSize: 13.5, color: 'var(--text-muted, #737373)', marginTop: 2, lineHeight: 1.35 }}>
                         {item.descricao}
                       </span>
                     </span>

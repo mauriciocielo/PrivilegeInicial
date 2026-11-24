@@ -210,7 +210,7 @@ export default function MarketingFluxogramaPage() {
 
       {/* Progresso */}
       <div className="card" style={{ padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14.5, fontWeight: 700 }}>
           <span>Evolução do Fluxograma 360 MKT (150 a 180 dias)</span>
           <span style={{ color: 'var(--accent)' }}>{stats.done} concluídas · {stats.doing} em andamento · {stats.pct}%</span>
         </div>
@@ -226,7 +226,7 @@ export default function MarketingFluxogramaPage() {
             <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Globe size={18} color="var(--accent)" /> Auditoria Digital 360º com IA (Gemini)
             </h3>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '3px 0 0' }}>
               Cole os links dos canais da empresa (Site, E-commerce, Instagram, Facebook, Google e LinkedIn) para o Gemini analisar posicionamento, conversão e oportunidades.
             </p>
           </div>
@@ -235,7 +235,7 @@ export default function MarketingFluxogramaPage() {
             disabled={auditingAi}
             onClick={handleAnalyzeChannels}
             className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14.5 }}
           >
             <Sparkles size={15} /> {auditingAi ? 'Analisando canais com Gemini...' : 'Analisar Canais com IA'}
           </button>
@@ -243,27 +243,27 @@ export default function MarketingFluxogramaPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
           <div>
-            <label className="form-label">🌐 Site Próprio</label>
+            <label className="form-label">Site Próprio</label>
             <input className="form-control" placeholder="https://www.empresa.com.br" value={links.site} onChange={e => setLinks(l => ({ ...l, site: e.target.value }))} />
           </div>
           <div>
-            <label className="form-label">🛒 E-commerce / Loja Virtual</label>
+            <label className="form-label">E-commerce / Loja Virtual</label>
             <input className="form-control" placeholder="https://loja.empresa.com.br" value={links.ecommerce} onChange={e => setLinks(l => ({ ...l, ecommerce: e.target.value }))} />
           </div>
           <div>
-            <label className="form-label">📸 Instagram</label>
+            <label className="form-label">Instagram</label>
             <input className="form-control" placeholder="https://instagram.com/empresa" value={links.instagram} onChange={e => setLinks(l => ({ ...l, instagram: e.target.value }))} />
           </div>
           <div>
-            <label className="form-label">📘 Facebook</label>
+            <label className="form-label">Facebook</label>
             <input className="form-control" placeholder="https://facebook.com/empresa" value={links.facebook} onChange={e => setLinks(l => ({ ...l, facebook: e.target.value }))} />
           </div>
           <div>
-            <label className="form-label">🔍 Google / Perfil da Empresa</label>
+            <label className="form-label">Google / Perfil da Empresa</label>
             <input className="form-control" placeholder="Link do Google Maps / Busca" value={links.google} onChange={e => setLinks(l => ({ ...l, google: e.target.value }))} />
           </div>
           <div>
-            <label className="form-label">💼 LinkedIn</label>
+            <label className="form-label">LinkedIn</label>
             <input className="form-control" placeholder="https://linkedin.com/company/empresa" value={links.linkedin} onChange={e => setLinks(l => ({ ...l, linkedin: e.target.value }))} />
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function MarketingFluxogramaPage() {
                 <div style={{ padding: '6px 14px', borderRadius: 999, background: 'var(--accent)', color: '#fff', fontWeight: 900, fontSize: 15 }}>
                   Score Digital: {aiAudit.score ?? 70}/100
                 </div>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                   Análise gerada pelo Gemini {aiAudit.analyzedAt ? `em ${new Date(aiAudit.analyzedAt).toLocaleString('pt-BR')}` : ''}
                 </span>
               </div>
@@ -292,15 +292,15 @@ export default function MarketingFluxogramaPage() {
                     toast.success('Sugestões aplicadas no Diagnóstico de Posicionamento!');
                   }}
                   className="btn btn-secondary"
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 14 }}
                 >
-                  ✨ Aplicar ICP &amp; Big Idea no Diagnóstico
+                  Aplicar ICP &amp; Big Idea no Diagnóstico
                 </button>
               )}
             </div>
 
             {aiAudit.resumoExecutivo && (
-              <div style={{ fontSize: 13, lineHeight: 1.5 }}>{aiAudit.resumoExecutivo}</div>
+              <div style={{ fontSize: 14.5, lineHeight: 1.5 }}>{aiAudit.resumoExecutivo}</div>
             )}
 
             {Array.isArray(aiAudit.canais) && aiAudit.canais.length > 0 && (
@@ -308,15 +308,15 @@ export default function MarketingFluxogramaPage() {
                 {aiAudit.canais.map((c: any, i: number) => (
                   <div key={i} style={{ padding: 12, borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <strong style={{ fontSize: 13 }}>{c.canal}</strong>
-                      <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent)' }}>
+                      <strong style={{ fontSize: 14.5 }}>{c.canal}</strong>
+                      <span style={{ fontSize: 13, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent)' }}>
                         {c.situacao}
                       </span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 4 }}>
                       <strong>Pontos fortes:</strong> {c.pontosFortes}
                     </div>
-                    <div style={{ fontSize: 12 }}>
+                    <div style={{ fontSize: 14 }}>
                       <strong>Melhorias:</strong> {c.melhorias}
                     </div>
                   </div>
@@ -326,8 +326,8 @@ export default function MarketingFluxogramaPage() {
 
             {Array.isArray(aiAudit.planoImediato) && aiAudit.planoImediato.length > 0 && (
               <div>
-                <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 4, color: 'var(--accent)' }}>Ações Imediatas (7 dias):</div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4, color: 'var(--accent)' }}>Ações Imediatas (7 dias):</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
                   {aiAudit.planoImediato.map((item: string, idx: number) => (
                     <li key={idx}>{item}</li>
                   ))}
@@ -381,7 +381,7 @@ export default function MarketingFluxogramaPage() {
       <div className="card" style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Cronograma das 12 Etapas do Fluxograma Geral Marketing</h3>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{milestones.length} etapas</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{milestones.length} etapas</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -399,7 +399,7 @@ export default function MarketingFluxogramaPage() {
               {milestones.map((m, idx) => (
                 <tr key={m.id}>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
                       {m.windowDays}
                     </span>
                   </td>
@@ -412,7 +412,7 @@ export default function MarketingFluxogramaPage() {
                       style={{
                         padding: '4px 10px',
                         borderRadius: 999,
-                        fontSize: 11.5,
+                        fontSize: 13.5,
                         fontWeight: 700,
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
@@ -420,9 +420,9 @@ export default function MarketingFluxogramaPage() {
                         color: m.status === 'concluido' ? 'var(--green)' : m.status === 'em_andamento' ? 'var(--yellow)' : 'var(--text-secondary)',
                       }}
                     >
-                      <option value="pendente">⏳ Pendente</option>
-                      <option value="em_andamento">🔄 Em Andamento</option>
-                      <option value="concluido">✅ Concluído</option>
+                      <option value="pendente">Pendente</option>
+                      <option value="em_andamento">Em Andamento</option>
+                      <option value="concluido">Concluído</option>
                     </select>
                   </td>
                   <td style={{ color: 'var(--text-secondary)', lineHeight: 1.45, minWidth: 260 }}>{m.deliverable}</td>

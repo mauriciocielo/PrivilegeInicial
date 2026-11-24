@@ -72,11 +72,11 @@ export default function NfseServicoPicker({ cTribNac, cNbs, onChange, cnaes }: P
   const nbsDigitos = cNbs.replace(/\D/g, '');
   const descricaoNbs = tabela?.nbs[nbsDigitos];
 
-  if (erro) return <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>Não foi possível carregar a lista oficial de serviços. Digite os códigos abaixo.</div>;
+  if (erro) return <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>Não foi possível carregar a lista oficial de serviços. Digite os códigos abaixo.</div>;
 
   const listaStyle = { maxHeight: 170, overflowY: 'auto' as const, border: '1px solid var(--border-light)', borderRadius: 6, marginTop: 4 };
   const selecionadoStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' };
-  const itemStyle = { display: 'block', width: '100%', textAlign: 'left' as const, padding: '6px 10px', fontSize: 12, background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-light)', color: 'var(--text-primary)', cursor: 'pointer' };
+  const itemStyle = { display: 'block', width: '100%', textAlign: 'left' as const, padding: '6px 10px', fontSize: 14, background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-light)', color: 'var(--text-primary)', cursor: 'pointer' };
 
   const botaoServico = (codigo: string) => {
     const escolhido = codigo === cTribNac;
@@ -97,31 +97,31 @@ export default function NfseServicoPicker({ cTribNac, cNbs, onChange, cnaes }: P
 
   return (
     <div style={{ marginBottom: 12 }}>
-      {cnaes === null && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Consultando os CNAEs da empresa...</div>}
+      {cnaes === null && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>Consultando os CNAEs da empresa...</div>}
       {cnaes && cnaes.length > 0 && tabela && (
         <div className="form-group" style={{ marginBottom: 12 }}>
           <label className="form-label">Serviços do CNAE da empresa</label>
           {principais.map(s => (
             <div key={s.codigo} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>CNAE principal: {tituloCnae(s)}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>CNAE principal: {tituloCnae(s)}</div>
               {s.servicos.length > 0
                 ? <div style={listaServicos}>{s.servicos.map(botaoServico)}</div>
-                : <div style={{ fontSize: 12, marginTop: 4 }}>Sem sugestão para este CNAE. Use a busca abaixo.</div>}
+                : <div style={{ fontSize: 14, marginTop: 4 }}>Sem sugestão para este CNAE. Use a busca abaixo.</div>}
             </div>
           ))}
           {secundarios.length > 0 && (
             <details style={{ marginBottom: 8 }}>
-              <summary style={{ fontSize: 12, cursor: 'pointer' }}>Demais CNAEs da empresa ({secundarios.length})</summary>
+              <summary style={{ fontSize: 14, cursor: 'pointer' }}>Demais CNAEs da empresa ({secundarios.length})</summary>
               {secundarios.map(s => (
                 <div key={s.codigo} style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tituloCnae(s)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{tituloCnae(s)}</div>
                   <div style={listaServicos}>{s.servicos.map(botaoServico)}</div>
                 </div>
               ))}
             </details>
           )}
           {temSugestao && (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               Sugestão pelo CNAE, não uma regra oficial: o código certo é o do serviço prestado nesta nota.
             </div>
           )}
@@ -145,13 +145,13 @@ export default function NfseServicoPicker({ cTribNac, cNbs, onChange, cnaes }: P
         {servicoAtual && (
           <div style={selecionadoStyle}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Serviço selecionado</div>
-              <div style={{ fontSize: 13, color: 'var(--text-primary)' }}><strong>{servicoAtual.c}</strong> — {servicoAtual.d}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Serviço selecionado</div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-primary)' }}><strong>{servicoAtual.c}</strong> — {servicoAtual.d}</div>
             </div>
             <button type="button" className="btn btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => onChange({ cTribNac: '' })}>Remover</button>
           </div>
         )}
-        {tabela && /^\d{6}$/.test(cTribNac) && !servicoAtual && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>O código {cTribNac} não está na lista nacional.</div>}
+        {tabela && /^\d{6}$/.test(cTribNac) && !servicoAtual && <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 4 }}>O código {cTribNac} não está na lista nacional.</div>}
       </div>
 
       {sugestoesNbs.length > 0 && (
@@ -161,7 +161,7 @@ export default function NfseServicoPicker({ cTribNac, cNbs, onChange, cnaes }: P
             <option value="">— Selecionar —</option>
             {sugestoesNbs.map(n => <option key={n.c} value={n.c}>{formatarNbs(n.c)} — {n.d.slice(0, 90)}</option>)}
           </select>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Sugestão: o governo ainda trata essa tabela como trabalho inicial. Confirme com a contabilidade.</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Sugestão: o governo ainda trata essa tabela como trabalho inicial. Confirme com a contabilidade.</div>
         </div>
       )}
 
@@ -180,8 +180,8 @@ export default function NfseServicoPicker({ cTribNac, cNbs, onChange, cnaes }: P
         {descricaoNbs && (
           <div style={selecionadoStyle}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>NBS selecionado</div>
-              <div style={{ fontSize: 13, color: 'var(--text-primary)' }}><strong>{formatarNbs(nbsDigitos)}</strong> — {descricaoNbs}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>NBS selecionado</div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-primary)' }}><strong>{formatarNbs(nbsDigitos)}</strong> — {descricaoNbs}</div>
             </div>
             <button type="button" className="btn btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => onChange({ cNbs: '' })}>Remover</button>
           </div>

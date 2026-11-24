@@ -7,6 +7,7 @@ import { projetarCaixa, parcelaPrice, type NovoFinanciamento, type ContaFinancei
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
+import { Landmark as IcoLandmark, Wallet as IcoWallet } from 'lucide-react';
 
 export default function ProjecaoCaixaPage() {
   const [empresaId, setEmpresaId] = useState('');
@@ -105,7 +106,7 @@ export default function ProjecaoCaixaPage() {
           </div>
         </div>
         <div className="header-actions">
-          <select className="form-control" style={{ width: 150 }} value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>
+          <select className="form-control" style={{ minWidth: 150, width: 'auto' }} value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>
             {[6, 12, 18, 24, 36].map(n => <option key={n} value={n}>{n} meses</option>)}
           </select>
         </div>
@@ -115,7 +116,7 @@ export default function ProjecaoCaixaPage() {
         {/* Indicadores */}
         <div className="stat-grid" style={{ marginBottom: 24 }}>
           <div className="card stat-card">
-            <div className="stat-icon blue">💰</div>
+            <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em conta hoje</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{fmt.currency(saldoInicial)}</div>
           </div>
@@ -127,7 +128,7 @@ export default function ProjecaoCaixaPage() {
             </div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon purple">🏦</div>
+            <div className="stat-icon purple"><IcoLandmark size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Serviço da dívida ({horizonte}m)</div>
             <div className="stat-value" style={{ fontSize: 24 }}>{fmt.currency(atual.totalServicoDivida)}</div>
           </div>
@@ -144,9 +145,9 @@ export default function ProjecaoCaixaPage() {
         {atual.primeiroMesNegativo && (
           <div className="card animate-slide-up" style={{ marginBottom: 24, borderLeft: '4px solid var(--red)', animationDelay: '200ms' }}>
             <div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 6 }}>
-              ⚠️ O caixa fica negativo em {atual.meses.find(m => m.competencia === atual.primeiroMesNegativo)?.label}
+              O caixa fica negativo em {atual.meses.find(m => m.competencia === atual.primeiroMesNegativo)?.label}
             </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               Considerando os lançamentos já previstos e as parcelas em aberto, a empresa chega a{' '}
               <strong>{fmt.currency(atual.menorSaldo)}</strong> no pior mês. Antecipar recebimentos, alongar
               prazos ou reduzir o serviço da dívida evita a necessidade de capital de giro emergencial.
@@ -158,7 +159,7 @@ export default function ProjecaoCaixaPage() {
         <div className="card animate-slide-up" style={{ marginBottom: 24, animationDelay: '300ms' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="card-title">Simular novo financiamento</div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5 }}>
               <input type="checkbox" checked={simulando} onChange={e => setSimulando(e.target.checked)} />
               Aplicar à projeção
             </label>
@@ -183,7 +184,7 @@ export default function ProjecaoCaixaPage() {
             </div>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.5, color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={sim.creditarNoCaixa} onChange={e => setSim(s => ({ ...s, creditarNoCaixa: e.target.checked }))} />
             Creditar o valor no caixa (desmarque para financiamento de bem, que não passa pelo caixa)
           </label>
@@ -191,20 +192,20 @@ export default function ProjecaoCaixaPage() {
           {simulacao && simulacao.parcelas > 0 && (
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-light)' }}>
               <div>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Parcela</div>
+                <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Parcela</div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{fmt.currency(parcelaSimulada)}</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Total pago</div>
+                <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Total pago</div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{fmt.currency(parcelaSimulada * simulacao.parcelas)}</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Custo dos juros</div>
+                <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Custo dos juros</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--red)' }}>{fmt.currency(custoTotal)}</div>
               </div>
               {comEmprestimo && (
                 <div>
-                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Menor saldo com o empréstimo</div>
+                  <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)' }}>Menor saldo com o empréstimo</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: corSaldo(comEmprestimo.menorSaldo) }}>
                     {fmt.currency(comEmprestimo.menorSaldo)}
                   </div>
@@ -220,8 +221,8 @@ export default function ProjecaoCaixaPage() {
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={dadosGrafico} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <XAxis dataKey="mes" tick={{ fontSize: 13 }} />
+              <YAxis tick={{ fontSize: 13 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v: any) => fmt.currency(Number(v))} cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Legend />
               <ReferenceLine y={0} stroke="var(--red)" strokeDasharray="4 4" />
@@ -261,7 +262,7 @@ export default function ProjecaoCaixaPage() {
                     <tr key={m.competencia} style={{ background: paramProj ? 'rgba(59, 130, 246, 0.05)' : undefined }}>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {m.label}
-                        {paramProj && <span title="Valor manual inserido" style={{ marginLeft: 6, fontSize: 10, background: 'var(--blue)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>MANUAL</span>}
+                        {paramProj && <span title="Valor manual inserido" style={{ marginLeft: 6, fontSize: 12.5, background: 'var(--blue)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>MANUAL</span>}
                       </td>
                       <td style={{ textAlign: 'right', color: 'var(--green)' }}>
                         {editandoPrevisao ? (
@@ -303,7 +304,7 @@ export default function ProjecaoCaixaPage() {
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '12px 4px 0', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', padding: '12px 4px 0', lineHeight: 1.6 }}>
             A projeção usa lançamentos com status <strong>previsto</strong> e os títulos ainda em aberto
             lançados via <strong>integração com o ERP</strong> — os realizados já estão refletidos no saldo
             em conta. Quanto mais completo o contas a pagar e a receber, mais fiel a curva.

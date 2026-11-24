@@ -239,10 +239,10 @@ export default function Diagnostico360Page() {
                 </div>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', padding: '4px 12px', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Mês-Base:</span>
+                        <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-secondary)' }}>Mês-Base:</span>
                         <select 
                             className="form-control" 
-                            style={{ height: 32, fontSize: 13, border: 'none', background: 'transparent', width: 140, cursor: 'pointer' }}
+                            style={{ height: 32, fontSize: 14.5, border: 'none', background: 'transparent', minWidth: 140, width: 'auto', cursor: 'pointer' }}
                             value={mesSelecionado}
                             onChange={e => setMesSelecionado(e.target.value)}
                         >
@@ -257,9 +257,9 @@ export default function Diagnostico360Page() {
                 <div className="header-actions">
                     {dirty && <span className="badge badge-yellow">Alterações não salvas</span>}
                     <button className="btn btn-ghost" onClick={handleNovo}>+ Novo</button>
-                    <button className="btn btn-secondary" onClick={handleSalvar} disabled={!dirty}>💾 Salvar</button>
+                    <button className="btn btn-secondary" onClick={handleSalvar} disabled={!dirty}>Salvar</button>
                     <button className="btn btn-primary" onClick={handlePdf} disabled={gerando}>
-                        {gerando ? 'Gerando…' : '📄 Gerar PDF'}
+                        {gerando ? 'Gerando…' : 'Gerar PDF'}
                     </button>
                 </div>
             </div>
@@ -658,7 +658,7 @@ export default function Diagnostico360Page() {
                                                 <div>
                                                     <div className="d360-acao-area" style={{ color: area.cor }}>{area.nome.toUpperCase()}</div>
                                                     <div style={{ fontWeight: 600, marginBottom: 4 }}>{qa.questao.enunciado}</div>
-                                                    <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{qa.questao.recomendacao}</div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: 14.5 }}>{qa.questao.recomendacao}</div>
                                                 </div>
                                             </div>
                                         );

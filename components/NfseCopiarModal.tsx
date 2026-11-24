@@ -6,6 +6,7 @@ import { fmt } from '../lib/reports';
 import { hojeBrasilia, type AmbienteNfse } from '../lib/nfse/dps';
 import { copiarParaCompetencia, existeNotaIgual, mesAnterior, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
+import { ClipboardList as IcoClipboardList } from 'lucide-react';
 
 interface Props {
   notas: NfsE[];
@@ -75,10 +76,10 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onFechar()}>
+    <div className="modal-overlay nfse-ui" onClick={e => e.target === e.currentTarget && onFechar()}>
       <div className="modal modal-lg" style={{ maxWidth: 800, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h2 className="modal-title">📋 Copiar notas emitidas</h2>
+          <h2 className="modal-title">Copiar notas emitidas</h2>
           <button className="modal-close" onClick={onFechar}>✕</button>
         </div>
 
@@ -92,13 +93,13 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
             <input type="month" className="form-control" max={mesAtual} value={competencia} onChange={e => setCompetencia(e.target.value)} />
           </div>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginBottom: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14.5, marginBottom: 12 }}>
           <input type="checkbox" checked={atualizarDescricao} onChange={e => setAtualizarDescricao(e.target.checked)} />
           Atualizar o mês citado na descrição (ex.: &quot;referente a 10/2026&quot; passa para a nova competência)
         </label>
 
         <div className="form-group" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+          <div className="form-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <label className="form-label" style={{ margin: 0 }}>
               Alterar descrição para todas automaticamente (opcional)
             </label>
@@ -106,7 +107,7 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ padding: '3px 9px', fontSize: 11.5 }}
+                style={{ padding: '3px 9px', fontSize: 13.5 }}
                 onClick={() => setDescricaoLote(copiarParaCompetencia(candidatas[0], competencia, atualizarDescricao).discriminacao)}
               >
                 Usar 1ª nota como modelo
@@ -124,7 +125,7 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
 
         {candidatas.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
+            <div className="empty-state-icon"><IcoClipboardList size={20} strokeWidth={2} aria-hidden /></div>
             <h3>Nenhuma nota emitida neste mês</h3>
             <p>Use Buscar Notas do Portal para trazer as notas emitidas fora do sistema.</p>
           </div>
@@ -154,9 +155,9 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
                     <td><input type="checkbox" checked={selecionadas.has(n.id)} onChange={() => alternar(n.id)} onClick={e => e.stopPropagation()} /></td>
                     <td>
                       <div style={{ fontWeight: 500 }}>{n.tomadorRazaoSocial}</div>
-                      {jaExiste(n) && <div style={{ fontSize: 11, color: '#f59e0b' }}>Já existe nota igual nesta competência</div>}
+                      {jaExiste(n) && <div style={{ fontSize: 13, color: '#f59e0b' }}>Já existe nota igual nesta competência</div>}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <td style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {resolverDescricao(n)}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(n.valorServicos)}</td>
@@ -172,7 +173,7 @@ export default function NfseCopiarModal({ notas, ambiente, portadores, planoCont
         </div>
 
         <div className="form-actions" style={{ marginTop: 20 }}>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginRight: 'auto' }}>
+          <span style={{ fontSize: 14.5, color: 'var(--text-muted)', marginRight: 'auto' }}>
             As cópias viram rascunhos: nada é enviado ao Sefin nesta etapa.
           </span>
           <button className="btn btn-secondary" onClick={onFechar}>Cancelar</button>

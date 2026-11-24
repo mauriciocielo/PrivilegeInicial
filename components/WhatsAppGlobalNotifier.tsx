@@ -328,7 +328,7 @@ export default function WhatsAppGlobalNotifier({
               <span
                 style={{
                   fontWeight: 700,
-                  fontSize: 13.5,
+                  fontSize: 15,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -338,7 +338,7 @@ export default function WhatsAppGlobalNotifier({
               </span>
               <span
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 13,
                   fontWeight: 600,
                   color: '#10b981',
                   flexShrink: 0,
@@ -349,7 +349,7 @@ export default function WhatsAppGlobalNotifier({
             </div>
             <div
               style={{
-                fontSize: 12.5,
+                fontSize: 14,
                 color: 'var(--text-secondary, #4b5563)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

@@ -75,7 +75,7 @@ export default function RelatorioPerfilPage({ params }: { params: Promise<{ id: 
           <button className="btn btn-secondary" onClick={() => router.push('/consultor/perfil-disc')}>← Voltar</button>
           {avaliacao?.resultado && (
             <button className="btn btn-primary" onClick={baixar} disabled={gerandoPdf}>
-              {gerandoPdf ? '⏳ Gerando...' : 'Baixar PDF'}
+              {gerandoPdf ? 'Gerando...' : 'Baixar PDF'}
             </button>
           )}
         </div>
@@ -83,11 +83,11 @@ export default function RelatorioPerfilPage({ params }: { params: Promise<{ id: 
 
       <div className="page-body">
         {erro ? (
-          <div className="card" style={{ textAlign: 'center', fontSize: 14, color: 'var(--red)' }}>{erro}</div>
+          <div className="card" style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--red)' }}>{erro}</div>
         ) : !avaliacao ? (
-          <div className="card" style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>⏳ Carregando relatório...</div>
+          <div className="card" style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-muted)' }}>Carregando relatório...</div>
         ) : !avaliacao.resultado ? (
-          <div className="card" style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
+          <div className="card" style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)' }}>
             Esta pessoa ainda não respondeu. O relatório aparece aqui assim que as respostas forem enviadas.
           </div>
         ) : (

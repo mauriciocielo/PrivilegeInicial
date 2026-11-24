@@ -3,6 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { store } from '../lib/store';
 import { fmt } from '../lib/reports';
 import { askClaude } from '../lib/claude-client';
+import { AlertTriangle, BarChart3, FolderOpen, Gem, Lightbulb, Rocket, Search, ClipboardList, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
+
+// A IA devolve um emoji como ícone; na tela ele vira um ícone de traço do sistema.
+const ICONES: Record<string, LucideIcon> = {
+  '⚠': AlertTriangle, '💰': Wallet, '📈': TrendingUp, '📂': FolderOpen, '📋': ClipboardList,
+  '🔍': Search, '💎': Gem, '📊': BarChart3, '🚀': Rocket,
+};
+const iconeDe = (emoji: string): LucideIcon => ICONES[(emoji || '').replace(/️/g, '').trim()] || Lightbulb;
 
 interface GeminiTipsProps {
   empresaId: string;
@@ -196,15 +204,15 @@ Responda em Português do Brasil com postura de Conselheiro Financeiro de BPO de
           fontSize: 16, fontWeight: 700
         }}>🧠</div>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.5 }}>Insights Privilege AI (Gemini)</h2>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Análise automática da saúde financeira com inteligência artificial</p>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.5 }}>Insights da IA</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Análise automática da saúde financeira com inteligência artificial</p>
         </div>
       </div>
 
       {loading ? (
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 24, justifyContent: 'center' }}>
           <div className="animate-pulse" style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }}></div>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Privilege AI está analisando seus relatórios financeiros...</span>
+          <span style={{ fontSize: 14.5, color: 'var(--text-secondary)', fontWeight: 500 }}>Privilege AI está analisando seus relatórios financeiros...</span>
         </div>
       ) : (
         <div className="grid-3">
@@ -222,10 +230,10 @@ Responda em Português do Brasil com postura de Conselheiro Financeiro de BPO de
               padding: 20
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>{item.icon}</span>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>{item.title}</h4>
+                {(() => { const Icone = iconeDe(item.icon); return <Icone size={18} color="var(--accent)" aria-hidden />; })()}
+                <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--accent)' }}>{item.title}</h4>
               </div>
-              <p style={{ fontSize: 12, color: '#334155', lineHeight: 1.5, fontWeight: 500 }}>{item.text}</p>
+              <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.5, fontWeight: 500 }}>{item.text}</p>
             </div>
           ))}
         </div>

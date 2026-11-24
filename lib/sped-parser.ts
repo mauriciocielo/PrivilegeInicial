@@ -615,7 +615,7 @@ export function processarDiagnostico(
       tipo: 'alerta',
       prioridade: 1,
       titulo: 'Aumento de Carga Tributária Projetado',
-      texto: `A Reforma implica acréscimo de R$ ${fmt.currency(diffValor)} (${(diffPct * 100).toFixed(2)} p.p.) frente ao regime atual. Planeje fluxo de caixa para Split Payment.`,
+      texto: `A Reforma implica acréscimo de ${fmt.currency(diffValor)} (${(diffPct * 100).toFixed(2)} p.p.) frente ao regime atual. Planeje fluxo de caixa para Split Payment.`,
       impactoEstimado: diffValor,
       baseLegal: 'LC 214/2025 art. 58 (split payment obrigatório)',
     });
@@ -625,7 +625,7 @@ export function processarDiagnostico(
       tipo: 'oportunidade',
       prioridade: 1,
       titulo: 'Redução de Carga Tributária Projetada',
-      texto: `A Reforma gera economia de R$ ${fmt.currency(Math.abs(diffValor))} pelo crédito financeiro amplo do IBS/CBS. Monitore acúmulo de créditos para solicitação de ressarcimento.`,
+      texto: `A Reforma gera economia de ${fmt.currency(Math.abs(diffValor))} pelo crédito financeiro amplo do IBS/CBS. Monitore acúmulo de créditos para solicitação de ressarcimento.`,
       impactoEstimado: Math.abs(diffValor),
       baseLegal: 'LC 214/2025 art. 29 (não cumulatividade plena)',
     });
@@ -637,7 +637,7 @@ export function processarDiagnostico(
       tipo: 'risco',
       prioridade: 1,
       titulo: 'Créditos Represados — Risco de Passivo',
-      texto: `Identificados R$ ${fmt.currency(creditosNaoAproveitados)} de insumos sem crédito no regime atual. Com a não-cumulatividade plena da Reforma, esses itens gerarão crédito — mas exigem reclassificação do cadastro no ERP.`,
+      texto: `Identificados ${fmt.currency(creditosNaoAproveitados)} de insumos sem crédito no regime atual. Com a não-cumulatividade plena da Reforma, esses itens gerarão crédito — mas exigem reclassificação do cadastro no ERP.`,
       impactoEstimado: creditosNaoAproveitados * (ALIQ_REFERENCIA_IBS + ALIQ_REFERENCIA_CBS),
       baseLegal: 'LC 214/2025 art. 28-45 (crédito financeiro amplo)',
     });
@@ -649,7 +649,7 @@ export function processarDiagnostico(
       tipo: 'alerta',
       prioridade: 2,
       titulo: 'Imposto Seletivo Identificado',
-      texto: `Detectado IS de R$ ${fmt.currency(impostoSeletivoTotal)} sobre ${anomalias.filter(a => a.tipo === 'is_incidente').length} NCMs. O IS não gera crédito de IBS/CBS e incide sobre o valor sem dedução.`,
+      texto: `Detectado IS de ${fmt.currency(impostoSeletivoTotal)} sobre ${anomalias.filter(a => a.tipo === 'is_incidente').length} NCMs. O IS não gera crédito de IBS/CBS e incide sobre o valor sem dedução.`,
       impactoEstimado: impostoSeletivoTotal,
       baseLegal: 'LC 214/2025 art. 413-435 (Imposto Seletivo)',
     });
@@ -685,7 +685,7 @@ export function processarDiagnostico(
       tipo: 'oportunidade',
       prioridade: 2,
       titulo: 'Itens com Isenção Plena (100% Redução)',
-      texto: `Identificados R$ ${fmt.currency(valorIsentos)} em operações com isenção plena de IBS/CBS (cesta básica, insumos agro, educação). Certifique-se de que os NCMs estão no Anexo III da LC 214/2025 para garantia do benefício.`,
+      texto: `Identificados ${fmt.currency(valorIsentos)} em operações com isenção plena de IBS/CBS (cesta básica, insumos agro, educação). Certifique-se de que os NCMs estão no Anexo III da LC 214/2025 para garantia do benefício.`,
       baseLegal: 'LC 214/2025 Anexo III',
     });
   }

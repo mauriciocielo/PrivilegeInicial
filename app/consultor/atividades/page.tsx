@@ -664,7 +664,7 @@ export default function AtividadesTempoPage() {
                   deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
                 }}
               >
-                📲 Instalar no Celular (Modo Offline)
+                Instalar no Celular (Modo Offline)
               </button>
            )}
         </div>
@@ -701,7 +701,7 @@ export default function AtividadesTempoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="card">
               <h3 style={{ fontSize: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                ⏱️ Tracker de Tempo
+                Tracker de Tempo
               </h3>
               
               <div style={{ 
@@ -742,11 +742,11 @@ export default function AtividadesTempoPage() {
                    {formatTime(timePassed)}
                 </div>
                 {isRunning ? (
-                  <div style={{ fontSize: 14, color: '#60a5fa', marginTop: 24, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }} className="pulse-glow">
-                    🔵 GRAVANDO TEMPO DE CONSULTORIA
+                  <div style={{ fontSize: 15.5, color: '#60a5fa', marginTop: 24, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' }} className="pulse-glow">
+                    GRAVANDO TEMPO DE CONSULTORIA
                   </div>
                 ) : (
-                  <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 24, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 15.5, color: 'var(--text-muted)', marginTop: 24, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
                     SISTEMA EM MODO DE ESPERA
                   </div>
                 )}
@@ -760,14 +760,14 @@ export default function AtividadesTempoPage() {
                       style={{ flex: 1, background: modoAtividade === 'avulsa' ? 'var(--accent)' : 'transparent', color: modoAtividade === 'avulsa' ? '#fff' : 'var(--text-primary)', border: 'none', fontWeight: 600, padding: '12px' }}
                       onClick={() => setModoAtividade('avulsa')}
                     >
-                      ⚡ Nova Rápida
+                      Nova Rápida
                     </button>
                     <button 
                       className="btn"
                       style={{ flex: 1, background: modoAtividade === 'agenda' ? 'var(--accent)' : 'transparent', color: modoAtividade === 'agenda' ? '#fff' : 'var(--text-primary)', border: 'none', fontWeight: 600, padding: '12px' }}
                       onClick={() => setModoAtividade('agenda')}
                     >
-                      📅 Agendadas
+                      Agendadas
                     </button>
                   </div>
 
@@ -798,7 +798,7 @@ export default function AtividadesTempoPage() {
                                 <div style={{ fontSize: 24 }}>{isSelected ? '☑️' : '🗓️'}</div>
                                 <div>
                                   <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{t.title}</div>
-                                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                  <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>
                                     {t.day} às {t.horario} - {et?.nomeFantasia || et?.razaoSocial}
                                   </div>
                                 </div>
@@ -858,7 +858,7 @@ export default function AtividadesTempoPage() {
               <div className="photos-grid" style={{ gridTemplateColumns: (!isRunning && timePassed > 0) ? '1fr 1fr' : '1fr' }}>
                 {timePassed === 0 && (
                   <div style={{ border: '1px dashed var(--border)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
-                    <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Comprovação de Início (Obrigatória)</h4>
+                    <h4 style={{ fontSize: 14.5, marginBottom: 12 }}>Comprovação de Início (Obrigatória)</h4>
                     {fotoInicio ? (
                       <div style={{ position: 'relative' }}>
                         <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
@@ -876,11 +876,11 @@ export default function AtividadesTempoPage() {
                 {(!isRunning && timePassed > 0) && (
                   <>
                     <div style={{ border: '1px solid var(--border-light)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--bg-body)' }}>
-                      <h4 style={{ fontSize: 13, marginBottom: 12 }}>📷 Início (Concluída)</h4>
+                      <h4 style={{ fontSize: 14.5, marginBottom: 12 }}>Início (Concluída)</h4>
                       {fotoInicio && <img src={fotoInicio} alt="Início" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', opacity: 0.8 }} />}
                     </div>
                     <div style={{ border: '1px dashed var(--accent)', padding: '16px', borderRadius: '8px', textAlign: 'center', background: 'var(--accent-light)' }}>
-                      <h4 style={{ fontSize: 13, marginBottom: 12, color: 'var(--accent)' }}>📷 Finalizar Tarefa (Obrigatória)</h4>
+                      <h4 style={{ fontSize: 14.5, marginBottom: 12, color: 'var(--accent)' }}>Finalizar Tarefa (Obrigatória)</h4>
                       {fotoFim ? (
                         <div style={{ position: 'relative' }}>
                           <img src={fotoFim} alt="Fim" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }} />
@@ -994,14 +994,14 @@ export default function AtividadesTempoPage() {
                       onClick={handlePauseResume}
                       style={{ fontWeight: 700, fontSize: '16px', padding: '18px', borderRadius: '14px' }}
                     >
-                      {isPaused ? '▶ RETOMAR TEMPO' : '⏸ PAUSAR TEMPO'}
+                      {isPaused ? 'RETOMAR TEMPO' : 'PAUSAR TEMPO'}
                     </button>
                     <button 
                       className="btn btn-danger btn-lg btn-mobile-full" 
                       onClick={handleStopOperation} 
                       style={{ background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '16px', padding: '18px', borderRadius: '14px', boxShadow: '0 8px 24px rgba(239, 68, 68, 0.32)', transition: 'all 0.3s' }}
                     >
-                      ⏹ PARAR E SALVAR
+                      PARAR E SALVAR
                     </button>
                   </>
                 ) : (
@@ -1010,7 +1010,7 @@ export default function AtividadesTempoPage() {
                     onClick={handleStopAndSave} 
                     style={{ background: 'var(--green)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '18px', padding: '20px', borderRadius: '14px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.32)', transition: 'all 0.3s' }}
                   >
-                    💾 FINALIZAR E SALVAR ATENDIMENTO
+                    FINALIZAR E SALVAR ATENDIMENTO
                   </button>
                 )}
               </div>
@@ -1018,7 +1018,7 @@ export default function AtividadesTempoPage() {
 
             <div className="card">
               <h3 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                📋 Histórico Recente de Atividades
+                Histórico Recente de Atividades
               </h3>
               
               {atividades.length === 0 ? (
@@ -1035,8 +1035,8 @@ export default function AtividadesTempoPage() {
                           {formatTime(ativ.tempoSegundos)}
                         </div>
                         <div style={{ flex: 1, width: '100%' }}>
-                          <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{emp?.nomeFantasia || emp?.razaoSocial || 'Empresa não encontrada'}</h4>
-                          <p style={{ margin: '0 0 6px 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>{ativ.descricao}</p>
+                          <h4 style={{ margin: '0 0 4px 0', fontSize: '15.5px', color: 'var(--text-primary)' }}>{emp?.nomeFantasia || emp?.razaoSocial || 'Empresa não encontrada'}</h4>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>{ativ.descricao}</p>
                           
                           {(ativ.fotoInicio || ativ.fotoFim) && (
                             <div style={{ display: 'flex', gap: 8, marginTop: 8, marginBottom: 8 }}>
@@ -1059,10 +1059,10 @@ export default function AtividadesTempoPage() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', gap: 12, fontSize: '11px', color: 'var(--text-muted)' }}>
+                          <div style={{ display: 'flex', gap: 12, fontSize: '13px', color: 'var(--text-muted)' }}>
                             <span>📅 {fmt.date(ativ.data)} às {new Date(ativ.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                             {ativ.localizacao && (
-                              <span title={`Lat: ${ativ.localizacao.lat}, Lng: ${ativ.localizacao.lng}`}>📍 GPS Salvo</span>
+                              <span title={`Lat: ${ativ.localizacao.lat}, Lng: ${ativ.localizacao.lng}`}>GPS Salvo</span>
                             )}
                           </div>
                         </div>
@@ -1080,16 +1080,16 @@ export default function AtividadesTempoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="card" style={{ height: 'fit-content' }}>
               <h3 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                📍 Sua Localização Atual
+                Sua Localização Atual
               </h3>
               
               {geoError ? (
-                <div style={{ padding: '20px', background: 'var(--red-bg)', color: 'var(--red)', borderRadius: '8px', fontSize: '13px', textAlign: 'center', fontWeight: 600 }}>
+                <div style={{ padding: '20px', background: 'var(--red-bg)', color: 'var(--red)', borderRadius: '8px', fontSize: '14.5px', textAlign: 'center', fontWeight: 600 }}>
                   ⚠️ {geoError}
                 </div>
               ) : !position ? (
                 <div style={{ padding: '40px', background: 'var(--bg-body)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  ⏳ Obtendo coordenadas do GPS...
+                  Obtendo coordenadas do GPS...
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1107,11 +1107,11 @@ export default function AtividadesTempoPage() {
                       title="Localização do Consultor"
                     />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-body)', padding: '10px 14px', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg-body)', padding: '10px 14px', borderRadius: '8px' }}>
                     <span>**Latitude:** {position.lat.toFixed(6)}</span>
                     <span>**Longitude:** {position.lng.toFixed(6)}</span>
                   </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '0 4px' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '0 4px' }}>
                     O GPS está ativo. Ao salvar uma atividade, estas coordenadas serão ancoradas ao registro para auditoria de visita ao cliente.
                   </p>
                 </div>

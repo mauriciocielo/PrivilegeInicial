@@ -65,7 +65,7 @@ export default function ProjecaoCaixaResumo({
       <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div className="card-title">Projeção de caixa — próximos {meses} meses</div>
         {href && (
-          <Link href={href} style={{ fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href={href} style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
             Ver detalhes e simular financiamento →
           </Link>
         )}
@@ -74,13 +74,13 @@ export default function ProjecaoCaixaResumo({
       {/* Três números que resumem a situação */}
       <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
+          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
             Em conta hoje
           </div>
           <div style={{ fontSize: 21, fontWeight: 800 }}>{fmt.currency(saldoInicial)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
+          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
             Menor saldo previsto
           </div>
           <div style={{ fontSize: 21, fontWeight: 800, color: proj.menorSaldo < 0 ? 'var(--red)' : 'var(--green)' }}>
@@ -88,7 +88,7 @@ export default function ProjecaoCaixaResumo({
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
+          <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--text-muted)', marginBottom: 3 }}>
             Cobertura da dívida
           </div>
           <div style={{
@@ -104,9 +104,9 @@ export default function ProjecaoCaixaResumo({
       {mesCritico && (
         <div style={{
           background: 'var(--red-bg)', border: '1px solid var(--red-border)', borderRadius: 8,
-          padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--text-primary)',
+          padding: '10px 14px', marginBottom: 16, fontSize: 14.5, color: 'var(--text-primary)',
         }}>
-          ⚠️ O caixa fica negativo em <strong>{mesCritico.label}</strong>, chegando a{' '}
+          O caixa fica negativo em <strong>{mesCritico.label}</strong>, chegando a{' '}
           <strong>{fmt.currency(proj.menorSaldo)}</strong>.
         </div>
       )}
@@ -119,8 +119,8 @@ export default function ProjecaoCaixaResumo({
               <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <XAxis dataKey="mes" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={46}
+          <XAxis dataKey="mes" tick={{ fontSize: 13 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 13 }} axisLine={false} tickLine={false} width={46}
                  tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
           <Tooltip formatter={(v: any) => fmt.currency(Number(v))} />
           <ReferenceLine y={0} stroke="var(--red)" strokeDasharray="4 4" />
@@ -129,7 +129,7 @@ export default function ProjecaoCaixaResumo({
       </ResponsiveContainer>
 
       {!temPrevistos && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
           Não há lançamentos previstos no período — a curva mostra apenas o efeito das parcelas de dívida.
           Cadastrar contas a pagar e a receber torna a projeção confiável.
         </div>

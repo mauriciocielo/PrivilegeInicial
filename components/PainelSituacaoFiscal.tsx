@@ -84,7 +84,7 @@ function textoIdade(c: Consulta): string {
   return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
 }
 
-const linkStyle = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 };
+const linkStyle = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14 };
 
 /** A validade fica em UTC ao meio-dia: mostrar em UTC mantém o dia que está na certidão. */
 const formatarValidade = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
@@ -342,24 +342,24 @@ export default function PainelSituacaoFiscal() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Situação Fiscal</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: 14.5 }}>
             Pendências de cada empresa na Receita Federal e na PGFN, pelo relatório SITFIS.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <a className="btn btn-secondary" href={URL_CND_RECEITA} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <a className="btn btn-secondary" href={URL_CND_RECEITA} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14.5 }}>
             <ExternalLink size={14} /> Emitir CND na Receita
           </a>
-          <button type="button" className="btn btn-secondary" onClick={() => { setBuscaEstado(''); setModalEstados(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => { setBuscaEstado(''); setModalEstados(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14.5 }}>
             <Landmark size={14} /> Certidões estaduais (27)
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setModalRotina(true)} disabled={!config} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => setModalRotina(true)} disabled={!config} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14.5 }}>
             <Settings size={14} /> Rotina mensal
           </button>
         </div>
       </div>
 
-      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>
+      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: 14.5, color: '#78350f', lineHeight: 1.5 }}>
         <strong>O relatório SITFIS não é uma certidão.</strong> Ele mostra as pendências, mas a CND vale só se emitida no portal oficial — a federal na Receita e a estadual na SEFAZ. O sistema abre o portal certo e guarda o PDF que você anexa, acompanhando a validade.
       </div>
 
@@ -379,11 +379,11 @@ export default function PainelSituacaoFiscal() {
                 border: `1px solid ${ativo ? cor : 'var(--border)'}`, boxShadow: ativo ? `inset 0 0 0 1px ${cor}` : 'none', color: 'inherit', font: 'inherit',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 <Icone size={14} color={cor} /> {titulo}
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{metricas[categoria]}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ajuda}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{ajuda}</div>
             </button>
           );
         })}
@@ -399,25 +399,25 @@ export default function PainelSituacaoFiscal() {
               placeholder="Buscar por nome ou CNPJ..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              style={{ paddingLeft: 32, fontSize: 13 }}
+              style={{ paddingLeft: 32, fontSize: 14.5 }}
             />
           </div>
           {ufsDisponiveis.length > 1 && (
-            <select className="form-control" aria-label="Filtrar por estado" value={filtroUf} onChange={e => setFiltroUf(e.target.value)} style={{ width: 'auto', fontSize: 13 }}>
+            <select className="form-control" aria-label="Filtrar por estado" value={filtroUf} onChange={e => setFiltroUf(e.target.value)} style={{ width: 'auto', fontSize: 14.5 }}>
               <option value="">Todos os estados</option>
               {ufsDisponiveis.map(uf => <option key={uf} value={uf}>{uf}</option>)}
             </select>
           )}
-          <select className="form-control" aria-label="Filtrar por certidão estadual" value={filtroEstadual} onChange={e => setFiltroEstadual(e.target.value as typeof filtroEstadual)} style={{ width: 'auto', fontSize: 13 }}>
+          <select className="form-control" aria-label="Filtrar por certidão estadual" value={filtroEstadual} onChange={e => setFiltroEstadual(e.target.value as typeof filtroEstadual)} style={{ width: 'auto', fontSize: 14.5 }}>
             <option value="">Certidão estadual: todas</option>
             <option value="sem">Sem certidão anexada</option>
             <option value="vencendo">Vencida ou vencendo</option>
           </select>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{filtradas.length} de {empresas.length} empresas</span>
+          <span style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>{filtradas.length} de {empresas.length} empresas</span>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             {lote ? (
               <>
-                <span role="status" style={{ fontSize: 13 }}>Consultando {Math.min(lote.feitas + 1, lote.total)} de {lote.total}...</span>
+                <span role="status" style={{ fontSize: 14.5 }}>Consultando {Math.min(lote.feitas + 1, lote.total)} de {lote.total}...</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => { cancelarLote.current = true; }}>Parar</button>
               </>
             ) : (
@@ -467,49 +467,49 @@ export default function PainelSituacaoFiscal() {
                 return (
                   <tr key={e.id}>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: 13.5 }}>{e.nomeFantasia || e.razaoSocial}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{e.cnpj}</div>
+                      <div style={{ fontWeight: 600, fontSize: 15 }}>{e.nomeFantasia || e.razaoSocial}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{e.cnpj}</div>
                     </td>
                     <td style={{ maxWidth: 320 }}>
-                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Relatório (SITFIS)</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Relatório (SITFIS)</div>
                       <span className={`badge ${CATEGORIAS[e.categoria].classe}`} style={CATEGORIAS[e.categoria].classe ? undefined : { background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
                         {rotuloDaConsulta(e)}
                       </span>
-                      {detalhe && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>{detalhe}</div>}
+                      {detalhe && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 4 }}>{detalhe}</div>}
 
-                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 10 }}>CND federal</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 10 }}>CND federal</div>
                       {e.cndFederal ? (() => {
                         const validade = textoValidade(e.cndFederal.validoAte);
                         return (
                           <div>
                             <span className={`badge ${CLASSE_ANEXO[e.cndFederal.situacao] || ''}`}>{SITUACOES_ANEXO[e.cndFederal.situacao] || e.cndFederal.situacao}</span>
-                            <div style={{ fontSize: 11.5, color: validade.cor, marginTop: 2 }}>
+                            <div style={{ fontSize: 13.5, color: validade.cor, marginTop: 2 }}>
                               {validade.texto}{' · '}
                               <a href={`/api/certidoes/${e.cndFederal.id}/download`} target="_blank" rel="noreferrer">PDF</a>
                             </div>
                           </div>
                         );
-                      })() : <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 4 }}>Não anexada</div>}
+                      })() : <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 4 }}>Não anexada</div>}
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => abrirAnexo(e, 'FEDERAL')} style={{ ...linkStyle, marginTop: 4 }}>
                         <Upload size={12} /> {e.cndFederal ? 'Atualizar CND' : 'Emitir e anexar CND'}
                       </button>
                     </td>
-                    <td style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
                       {e.federal ? (
                         <>
                           <div>{dataDaConsulta(e.federal).toLocaleDateString('pt-BR')}</div>
-                          <div style={{ fontSize: 11.5, color: antiga ? '#b45309' : 'var(--text-muted)' }}>{textoIdade(e.federal)}{antiga ? ': consulte de novo' : ''}</div>
+                          <div style={{ fontSize: 13.5, color: antiga ? '#b45309' : 'var(--text-muted)' }}>{textoIdade(e.federal)}{antiga ? ': consulte de novo' : ''}</div>
                         </>
                       ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td style={{ fontSize: 12.5 }}>
+                    <td style={{ fontSize: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                         {(e.estaduais || []).map(c => {
                           const validade = textoValidade(c.validoAte);
                           return (
                             <div key={c.id}>
                               <span className={`badge ${CLASSE_ANEXO[c.situacao] || ''}`}>{c.uf}: {SITUACOES_ANEXO[c.situacao] || c.situacao}</span>
-                              <div style={{ fontSize: 11.5, color: validade.cor, marginTop: 2 }}>
+                              <div style={{ fontSize: 13.5, color: validade.cor, marginTop: 2 }}>
                                 {validade.texto}
                                 {' · '}
                                 <a href={`/api/certidoes/${c.id}/download`} target="_blank" rel="noreferrer">PDF</a>
@@ -554,7 +554,7 @@ export default function PainelSituacaoFiscal() {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">{anexoTipo === 'FEDERAL' ? 'CND federal' : 'Certidão estadual'}</h2>
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{anexoEmpresa.nomeFantasia || anexoEmpresa.razaoSocial} — {anexoEmpresa.cnpj}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{anexoEmpresa.nomeFantasia || anexoEmpresa.razaoSocial} — {anexoEmpresa.cnpj}</div>
               </div>
               <button type="button" className="modal-close" onClick={() => setAnexoEmpresa(null)} disabled={anexando}>✕</button>
             </div>
@@ -569,7 +569,7 @@ export default function PainelSituacaoFiscal() {
               </div>
             )}
 
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>1. Emita no portal {anexoTipo === 'FEDERAL' ? 'da Receita' : 'do estado'}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}>1. Emita no portal {anexoTipo === 'FEDERAL' ? 'da Receita' : 'do estado'}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => copiarCnpj(anexoEmpresa.cnpj)} style={linkStyle}>
                 <Copy size={12} /> Copiar CNPJ
@@ -585,13 +585,13 @@ export default function PainelSituacaoFiscal() {
               ))}
             </div>
             {anexoTipo === 'FEDERAL'
-              ? <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>A CND federal cobre a Receita e a PGFN e vale para todos os estabelecimentos do CNPJ raiz.</div>
-              : portalDaUf(anexoUf)?.observacao && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{portalDaUf(anexoUf)?.observacao}</div>}
+              ? <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 6 }}>A CND federal cobre a Receita e a PGFN e vale para todos os estabelecimentos do CNPJ raiz.</div>
+              : portalDaUf(anexoUf)?.observacao && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 6 }}>{portalDaUf(anexoUf)?.observacao}</div>}
 
-            <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>2. Anexe o PDF baixado</div>
+            <div style={{ fontSize: 14.5, fontWeight: 600, margin: '14px 0 6px' }}>2. Anexe o PDF baixado</div>
             <div className="form-group">
               <label className="form-label" htmlFor="anexo-pdf">PDF da certidão (até 3 MB)</label>
-              <input id="anexo-pdf" type="file" accept="application/pdf,.pdf" style={{ fontSize: 12 }} disabled={anexando} onChange={e => setAnexoArquivo(e.target.files?.[0] || null)} />
+              <input id="anexo-pdf" type="file" accept="application/pdf,.pdf" style={{ fontSize: 14 }} disabled={anexando} onChange={e => setAnexoArquivo(e.target.files?.[0] || null)} />
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -605,7 +605,7 @@ export default function PainelSituacaoFiscal() {
                 <input id="anexo-validade" type="date" className="form-control" value={anexoValidade} onChange={e => setAnexoValidade(e.target.value)} disabled={anexando} />
               </div>
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
               Copie a situação e a validade do próprio documento. O sistema guarda o arquivo e registra quem anexou, mas não confere a autenticidade: ela é validada no portal {anexoTipo === 'FEDERAL' ? 'da Receita' : 'do estado'}.
             </div>
 
@@ -623,7 +623,7 @@ export default function PainelSituacaoFiscal() {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">Certidões estaduais</h2>
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                   Portal oficial dos 27 estados. A empresa precisa da certidão de cada estado em que atua.
                 </div>
               </div>
@@ -635,24 +635,24 @@ export default function PainelSituacaoFiscal() {
               placeholder="Buscar estado..."
               value={buscaEstado}
               onChange={e => setBuscaEstado(e.target.value)}
-              style={{ marginBottom: 12, fontSize: 13 }}
+              style={{ marginBottom: 12, fontSize: 14.5 }}
             />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 8 }}>
               {estadosFiltrados.map(uf => {
                 const portal = PORTAIS_ESTADUAIS[uf];
                 return (
                   <div key={uf} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{uf} — {portal.nome}</div>
+                    <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{uf} — {portal.nome}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
                       {portal.links.map(l => (
                         <a key={l.url} href={l.url} target="_blank" rel="noreferrer" style={linkStyle}><ExternalLink size={12} /> {l.rotulo}</a>
                       ))}
                     </div>
-                    {portal.observacao && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>{portal.observacao}</div>}
+                    {portal.observacao && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5 }}>{portal.observacao}</div>}
                   </div>
                 );
               })}
-              {estadosFiltrados.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nenhum estado encontrado.</div>}
+              {estadosFiltrados.length === 0 && <div style={{ fontSize: 14.5, color: 'var(--text-muted)' }}>Nenhum estado encontrado.</div>}
             </div>
             <div className="form-actions" style={{ marginTop: 14 }}>
               <button type="button" className="btn btn-secondary" onClick={() => setModalEstados(false)}>Fechar</button>
@@ -668,10 +668,10 @@ export default function PainelSituacaoFiscal() {
               <h2 className="modal-title">Rotina mensal</h2>
               <button type="button" className="modal-close" onClick={() => setModalRotina(false)}>✕</button>
             </div>
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#78350f', marginBottom: 14 }}>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 14.5, color: '#78350f', marginBottom: 14 }}>
               <strong>A rotina ainda não está agendada:</strong> nada roda sozinho no último dia do mês. Por enquanto, use &quot;Consultar esta lista&quot;. Estas opções só passam a valer quando o agendamento for ativado.
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, marginBottom: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 15, marginBottom: 14 }}>
               <input type="checkbox" checked={config.ativo} onChange={e => setConfig({ ...config, ativo: e.target.checked })} />
               Consultar a carteira no último dia do mês
             </label>
@@ -698,7 +698,7 @@ export default function PainelSituacaoFiscal() {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">Histórico</h2>
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{historicoEmpresa.nomeFantasia || historicoEmpresa.razaoSocial} — {historicoEmpresa.cnpj}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{historicoEmpresa.nomeFantasia || historicoEmpresa.razaoSocial} — {historicoEmpresa.cnpj}</div>
               </div>
               <button type="button" className="modal-close" onClick={() => setHistoricoEmpresa(null)}>✕</button>
             </div>
@@ -713,11 +713,11 @@ export default function PainelSituacaoFiscal() {
                 return (
                   <div key={h.id} style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 600 }}>
                         {titulo} — {dataDaConsulta(h).toLocaleDateString('pt-BR')} às {dataDaConsulta(h).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         {h.criadoAutomaticamente && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — automática</span>}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                         {anexo && h.validoAte ? `${textoValidade(h.validoAte).texto}. ` : ''}{h.observacoes || h.situacao}
                       </div>
                     </div>

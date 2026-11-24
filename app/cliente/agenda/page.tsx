@@ -96,7 +96,7 @@ export default function ClienteAgendaPage() {
               return (
                 <div key={iso}>
                   <div style={{
-                    fontSize: 12.5, fontWeight: 800, textTransform: 'capitalize', marginBottom: 8,
+                    fontSize: 14, fontWeight: 800, textTransform: 'capitalize', marginBottom: 8,
                     color: isHoje ? 'var(--accent)' : isPassado ? 'var(--text-muted)' : 'var(--text-primary)',
                   }}>
                     {rotuloDoDia(iso)}
@@ -110,12 +110,12 @@ export default function ClienteAgendaPage() {
                       }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent)', minWidth: 48 }}>{t.horario}</div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, textDecoration: t.completed ? 'line-through' : 'none' }}>
+                          <div style={{ fontSize: 15.5, fontWeight: 700, textDecoration: t.completed ? 'line-through' : 'none' }}>
                             {t.title}
                           </div>
-                          {t.location && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>📍 {t.location}</div>}
+                          {t.location && <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 3 }}>📍 {t.location}</div>}
                         </div>
-                        {t.completed && <span className="badge badge-green" style={{ fontSize: 10 }}>Concluído</span>}
+                        {t.completed && <span className="badge badge-green" style={{ fontSize: 12.5 }}>Concluído</span>}
                       </div>
                     ))}
                   </div>

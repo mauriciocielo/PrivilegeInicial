@@ -108,37 +108,37 @@ export default function DateRangeFilter({
         >
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>De</label>
+              <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>De</label>
               <input
                 type="date"
                 className="form-control"
                 value={ini}
                 max={fim || undefined}
                 onChange={e => onChange(e.target.value, fim)}
-                style={{ fontSize: 12.5, padding: '7px 8px' }}
+                style={{ fontSize: 14, padding: '7px 8px' }}
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Até</label>
+              <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Até</label>
               <input
                 type="date"
                 className="form-control"
                 value={fim}
                 min={ini || undefined}
                 onChange={e => onChange(ini, e.target.value)}
-                style={{ fontSize: 12.5, padding: '7px 8px' }}
+                style={{ fontSize: 14, padding: '7px 8px' }}
               />
             </div>
           </div>
 
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Atalhos</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Atalhos</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {PRESETS.map(p => (
               <button
                 key={p.label}
                 type="button"
                 className="btn btn-secondary btn-sm"
-                style={{ fontSize: 11, padding: '4px 9px' }}
+                style={{ fontSize: 13, padding: '4px 9px' }}
                 onClick={() => { const [s, e] = p.range(); onChange(s, e); }}
               >
                 {p.label}

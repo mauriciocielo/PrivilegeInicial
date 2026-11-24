@@ -88,7 +88,7 @@ function ClimaPublicForm() {
         <div className="card" style={{ maxWidth: '520px', width: '100%', padding: '32px 24px', textAlign: 'center' }}>
           <CheckCircle2 size={56} color="#16a34a" style={{ margin: '0 auto 14px' }} />
           <h1 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 8px' }}>Respostas Enviadas!</h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '15.5px', color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.6, margin: 0 }}>
             Muito obrigado pela sua participação. Suas respostas foram registradas com segurança na tabulação da Pesquisa de Clima Organizacional.
           </p>
         </div>
@@ -105,10 +105,10 @@ function ClimaPublicForm() {
             <SmilePlus size={26} color="var(--accent, #8c1a22)" />
             <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Pesquisa de Clima Organizacional</h1>
           </div>
-          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary, #94a3b8)', margin: '0 0 14px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '15px', color: 'var(--text-secondary, #94a3b8)', margin: '0 0 14px', lineHeight: 1.5 }}>
             Avalie cada afirmação de <strong>0</strong> (Discordo Totalmente) a <strong>10</strong> (Concordo Totalmente). Sua sinceridade ajuda a construir um ambiente melhor.
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-muted, #94a3b8)' }}>
               <ShieldCheck size={14} color="#16a34a" /> Participação segura · Celular ou Computador
             </span>
@@ -155,7 +155,7 @@ function ClimaPublicForm() {
                   .filter((q) => q.categoria === cat)
                   .map((q) => (
                     <div key={q.id} style={{ paddingBottom: '14px', borderBottom: '1px solid var(--border, #262b36)' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '10px', lineHeight: 1.45 }}>
+                      <div style={{ fontSize: '15.5px', fontWeight: 600, marginBottom: '10px', lineHeight: 1.45 }}>
                         <span style={{ color: 'var(--accent, #f87171)', marginRight: '6px' }}>{q.id}ª.</span>
                         {q.texto}
                       </div>
@@ -180,7 +180,7 @@ function ClimaPublicForm() {
                                   : 'var(--bg-secondary, #161b26)',
                                 color: active ? '#fff' : 'var(--text-primary, #e2e8f0)',
                                 fontWeight: 700,
-                                fontSize: '13px',
+                                fontSize: '14.5px',
                                 cursor: 'pointer',
                               }}
                             >
@@ -189,7 +189,7 @@ function ClimaPublicForm() {
                           );
                         })}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--text-muted, #94a3b8)', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted, #94a3b8)', marginTop: '4px' }}>
                         <span>0 = Discordo Totalmente</span>
                         <span>5 = Neutro</span>
                         <span>10 = Concordo Totalmente</span>
@@ -201,7 +201,7 @@ function ClimaPublicForm() {
           ))}
 
           {error && (
-            <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(220, 38, 38, 0.15)', border: '1px solid #dc2626', color: '#fca5a5', fontSize: '13.5px', fontWeight: 600 }}>
+            <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(220, 38, 38, 0.15)', border: '1px solid #dc2626', color: '#fca5a5', fontSize: '15px', fontWeight: 600 }}>
               {error}
             </div>
           )}

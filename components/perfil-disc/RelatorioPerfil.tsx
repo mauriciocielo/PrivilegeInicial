@@ -33,9 +33,9 @@ const ESTILOS = `
 const TABELA_COMPACTA: React.CSSProperties = { minWidth: 0 };
 
 const tituloSecao: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' };
-const subtituloSecao: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 14px' };
-const texto: React.CSSProperties = { fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 };
-const rotulo: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' };
+const subtituloSecao: React.CSSProperties = { fontSize: 14.5, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 14px' };
+const texto: React.CSSProperties = { fontSize: 15, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 };
+const rotulo: React.CSSProperties = { fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' };
 
 function Secao({ titulo, subtitulo, children }: { titulo: string; subtitulo?: string; children: React.ReactNode }) {
   return (
@@ -49,7 +49,7 @@ function Secao({ titulo, subtitulo, children }: { titulo: string; subtitulo?: st
 
 function Legenda() {
   const item = (cor: string, nome: string) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)' }}>
       <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: cor }} />
       {nome}
     </span>
@@ -90,11 +90,11 @@ function GraficoDisc({ dados }: { dados: Array<{ nome: string; Natural: number; 
         <BarChart data={dados} barGap={2} margin={{ top: 14, right: 10, left: -18, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="var(--border)" />
           <XAxis dataKey="nome" interval={0} axisLine={{ stroke: 'var(--border-dark)' }} tickLine={false} tick={RotuloFator} />
-          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: 'var(--text-muted)' }} />
           <ReferenceLine y={50} stroke="var(--text-muted)" />
           <Tooltip
             cursor={{ fill: 'var(--bg-hover)' }}
-            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, color: 'var(--text-primary)' }}
+            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, color: 'var(--text-primary)' }}
           />
           <Bar dataKey="Natural" fill="var(--pd-natural)" barSize={22} radius={[4, 4, 0, 0]} />
           <Bar dataKey="Adaptado" fill="var(--pd-adaptado)" barSize={22} radius={[4, 4, 0, 0]} />
@@ -108,13 +108,13 @@ function BarraValor({ nome, detalhe, valor, sufixo = '' }: { nome: string; detal
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 170px) 1fr 44px', alignItems: 'center', gap: 10, padding: '5px 0' }}>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{nome}</div>
-        {detalhe && <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{detalhe}</div>}
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)' }}>{nome}</div>
+        {detalhe && <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>{detalhe}</div>}
       </div>
       <div style={{ height: 10, background: 'var(--border-light)', borderRadius: 5 }}>
         <div style={{ height: '100%', width: `${Math.min(100, valor)}%`, background: 'var(--pd-natural)', borderRadius: 5 }} />
       </div>
-      <span className="pd-num" style={{ fontSize: 12.5, color: 'var(--text-primary)', textAlign: 'right' }}>{valor}{sufixo}</span>
+      <span className="pd-num" style={{ fontSize: 14, color: 'var(--text-primary)', textAlign: 'right' }}>{valor}{sufixo}</span>
     </div>
   );
 }
@@ -122,14 +122,14 @@ function BarraValor({ nome, detalhe, valor, sufixo = '' }: { nome: string; detal
 function BarraJung({ linha }: { linha: LinhaJung }) {
   const [a, b] = linha.polos;
   const bloco = (pct: number, cor: string) => pct > 0 && (
-    <div style={{ width: `${pct}%`, background: cor, borderRadius: 4, color: '#fff', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', paddingLeft: 8, overflow: 'visible', whiteSpace: 'nowrap' }}>
+    <div style={{ width: `${pct}%`, background: cor, borderRadius: 4, color: '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', paddingLeft: 8, overflow: 'visible', whiteSpace: 'nowrap' }}>
       {/* Bloco estreito não comporta o número: ele fica nos nomes logo acima. */}
       {pct >= 15 ? `${pct}%` : ''}
     </div>
   );
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>
         <span>{a.nome} ({a.letra}): {a.pct}%</span>
         <span>{b.nome} ({b.letra}): {b.pct}%</span>
       </div>
@@ -155,7 +155,7 @@ function CelulaMedidor({ valor, cor }: { valor: number; cor: string }) {
         <div style={{ flex: 1, minWidth: 50, height: 8, background: 'var(--border-light)', borderRadius: 4 }}>
           <div style={{ width: `${valor}%`, height: '100%', background: cor, borderRadius: 4 }} />
         </div>
-        <span className="pd-num" style={{ fontSize: 12.5, color: 'var(--text-primary)', minWidth: 22, textAlign: 'right' }}>{valor}</span>
+        <span className="pd-num" style={{ fontSize: 14, color: 'var(--text-primary)', minWidth: 22, textAlign: 'right' }}>{valor}</span>
       </div>
     </td>
   );
@@ -165,8 +165,8 @@ function LinhaCompetenciaTabela({ item }: { item: LinhaCompetencia }) {
   return (
     <tr>
       <td style={{ padding: '6px 8px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.nome}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{item.descricao}</div>
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)' }}>{item.nome}</div>
+        <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>{item.descricao}</div>
       </td>
       <CelulaMedidor valor={item.natural} cor="var(--pd-natural)" />
       <CelulaMedidor valor={item.adaptado} cor="var(--pd-adaptado)" />
@@ -186,11 +186,11 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
       <section className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>{nomeTipoRespondente(respondente.tipo)} · {respondente.empresa}</div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 2 }}>{nomeTipoRespondente(respondente.tipo)} · {respondente.empresa}</div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{respondente.nome}</h2>
-            {respondente.cargo && <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{respondente.cargo}</div>}
+            {respondente.cargo && <div style={{ fontSize: 14.5, color: 'var(--text-secondary)' }}>{respondente.cargo}</div>}
           </div>
-          <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
             {respondente.concluidoEm && <div>Respondido em {new Date(respondente.concluidoEm).toLocaleDateString('pt-BR')}</div>}
             <div>Tempo de resposta: {formatarTempoResposta(respondente.tempoRespostaSeg)}</div>
             {respondente.consentimentoEm && <div>Aceite registrado em {new Date(respondente.consentimentoEm).toLocaleDateString('pt-BR')}</div>}
@@ -198,7 +198,7 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
         </div>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{rel.perfil}</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '4px 0 8px' }}>{rel.titulo}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary)', margin: '4px 0 8px' }}>{rel.titulo}</div>
           {rel.visaoGeral.map(p => <p key={p} style={{ ...texto, marginBottom: 6 }}>{p}</p>)}
         </div>
       </section>
@@ -224,7 +224,7 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
           </table>
         </div>
         <div style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-hover)', borderRadius: 10 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Esforço de adaptação</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Esforço de adaptação</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{rel.esforco.nome} ({rel.esforco.valor})</div>
           <p style={{ ...texto, marginTop: 4 }}>{rel.esforco.texto}</p>
         </div>
@@ -287,7 +287,7 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
             <thead><tr><th>Competência</th><th>Natural</th><th>Adaptado</th></tr></thead>
             {rel.competencias.map(grupo => (
               <tbody key={grupo.fator}>
-                <tr><td colSpan={3} style={{ padding: '10px 8px 2px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>{grupo.nome}</td></tr>
+                <tr><td colSpan={3} style={{ padding: '10px 8px 2px', fontSize: 14, fontWeight: 700, color: 'var(--text-muted)' }}>{grupo.nome}</td></tr>
                 {grupo.itens.map(item => <LinhaCompetenciaTabela key={item.id} item={item} />)}
               </tbody>
             ))}
@@ -302,7 +302,7 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
               {rel.tendencias.map(t => (
                 <tr key={t.a}>
                   <td style={{ width: '40%', fontWeight: t.lado === 'a' ? 700 : 400, color: t.lado === 'a' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{t.lado === 'a' ? '● ' : ''}{t.a}</td>
-                  <td style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--text-muted)' }}>{t.lado === 'equilibrio' ? 'equilíbrio' : ''}</td>
+                  <td style={{ textAlign: 'center', fontSize: 13.5, color: 'var(--text-muted)' }}>{t.lado === 'equilibrio' ? 'equilíbrio' : ''}</td>
                   <td style={{ width: '40%', textAlign: 'right', fontWeight: t.lado === 'b' ? 700 : 400, color: t.lado === 'b' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{t.b}{t.lado === 'b' ? ' ●' : ''}</td>
                 </tr>
               ))}
@@ -334,7 +334,7 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
         </div>
       </Secao>
 
-      <p style={{ fontSize: 12, lineHeight: 1.55, color: 'var(--text-muted)', margin: '0 4px 8px' }}>{AVISO_METODOLOGICO}</p>
+      <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--text-muted)', margin: '0 4px 8px' }}>{AVISO_METODOLOGICO}</p>
     </div>
   );
 }

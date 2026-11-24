@@ -299,7 +299,7 @@ export default function PessoasOrganogramaPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 12.5,
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       color: '#fff',
@@ -340,9 +340,9 @@ export default function PessoasOrganogramaPage() {
                     </button>
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{node.cargo}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{node.setor}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-primary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
+                <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--text-primary)' }}>{node.cargo}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 2 }}>{node.setor}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
                   <UserCheck size={13} color={style.badge} />
                   {node.colaborador || 'A definir'}
                 </div>
@@ -390,9 +390,9 @@ export default function PessoasOrganogramaPage() {
           </div>
         </div>
         <div className="header-actions">
-          {saving && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Salvando...</span>}
+          {saving && <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Salvando...</span>}
           {!saving && lastSaved && (
-            <span style={{ fontSize: 12, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 14, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
               <CheckCircle2 size={14} /> Salvo às {lastSaved}
             </span>
           )}
@@ -467,7 +467,7 @@ export default function PessoasOrganogramaPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <div className="card-title">Estrutura Hierárquica</div>
-                <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
                   Clique em <strong>+</strong> dentro de qualquer cargo para adicionar um subordinado direto.
                 </p>
               </div>
@@ -478,8 +478,8 @@ export default function PessoasOrganogramaPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 18, alignItems: 'start' }}>
             <div className="card" style={{ padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <strong style={{ fontSize: 14 }}>Funções ({descritivos.length})</strong>
-                <button onClick={openNewDesc} className="btn btn-primary" style={{ padding: '6px 10px', fontSize: 12 }}>
+                <strong style={{ fontSize: 15.5 }}>Funções ({descritivos.length})</strong>
+                <button onClick={openNewDesc} className="btn btn-primary" style={{ padding: '6px 10px', fontSize: 14 }}>
                   <Plus size={14} /> Nova
                 </button>
               </div>
@@ -502,8 +502,8 @@ export default function PessoasOrganogramaPage() {
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 13 }}>{d.funcao}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                      <div style={{ fontWeight: 700, fontSize: 14.5 }}>{d.funcao}</div>
+                      <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                         {d.setor} · CBO {d.cbo || '—'}
                       </div>
                     </div>
@@ -550,12 +550,12 @@ export default function PessoasOrganogramaPage() {
                 <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
                   <div style={{ background: 'var(--bg-secondary)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, borderBottom: '1px solid var(--border)' }}>
                     <div>
-                      <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
                         Descrição de Perfil de Função
                       </div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{selectedDesc.funcao}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 14, color: 'var(--text-secondary)' }}>
                       <div><strong>CBO:</strong> {selectedDesc.cbo || '—'}</div>
                       <div><strong>Revisão:</strong> {selectedDesc.revisao || '01'}</div>
                       <div><strong>Data:</strong> {selectedDesc.data || '—'}</div>
@@ -564,33 +564,33 @@ export default function PessoasOrganogramaPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Setor</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.setor}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Setor</div>
+                      <div style={{ fontSize: 15.5, fontWeight: 600 }}>{selectedDesc.setor}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Funcionário</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.nomeFuncionario || 'A definir'}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Funcionário</div>
+                      <div style={{ fontSize: 15.5, fontWeight: 600 }}>{selectedDesc.nomeFuncionario || 'A definir'}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Gestor Responsável</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedDesc.gestorResponsavel || '—'}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Gestor Responsável</div>
+                      <div style={{ fontSize: 15.5, fontWeight: 600 }}>{selectedDesc.gestorResponsavel || '—'}</div>
                     </div>
                   </div>
 
                   <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 6 }}>
                       Objetivo da Função
                     </div>
-                    <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{selectedDesc.objetivo}</p>
+                    <p style={{ margin: 0, fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{selectedDesc.objetivo}</p>
                   </div>
 
                   <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
                       Perfil / Requisitos
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {selectedDesc.requisitos.map((req, i) => (
-                        <span key={i} className="badge badge-info" style={{ fontSize: 12, padding: '4px 10px' }}>
+                        <span key={i} className="badge badge-info" style={{ fontSize: 14, padding: '4px 10px' }}>
                           {req}
                         </span>
                       ))}
@@ -598,10 +598,10 @@ export default function PessoasOrganogramaPage() {
                   </div>
 
                   <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
                       Função — Descrição das Atividades Exercidas
                     </div>
-                    <ol style={{ margin: 0, paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.7 }}>
+                    <ol style={{ margin: 0, paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.7 }}>
                       {selectedDesc.atividades.map((at, i) => (
                         <li key={i}>{at}</li>
                       ))}
@@ -610,12 +610,12 @@ export default function PessoasOrganogramaPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, padding: '32px 24px 20px' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Assinatura do Colaborador
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Assinatura do Supervisor / Gestor
                       </div>
                     </div>
@@ -784,11 +784,11 @@ export default function PessoasOrganogramaPage() {
                   }
                 }}>Adicionar</button>
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5 }}>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
                 {editingDesc.atividades.map((a, idx) => (
                   <li key={idx} style={{ marginBottom: 4 }}>
                     {a}{' '}
-                    <button type="button" onClick={() => setEditingDesc({ ...editingDesc, atividades: editingDesc.atividades.filter((_, i) => i !== idx) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12 }}>[remover]</button>
+                    <button type="button" onClick={() => setEditingDesc({ ...editingDesc, atividades: editingDesc.atividades.filter((_, i) => i !== idx) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 14 }}>[remover]</button>
                   </li>
                 ))}
               </ul>

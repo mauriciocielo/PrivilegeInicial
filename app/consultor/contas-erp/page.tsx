@@ -3,6 +3,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { store } from '../../../lib/store';
 import { fmt } from '../../../lib/reports';
 import { toast } from 'sonner';
+import { Check as IcoCheck, FileText as IcoFileText, Plug as IcoPlug, Wallet as IcoWallet } from 'lucide-react';
 
 type StatusConta = 'aberto' | 'parcial' | 'liquidado' | 'cancelado';
 
@@ -154,11 +155,11 @@ export default function ConsultorContasErpPage() {
           background: 'var(--blue-bg, rgba(59,130,246,0.08))', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8,
         }}>
           <span style={{ fontSize: 16 }}>💡</span>
-          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             Para o dia a dia (dar baixa, conciliar com o extrato bancário), use as telas normais de{' '}
             <a href="/consultor/contas-receber" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contas a Receber</a>
             {' '}e <a href="/consultor/contas-pagar" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contas a Pagar</a> — todo
-            título com o selo <span className="badge badge-blue" style={{ fontSize: 9.5 }}>🔌 API</span> veio daqui automaticamente
+            título com o selo <span className="badge badge-blue" style={{ fontSize: 12 }}>API</span> veio daqui automaticamente
             (se a empresa tiver plano de conta/portador padrão configurados em Empresas → Integração via API).
             Esta tela é o livro-razão exato como o ERP vê — útil para conferência e para dar baixa quando o
             webhook de pagamento não chegar.
@@ -166,22 +167,22 @@ export default function ConsultorContasErpPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-light)', paddingBottom: 10 }}>
-          <button className={`btn ${aba === 'receber' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => { setAba('receber'); setBaixando(null); }}>
+          <button className={`btn ${aba === 'receber' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => { setAba('receber'); setBaixando(null); }}>
             ↑ A Receber
           </button>
-          <button className={`btn ${aba === 'pagar' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => { setAba('pagar'); setBaixando(null); }}>
+          <button className={`btn ${aba === 'pagar' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 14.5, padding: '6px 14px' }} onClick={() => { setAba('pagar'); setBaixando(null); }}>
             ↓ A Pagar
           </button>
         </div>
 
         <div className="stat-grid" style={{ marginBottom: 20 }}>
           <div className="card stat-card">
-            <div className="stat-icon blue">💰</div>
+            <div className="stat-icon blue"><IcoWallet size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Saldo em aberto</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{fmt.currency(resumo.totalAberto)}</div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon purple">📄</div>
+            <div className="stat-icon purple"><IcoFileText size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Títulos em aberto</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{resumo.qtdAberto}</div>
           </div>
@@ -191,7 +192,7 @@ export default function ConsultorContasErpPage() {
             <div className="stat-value" style={{ fontSize: 22, color: resumo.qtdVencida > 0 ? 'var(--red)' : undefined }}>{resumo.qtdVencida}</div>
           </div>
           <div className="card stat-card">
-            <div className="stat-icon green">✓</div>
+            <div className="stat-icon green"><IcoCheck size={20} strokeWidth={2} aria-hidden /></div>
             <div className="stat-label">Liquidados</div>
             <div className="stat-value" style={{ fontSize: 22 }}>{resumo.qtdLiquidada}</div>
           </div>
@@ -210,14 +211,14 @@ export default function ConsultorContasErpPage() {
           </div>
 
           {erro && (
-            <div style={{ padding: 16, color: 'var(--red)', fontSize: 13 }}>{erro}</div>
+            <div style={{ padding: 16, color: 'var(--red)', fontSize: 14.5 }}>{erro}</div>
           )}
 
           {!erro && loading ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando...</div>
           ) : !erro && filtradas.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🔌</div>
+              <div className="empty-state-icon"><IcoPlug size={20} strokeWidth={2} aria-hidden /></div>
               <h3>Nenhum título encontrado</h3>
               <p>
                 Assim que o ERP do cliente enviar lançamentos pela integração de API (veja
@@ -248,9 +249,9 @@ export default function ConsultorContasErpPage() {
                       <Fragment key={c.id}>
                         <tr>
                           <td style={{ fontWeight: 600 }}>{pessoa?.nome || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          <td style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                             {c.numeroDocumento || c.descricao || '—'}
-                            {c.formaPagamentoPrevista && <div style={{ fontSize: 10.5, color: 'var(--accent)', marginTop: 2 }}>💳 {c.formaPagamentoPrevista}</div>}
+                            {c.formaPagamentoPrevista && <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2 }}>💳 {c.formaPagamentoPrevista}</div>}
                           </td>
                           <td style={{ whiteSpace: 'nowrap', color: vencida(c) ? 'var(--red)' : undefined, fontWeight: vencida(c) ? 700 : 400 }}>
                             {fmt.date(c.dataVencimento)} {vencida(c) && '⚠️'}
@@ -258,14 +259,14 @@ export default function ConsultorContasErpPage() {
                           <td style={{ textAlign: 'right' }}>{fmt.currency(c.valorLiquido)}</td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.currency(Math.max(0, emAberto))}</td>
                           <td><span className={`badge ${STATUS_BADGE[c.status]}`}>{STATUS_LABEL[c.status]}</span></td>
-                          <td style={{ fontSize: 11, whiteSpace: 'nowrap', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <td style={{ fontSize: 13, whiteSpace: 'nowrap', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             {podeBaixar && (
                               <button
                                 className="btn btn-ghost btn-sm"
-                                style={{ padding: '2px 8px', fontSize: 10.5, border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: 4 }}
+                                style={{ padding: '2px 8px', fontSize: 13, border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: 4 }}
                                 onClick={() => (baixando === c.id ? setBaixando(null) : iniciarBaixa(c))}
                               >
-                                {baixando === c.id ? 'Cancelar' : '💵 Dar baixa'}
+                                {baixando === c.id ? 'Cancelar' : 'Dar baixa'}
                               </button>
                             )}
                             {c.baixas.length > 0 && (
@@ -280,22 +281,22 @@ export default function ConsultorContasErpPage() {
                             <td colSpan={7} style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                                 <div>
-                                  <label className="form-label" style={{ fontSize: 11 }}>Valor (R$)</label>
+                                  <label className="form-label" style={{ fontSize: 13 }}>Valor (R$)</label>
                                   <input className="form-control form-control-sm" style={{ width: 120 }} type="number" step="0.01"
                                     value={formBaixa.valor} onChange={e => setFormBaixa(f => ({ ...f, valor: e.target.value }))} />
                                 </div>
                                 <div>
-                                  <label className="form-label" style={{ fontSize: 11 }}>Data</label>
+                                  <label className="form-label" style={{ fontSize: 13 }}>Data</label>
                                   <input className="form-control form-control-sm" style={{ width: 140 }} type="date"
                                     value={formBaixa.data} onChange={e => setFormBaixa(f => ({ ...f, data: e.target.value }))} />
                                 </div>
                                 <div>
-                                  <label className="form-label" style={{ fontSize: 11 }}>Forma de pagamento</label>
+                                  <label className="form-label" style={{ fontSize: 13 }}>Forma de pagamento</label>
                                   <input className="form-control form-control-sm" style={{ width: 140 }} placeholder="PIX, boleto..."
                                     value={formBaixa.formaPagamento} onChange={e => setFormBaixa(f => ({ ...f, formaPagamento: e.target.value }))} />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label className="form-label" style={{ fontSize: 11 }}>Observação</label>
+                                  <label className="form-label" style={{ fontSize: 13 }}>Observação</label>
                                   <input className="form-control form-control-sm" value={formBaixa.observacao}
                                     onChange={e => setFormBaixa(f => ({ ...f, observacao: e.target.value }))} />
                                 </div>
@@ -308,7 +309,7 @@ export default function ConsultorContasErpPage() {
                         )}
                         {aberta && c.baixas.map(b => (
                           <tr key={b.id} style={{ background: 'var(--bg-card2)' }}>
-                            <td colSpan={7} style={{ padding: '8px 16px 8px 32px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                            <td colSpan={7} style={{ padding: '8px 16px 8px 32px', fontSize: 14, color: 'var(--text-secondary)' }}>
                               {b.valor < 0 ? '↩ Estorno' : '✓ Baixa'} de {fmt.currency(Math.abs(b.valor))} em {fmt.date(b.data)}
                               {b.formaPagamento && ` · ${b.formaPagamento}`}
                               {b.observacao && ` · ${b.observacao}`}
