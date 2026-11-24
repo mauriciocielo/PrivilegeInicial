@@ -455,7 +455,51 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
         </div>
 
         <div style={secaoStyle}>
-          <div style={tituloStyle}>PIS/COFINS e IBS/CBS</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+            <div style={{ ...tituloStyle, marginBottom: 0 }}>PIS/COFINS e IBS/CBS (Reforma Tributária 2026)</div>
+            {p.opSimpNac === 1 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11.5, padding: '3px 8px' }}
+                  onClick={() => {
+                    setP(a => ({ ...a, ibsCbsCIndOp: '100301', ibsCbsCst: '000', ibsCbsCClassTrib: '000001', ibsCbsIndFinal: '0' }));
+                    toast.success('Padrão IBS/CBS Tributação Integral aplicado (CBS 0,90% + IBS 0,10%).');
+                  }}
+                >
+                  Padrão Integral (000)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11.5, padding: '3px 8px' }}
+                  onClick={() => {
+                    setP(a => ({ ...a, ibsCbsCIndOp: '100301', ibsCbsCst: '200', ibsCbsCClassTrib: '200028', ibsCbsIndFinal: '0' }));
+                    toast.success('Padrão IBS/CBS Redução 30% (Profissões Regulamentadas) aplicado.');
+                  }}
+                >
+                  Redução 30% (Profissões)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11.5, padding: '3px 8px' }}
+                  onClick={() => {
+                    setP(a => ({ ...a, ibsCbsCIndOp: '100301', ibsCbsCst: '200', ibsCbsCClassTrib: '200029', ibsCbsIndFinal: '0' }));
+                    toast.success('Padrão IBS/CBS Redução 60% (Saúde / Educação) aplicado.');
+                  }}
+                >
+                  Redução 60% (Saúde/Educ.)
+                </button>
+              </div>
+            )}
+          </div>
+          {p.opSimpNac === 1 && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
+              <strong>Alíquotas 2026 (LC 214/2025):</strong> a SEFIN Nacional calcula automaticamente <strong>CBS 0,90%</strong> e <strong>IBS 0,10%</strong> (com eventuais reduções) a partir de <code>cIndOp</code>, <code>CST</code> e <code>cClassTrib</code>. Se ficar em branco na emissão com NBS, o sistema aplica o padrão integral automaticamente.
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">CST PIS/COFINS</label>

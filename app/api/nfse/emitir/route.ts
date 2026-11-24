@@ -179,6 +179,26 @@ export async function POST(request: Request) {
       };
     }
 
+    // Reforma Tributária (LC 214/2025 — 2026): para Regime Regular (opSimpNac === 1),
+    // se a nota tiver NBS e o grupo IBS/CBS não tiver sido preenchido manualmente na configuração,
+    // aplica o padrão nacional de tributação integral (CST 000 / cClassTrib 000001 / cIndOp 100301)
+    // para que a SEFIN calcule automaticamente CBS (0,90%) e IBS (0,10%) sem nota em desconformidade.
+    if (
+      configParaEmissao.opSimpNac === 1 &&
+      apenasDigitos(dados.cNbs).length > 0 &&
+      !configParaEmissao.ibsCbsCIndOp &&
+      !configParaEmissao.ibsCbsCst &&
+      !configParaEmissao.ibsCbsCClassTrib
+    ) {
+      configParaEmissao = {
+        ...configParaEmissao,
+        ibsCbsCIndOp: '100301',
+        ibsCbsCst: '000',
+        ibsCbsCClassTrib: '000001',
+        ibsCbsIndFinal: configParaEmissao.ibsCbsIndFinal || '0',
+      };
+    }
+
     const cfg = configFiscal(configParaEmissao, empresa.cnpj);
     const problemas = validarEmissao(cfg, dados);
     if (problemas.length > 0) return NextResponse.json({ error: problemas.join(' '), problemas }, { status: 422 });
@@ -345,15 +365,15 @@ export async function POST(request: Request) {
     const whatsappEmissor = texto(body?.whatsappEmissor);
     const whatsappEnviado = querWhatsappEmissor && whatsappEmissor
       ? await enviarNfsePorWhatsAppAoEmissor({
-          telefoneDestino: whatsappEmissor,
-          numero: autorizada.numero || '',
-          dataEmissao: autorizada.dataEmissao,
-          prestadorNome: autorizada.prestadorRazaoSocial,
-          tomadorNome: dados.tomadorNome,
-          valorLiquido: autorizada.valorLiquido,
-          nfseXml: resultado.nfseXml,
-          ambiente,
-        })
+        telefoneDestino: whatsappEmissor,
+        numero: autorizada.numero || '',
+        dataEmissao: autorizada.dataEmissao,
+        prestadorNome: autorizada.prestadorRazaoSocial,
+        tomadorNome: dados.tomadorNome,
+        valorLiquido: autorizada.valorLiquido,
+        nfseXml: resultado.nfseXml,
+        ambiente,
+      })
       : { enviado: false };
 
     return NextResponse.json({
