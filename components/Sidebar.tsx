@@ -14,7 +14,7 @@ import {
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, type LucideIcon,
+  Bell, LogOut, Sun, Moon, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, CheckSquare, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -50,6 +50,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Gestão SaaS (Cadastros & Mov.)', href: '/consultor/saas', icon: Layers, adminOnly: true },
       { label: 'Administrativo', href: '/consultor/administrativo', icon: Settings },
       { label: 'Agenda Semanal', href: '/consultor/agenda', icon: CalendarDays },
+      { label: 'Tarefas', href: '/consultor/tarefas', icon: CheckSquare },
       { label: 'Atividades e Tempo', href: '/consultor/atividades', icon: Timer },
       { label: 'Empresas', href: '/consultor/empresas', icon: Building2 },
       { label: 'Usuários', href: '/consultor/usuarios', icon: UserCog },
@@ -128,6 +129,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Dashboard 2 (Fiscal & CNDs)', href: '/cliente/dashboard2', icon: ShieldCheck },
       { label: 'Dashboard Financeiro', href: '/cliente/dashboard', icon: LayoutDashboard },
       { label: 'Agenda', href: '/cliente/agenda', icon: CalendarDays },
+      { label: 'Tarefas', href: '/cliente/tarefas', icon: CheckSquare },
       { label: 'Inteligência Financeira', href: '/cliente/inteligencia', icon: BrainCircuit },
       { label: 'Relatórios', href: '/cliente/relatorios', icon: BarChart3 },
     ],
