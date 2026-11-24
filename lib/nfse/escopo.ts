@@ -6,6 +6,12 @@ import type { Prisma } from '@prisma/client';
 import db from '../prisma';
 import type { SessionPayload } from '../session';
 import { TIPO_EMPRESA_SO_EMISSOR } from './emissor';
+import {
+  idsEmpresasDeTerceiros,
+  idsEmpresasDoEscritorio,
+  obterEscritorioDaEmpresa,
+  obterEscritorioDoUsuario,
+} from './escritorios-terceiros';
 
 const ROTA_NFSE_CONSULTOR = '/consultor/nfse';
 
@@ -37,20 +43,51 @@ async function temTelaNfse(userId: string): Promise<boolean> {
 
 /** Empresas do certificado que este usuário opera: nenhuma, se ele não tem a tela de NFS-e. */
 export async function idsEmpresasDoCertificado(userId: string): Promise<string[]> {
+  const vinculoTerceiro = await obterEscritorioDoUsuario(userId);
+  if (vinculoTerceiro) {
+    return vinculoTerceiro.ativo ? idsEmpresasDoEscritorio(vinculoTerceiro.escritorioId) : [];
+  }
   if (!(await temTelaNfse(userId))) return [];
-  const empresas = await db.empresa.findMany({ where: EMPRESA_DO_CERTIFICADO, select: { id: true } });
+  const terceiros = await idsEmpresasDeTerceiros();
+  const where: Prisma.EmpresaWhereInput = terceiros.length > 0
+    ? { AND: [EMPRESA_DO_CERTIFICADO, { id: { notIn: terceiros } }] }
+    : EMPRESA_DO_CERTIFICADO;
+  const empresas = await db.empresa.findMany({ where, select: { id: true } });
   return empresas.map(e => e.id);
 }
 
 export async function operaEmpresaDoCertificado(userId: string, empresaId: string): Promise<boolean> {
+  const vinculoTerceiro = await obterEscritorioDoUsuario(userId);
+  if (vinculoTerceiro) {
+    if (!vinculoTerceiro.ativo) return false;
+    const escEmp = await obterEscritorioDaEmpresa(empresaId);
+    return escEmp === vinculoTerceiro.escritorioId;
+  }
   if (!(await temTelaNfse(userId))) return false;
+  const escEmp = await obterEscritorioDaEmpresa(empresaId);
+  if (escEmp !== 'padrao') return false;
   const empresa = await db.empresa.findFirst({ where: { id: empresaId, ...EMPRESA_DO_CERTIFICADO }, select: { id: true } });
   return !!empresa;
 }
 
-/** Filtro das empresas listadas na emissão: as da carteira do usuário e as do certificado. */
+/** Filtro das empresas listadas na emissão: respeita o isolamento entre escritórios contábeis. */
 export async function filtroEmpresasNfse(session: SessionPayload): Promise<Prisma.EmpresaWhereInput> {
+  // Contador terceiro: vê EXCLUSIVAMENTE as empresas vinculadas ao próprio escritório (e sua carteira explícita)
+  const vinculoTerceiro = await obterEscritorioDoUsuario(session.userId);
+  if (vinculoTerceiro) {
+    if (!vinculoTerceiro.ativo) return { id: { in: [] } };
+    const idsEsc = await idsEmpresasDoEscritorio(vinculoTerceiro.escritorioId);
+    const idsPermitidos = Array.from(new Set([...idsEsc, ...(session.empresaIds || [])]));
+    return { id: { in: idsPermitidos } };
+  }
+
   if (session.role === 'administrador') return {};
   const carteira: Prisma.EmpresaWhereInput = { id: { in: session.empresaIds } };
-  return (await temTelaNfse(session.userId)) ? { OR: [carteira, EMPRESA_DO_CERTIFICADO] } : carteira;
+  if (!(await temTelaNfse(session.userId))) return carteira;
+
+  const terceiros = await idsEmpresasDeTerceiros();
+  const doCertificadoPadrao: Prisma.EmpresaWhereInput = terceiros.length > 0
+    ? { AND: [EMPRESA_DO_CERTIFICADO, { id: { notIn: terceiros } }] }
+    : EMPRESA_DO_CERTIFICADO;
+  return { OR: [carteira, doCertificadoPadrao] };
 }

@@ -4,6 +4,7 @@ import db from '../../../../../lib/prisma';
 import { requireAuth } from '../../../../../lib/api-auth';
 import { captureError } from '../../../../../lib/sentry-helper';
 import { acessoEmissaoNegado, acessoNegado, ID_CERT_ESCRITORIO } from '../../../../../lib/nfse/servidor';
+import { obterEscritorioDaEmpresa } from '../../../../../lib/nfse/escritorios-terceiros';
 import { apenasDigitos, LEIAUTE_NT009, LEIAUTE_PRODUCAO } from '../../../../../lib/nfse/dps';
 import { CertificadoInvalidoError, certificadoPertenceAoCnpj, lerCertificadoA1 } from '../../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError, cifrar } from '../../../../../lib/nfse/cofre';
@@ -14,9 +15,10 @@ const TAMANHO_MAX_PFX = 64 * 1024;
 const cofreConfigurado = () => Buffer.from(process.env.NFSE_CERT_KEY || '', 'base64').length === 32;
 
 /** Nunca devolve certPfxCifrado nem certSenhaCifrada. */
-async function paraResposta(config: NfseConfig | null) {
+async function paraResposta(config: NfseConfig | null, empresaId?: string) {
+  const escId = empresaId ? await obterEscritorioDaEmpresa(empresaId) : ID_CERT_ESCRITORIO;
   const certEscritorio = await db.nfseCertificadoEscritorio.findUnique({
-    where: { id: ID_CERT_ESCRITORIO },
+    where: { id: escId },
     select: { titular: true, documento: true, validoAte: true },
   });
   const certificado = config?.certPfxCifrado ? {
@@ -90,7 +92,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (negado) return negado;
 
     const config = await db.nfseConfig.findUnique({ where: { empresaId } });
-    return NextResponse.json(await paraResposta(config));
+    return NextResponse.json(await paraResposta(config, empresaId));
   } catch (error) {
     console.error('Erro em GET nfse-config:', error);
     captureError(error);

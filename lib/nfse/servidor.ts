@@ -11,9 +11,14 @@ import { decifrar } from './cofre';
 import type { ConfigFiscalNfse } from './dps';
 import type { ErroSefin } from './sefin';
 import { operaEmpresaDoCertificado } from './escopo';
+import {
+  escopoCertificadoEscritorio,
+  obterEscritorioDaEmpresa,
+  obterEscritorioDoUsuario,
+} from './escritorios-terceiros';
 
 export const ID_CERT_ESCRITORIO = 'padrao';
-/** Dado autenticado da cifra do certificado do escritório (nas empresas, é o empresaId). */
+/** Dado autenticado da cifra do certificado do escritório padrão (nas empresas, é o empresaId). */
 export const ESCOPO_CERT_ESCRITORIO = 'escritorio';
 
 async function usuarioPossuiEmpresa(session: SessionPayload, empresaId: string): Promise<boolean> {
@@ -32,6 +37,19 @@ async function usuarioPossuiEmpresa(session: SessionPayload, empresaId: string):
  */
 export async function acessoNegado(session: SessionPayload, empresaId: string): Promise<NextResponse | null> {
   if (session.role === 'administrador') return null;
+
+  // Se o usuário pertence a um contador terceiro, só acessa empresas do próprio escritório
+  const vinculoTerceiro = await obterEscritorioDoUsuario(session.userId);
+  if (vinculoTerceiro) {
+    if (!vinculoTerceiro.ativo) {
+      return NextResponse.json({ error: 'Conta do escritório contábil suspensa.' }, { status: 403 });
+    }
+    const escEmp = await obterEscritorioDaEmpresa(empresaId);
+    if (escEmp === vinculoTerceiro.escritorioId) return null;
+    if (await usuarioPossuiEmpresa(session, empresaId)) return null;
+    return NextResponse.json({ error: 'Sem acesso a esta empresa.' }, { status: 403 });
+  }
+
   if (await usuarioPossuiEmpresa(session, empresaId)) return null;
   if (session.role !== 'cliente') {
     if (await operaEmpresaDoCertificado(session.userId, empresaId)) return null;
@@ -91,15 +109,21 @@ function abrirValidade(pfxCifrado: string, senhaCifrada: string, escopo: string)
   return { credencial };
 }
 
-export async function abrirCredencialEscritorio(): Promise<{ credencial: CredencialA1 } | { erro: string }> {
-  const cert = await db.nfseCertificadoEscritorio.findUnique({ where: { id: ID_CERT_ESCRITORIO } });
+export async function abrirCredencialEscritorio(
+  escritorioId: string = ID_CERT_ESCRITORIO
+): Promise<{ credencial: CredencialA1 } | { erro: string }> {
+  const idAlvo = escritorioId || ID_CERT_ESCRITORIO;
+  const cert = await db.nfseCertificadoEscritorio.findUnique({ where: { id: idAlvo } });
   if (!cert) return { erro: 'Envie o certificado do contador em Emissores por Procuração.' };
-  return abrirValidade(cert.certPfxCifrado, cert.certSenhaCifrada, ESCOPO_CERT_ESCRITORIO);
+  return abrirValidade(cert.certPfxCifrado, cert.certSenhaCifrada, escopoCertificadoEscritorio(idAlvo));
 }
 
-/** Certificado usado na emissão: o do contador por procuração ou, se configurado, o da própria empresa. */
+/** Certificado usado na emissão: o do contador (padrão ou terceiro) por procuração ou o da própria empresa. */
 export async function abrirCredencial(config: NfseConfig): Promise<{ credencial: CredencialA1 } | { erro: string }> {
-  if (config.usarProcuracao) return abrirCredencialEscritorio();
+  if (config.usarProcuracao) {
+    const escritorioId = await obterEscritorioDaEmpresa(config.empresaId);
+    return abrirCredencialEscritorio(escritorioId);
+  }
   if (!config.certPfxCifrado || !config.certSenhaCifrada) {
     return { erro: 'Envie o certificado digital A1 da empresa na configuração do Emissor Nacional.' };
   }

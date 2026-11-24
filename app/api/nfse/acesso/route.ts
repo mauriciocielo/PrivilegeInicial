@@ -3,6 +3,7 @@ import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
 import { abrirCredencialEscritorio } from '../../../../lib/nfse/servidor';
+import { obterEscritorioDaEmpresa } from '../../../../lib/nfse/escritorios-terceiros';
 import { apenasDigitos, cnpjValido } from '../../../../lib/nfse/dps';
 import { criarTransporteMtls, SefinIndisponivelError, verificarProcuracao } from '../../../../lib/nfse/sefin';
 
@@ -41,13 +42,21 @@ export async function GET(request: Request) {
     const aVerificar = empresas.filter(e => cnpjValido(e.cnpj) && e.nfseConfig?.usarProcuracao !== false && vencida(e));
 
     if (aVerificar.length > 0) {
-      const aberta = await abrirCredencialEscritorio().catch(() => ({ erro: 'certificado indisponível' }));
-      if ('credencial' in aberta) {
+      const porEscritorio = new Map<string, typeof aVerificar>();
+      for (const emp of aVerificar) {
+        const escId = await obterEscritorioDaEmpresa(emp.id);
+        const lista = porEscritorio.get(escId) || [];
+        lista.push(emp);
+        porEscritorio.set(escId, lista);
+      }
+
+      for (const [escId, listaEmpresas] of porEscritorio.entries()) {
+        const aberta = await abrirCredencialEscritorio(escId).catch(() => ({ erro: 'certificado indisponível' }));
+        if (!('credencial' in aberta)) continue;
         const transporte = criarTransporteMtls('producao', aberta.credencial, 'adn');
-        for (const empresa of aVerificar) {
+        for (const empresa of listaEmpresas) {
           try {
             const r = await verificarProcuracao(transporte, apenasDigitos(empresa.cnpj));
-            // Sem resposta conclusiva, vale a última verificação: instabilidade do Sefin não muda o acesso.
             if (r.status === 'indeterminada') continue;
             const dados = { procuracaoStatus: r.status, procuracaoMensagem: r.mensagem, procuracaoVerificadaEm: new Date() };
             await db.nfseConfig.upsert({ where: { empresaId: empresa.id }, update: dados, create: { ...dados, empresaId: empresa.id } });

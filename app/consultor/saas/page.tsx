@@ -16,6 +16,7 @@ import {
   Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import SaasEscritoriosNfseTab from '../../../components/SaasEscritoriosNfseTab';
 
 const ALL_MODULES = [
   { id: 'administrativo', label: 'Administrativo' },
@@ -32,7 +33,7 @@ function fmtBRL(v: number) {
 }
 
 export default function SaasBackofficePage() {
-  const [activeTab, setActiveTab] = useState<'cadastros' | 'movimentacoes'>('cadastros');
+  const [activeTab, setActiveTab] = useState<'cadastros' | 'movimentacoes' | 'contadores'>('cadastros');
   const [tenants, setTenants] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
   const [availableEmpresas, setAvailableEmpresas] = useState<any[]>([]);
@@ -392,7 +393,17 @@ export default function SaasBackofficePage() {
         >
           <Receipt size={15} /> Movimentações SaaS ({movements.length})
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('contadores')}
+          className={activeTab === 'contadores' ? 'btn btn-primary' : 'btn btn-secondary'}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 13 }}
+        >
+          <Users size={15} /> Contadores Terceiros (NFS-e)
+        </button>
       </div>
+
+      {activeTab === 'contadores' && <SaasEscritoriosNfseTab />}
 
       {/* ABA 1: CADASTROS SAAS */}
       {activeTab === 'cadastros' && (

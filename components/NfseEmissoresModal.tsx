@@ -80,6 +80,7 @@ interface Props {
 export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecionar, onCertificadoAlterado }: Props) {
   const [empresas, setEmpresas] = useState<EmpresaEmissora[] | null>(null);
   const [certificado, setCertificado] = useState<CertificadoEscritorio | null>(null);
+  const [escritorioNome, setEscritorioNome] = useState<string | null>(null);
   const [podeAlterar, setPodeAlterar] = useState(false);
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
@@ -102,6 +103,7 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
       if (!res.ok) { setErro(dados.error || 'Não foi possível carregar as empresas.'); return; }
       setEmpresas(dados.empresas);
       setCertificado(dados.certificado);
+      setEscritorioNome(dados.escritorioNome || null);
       setPodeAlterar(!!dados.podeAlterarCertificado);
     } catch {
       setErro('Sem conexão com o servidor.');
@@ -252,7 +254,14 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
     <div className="modal-overlay">
       <div className="modal modal-lg" style={{ maxWidth: 900, maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h2 className="modal-title">Emissores por procuração</h2>
+          <div>
+            <h2 className="modal-title">Emissores por procuração</h2>
+            {escritorioNome && (
+              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginTop: 2 }}>
+                Ambiente isolado: {escritorioNome}
+              </div>
+            )}
+          </div>
           <button className="modal-close" onClick={onFechar} disabled={ocupado}>✕</button>
         </div>
 

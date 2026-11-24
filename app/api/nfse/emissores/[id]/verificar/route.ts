@@ -3,6 +3,7 @@ import db from '../../../../../../lib/prisma';
 import { requireAuth } from '../../../../../../lib/api-auth';
 import { captureError } from '../../../../../../lib/sentry-helper';
 import { abrirCredencialEscritorio, acessoNegado } from '../../../../../../lib/nfse/servidor';
+import { obterEscritorioDaEmpresa } from '../../../../../../lib/nfse/escritorios-terceiros';
 import { apenasDigitos } from '../../../../../../lib/nfse/dps';
 import { CertificadoInvalidoError } from '../../../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError } from '../../../../../../lib/nfse/cofre';
@@ -24,7 +25,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
     if (!empresa) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
 
-    const aberta = await abrirCredencialEscritorio();
+    const escritorioId = await obterEscritorioDaEmpresa(empresaId);
+    const aberta = await abrirCredencialEscritorio(escritorioId);
     if ('erro' in aberta) return NextResponse.json({ error: aberta.erro }, { status: 422 });
 
     const cnpjLimpo = apenasDigitos(empresa.cnpj);

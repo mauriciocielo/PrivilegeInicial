@@ -3,7 +3,13 @@ import type { Prisma } from '@prisma/client';
 import db from '../../../../../lib/prisma';
 import { requireAuth } from '../../../../../lib/api-auth';
 import { captureError } from '../../../../../lib/sentry-helper';
-import { abrirCredencialEscritorio } from '../../../../../lib/nfse/servidor';
+import { abrirCredencialEscritorio, ID_CERT_ESCRITORIO } from '../../../../../lib/nfse/servidor';
+import {
+  idsEmpresasDoEscritorio,
+  obterEscritorioDaEmpresa,
+  obterEscritorioDoUsuario,
+  vincularEmpresaAoEscritorio,
+} from '../../../../../lib/nfse/escritorios-terceiros';
 import { apenasDigitos, cnpjValido } from '../../../../../lib/nfse/dps';
 import { CertificadoInvalidoError } from '../../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError } from '../../../../../lib/nfse/cofre';
@@ -22,15 +28,18 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role !== 'administrador') {
+    const vinculoTerceiro = await obterEscritorioDoUsuario(auth.session.userId);
+    const podeImportar = auth.session.role === 'administrador' || (vinculoTerceiro?.ativo && vinculoTerceiro.papel === 'admin_escritorio');
+    if (!podeImportar) {
       return NextResponse.json({ error: 'Só um administrador pode adicionar emissores.' }, { status: 403 });
     }
+    const escritorioId = vinculoTerceiro ? vinculoTerceiro.escritorioId : ID_CERT_ESCRITORIO;
 
     const body = await request.json().catch(() => ({}));
     const cnpj = apenasDigitos(typeof body?.cnpj === 'string' ? body.cnpj : '');
     if (!cnpjValido(cnpj)) return NextResponse.json({ error: 'CNPJ inválido.' }, { status: 422 });
 
-    const aberta = await abrirCredencialEscritorio();
+    const aberta = await abrirCredencialEscritorio(escritorioId);
     if ('erro' in aberta) return NextResponse.json({ error: aberta.erro }, { status: 422 });
 
     let caixa;
@@ -43,6 +52,28 @@ export async function POST(request: Request) {
 
     const todas = await db.empresa.findMany({ select: { id: true, cnpj: true, razaoSocial: true, nomeFantasia: true, tipo: true, nfseConfig: true } });
     const existente = todas.find(e => apenasDigitos(e.cnpj) === cnpj);
+
+    // Impede que um contador terceiro vincule uma empresa já ativa sob outro contador (isolamento total)
+    if (existente && vinculoTerceiro) {
+      const escAtual = await obterEscritorioDaEmpresa(existente.id);
+      if (escAtual !== vinculoTerceiro.escritorioId && existente.nfseConfig?.procuracaoStatus === 'ativa') {
+        return NextResponse.json(
+          { error: 'Este CNPJ já está ativo sob outro escritório contábil na plataforma. Solicite a transferência ao suporte.' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Verifica limite de empresas do plano do contador terceiro
+    if (!existente && vinculoTerceiro) {
+      const atuais = await idsEmpresasDoEscritorio(vinculoTerceiro.escritorioId);
+      if (atuais.length >= vinculoTerceiro.limiteEmpresas) {
+        return NextResponse.json(
+          { error: `Limite de ${vinculoTerceiro.limiteEmpresas} empresas do seu plano atingido.` },
+          { status: 422 }
+        );
+      }
+    }
     const verificacao = { procuracaoStatus: caixa.status, procuracaoMensagem: caixa.mensagem, procuracaoVerificadaEm: new Date() };
 
     if (caixa.status !== 'ativa') {
@@ -126,6 +157,10 @@ export async function POST(request: Request) {
       update: dados,
       create: { ...(dados as Prisma.NfseConfigUncheckedCreateInput), empresaId },
     });
+
+    if (vinculoTerceiro) {
+      await vincularEmpresaAoEscritorio(empresaId, vinculoTerceiro.escritorioId);
+    }
 
     return NextResponse.json({
       cnpj,

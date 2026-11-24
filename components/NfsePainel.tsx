@@ -28,6 +28,7 @@ import { instrumentSerif as serif } from '../app/fonts';
 // Modais e painéis secundários carregados sob demanda (reduz bundle inicial da tela de NFS-e)
 const NfseConfigModal = dynamic(() => import('./NfseConfigModal'), { ssr: false });
 const NfseEmissoresModal = dynamic(() => import('./NfseEmissoresModal'), { ssr: false });
+const NfseCertificadoClienteModal = dynamic(() => import('./NfseCertificadoClienteModal'), { ssr: false });
 const NfseAcessoClienteModal = dynamic(() => import('./NfseAcessoClienteModal'), { ssr: false });
 const NfseCopiarModal = dynamic(() => import('./NfseCopiarModal'), { ssr: false });
 const NfseImportarModal = dynamic(() => import('./NfseImportarModal'), { ssr: false });
@@ -196,6 +197,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   }, []);
   const [transmitindoId, setTransmitindoId] = useState<string | null>(null);
   const [showEmissoresModal, setShowEmissoresModal] = useState(false);
+  const [showCertClienteModal, setShowCertClienteModal] = useState(false);
   const [showAcessoClienteModal, setShowAcessoClienteModal] = useState(false);
   const [showCopiarModal, setShowCopiarModal] = useState(false);
   const [showImportarModal, setShowImportarModal] = useState(false);
@@ -2020,6 +2022,17 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   </>
                 )}
 
+                {modoCliente && (
+                  <button
+                    type="button"
+                    style={itemMenuDropdownStyle}
+                    onClick={() => { setShowMenuFerramentas(false); setShowCertClienteModal(true); }}
+                    disabled={!empresa}
+                  >
+                    <KeyRound size={15} color="#0284c7" /> Meu Certificado Digital A1
+                  </button>
+                )}
+
                 <button
                   type="button"
                   style={itemMenuDropdownStyle}
@@ -2975,6 +2988,21 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           config={config}
           onFechar={() => setShowConfigModal(false)}
           onSalvo={novaConfig => { setConfig(novaConfig); setShowConfigModal(false); }}
+        />
+      )}
+
+      {showCertClienteModal && empresa && (
+        <NfseCertificadoClienteModal
+          empresaId={empresaId}
+          empresaNome={empresa.nomeFantasia || empresa.razaoSocial}
+          empresaCnpj={empresa.cnpj}
+          certificadoAtual={config?.certificado || null}
+          usarProcuracao={parametros?.usarProcuracao !== false}
+          onFechar={() => setShowCertClienteModal(false)}
+          onSalvo={() => {
+            setShowCertClienteModal(false);
+            if (empresaId) carregarConfig(empresaId);
+          }}
         />
       )}
 

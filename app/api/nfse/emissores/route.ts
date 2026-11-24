@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
-import { ESCOPO_CERT_ESCRITORIO, ID_CERT_ESCRITORIO } from '../../../../lib/nfse/servidor';
+import { ID_CERT_ESCRITORIO } from '../../../../lib/nfse/servidor';
 import { filtroEmpresasNfse } from '../../../../lib/nfse/escopo';
+import {
+  escopoCertificadoEscritorio,
+  idsEmpresasDeTerceiros,
+  idsEmpresasDoEscritorio,
+  obterEscritorioDoUsuario,
+} from '../../../../lib/nfse/escritorios-terceiros';
 import { cnpjValido } from '../../../../lib/nfse/dps';
 import { CertificadoInvalidoError, lerCertificadoA1 } from '../../../../lib/nfse/assinatura';
 import { CofreNaoConfiguradoError, cifrar } from '../../../../lib/nfse/cofre';
@@ -19,6 +25,11 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error;
     if (auth.session.role === 'cliente') return NextResponse.json({ error: 'Sem acesso.' }, { status: 403 });
 
+    const vinculoTerceiro = await obterEscritorioDoUsuario(auth.session.userId);
+    if (vinculoTerceiro && !vinculoTerceiro.ativo) {
+      return NextResponse.json({ error: 'Conta do escritório contábil suspensa.' }, { status: 403 });
+    }
+    const certId = vinculoTerceiro ? vinculoTerceiro.escritorioId : ID_CERT_ESCRITORIO;
     const filtroEmpresas = await filtroEmpresasNfse(auth.session);
 
     const [empresas, certificado, usuariosClientes] = await Promise.all([
@@ -40,7 +51,7 @@ export async function GET(request: Request) {
         },
         orderBy: { razaoSocial: 'asc' },
       }),
-      db.nfseCertificadoEscritorio.findUnique({ where: { id: ID_CERT_ESCRITORIO }, select: certificadoPublico }),
+      db.nfseCertificadoEscritorio.findUnique({ where: { id: certId }, select: certificadoPublico }),
       db.user.findMany({
         where: { role: 'cliente' },
         select: { id: true, name: true, email: true, empresaIds: true },
@@ -59,7 +70,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       certificado,
-      podeAlterarCertificado: auth.session.role === 'administrador',
+      escritorioNome: vinculoTerceiro?.nomeEscritorio || null,
+      podeAlterarCertificado: auth.session.role === 'administrador' || vinculoTerceiro?.papel === 'admin_escritorio',
       // Cadastros sem CNPJ real (ex.: criados por sincronização) não podem emitir.
       empresas: empresas
         .filter(e => cnpjValido(e.cnpj))
@@ -80,9 +92,13 @@ export async function PUT(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
-    if (auth.session.role !== 'administrador') {
+    const vinculoTerceiro = await obterEscritorioDoUsuario(auth.session.userId);
+    const podeAlterar = auth.session.role === 'administrador' || (vinculoTerceiro?.ativo && vinculoTerceiro.papel === 'admin_escritorio');
+    if (!podeAlterar) {
       return NextResponse.json({ error: 'Só um administrador pode alterar o certificado do contador.' }, { status: 403 });
     }
+    const certId = vinculoTerceiro ? vinculoTerceiro.escritorioId : ID_CERT_ESCRITORIO;
+    const escopoCifra = escopoCertificadoEscritorio(certId);
 
     const body = await request.json().catch(() => ({}));
     const pfx = Buffer.from(typeof body?.pfxBase64 === 'string' ? body.pfxBase64 : '', 'base64');
@@ -96,22 +112,29 @@ export async function PUT(request: Request) {
     }
 
     const dados = {
-      certPfxCifrado: cifrar(pfx, ESCOPO_CERT_ESCRITORIO),
-      certSenhaCifrada: cifrar(Buffer.from(senha, 'utf8'), ESCOPO_CERT_ESCRITORIO),
+      certPfxCifrado: cifrar(pfx, escopoCifra),
+      certSenhaCifrada: cifrar(Buffer.from(senha, 'utf8'), escopoCifra),
       nomeArquivo: typeof body?.nomeArquivo === 'string' ? body.nomeArquivo : null,
       titular: credencial.titular,
       documento: credencial.documento,
       validoAte: credencial.validoAte,
     };
-    // Procurações verificadas com outro certificado deixam de valer.
+    // Procurações verificadas com outro certificado deixam de valer — APENAS para as empresas deste escritório.
+    const whereReset = vinculoTerceiro
+      ? { empresaId: { in: await idsEmpresasDoEscritorio(vinculoTerceiro.escritorioId) } }
+      : { empresaId: { notIn: await idsEmpresasDeTerceiros() } };
+
     const [certificado] = await db.$transaction([
       db.nfseCertificadoEscritorio.upsert({
-        where: { id: ID_CERT_ESCRITORIO },
+        where: { id: certId },
         update: dados,
-        create: { id: ID_CERT_ESCRITORIO, ...dados },
+        create: { id: certId, ...dados },
         select: certificadoPublico,
       }),
-      db.nfseConfig.updateMany({ data: { procuracaoStatus: null, procuracaoMensagem: null, procuracaoVerificadaEm: null } }),
+      db.nfseConfig.updateMany({
+        where: whereReset,
+        data: { procuracaoStatus: null, procuracaoMensagem: null, procuracaoVerificadaEm: null },
+      }),
     ]);
     return NextResponse.json({ certificado });
   } catch (error) {
