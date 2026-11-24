@@ -70,6 +70,38 @@ export default function SaasBackofficePage() {
     notes: '',
   });
   const [savingTenant, setSavingTenant] = useState(false);
+  const [buscandoCnpjTenant, setBuscandoCnpjTenant] = useState(false);
+
+  async function buscarCnpjReceitaTenant(cnpjRaw: string) {
+    const dig = String(cnpjRaw || '').replace(/\D/g, '');
+    if (dig.length !== 14) {
+      toast.error('Informe os 14 dígitos do CNPJ para consultar na Receita Federal.');
+      return;
+    }
+    setBuscandoCnpjTenant(true);
+    try {
+      const res = await fetch(`/api/nfse/dados-publicos?cnpj=${dig}`);
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(dados.error || 'CNPJ não encontrado na Receita Federal.');
+        return;
+      }
+      const cnpjFmt = dig.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      setTenantForm((f: any) => ({
+        ...f,
+        cnpj: cnpjFmt,
+        company_name: dados.razaoSocial || dados.nomeFantasia || f.company_name,
+        contact_name: dados.responsavel || f.contact_name,
+        contact_email: dados.email || f.contact_email,
+        contact_phone: dados.telefone || f.contact_phone,
+      }));
+      toast.success('Dados preenchidos automaticamente pela Receita Federal!');
+    } catch {
+      toast.error('Erro de conexão ao consultar a Receita Federal.');
+    } finally {
+      setBuscandoCnpjTenant(false);
+    }
+  }
 
   // Modal Movimentação SaaS
   const [showMovModal, setShowMovModal] = useState(false);
@@ -763,22 +795,42 @@ export default function SaasBackofficePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label className="form-label">Nome da Empresa</label>
+                <label className="form-label">CNPJ (busca automática na Receita)</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="00.000.000/0001-00"
+                    value={tenantForm.cnpj || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setTenantForm((f: any) => ({ ...f, cnpj: val }));
+                      const dig = val.replace(/\D/g, '');
+                      if (dig.length === 14 && !buscandoCnpjTenant) {
+                        buscarCnpjReceitaTenant(dig);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={buscandoCnpjTenant}
+                    onClick={() => buscarCnpjReceitaTenant(tenantForm.cnpj || '')}
+                    style={{ whiteSpace: 'nowrap', fontSize: 12, padding: '0 10px' }}
+                    title="Consultar dados na Receita Federal"
+                  >
+                    {buscandoCnpjTenant ? '...' : 'Buscar'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Nome da Empresa *</label>
                 <input
                   type="text"
                   className="form-control"
                   value={tenantForm.company_name}
                   onChange={e => setTenantForm((f: any) => ({ ...f, company_name: e.target.value }))}
                   required
-                />
-              </div>
-              <div>
-                <label className="form-label">CNPJ</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={tenantForm.cnpj || ''}
-                  onChange={e => setTenantForm((f: any) => ({ ...f, cnpj: e.target.value }))}
                 />
               </div>
               <div>

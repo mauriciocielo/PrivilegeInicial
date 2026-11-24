@@ -26,6 +26,7 @@ export default function SaasEscritoriosNfseTab() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
 
   const [form, setForm] = useState({
     nome: '',
@@ -38,6 +39,38 @@ export default function SaasEscritoriosNfseTab() {
     loginEmail: '',
     loginSenha: '',
   });
+
+  const buscarCnpjReceita = async (cnpjRaw: string) => {
+    const dig = String(cnpjRaw || '').replace(/\D/g, '');
+    if (dig.length !== 14) {
+      toast.error('Informe os 14 dígitos do CNPJ para consultar na Receita Federal.');
+      return;
+    }
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`/api/nfse/dados-publicos?cnpj=${dig}`);
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(dados.error || 'CNPJ não encontrado na Receita Federal.');
+        return;
+      }
+      const cnpjFmt = dig.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      setForm((prev) => ({
+        ...prev,
+        cnpj: cnpjFmt,
+        nome: dados.razaoSocial || dados.nomeFantasia || prev.nome,
+        responsavel: dados.responsavel || prev.responsavel,
+        telefone: dados.telefone || prev.telefone,
+        email: dados.email || prev.email,
+        loginEmail: prev.loginEmail || dados.email || '',
+      }));
+      toast.success('Dados do escritório preenchidos pela Receita Federal!');
+    } catch {
+      toast.error('Erro de conexão ao consultar a Receita Federal.');
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  };
 
   const carregar = async () => {
     setLoading(true);
@@ -279,14 +312,38 @@ export default function SaasEscritoriosNfseTab() {
             </div>
 
             <form onSubmit={handleCriar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 10 }}>
+                <div>
+                  <label className="form-label">CNPJ (busca na Receita)</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      className="form-control"
+                      value={form.cnpj}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm((prev) => ({ ...prev, cnpj: val }));
+                        const dig = val.replace(/\D/g, '');
+                        if (dig.length === 14 && !buscandoCnpj) {
+                          buscarCnpjReceita(dig);
+                        }
+                      }}
+                      placeholder="00.000.000/0001-00"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={buscandoCnpj}
+                      onClick={() => buscarCnpjReceita(form.cnpj)}
+                      style={{ whiteSpace: 'nowrap', fontSize: 12, padding: '0 10px' }}
+                      title="Consultar CNPJ na Receita Federal"
+                    >
+                      {buscandoCnpj ? '...' : 'Buscar'}
+                    </button>
+                  </div>
+                </div>
                 <div>
                   <label className="form-label">Nome do Escritório *</label>
                   <input className="form-control" required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: Contabilidade Alfa Ltda" />
-                </div>
-                <div>
-                  <label className="form-label">CNPJ</label>
-                  <input className="form-control" value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0001-00" />
                 </div>
               </div>
 

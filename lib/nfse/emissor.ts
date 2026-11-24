@@ -306,6 +306,8 @@ export interface CnpjPublico {
   numero: string | null;
   bairro: string | null;
   email: string | null;
+  telefone?: string | null;
+  responsavel?: string | null;
   cnaes: CnaeEmpresa[];
 }
 
@@ -352,6 +354,14 @@ export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
   const jaTemTipo = !!nomeVia && !!tipoVia && nomeVia.toUpperCase().startsWith(`${tipoVia.toUpperCase()} `);
   const digitosCep = (texto(json.cep) || texto(estab.cep) || '').replace(/\D/g, '');
 
+  const ddd1 = texto(estab.ddd1) || '';
+  const tel1 = texto(estab.telefone1) || '';
+  const telefoneRaw = texto(json.ddd_telefone_1) || texto(json.telefone) || (ddd1 && tel1 ? `${ddd1}${tel1}` : tel1) || null;
+  const qsa = Array.isArray(json.qsa) ? (json.qsa as Record<string, unknown>[]) : [];
+  const socios = Array.isArray(json.socios) ? (json.socios as Record<string, unknown>[]) : [];
+  const primeiroSocio = qsa[0] || socios[0] || null;
+  const responsavel = primeiroSocio ? (texto(primeiroSocio.nome_socio) || texto(primeiroSocio.nome)) : null;
+
   return {
     razaoSocial: texto(json.razao_social) || texto( json.nome ),
     nomeFantasia: texto(json.nome_fantasia) || texto(estab.nome_fantasia) || texto(json.fantasia),
@@ -364,6 +374,8 @@ export function mapearCnpjPublico(json: Record<string, unknown>): CnpjPublico {
     numero: texto(json.numero) || texto(estab.numero),
     bairro: texto(json.bairro) || texto(estab.bairro),
     email: (texto(json.email) || texto(estab.email))?.toLowerCase() ?? null,
+    telefone: telefoneRaw,
+    responsavel,
     cnaes: mapearCnaes(json, estab),
   };
 }
@@ -432,6 +444,8 @@ export async function consultarCnpjPublico(cnpj: string): Promise<CnpjPublico | 
           numero: acumulado.numero || mapeado.numero,
           bairro: acumulado.bairro || mapeado.bairro,
           email: acumulado.email || mapeado.email,
+          telefone: acumulado.telefone || mapeado.telefone || null,
+          responsavel: acumulado.responsavel || mapeado.responsavel || null,
           cnaes: acumulado.cnaes.length > 0 ? acumulado.cnaes : mapeado.cnaes,
         };
       }
