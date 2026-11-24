@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import type { NfsE, Empresa } from '../lib/store';
 import { fmt } from '../lib/reports';
 import { askClaude } from '../lib/claude-client';
+import MarkdownLeve from './ui/MarkdownLeve';
 import type { NfseConfigResposta } from './NfseConfigModal';
 import {
   Sparkles, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown,
@@ -551,10 +552,10 @@ Responda em linguagem direta, profissional, em Português do Brasil, formatado c
                   fontSize: 14.5,
                   lineHeight: 1.6,
                   color: '#e2e8f0',
-                  whiteSpace: 'pre-line',
                 }}
               >
-                {analiseIaGerada}
+                {/* A IA responde em Markdown: antes aparecia cru, com ** e ## na tela. */}
+                <MarkdownLeve texto={analiseIaGerada} />
               </div>
             </div>
           )}

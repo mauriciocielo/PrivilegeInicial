@@ -62,11 +62,20 @@ const PAUSA_ENTRE_CONSULTAS_MS = 1000; // o ADN limita a taxa (HTTP 429)
 
 const ORDEM_STATUS: Record<string, number> = { ativa: 0, indeterminada: 1, nao_verificada: 2, sem_procuracao: 3 };
 
+// Selo sempre numa linha só (a coluna Situação é estreita e ele quebrava em "Procuração / ativa").
+const SELO = { whiteSpace: 'nowrap' } as const;
+
 function badgeStatus(status: StatusProcuracao | null | undefined) {
-  if (status === 'ativa') return <span className="badge badge-green">Procuração ativa</span>;
-  if (status === 'sem_procuracao') return <span className="badge badge-red">Sem procuração</span>;
-  if (status === 'indeterminada') return <span className="badge badge-yellow">Não confirmada</span>;
-  return <span className="badge" style={{ background: 'rgba(148,163,184,0.15)', color: 'var(--text-muted)' }}>Não verificada</span>;
+  if (status === 'ativa') return <span className="badge badge-green" style={SELO}>Procuração ativa</span>;
+  if (status === 'sem_procuracao') return <span className="badge badge-red" style={SELO}>Sem procuração</span>;
+  if (status === 'indeterminada') return <span className="badge badge-yellow" style={SELO}>Não confirmada</span>;
+  return <span className="badge" style={{ ...SELO, background: 'rgba(148,163,184,0.15)', color: 'var(--text-muted)' }}>Não verificada</span>;
+}
+
+// "04/11/2026 16:06" — sem segundos, cabe numa linha embaixo do selo.
+function dataCurta(iso: string) {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 interface Props {
@@ -382,8 +391,9 @@ export default function NfseEmissoresModal({ empresaAtualId, onFechar, onSelecio
                     <td>
                       {badgeStatus(c?.procuracaoStatus)}
                       {c?.procuracaoVerificadaEm && (
-                        <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 3 }}>
-                          Verificada em {new Date(c.procuracaoVerificadaEm).toLocaleString('pt-BR')}
+                        <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 3, whiteSpace: 'nowrap' }}
+                          title={`Verificada em ${new Date(c.procuracaoVerificadaEm).toLocaleString('pt-BR')}`}>
+                          Verificada {dataCurta(c.procuracaoVerificadaEm)}
                         </div>
                       )}
                       {c?.procuracaoStatus === 'indeterminada' && c.procuracaoMensagem && (
