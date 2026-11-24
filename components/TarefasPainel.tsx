@@ -5,6 +5,7 @@ import {
   CheckSquare, Plus, LayoutGrid, List, Search, Calendar, Clock, AlertTriangle,
   Building2, User as UserIcon, Repeat, Paperclip, MessageSquare, Send, Trash2,
   X, CheckCircle2, Circle, Download, Upload, Bell, Eye, EyeOff, RefreshCw,
+  Sparkles, Users, Timer, Flag, FolderKanban,
 } from 'lucide-react';
 import { store, type Empresa, type User } from '../lib/store';
 import { toast } from 'sonner';
@@ -46,8 +47,66 @@ const CATEGORIAS_PADRAO = [
   'Outro',
 ];
 
+const MODELOS_RAPIDOS: Array<{
+  label: string;
+  titulo: string;
+  categoria: string;
+  prioridade: TarefaPrioridade;
+  destinoTipo: TarefaDestinoTipo;
+  recorrente: boolean;
+  descricao: string;
+  subtarefas: string[];
+}> = [
+  {
+    label: 'Extratos Mensais',
+    titulo: 'Enviar extratos bancários e comprovantes do mês',
+    categoria: 'Documentos / Extratos',
+    prioridade: 'alta',
+    destinoTipo: 'cliente',
+    recorrente: true,
+    descricao: 'Por favor, anexe os extratos bancários em OFX/PDF e os comprovantes de pagamento referentes ao fechamento do mês.',
+    subtarefas: ['Extrato bancário (OFX ou PDF)', 'Comprovantes de pagamentos', 'Relatório de cartões / recebíveis'],
+  },
+  {
+    label: 'Emissão NFS-e',
+    titulo: 'Conferir e emitir notas fiscais de serviço do período',
+    categoria: 'Fiscal / NF-e',
+    prioridade: 'alta',
+    destinoTipo: 'ambos',
+    recorrente: true,
+    descricao: 'Validar a relação de clientes/valores do mês e emitir as NFS-e no Portal Nacional.',
+    subtarefas: ['Validar lista de clientes e valores', 'Transmitir lote no Emissor Nacional', 'Enviar PDF/XML aos tomadores'],
+  },
+  {
+    label: 'Pendência Financeira',
+    titulo: 'Regularizar pendência de contas a pagar / receber',
+    categoria: 'Financeiro',
+    prioridade: 'urgente',
+    destinoTipo: 'cliente',
+    recorrente: false,
+    descricao: 'Verificar os títulos em aberto e retornar com o comprovante ou previsão de quitação.',
+    subtarefas: ['Conferir títulos pendentes', 'Anexar comprovante de pagamento'],
+  },
+  {
+    label: 'Rotina Interna',
+    titulo: 'Fechamento contábil e conciliação bancária',
+    categoria: 'Contábil',
+    prioridade: 'media',
+    destinoTipo: 'usuario',
+    recorrente: true,
+    descricao: 'Executar conciliação bancária, revisão de plano de contas e fechamento do DRE mensal.',
+    subtarefas: ['Importar e conciliar OFX', 'Revisar classificações', 'Validar DRE e Fluxo de Caixa'],
+  },
+];
+
 function hojeIso(): string {
   const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function somarDiasIso(dias: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -72,6 +131,35 @@ function fmtTamanho(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatarDuracaoMs(ms: number): string {
+  const seguro = Math.max(0, ms);
+  const minTotal = Math.floor(seguro / 60000);
+  if (minTotal < 1) return 'agora';
+  if (minTotal < 60) return `${minTotal}min`;
+  const horasTotal = Math.floor(minTotal / 60);
+  const mins = minTotal % 60;
+  if (horasTotal < 24) return mins > 0 ? `${horasTotal}h ${mins}m` : `${horasTotal}h`;
+  const dias = Math.floor(horasTotal / 24);
+  const horas = horasTotal % 24;
+  return horas > 0 ? `${dias}d ${horas}h` : `${dias}d`;
+}
+
+function calcularTempoAberto(t: TarefaRecord, agoraMs: number): { texto: string; ms: number; concluida: boolean } {
+  const inicio = new Date(t.createdAt).getTime();
+  if (Number.isNaN(inicio)) return { texto: '—', ms: 0, concluida: t.status === 'concluida' };
+  if (t.status === 'concluida') {
+    const fim = t.concluidaEm ? new Date(t.concluidaEm).getTime() : new Date(t.updatedAt).getTime();
+    const diff = Math.max(0, (Number.isNaN(fim) ? agoraMs : fim) - inicio);
+    return { texto: `Concluída em ${formatarDuracaoMs(diff)}`, ms: diff, concluida: true };
+  }
+  const diff = Math.max(0, agoraMs - inicio);
+  return {
+    texto: diff < 60000 ? 'Aberta agora' : `Aberta há ${formatarDuracaoMs(diff)}`,
+    ms: diff,
+    concluida: false,
+  };
+}
+
 export default function TarefasPainel({ modo }: Props) {
   const isConsultor = modo === 'consultor';
 
@@ -81,6 +169,7 @@ export default function TarefasPainel({ modo }: Props) {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [empresaSelecionadaCliente, setEmpresaSelecionadaCliente] = useState('');
+  const [agoraMs, setAgoraMs] = useState(() => Date.now());
 
   // Visualização e filtros
   const [view, setView] = useState<'kanban' | 'lista'>('kanban');
@@ -120,6 +209,12 @@ export default function TarefasPainel({ modo }: Props) {
   const [anexosPendentes, setAnexosPendentes] = useState<Array<{ nome: string; tipo: string; tamanho: number; dataUrl: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Atualiza o relógio de "tempo aberto" a cada minuto
+  useEffect(() => {
+    const id = setInterval(() => setAgoraMs(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const carregarDados = async (silencioso = false) => {
     if (!silencioso) setLoading(true);
     try {
@@ -127,6 +222,7 @@ export default function TarefasPainel({ modo }: Props) {
       const data = await res.json().catch(() => ({}));
       if (res.ok && Array.isArray(data.tarefas)) {
         setTarefas(data.tarefas);
+        setAgoraMs(Date.now());
         if (tarefaAtiva) {
           const atualizada = data.tarefas.find((t: TarefaRecord) => t.id === tarefaAtiva.id);
           if (atualizada) setTarefaAtiva(atualizada);
@@ -158,7 +254,6 @@ export default function TarefasPainel({ modo }: Props) {
   }, [isConsultor]);
 
   const hoje = hojeIso();
-
   const isAtrasada = (t: TarefaRecord) => Boolean(t.prazo && t.status !== 'concluida' && t.prazo < hoje);
 
   const tarefasVisiveisBase = useMemo(() => {
@@ -174,17 +269,27 @@ export default function TarefasPainel({ modo }: Props) {
     let andamento = 0;
     let atrasadas = 0;
     let concluidas = 0;
+    let somaResolucaoMs = 0;
+    let qtdComTempo = 0;
+
     for (const t of tarefasVisiveisBase) {
-      if (t.status === 'concluida') concluidas++;
-      else {
+      if (t.status === 'concluida') {
+        concluidas++;
+        const tempo = calcularTempoAberto(t, agoraMs);
+        if (tempo.ms > 0) {
+          somaResolucaoMs += tempo.ms;
+          qtdComTempo++;
+        }
+      } else {
         abertas++;
         if (t.status === 'em_andamento') andamento++;
         if (isAtrasada(t)) atrasadas++;
       }
     }
-    return { abertas, andamento, atrasadas, concluidas };
+    const tempoMedioTexto = qtdComTempo > 0 ? formatarDuracaoMs(somaResolucaoMs / qtdComTempo) : '—';
+    return { abertas, andamento, atrasadas, concluidas, tempoMedioTexto };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tarefasVisiveisBase, hoje]);
+  }, [tarefasVisiveisBase, hoje, agoraMs]);
 
   const tarefasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -216,7 +321,7 @@ export default function TarefasPainel({ modo }: Props) {
     setDestinoTipoForm('cliente');
     setEmpresaIdForm(filtroEmpresaId || '');
     setResponsavelUserIdForm(filtroResponsavelId || '');
-    setPrazoForm(hojeIso());
+    setPrazoForm(somarDiasIso(3));
     setRecorrenteForm(false);
     setRecorrenciaDiaForm(5);
     setVisivelClienteForm(true);
@@ -226,6 +331,24 @@ export default function TarefasPainel({ modo }: Props) {
     setNovoComentarioTexto('');
     setAnexosPendentes([]);
     setModalAberto(true);
+  };
+
+  const aplicarModeloRapido = (m: (typeof MODELOS_RAPIDOS)[number]) => {
+    setTitulo(m.titulo);
+    setCategoriaForm(m.categoria);
+    setPrioridadeForm(m.prioridade);
+    setDestinoTipoForm(m.destinoTipo);
+    setVisivelClienteForm(m.destinoTipo !== 'usuario');
+    setRecorrenteForm(m.recorrente);
+    setDescricao(m.descricao);
+    setSubtarefasForm(
+      m.subtarefas.map((txt) => ({
+        id: Math.random().toString(36).slice(2, 10),
+        titulo: txt,
+        concluida: false,
+      }))
+    );
+    toast.info(`Modelo "${m.label}" aplicado — ajuste o destinatário e o prazo.`);
   };
 
   const abrirDetalheTarefa = (t: TarefaRecord) => {
@@ -251,7 +374,6 @@ export default function TarefasPainel({ modo }: Props) {
 
   const atualizarStatusRapido = async (t: TarefaRecord, novoStatus: TarefaStatus) => {
     if (t.status === novoStatus) return;
-    // Otimista
     setTarefas((prev) => prev.map((item) => (item.id === t.id ? { ...item, status: novoStatus } : item)));
     try {
       const res = await fetch(`/api/tarefas/${t.id}`, {
@@ -489,6 +611,34 @@ export default function TarefasPainel({ modo }: Props) {
     }
   };
 
+  const renderBadgeTempo = (t: TarefaRecord) => {
+    const info = calcularTempoAberto(t, agoraMs);
+    const maisDe5Dias = !info.concluida && info.ms > 5 * 86400000;
+    return (
+      <span
+        title={`Criada em ${fmtDataHoraBr(t.createdAt)}${t.concluidaEm ? ` · Concluída em ${fmtDataHoraBr(t.concluidaEm)}` : ''}`}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: 10.5,
+          fontWeight: 700,
+          padding: '2px 7px',
+          borderRadius: 999,
+          background: info.concluida
+            ? 'rgba(22,163,74,0.12)'
+            : maisDe5Dias
+              ? 'rgba(220,38,38,0.12)'
+              : 'rgba(100,116,139,0.12)',
+          color: info.concluida ? '#15803d' : maisDe5Dias ? '#dc2626' : 'var(--text-secondary)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <Timer size={11} /> {info.texto}
+      </span>
+    );
+  };
+
   const renderCard = (t: TarefaRecord) => {
     const prio = PRIORIDADE_META[t.prioridade] || PRIORIDADE_META.media;
     const atrasada = isAtrasada(t);
@@ -542,7 +692,7 @@ export default function TarefasPainel({ modo }: Props) {
         </div>
 
         {/* Destinatários: Empresa e/ou Usuário */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
           {t.empresaNome && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)' }}>
               <Building2 size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -556,6 +706,9 @@ export default function TarefasPainel({ modo }: Props) {
             </div>
           )}
         </div>
+
+        {/* Tempo aberto / resolvido */}
+        <div style={{ marginBottom: 8 }}>{renderBadgeTempo(t)}</div>
 
         {/* Progresso de subtarefas */}
         {totalSubs > 0 && (
@@ -654,7 +807,7 @@ export default function TarefasPainel({ modo }: Props) {
 
       <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12 }}>
           <div className="card" onClick={() => setChipFiltro('todas')} style={{ padding: '14px 16px', cursor: 'pointer' }}>
             <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Em Aberto</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>{kpis.abertas}</div>
@@ -681,12 +834,17 @@ export default function TarefasPainel({ modo }: Props) {
             <div style={{ fontSize: 11.5, color: '#16a34a', fontWeight: 600 }}>Concluídas</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a', marginTop: 4 }}>{kpis.concluidas}</div>
           </div>
+          <div className="card" style={{ padding: '14px 16px' }}>
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Clock size={13} /> Tempo Médio
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginTop: 5 }}>{kpis.tempoMedioTexto}</div>
+          </div>
         </div>
 
         {/* Barra de filtros + toggle Kanban / Lista */}
         <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-            {/* Chips */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {(isConsultor
                 ? [
@@ -726,7 +884,6 @@ export default function TarefasPainel({ modo }: Props) {
               })}
             </div>
 
-            {/* Switch Kanban / Lista */}
             <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', padding: 3, borderRadius: 10, border: '1px solid var(--border)' }}>
               <button
                 type="button"
@@ -755,7 +912,6 @@ export default function TarefasPainel({ modo }: Props) {
             </div>
           </div>
 
-          {/* Linha de busca e selects */}
           <div style={{ display: 'grid', gridTemplateColumns: isConsultor ? '2fr 1.2fr 1.2fr 0.9fr' : '2fr 1fr', gap: 10 }}>
             <div style={{ position: 'relative' }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -881,6 +1037,7 @@ export default function TarefasPainel({ modo }: Props) {
                     <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Tarefa</th>
                     <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Destinatário</th>
                     <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Prioridade</th>
+                    <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Tempo Aberto</th>
                     <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Prazo</th>
                     <th style={{ textAlign: 'left', padding: '11px 14px', fontSize: 11.5 }}>Status</th>
                     <th style={{ textAlign: 'right', padding: '11px 14px', fontSize: 11.5 }}>Ações</th>
@@ -915,6 +1072,7 @@ export default function TarefasPainel({ modo }: Props) {
                             {prio.label}
                           </span>
                         </td>
+                        <td style={{ padding: '11px 14px' }}>{renderBadgeTempo(t)}</td>
                         <td style={{ padding: '11px 14px', fontSize: 12.5, fontWeight: atrasada ? 700 : 500, color: atrasada ? '#dc2626' : 'var(--text-primary)' }}>
                           {fmtDataBr(t.prazo)}
                         </td>
@@ -967,13 +1125,13 @@ export default function TarefasPainel({ modo }: Props) {
         )}
       </div>
 
-      {/* Modal de Criação / Detalhe */}
+      {/* Modal Executivo 2 Colunas — Criar / Detalhes da Tarefa */}
       {modalAberto && (
         <div
           onClick={() => setModalAberto(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(3px)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
           }}
         >
           <div
@@ -981,348 +1139,557 @@ export default function TarefasPainel({ modo }: Props) {
             style={{
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
-              borderRadius: 16,
+              borderRadius: 18,
               width: '100%',
-              maxWidth: 780,
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: 22,
+              maxWidth: 960,
+              maxHeight: '92vh',
               display: 'flex',
               flexDirection: 'column',
-              gap: 16,
-              boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
+              overflow: 'hidden',
+              boxShadow: '0 28px 70px rgba(0,0,0,0.32)',
             }}
           >
-            {/* Header Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
-                  {tarefaAtiva ? 'Detalhes da Tarefa' : 'Nova Tarefa'}
-                </h3>
-                {tarefaAtiva && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
-                    Criada por {tarefaAtiva.criadoPorNome} em {fmtDataHoraBr(tarefaAtiva.createdAt)}
-                    {tarefaAtiva.notificadoWhatsappEm && ` · Avisada no WhatsApp em ${fmtDataHoraBr(tarefaAtiva.notificadoWhatsappEm)}`}
+            {/* Header Premium */}
+            <div
+              style={{
+                padding: '16px 22px',
+                borderBottom: '1px solid var(--border)',
+                background: 'linear-gradient(135deg, rgba(140,26,34,0.06) 0%, rgba(15,23,42,0.02) 100%)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <CheckSquare size={20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: 17.5, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {tarefaAtiva ? 'Detalhes da Tarefa' : 'Criar Nova Tarefa'}
+                    </h3>
+                    {tarefaAtiva && renderBadgeTempo(tarefaAtiva)}
                   </div>
-                )}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {tarefaAtiva
+                      ? `Aberta por ${tarefaAtiva.criadoPorNome} em ${fmtDataHoraBr(tarefaAtiva.createdAt)}${
+                          tarefaAtiva.concluidaEm ? ` · Concluída em ${fmtDataHoraBr(tarefaAtiva.concluidaEm)}` : ''
+                        }${tarefaAtiva.notificadoWhatsappEm ? ` · WhatsApp em ${fmtDataHoraBr(tarefaAtiva.notificadoWhatsappEm)}` : ''}`
+                      : 'Defina o objetivo, o destinatário e o prazo. O cliente ou usuário acompanha tudo em tempo real.'}
+                  </div>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                style={{ border: 'none', background: 'var(--bg-secondary)', borderRadius: 8, padding: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
+                style={{
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
+                  borderRadius: 10,
+                  padding: 7,
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Título */}
-            <div>
-              <label className="form-label">Título da tarefa *</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Ex.: Enviar extratos bancários e notas fiscais do mês"
-                value={titulo}
-                disabled={!isConsultor}
-                onChange={(e) => setTitulo(e.target.value)}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* Destinatário (Consultor) */}
-            {isConsultor && (
-              <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 12, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Destinar para:</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'cliente', label: 'Cliente (Empresa)' },
-                    { id: 'usuario', label: 'Usuário Interno' },
-                    { id: 'ambos', label: 'Empresa + Responsável' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => {
-                        const v = opt.id as TarefaDestinoTipo;
-                        setDestinoTipoForm(v);
-                        setVisivelClienteForm(v !== 'usuario');
-                      }}
-                      style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        border: `1px solid ${destinoTipoForm === opt.id ? 'var(--accent)' : 'var(--border)'}`,
-                        background: destinoTipoForm === opt.id ? 'var(--accent)' : 'var(--bg-card)',
-                        color: destinoTipoForm === opt.id ? '#fff' : 'var(--text-secondary)',
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-                  {(destinoTipoForm === 'cliente' || destinoTipoForm === 'ambos') && (
-                    <div>
-                      <label className="form-label">Empresa Cliente *</label>
-                      <select className="form-select" value={empresaIdForm} onChange={(e) => setEmpresaIdForm(e.target.value)} style={{ width: '100%' }}>
-                        <option value="">Selecione a empresa...</option>
-                        {empresas.map((e) => (
-                          <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
-                        ))}
-                      </select>
+            {/* Corpo em 2 colunas com scroll interno */}
+            <div
+              style={{
+                padding: 22,
+                overflowY: 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: 20,
+                alignItems: 'start',
+              }}
+            >
+              {/* COLUNA ESQUERDA: Conteúdo, Modelos, Checklist, Anexos, Comentários */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Modelos Rápidos (somente na criação) */}
+                {!tarefaAtiva && isConsultor && (
+                  <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <Sparkles size={13} style={{ color: 'var(--accent)' }} /> Modelos rápidos (preenche em 1 clique)
                     </div>
-                  )}
-
-                  {(destinoTipoForm === 'usuario' || destinoTipoForm === 'ambos') && (
-                    <div>
-                      <label className="form-label">Usuário Responsável *</label>
-                      <select className="form-select" value={responsavelUserIdForm} onChange={(e) => setResponsavelUserIdForm(e.target.value)} style={{ width: '100%' }}>
-                        <option value="">Selecione o usuário...</option>
-                        {usuarios.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                        ))}
-                      </select>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {MODELOS_RAPIDOS.map((m) => (
+                        <button
+                          key={m.label}
+                          type="button"
+                          onClick={() => aplicarModeloRapido(m)}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            color: 'var(--text-primary)',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          + {m.label}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={visivelClienteForm} onChange={(e) => setVisivelClienteForm(e.target.checked)} />
-                  {visivelClienteForm ? <Eye size={14} style={{ color: '#16a34a' }} /> : <EyeOff size={14} />}
-                  Visível no Portal do Cliente (/cliente/tarefas)
-                </label>
-              </div>
-            )}
-
-            {/* Status, Prioridade, Categoria, Prazo */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-              <div>
-                <label className="form-label">Status</label>
-                <select className="form-select" value={statusForm} onChange={(e) => setStatusForm(e.target.value as TarefaStatus)} style={{ width: '100%' }}>
-                  {COLUNAS.map((c) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Prioridade</label>
-                <select className="form-select" disabled={!isConsultor} value={prioridadeForm} onChange={(e) => setPrioridadeForm(e.target.value as TarefaPrioridade)} style={{ width: '100%' }}>
-                  <option value="baixa">Baixa</option>
-                  <option value="media">Média</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Categoria</label>
-                <select className="form-select" disabled={!isConsultor} value={categoriaForm} onChange={(e) => setCategoriaForm(e.target.value)} style={{ width: '100%' }}>
-                  {CATEGORIAS_PADRAO.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Prazo</label>
-                <input type="date" className="form-input" disabled={!isConsultor} value={prazoForm} onChange={(e) => setPrazoForm(e.target.value)} style={{ width: '100%' }} />
-              </div>
-            </div>
-
-            {/* Recorrência mensal */}
-            {isConsultor && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={recorrenteForm} onChange={(e) => setRecorrenteForm(e.target.checked)} />
-                  <Repeat size={14} style={{ color: '#2563eb' }} /> Tarefa recorrente mensal (gera o próximo mês ao concluir)
-                </label>
-                {recorrenteForm && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                    <span>Todo dia</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={31}
-                      className="form-input"
-                      value={recorrenciaDiaForm}
-                      onChange={(e) => setRecorrenciaDiaForm(Math.max(1, Math.min(31, Number(e.target.value) || 5)))}
-                      style={{ width: 64, padding: '4px 8px' }}
-                    />
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Descrição */}
-            <div>
-              <label className="form-label">Descrição / Instruções</label>
-              <textarea
-                className="form-input"
-                rows={3}
-                disabled={!isConsultor}
-                placeholder="Descreva os detalhes, documentos necessários ou orientações..."
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                style={{ width: '100%', resize: 'vertical' }}
-              />
-            </div>
+                {/* Título */}
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5 }}>Título da tarefa *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Ex.: Enviar extratos bancários e notas fiscais do mês"
+                    value={titulo}
+                    disabled={!isConsultor}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    style={{ width: '100%', fontSize: 14.5, fontWeight: 600, padding: '10px 12px' }}
+                  />
+                </div>
 
-            {/* Checklist / Subtarefas */}
-            <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                <span>Subtarefas / Checklist</span>
-                {subtarefasForm.length > 0 && (
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    {subtarefasForm.filter((s) => s.concluida).length}/{subtarefasForm.length} concluídas
-                  </span>
-                )}
-              </div>
+                {/* Descrição */}
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5 }}>Descrição e orientações</label>
+                  <textarea
+                    className="form-input"
+                    rows={4}
+                    disabled={!isConsultor}
+                    placeholder="Explique o que precisa ser feito, documentos esperados ou observações importantes..."
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    style={{ width: '100%', resize: 'vertical', lineHeight: 1.5 }}
+                  />
+                </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: isConsultor ? 8 : 0 }}>
-                {subtarefasForm.map((sub) => (
-                  <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '5px 8px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSubtarefa(sub.id)}
-                      style={{ border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: sub.concluida ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: sub.concluida ? 'line-through' : 'none', fontSize: 13, textAlign: 'left', flex: 1 }}
-                    >
-                      {sub.concluida ? <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} /> : <Circle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
-                      <span>{sub.titulo}</span>
-                    </button>
-                    {isConsultor && (
-                      <button
-                        type="button"
-                        onClick={() => setSubtarefasForm((prev) => prev.filter((s) => s.id !== sub.id))}
-                        style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
-                      >
-                        <X size={14} />
-                      </button>
+                {/* Checklist / Subtarefas */}
+                <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14, background: 'var(--bg-secondary)' }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <CheckSquare size={14} style={{ color: 'var(--accent)' }} /> Checklist / Subtarefas
+                    </span>
+                    {subtarefasForm.length > 0 && (
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 700 }}>
+                        {subtarefasForm.filter((s) => s.concluida).length}/{subtarefasForm.length} concluídas
+                      </span>
                     )}
                   </div>
-                ))}
-              </div>
 
-              {isConsultor && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Adicionar item ao checklist e pressionar Enter..."
-                    value={novaSubtarefaTexto}
-                    onChange={(e) => setNovaSubtarefaTexto(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        adicionarSubtarefa();
-                      }
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <button type="button" className="btn btn-secondary" onClick={adicionarSubtarefa}>
-                    <Plus size={14} /> Item
-                  </button>
-                </div>
-              )}
-            </div>
+                  {subtarefasForm.length > 0 && (
+                    <div style={{ height: 5, borderRadius: 99, background: 'var(--bg-card)', overflow: 'hidden', marginBottom: 10 }}>
+                      <div
+                        style={{
+                          width: `${Math.round((subtarefasForm.filter((s) => s.concluida).length / subtarefasForm.length) * 100)}%`,
+                          height: '100%',
+                          background: '#16a34a',
+                          transition: 'width 200ms',
+                        }}
+                      />
+                    </div>
+                  )}
 
-            {/* Anexos / Comprovantes */}
-            <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Paperclip size={14} /> Anexos e Comprovantes
-                </span>
-                <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => fileInputRef.current?.click()}>
-                  <Upload size={13} /> Anexar arquivo
-                </button>
-                <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUploadArquivo} />
-              </div>
-
-              {(() => {
-                const listaAnexos: Array<Partial<TarefaAnexo> & { nome: string; tamanho: number; dataUrl: string }> = tarefaAtiva
-                  ? tarefaAtiva.anexos
-                  : anexosPendentes;
-                if (listaAnexos.length === 0) {
-                  return <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nenhum arquivo anexado (limite de 4 MB por arquivo).</div>;
-                }
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {listaAnexos.map((a, idx) => (
-                      <div key={a.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--bg-secondary)', fontSize: 12.5 }}>
-                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <strong>{a.nome}</strong> <span style={{ color: 'var(--text-muted)' }}>({fmtTamanho(a.tamanho)})</span>
-                          {a.enviadoPor && <span style={{ color: 'var(--text-muted)' }}> · {a.enviadoPor}</span>}
-                        </div>
-                        <div style={{ display: 'inline-flex', gap: 6, flexShrink: 0 }}>
-                          <a href={a.dataUrl} download={a.nome} className="btn btn-secondary" style={{ padding: '3px 8px', fontSize: 11.5, textDecoration: 'none' }}>
-                            <Download size={12} /> Baixar
-                          </a>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: isConsultor ? 10 : 0 }}>
+                    {subtarefasForm.map((sub) => (
+                      <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderRadius: 9, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleSubtarefa(sub.id)}
+                          style={{ border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: sub.concluida ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: sub.concluida ? 'line-through' : 'none', fontSize: 13, textAlign: 'left', flex: 1 }}
+                        >
+                          {sub.concluida ? <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} /> : <Circle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                          <span>{sub.titulo}</span>
+                        </button>
+                        {isConsultor && (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (tarefaAtiva && a.id) removerAnexoExistente(a.id);
-                              else setAnexosPendentes((prev) => prev.filter((_, i) => i !== idx));
-                            }}
-                            style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer' }}
+                            onClick={() => setSubtarefasForm((prev) => prev.filter((s) => s.id !== sub.id))}
+                            style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
                           >
-                            <Trash2 size={14} />
+                            <X size={14} />
                           </button>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                );
-              })()}
-            </div>
 
-            {/* Comentários (apenas em tarefa existente) */}
-            {tarefaAtiva && (
-              <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <MessageSquare size={14} /> Comentários ({tarefaAtiva.comentarios.length})
+                  {isConsultor && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Digite um item e pressione Enter..."
+                        value={novaSubtarefaTexto}
+                        onChange={(e) => setNovaSubtarefaTexto(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            adicionarSubtarefa();
+                          }
+                        }}
+                        style={{ flex: 1, background: 'var(--bg-card)' }}
+                      />
+                      <button type="button" className="btn btn-secondary" onClick={adicionarSubtarefa}>
+                        <Plus size={14} /> Item
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {tarefaAtiva.comentarios.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10, maxHeight: 200, overflowY: 'auto' }}>
-                    {tarefaAtiva.comentarios.map((c) => (
-                      <div key={c.id} style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
-                          <strong style={{ color: 'var(--text-primary)' }}>{c.autorNome}</strong>
-                          <span>{fmtDataHoraBr(c.criadoEm)}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{c.texto}</div>
+                {/* Anexos / Comprovantes */}
+                <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Paperclip size={14} style={{ color: 'var(--accent)' }} /> Anexos e Comprovantes
+                    </span>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => fileInputRef.current?.click()}>
+                      <Upload size={13} /> Enviar arquivo
+                    </button>
+                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUploadArquivo} />
+                  </div>
+
+                  {(() => {
+                    const listaAnexos: Array<Partial<TarefaAnexo> & { nome: string; tamanho: number; dataUrl: string }> = tarefaAtiva
+                      ? tarefaAtiva.anexos
+                      : anexosPendentes;
+                    if (listaAnexos.length === 0) {
+                      return <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Anexe PDFs, extratos, planilhas ou comprovantes (até 4 MB por arquivo).</div>;
+                    }
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {listaAnexos.map((a, idx) => (
+                          <div key={a.id || idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderRadius: 8, background: 'var(--bg-secondary)', fontSize: 12.5 }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <strong>{a.nome}</strong> <span style={{ color: 'var(--text-muted)' }}>({fmtTamanho(a.tamanho)})</span>
+                              {a.enviadoPor && <span style={{ color: 'var(--text-muted)' }}> · {a.enviadoPor}</span>}
+                            </div>
+                            <div style={{ display: 'inline-flex', gap: 6, flexShrink: 0 }}>
+                              <a href={a.dataUrl} download={a.nome} className="btn btn-secondary" style={{ padding: '3px 8px', fontSize: 11.5, textDecoration: 'none' }}>
+                                <Download size={12} /> Baixar
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (tarefaAtiva && a.id) removerAnexoExistente(a.id);
+                                  else setAnexosPendentes((prev) => prev.filter((_, i) => i !== idx));
+                                }}
+                                style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    );
+                  })()}
+                </div>
+
+                {/* Comentários (tarefa existente) */}
+                {tarefaAtiva && (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <MessageSquare size={14} style={{ color: 'var(--accent)' }} /> Comentários ({tarefaAtiva.comentarios.length})
+                    </div>
+
+                    {tarefaAtiva.comentarios.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10, maxHeight: 200, overflowY: 'auto' }}>
+                        {tarefaAtiva.comentarios.map((c) => (
+                          <div key={c.id} style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
+                              <strong style={{ color: 'var(--text-primary)' }}>{c.autorNome}</strong>
+                              <span>{fmtDataHoraBr(c.criadoEm)}</span>
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{c.texto}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Escreva um comentário ou atualização..."
+                        value={novoComentarioTexto}
+                        onChange={(e) => setNovoComentarioTexto(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            enviarComentario();
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button type="button" className="btn btn-secondary" onClick={enviarComentario}>
+                        <Send size={14} /> Enviar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* COLUNA DIREITA: Destinatário, Prioridade, Prazo, Recorrência, WhatsApp */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, background: 'var(--bg-secondary)', padding: 16, borderRadius: 14, border: '1px solid var(--border)' }}>
+                {/* Destinatário */}
+                {isConsultor && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Users size={14} style={{ color: 'var(--accent)' }} /> Destinar para
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                      {[
+                        { id: 'cliente', label: 'Cliente', icon: Building2 },
+                        { id: 'usuario', label: 'Equipe', icon: UserIcon },
+                        { id: 'ambos', label: 'Ambos', icon: Users },
+                      ].map((opt) => {
+                        const Icon = opt.icon;
+                        const sel = destinoTipoForm === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              const v = opt.id as TarefaDestinoTipo;
+                              setDestinoTipoForm(v);
+                              setVisivelClienteForm(v !== 'usuario');
+                            }}
+                            style={{
+                              padding: '8px 6px',
+                              borderRadius: 10,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 5,
+                              border: `1.5px solid ${sel ? 'var(--accent)' : 'var(--border)'}`,
+                              background: sel ? 'var(--accent)' : 'var(--bg-card)',
+                              color: sel ? '#fff' : 'var(--text-secondary)',
+                            }}
+                          >
+                            <Icon size={13} /> {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {(destinoTipoForm === 'cliente' || destinoTipoForm === 'ambos') && (
+                      <div>
+                        <label className="form-label">Empresa Cliente *</label>
+                        <select className="form-select" value={empresaIdForm} onChange={(e) => setEmpresaIdForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                          <option value="">Selecione a empresa...</option>
+                          {empresas.map((e) => (
+                            <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {(destinoTipoForm === 'usuario' || destinoTipoForm === 'ambos') && (
+                      <div>
+                        <label className="form-label">Usuário Responsável *</label>
+                        <select className="form-select" value={responsavelUserIdForm} onChange={(e) => setResponsavelUserIdForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                          <option value="">Selecione o usuário...</option>
+                          {usuarios.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={visivelClienteForm} onChange={(e) => setVisivelClienteForm(e.target.checked)} />
+                      {visivelClienteForm ? <Eye size={14} style={{ color: '#16a34a' }} /> : <EyeOff size={14} />}
+                      Visível no Portal do Cliente
+                    </label>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Escreva um comentário ou atualização..."
-                    value={novoComentarioTexto}
-                    onChange={(e) => setNovoComentarioTexto(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        enviarComentario();
-                      }
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <button type="button" className="btn btn-secondary" onClick={enviarComentario}>
-                    <Send size={14} /> Enviar
-                  </button>
-                </div>
-              </div>
-            )}
+                <div style={{ height: 1, background: 'var(--border)' }} />
 
-            {/* Rodapé do Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                {!tarefaAtiva && isConsultor && (
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#15803d', fontWeight: 600, cursor: 'pointer' }}>
+                {/* Prioridade visual */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Flag size={13} style={{ color: 'var(--accent)' }} /> Prioridade
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                    {(['baixa', 'media', 'alta', 'urgente'] as TarefaPrioridade[]).map((pKey) => {
+                      const meta = PRIORIDADE_META[pKey];
+                      const sel = prioridadeForm === pKey;
+                      return (
+                        <button
+                          key={pKey}
+                          type="button"
+                          disabled={!isConsultor}
+                          onClick={() => setPrioridadeForm(pKey)}
+                          style={{
+                            padding: '6px 4px',
+                            borderRadius: 8,
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: isConsultor ? 'pointer' : 'default',
+                            border: `1.5px solid ${sel ? meta.cor : 'var(--border)'}`,
+                            background: sel ? meta.bg : 'var(--bg-card)',
+                            color: sel ? meta.cor : 'var(--text-secondary)',
+                          }}
+                        >
+                          {meta.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Status + Categoria */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label className="form-label">Status</label>
+                    <select className="form-select" value={statusForm} onChange={(e) => setStatusForm(e.target.value as TarefaStatus)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                      {COLUNAS.map((c) => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <FolderKanban size={12} /> Categoria
+                    </label>
+                    <select className="form-select" disabled={!isConsultor} value={categoriaForm} onChange={(e) => setCategoriaForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                      {CATEGORIAS_PADRAO.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Prazo + Atalhos rápidos */}
+                <div>
+                  <label className="form-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Calendar size={12} /> Prazo de entrega
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    disabled={!isConsultor}
+                    value={prazoForm}
+                    onChange={(e) => setPrazoForm(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-card)' }}
+                  />
+                  {isConsultor && (
+                    <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                      {[
+                        { label: 'Hoje', dias: 0 },
+                        { label: 'Amanhã', dias: 1 },
+                        { label: '+3 dias', dias: 3 },
+                        { label: '+7 dias', dias: 7 },
+                      ].map((at) => (
+                        <button
+                          key={at.label}
+                          type="button"
+                          onClick={() => setPrazoForm(somarDiasIso(at.dias))}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            color: 'var(--text-secondary)',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {at.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recorrência mensal */}
+                {isConsultor && (
+                  <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={recorrenteForm} onChange={(e) => setRecorrenteForm(e.target.checked)} />
+                      <Repeat size={13} style={{ color: '#2563eb' }} /> Recorrência mensal automática
+                    </label>
+                    {recorrenteForm && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <span>Repetir todo dia</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          className="form-input"
+                          value={recorrenciaDiaForm}
+                          onChange={(e) => setRecorrenciaDiaForm(Math.max(1, Math.min(31, Number(e.target.value) || 5)))}
+                          style={{ width: 62, padding: '4px 8px' }}
+                        />
+                        <span>ao concluir</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Notificação WhatsApp */}
+                {isConsultor && !tarefaAtiva && (
+                  <label
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      background: 'rgba(22,163,74,0.08)',
+                      border: '1px solid rgba(22,163,74,0.25)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#15803d',
+                      cursor: 'pointer',
+                    }}
+                  >
                     <input type="checkbox" checked={notificarWppAoCriar} onChange={(e) => setNotificarWppAoCriar(e.target.checked)} />
-                    Avisar no WhatsApp ao criar
+                    <Bell size={14} /> Avisar automaticamente no WhatsApp ao criar
                   </label>
                 )}
+              </div>
+            </div>
+
+            {/* Rodapé fixo do Modal */}
+            <div
+              style={{
+                padding: '14px 22px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--bg-card)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 10,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {tarefaAtiva && isConsultor && (
                   <>
                     <button
