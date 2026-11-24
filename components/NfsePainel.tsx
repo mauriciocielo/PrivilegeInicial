@@ -1826,7 +1826,9 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     <>
       {/* Cabeçalho fiscal escuro: NÃO usa a classe .page-header porque ela força
           `background: var(--bg-base) !important` (fundo branco), o que deixaria o texto
-          claro invisível. Replicamos o layout (flex + sticky) inline. */}
+          claro invisível. Replicamos o layout (flex) inline. Não é sticky: grudado em
+          top 0 ele rolava para baixo do menu superior (também sticky, z-index maior) e
+          ficava cortado — igual às outras telas, o cabeçalho rola junto com a página. */}
       <div
         className="nfse-hero-header nfse-ui"
         style={{
@@ -1838,9 +1840,8 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 18,
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
+          position: 'relative',
+          zIndex: 20,
         }}
       >
         <div>

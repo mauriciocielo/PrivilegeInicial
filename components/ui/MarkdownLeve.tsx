@@ -16,7 +16,7 @@ function emLinha(texto: string, chave: string): ReactNode[] {
     const t = m[0];
     partes.push(t.startsWith('**')
       ? <strong key={`${chave}-${i++}`}>{t.slice(2, -2)}</strong>
-      : <code key={`${chave}-${i++}`} style={{ background: 'var(--bg-base)', borderRadius: 4, padding: '1px 5px', fontSize: '0.92em' }}>{t.slice(1, -1)}</code>);
+      : <code key={`${chave}-${i++}`} style={{ background: 'rgba(127,127,127,0.18)', borderRadius: 4, padding: '1px 5px', fontSize: '0.92em' }}>{t.slice(1, -1)}</code>);
     ultimo = m.index + t.length;
   }
   if (ultimo < texto.length) partes.push(texto.slice(ultimo));
@@ -25,7 +25,12 @@ function emLinha(texto: string, chave: string): ReactNode[] {
 
 const celulas = (linha: string) => linha.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
 
-export default function MarkdownLeve({ texto }: { texto: string }) {
+/**
+ * `tabelaEmCartoes`: para painéis estreitos (ex.: Copiloto, 400px). Em vez de uma tabela
+ * espremida (palavras quebrando letra por letra e colunas saindo para a direita), cada
+ * linha vira um bloco: a 1ª coluna como título e as demais como "Coluna: valor".
+ */
+export default function MarkdownLeve({ texto, tabelaEmCartoes = false }: { texto: string; tabelaEmCartoes?: boolean }) {
   const linhas = texto.replace(/\r\n/g, '\n').split('\n');
   const blocos: ReactNode[] = [];
   let i = 0;
@@ -41,9 +46,27 @@ export default function MarkdownLeve({ texto }: { texto: string }) {
       i += 2;
       const corpo: string[][] = [];
       while (i < linhas.length && linhas[i].trim().includes('|')) { corpo.push(celulas(linhas[i])); i++; }
+      if (tabelaEmCartoes) {
+        blocos.push(
+          <div key={k++} style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '6px 0' }}>
+            {corpo.map((l, r) => (
+              <div key={r} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', background: 'var(--bg-base)', overflowWrap: 'break-word' }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>{emLinha(l[0] ?? '', `cc${k}${r}`)}</div>
+                {l.slice(1).map((c, j) => c && (
+                  <div key={j} style={{ fontSize: 13.5, marginTop: 2 }}>
+                    {cab[j + 1] && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{emLinha(cab[j + 1], `ch${k}${r}${j}`)}: </span>}
+                    {emLinha(c, `cv${k}${r}${j}`)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>,
+        );
+        continue;
+      }
       blocos.push(
         <div key={k++} style={{ overflowX: 'auto', margin: '6px 0' }}>
-          <table style={{ borderCollapse: 'collapse', fontSize: 13.5, width: '100%' }}>
+          <table className="md-leve-tabela" style={{ borderCollapse: 'collapse', fontSize: 13.5, width: '100%' }}>
             <thead><tr>{cab.map((c, j) => <th key={j} style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '2px solid var(--border)', fontWeight: 700, whiteSpace: 'nowrap' }}>{emLinha(c, `h${k}${j}`)}</th>)}</tr></thead>
             <tbody>{corpo.map((l, r) => <tr key={r}>{l.map((c, j) => <td key={j} style={{ padding: '6px 8px', borderBottom: '1px solid var(--border-light)', verticalAlign: 'top' }}>{emLinha(c, `c${k}${r}${j}`)}</td>)}</tr>)}</tbody>
           </table>

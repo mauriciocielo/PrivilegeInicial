@@ -2826,3 +2826,17 @@ textarea:focus-visible {
   .gemini-entrada { flex-wrap: wrap; }
   .gemini-entrada > div:first-child { flex: 1 1 100% !important; }
 }
+
+/* Tabelas das respostas de IA (MarkdownLeve): herdam a cor do quadro onde estão.
+   Sem isto o Parecer com IA (fundo escuro) ficava com cabeçalho claro e texto escuro invisível. */
+.md-leve-tabela thead tr,
+.md-leve-tabela tbody tr,
+.md-leve-tabela tbody tr:hover { background: transparent !important; }
+.md-leve-tabela th,
+.md-leve-tabela td {
+  color: inherit !important;
+  font-size: inherit !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+.md-leve-tabela th { opacity: 0.8; }

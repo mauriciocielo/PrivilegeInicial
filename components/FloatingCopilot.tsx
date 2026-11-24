@@ -107,7 +107,7 @@ Um analista fiscal está olhando o painel agora. Baseie-se no contexto consolida
 ${contextStr}
 
 Regras:
-1. Responda sempre em Markdown conciso e profissional (tabelas ou bullet points), rápido e direto ao ponto.
+1. Responda sempre em Markdown conciso e profissional, rápido e direto ao ponto. O chat é um painel estreito: prefira títulos curtos e bullet points; evite tabelas (se usar, no máximo 2 colunas).
 2. Ajude o analista a PRIORIZAR: certidões com pendência ou vencendo, certificados A1 a vencer, empresas sem consulta, erros do monitor. Sempre sugira a próxima ação concreta.
 3. Use só os números do contexto; pode fazer deduções simples, mas nunca invente valores, nomes de empresas ou situações que não estão no contexto.
 4. Quando pertinente, lembre que a CND só tem validade se emitida no portal oficial (Receita/SEFAZ) e que o relatório SITFIS não é certidão.`;
@@ -182,7 +182,7 @@ Responda baseado no contexto injetado da tela e da empresa:
 ${contextStr}
 
 Regras:
-1. Responda sempre em Markdown com formatação profissional, limpa e espaçada, mas seja conciso e prático. Use tabelas ou bullet points.
+1. Responda sempre em Markdown com formatação profissional, limpa e espaçada, mas seja conciso e prático. O chat é um painel estreito: prefira títulos curtos e bullet points; evite tabelas (se usar, no máximo 2 colunas).
 2. Analise os números e tabelas visíveis na tela atual e dê recomendações acionáveis para gerar mais caixa, lucro, conversão ou segurança fiscal. Nunca invente números fora do contexto.
 3. Se perguntarem sobre qualquer área (Financeiro, Comercial, Marketing, Pessoas ou Administrativo), conecte os indicadores de forma estratégica.`;
     }
@@ -301,10 +301,10 @@ Regras:
                   border: m.sender === 'ai' ? `1px solid ${m.erro ? '#fde68a' : 'var(--border)'}` : 'none',
                   fontSize: 14.5,
                   lineHeight: 1.55,
-                  overflowWrap: 'anywhere',
+                  overflowWrap: 'break-word',
                 }}>
                   {m.sender === 'ai' && !m.erro
-                    ? <MarkdownLeve texto={m.text} />
+                    ? <MarkdownLeve texto={m.text} tabelaEmCartoes />
                     : <span style={{ whiteSpace: 'pre-line' }}>{m.text}</span>}
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start' }}>{m.timestamp}</span>

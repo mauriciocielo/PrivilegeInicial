@@ -317,7 +317,7 @@ export default function BpoDashboardPage() {
           transform: translateY(-1px);
         }
       `}</style>
-      <div className="page-header glass-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 50 }}>
+      <div className="page-header glass-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div className="page-title text-gradient" style={{ fontSize: '24px', fontWeight: 900 }}>BPO Financeiro & Automação Inteligente</div>
           <div className="page-subtitle" style={{ fontSize: '15.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Central de processamento massivo, integração bancária e cobrança IA.</div>
