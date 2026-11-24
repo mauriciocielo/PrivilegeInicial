@@ -1794,7 +1794,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 14, color: '#525252' }}>{formatarCnpj(e.cnpj)}</td>
                         <td>
                           {e.nfseConfig?.procuracaoStatus === 'ativa' ? (
-                            <span className="badge badge-green">Procuração ativa</span>
+                            <span className="badge badge-green" style={{ whiteSpace: 'nowrap' }}>Procuração ativa</span>
                           ) : (
                             <span className="badge" style={{ background: '#f3f4f6', color: '#525252' }}>Cadastrada</span>
                           )}
