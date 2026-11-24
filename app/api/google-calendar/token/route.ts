@@ -21,9 +21,12 @@ async function ensureTable() {
 }
 
 function getGoogleOAuthCreds() {
-  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-  return { clientId, clientSecret, supported: Boolean(clientId && clientSecret) };
+  const clientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+  const clientIdHint = clientId
+    ? `${clientId.slice(0, 12)}...${clientId.slice(-27)}`
+    : 'VAZIO';
+  return { clientId, clientSecret, clientIdHint, supported: Boolean(clientId && clientSecret) };
 }
 
 /**
@@ -36,7 +39,7 @@ export async function GET(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
-    const { clientId, clientSecret, supported } = getGoogleOAuthCreds();
+    const { clientId, clientSecret, clientIdHint, supported } = getGoogleOAuthCreds();
     await ensureTable();
 
     const rows = await db.$queryRawUnsafe<
@@ -50,6 +53,7 @@ export async function GET(request: Request) {
     if (!row) {
       return NextResponse.json({
         permanentSupported: supported,
+        clientIdHint,
         connected: false,
         accessToken: null,
       });

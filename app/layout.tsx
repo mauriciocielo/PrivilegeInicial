@@ -222,7 +222,7 @@ const jsonLdSchema = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'UNCONFIGURED_CLIENT_ID';
+  const googleClientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || 'UNCONFIGURED_CLIENT_ID').trim();
   const gaId = process.env.NEXT_PUBLIC_GA_ID || 'G-KXZ9EZV079';
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
