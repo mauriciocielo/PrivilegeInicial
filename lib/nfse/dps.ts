@@ -375,15 +375,17 @@ function montarIbsCbs(cfg: ConfigFiscalNfse, nt009: boolean): string {
 }
 
 function montarTotTrib(cfg: ConfigFiscalNfse): string {
-  // ME/EPP: pTotTribSN (indTotTrib dá E0712). MEI: isento, indTotTrib=0.
+  // ME/EPP: pTotTribSN (indTotTrib dá E0712).
   if (cfg.opSimpNac === 3) return tag('totTrib', txt('pTotTribSN', dec2(cfg.pTotTribSN ?? 0)));
-  if (cfg.opSimpNac === 1 && cfg.pTotTribFed != null && cfg.pTotTribEst != null && cfg.pTotTribMun != null) {
+  // Não Optante (Lucro Presumido / Real): nunca pode enviar indTotTrib nem pTotTribSN (E0713).
+  if (cfg.opSimpNac === 1) {
     return tag('totTrib', tag('pTotTrib',
-      txt('pTotTribFed', dec2(cfg.pTotTribFed)),
-      txt('pTotTribEst', dec2(cfg.pTotTribEst)),
-      txt('pTotTribMun', dec2(cfg.pTotTribMun)),
+      txt('pTotTribFed', dec2(cfg.pTotTribFed ?? 0)),
+      txt('pTotTribEst', dec2(cfg.pTotTribEst ?? 0)),
+      txt('pTotTribMun', dec2(cfg.pTotTribMun ?? 0)),
     ));
   }
+  // MEI: isento, indTotTrib=0.
   return tag('totTrib', txt('indTotTrib', '0'));
 }
 

@@ -136,6 +136,9 @@ describe('montagem da DPS', () => {
     expect(regular).not.toContain('regApTribSN');
     expect(regular).toContain('<tribFed>');
     expect(regular).not.toContain('pAliq');
+    expect(regular).not.toContain('indTotTrib');
+    expect(regular).not.toContain('pTotTribSN');
+    expect(regular).toContain('<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>');
   });
 
   it('emite o grupo IBS/CBS conforme o leiaute', () => {
