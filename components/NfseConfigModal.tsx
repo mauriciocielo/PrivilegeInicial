@@ -314,9 +314,11 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
             <div className="form-group">
               <label className="form-label">Ambiente</label>
               <select className="form-control" value={p.ambiente} onChange={e => set('ambiente', e.target.value as NfseParametros['ambiente'])}>
-                <option value="homologacao">Produção restrita (teste, sem valor fiscal)</option>
+                <option value="homologacao">Produção restrita</option>
                 <option value="producao">Produção (nota real)</option>
               </select>
+              {/* Explicação fora da caixa: dentro dela o texto longo quebrava em 3 linhas. */}
+              {p.ambiente === 'homologacao' && <div style={ajudaStyle}>Teste, sem valor fiscal</div>}
             </div>
             <div className="form-group">
               <label className="form-label">Município (código IBGE) *</label>
@@ -328,7 +330,10 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               <input className="form-control" value={p.inscricaoMunicipal || ''} onChange={e => set('inscricaoMunicipal', e.target.value)} />
             </div>
           </div>
-          <div className="form-row">
+          {/* Regime e Apuração em 2 colunas largas (em 3 colunas o texto escolhido quebrava em
+              2–3 linhas); a Alíquota vem embaixo, com espaço para o campo e o botão do SERPRO.
+              No celular as colunas viram uma só. */}
+          <div className="form-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             <div className="form-group">
               <label className="form-label">Regime tributário</label>
               <select className="form-control" value={p.opSimpNac} onChange={e => set('opSimpNac', Number(e.target.value))}>
@@ -338,35 +343,36 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
               </select>
             </div>
             {p.opSimpNac === 3 && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Apuração do ISS</label>
-                  <select className="form-control" value={p.regApTribSN ?? 1} onChange={e => set('regApTribSN', Number(e.target.value))}>
-                    <option value={1}>Pelo Simples Nacional</option>
-                    <option value={2}>Federais pelo SN, ISS fora</option>
-                    <option value={3}>Federais e ISS fora do SN</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Alíquota do Simples (%) *</label>
-                  {/* Botão ao lado da caixa (e não no rótulo), para o campo alinhar com os vizinhos. */}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input type="number" step="0.01" min="0" className="form-control" style={{ flex: 1, minWidth: 0 }} value={p.pTotTribSN ?? ''} onChange={e => set('pTotTribSN', num(e.target.value))} />
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={buscarAliquotaSerpro}
-                      disabled={buscandoSerpro}
-                      style={{ flexShrink: 0, whiteSpace: 'nowrap', cursor: buscandoSerpro ? 'not-allowed' : 'pointer' }}
-                      title="Busca a alíquota oficial apurada na Receita Federal via Integra Contador (SERPRO)"
-                    >
-                      {buscandoSerpro ? 'Buscando...' : 'Buscar no SERPRO'}
-                    </button>
-                  </div>
-                </div>
-              </>
+              <div className="form-group">
+                <label className="form-label">Apuração do ISS</label>
+                <select className="form-control" value={p.regApTribSN ?? 1} onChange={e => set('regApTribSN', Number(e.target.value))}>
+                  <option value={1}>Pelo Simples Nacional</option>
+                  <option value={2}>Federais pelo SN, ISS fora</option>
+                  <option value={3}>Federais e ISS fora do SN</option>
+                </select>
+              </div>
             )}
           </div>
+          {p.opSimpNac === 3 && (
+            <div className="form-row" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+              <div className="form-group">
+                <label className="form-label">Alíquota do Simples (%) *</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="number" step="0.01" min="0" className="form-control" style={{ flex: 1, minWidth: 80 }} value={p.pTotTribSN ?? ''} onChange={e => set('pTotTribSN', num(e.target.value))} />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={buscarAliquotaSerpro}
+                    disabled={buscandoSerpro}
+                    style={{ flexShrink: 0, whiteSpace: 'nowrap', cursor: buscandoSerpro ? 'not-allowed' : 'pointer' }}
+                    title="Busca a alíquota oficial apurada na Receita Federal via Integra Contador (SERPRO)"
+                  >
+                    {buscandoSerpro ? 'Buscando...' : 'Buscar no SERPRO'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {p.opSimpNac === 1 && (
             <div className="form-row">
               <div className="form-group">
