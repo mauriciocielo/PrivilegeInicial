@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Layers,
   Plus,
@@ -703,21 +704,24 @@ export default function SaasBackofficePage() {
         </div>
       )}
 
-      {/* MODAL CADASTRO / EDIÇÃO SAAS */}
-      {showTenantModal && (
+      {/* MODAL CADASTRO / EDIÇÃO SAAS (Portal no document.body) */}
+      {showTenantModal && typeof document !== 'undefined' && createPortal(
         <div
+          onClick={() => setShowTenantModal(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'rgba(15,23,42,0.58)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 999,
+            zIndex: 9999,
             padding: 16,
           }}
         >
           <form
+            onClick={e => e.stopPropagation()}
             onSubmit={handleSaveTenant}
             className="card"
             style={{ width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}
@@ -888,27 +892,31 @@ export default function SaasBackofficePage() {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* MODAL MOVIMENTAÇÃO SAAS */}
-      {showMovModal && (
+      {/* MODAL MOVIMENTAÇÃO SAAS (Portal no document.body) */}
+      {showMovModal && typeof document !== 'undefined' && createPortal(
         <div
+          onClick={() => setShowMovModal(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'rgba(15,23,42,0.58)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 999,
+            zIndex: 9999,
             padding: 16,
           }}
         >
           <form
+            onClick={e => e.stopPropagation()}
             onSubmit={handleSaveMovement}
             className="card"
-            style={{ width: '100%', maxWidth: 520, padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}
+            style={{ width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}
           >
             <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>Nova Movimentação SaaS</h2>
 
@@ -1024,7 +1032,8 @@ export default function SaasBackofficePage() {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
       </div>
     </>
