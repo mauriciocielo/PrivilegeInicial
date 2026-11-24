@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { KeyRound, ShieldCheck, Upload, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -73,14 +74,17 @@ export default function NfseCertificadoClienteModal({
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       onClick={onFechar}
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15,23,42,0.55)',
-        zIndex: 1200,
+        background: 'rgba(15,23,42,0.58)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -190,6 +194,7 @@ export default function NfseCertificadoClienteModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

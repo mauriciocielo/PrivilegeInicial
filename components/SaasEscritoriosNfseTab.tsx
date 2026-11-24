@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Building2, KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, Users, X, Power } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -254,12 +255,12 @@ export default function SaasEscritoriosNfseTab() {
         </table>
       </div>
 
-      {/* Modal Novo Contador Terceiro */}
-      {showModal && (
+      {/* Modal Novo Contador Terceiro (Portal no document.body) */}
+      {showModal && typeof document !== 'undefined' && createPortal(
         <div
           onClick={() => setShowModal(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1100,
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.58)', backdropFilter: 'blur(4px)', zIndex: 9999,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
           }}
         >
@@ -336,7 +337,8 @@ export default function SaasEscritoriosNfseTab() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

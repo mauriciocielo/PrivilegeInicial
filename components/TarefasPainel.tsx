@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckSquare, Plus, LayoutGrid, List, Search, Calendar, Clock, AlertTriangle,
   Building2, User as UserIcon, Repeat, Paperclip, MessageSquare, Send, Trash2,
@@ -1149,8 +1150,8 @@ export default function TarefasPainel({ modo }: Props) {
         )}
       </div>
 
-      {/* Modal Executivo 2 Colunas — Criar / Detalhes da Tarefa */}
-      {modalAberto && (
+      {/* Modal Executivo 2 Colunas — Criar / Detalhes da Tarefa (Portal no document.body) */}
+      {modalAberto && typeof document !== 'undefined' && createPortal(
         <div
           onClick={() => setModalAberto(false)}
           style={{
@@ -1158,7 +1159,7 @@ export default function TarefasPainel({ modo }: Props) {
             inset: 0,
             background: 'rgba(15,23,42,0.58)',
             backdropFilter: 'blur(4px)',
-            zIndex: 1200,
+            zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1763,7 +1764,8 @@ export default function TarefasPainel({ modo }: Props) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
