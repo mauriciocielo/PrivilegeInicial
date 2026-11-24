@@ -963,18 +963,50 @@ class DataStore {
       if (depois < antes) liberou = true;
     } catch { /* segue para as próximas estratégias */ }
 
-    // 2) Log de auditoria: mantém os registros recentes, descarta a cauda.
+    // 2) Log de auditoria: descarta do cache local (fica salvo no PostgreSQL).
     if (exceto !== 'cf_audit_logs') {
       try {
-        const raw = localStorage.getItem('cf_audit_logs');
-        if (raw) {
-          const logs = JSON.parse(raw);
-          if (Array.isArray(logs) && logs.length > 200) {
-            localStorage.setItem('cf_audit_logs', JSON.stringify(logs.slice(0, 200)));
+        if (localStorage.getItem('cf_audit_logs')) {
+          localStorage.removeItem('cf_audit_logs');
+          liberou = true;
+        }
+      } catch { /* ignora */ }
+    }
+
+    // 3) Lançamentos legados no localStorage (já vivem no IndexedDB + PostgreSQL).
+    if (exceto !== 'cf_lancamentos') {
+      try {
+        if (localStorage.getItem('cf_lancamentos')) {
+          localStorage.removeItem('cf_lancamentos');
+          liberou = true;
+        }
+      } catch { /* ignora */ }
+    }
+
+    // 4) Documentos de Inteligência (reconstruíveis do PostgreSQL).
+    if (exceto !== 'cf_inteligencia_docs') {
+      try {
+        if (localStorage.getItem('cf_inteligencia_docs')) {
+          localStorage.removeItem('cf_inteligencia_docs');
+          liberou = true;
+        }
+      } catch { /* ignora */ }
+    }
+
+    // 5) Notas fiscais já emitidas/canceladas no cache local (a tela de NFS-e busca direto do PostgreSQL).
+    // Mantém apenas rascunhos locais não autorizados para nunca perder edição em andamento.
+    if (exceto !== 'cf_nfse') {
+      try {
+        const raw = localStorage.getItem('cf_nfse');
+        if (raw && raw.length > 50_000) {
+          const notas = JSON.parse(raw);
+          if (Array.isArray(notas)) {
+            const rascunhos = notas.filter((n: any) => n && n.status === 'rascunho' && !n.chaveAcesso);
+            localStorage.setItem('cf_nfse', JSON.stringify(rascunhos));
             liberou = true;
           }
         }
-      } catch { /* ignora log corrompido */ }
+      } catch { /* ignora */ }
     }
 
     return liberou;
