@@ -160,6 +160,32 @@ function calcularTempoAberto(t: TarefaRecord, agoraMs: number): { texto: string;
   };
 }
 
+const fieldBaseStyle: React.CSSProperties = {
+  width: '100%',
+  height: 40,
+  padding: '0 12px',
+  borderRadius: 10,
+  border: '1px solid var(--border)',
+  background: 'var(--bg-card)',
+  color: 'var(--text-primary)',
+  fontSize: 13,
+  fontWeight: 500,
+  outline: 'none',
+  boxSizing: 'border-box',
+  transition: 'border-color 150ms ease, box-shadow 150ms ease',
+};
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 5,
+  fontSize: 12,
+  fontWeight: 700,
+  color: 'var(--text-secondary)',
+  marginBottom: 6,
+  minHeight: 18,
+};
+
 export default function TarefasPainel({ modo }: Props) {
   const isConsultor = modo === 'consultor';
 
@@ -914,19 +940,18 @@ export default function TarefasPainel({ modo }: Props) {
 
           <div style={{ display: 'grid', gridTemplateColumns: isConsultor ? '2fr 1.2fr 1.2fr 0.9fr' : '2fr 1fr', gap: 10 }}>
             <div style={{ position: 'relative' }}>
-              <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
-                className="form-input"
                 placeholder="Buscar por título, empresa, responsável ou categoria..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                style={{ paddingLeft: 34, width: '100%' }}
+                style={{ ...fieldBaseStyle, paddingLeft: 34 }}
               />
             </div>
 
             {isConsultor && (
-              <select className="form-select" value={filtroEmpresaId} onChange={(e) => setFiltroEmpresaId(e.target.value)}>
+              <select value={filtroEmpresaId} onChange={(e) => setFiltroEmpresaId(e.target.value)} style={fieldBaseStyle}>
                 <option value="">Todas as empresas</option>
                 {empresas.map((e) => (
                   <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
@@ -935,7 +960,7 @@ export default function TarefasPainel({ modo }: Props) {
             )}
 
             {isConsultor && (
-              <select className="form-select" value={filtroResponsavelId} onChange={(e) => setFiltroResponsavelId(e.target.value)}>
+              <select value={filtroResponsavelId} onChange={(e) => setFiltroResponsavelId(e.target.value)} style={fieldBaseStyle}>
                 <option value="">Todos os usuários</option>
                 {usuarios.map((u) => (
                   <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
@@ -943,7 +968,7 @@ export default function TarefasPainel({ modo }: Props) {
               </select>
             )}
 
-            <select className="form-select" value={filtroPrioridade} onChange={(e) => setFiltroPrioridade(e.target.value)}>
+            <select value={filtroPrioridade} onChange={(e) => setFiltroPrioridade(e.target.value)} style={fieldBaseStyle}>
               <option value="">Prioridade: Todas</option>
               <option value="urgente">Urgente</option>
               <option value="alta">Alta</option>
@@ -1078,10 +1103,9 @@ export default function TarefasPainel({ modo }: Props) {
                         </td>
                         <td style={{ padding: '11px 14px' }} onClick={(e) => e.stopPropagation()}>
                           <select
-                            className="form-select"
                             value={t.status}
                             onChange={(e) => atualizarStatusRapido(t, e.target.value as TarefaStatus)}
-                            style={{ fontSize: 12, padding: '5px 8px', minWidth: 132 }}
+                            style={{ ...fieldBaseStyle, height: 34, fontSize: 12, padding: '0 8px', minWidth: 136 }}
                           >
                             {COLUNAS.map((c) => (
                               <option key={c.id} value={c.id}>{c.label}</option>
@@ -1130,8 +1154,16 @@ export default function TarefasPainel({ modo }: Props) {
         <div
           onClick={() => setModalAberto(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.62)', backdropFilter: 'blur(3px)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.58)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px 16px',
+            overflowY: 'auto',
           }}
         >
           <div
@@ -1141,12 +1173,13 @@ export default function TarefasPainel({ modo }: Props) {
               border: '1px solid var(--border)',
               borderRadius: 18,
               width: '100%',
-              maxWidth: 960,
-              maxHeight: '92vh',
+              maxWidth: 940,
+              maxHeight: 'calc(100vh - 40px)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
               boxShadow: '0 28px 70px rgba(0,0,0,0.32)',
+              margin: 'auto',
             }}
           >
             {/* Header Premium */}
@@ -1154,7 +1187,7 @@ export default function TarefasPainel({ modo }: Props) {
               style={{
                 padding: '16px 22px',
                 borderBottom: '1px solid var(--border)',
-                background: 'linear-gradient(135deg, rgba(140,26,34,0.06) 0%, rgba(15,23,42,0.02) 100%)',
+                background: 'var(--bg-card)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -1162,7 +1195,7 @@ export default function TarefasPainel({ modo }: Props) {
                 flexShrink: 0,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div
                   style={{
                     width: 40,
@@ -1178,9 +1211,9 @@ export default function TarefasPainel({ modo }: Props) {
                 >
                   <CheckSquare size={20} />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, fontSize: 17.5, fontWeight: 800, color: 'var(--text-primary)' }}>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>
                       {tarefaAtiva ? 'Detalhes da Tarefa' : 'Criar Nova Tarefa'}
                     </h3>
                     {tarefaAtiva && renderBadgeTempo(tarefaAtiva)}
@@ -1200,35 +1233,42 @@ export default function TarefasPainel({ modo }: Props) {
                 onClick={() => setModalAberto(false)}
                 style={{
                   border: '1px solid var(--border)',
-                  background: 'var(--bg-card)',
+                  background: 'var(--bg-secondary)',
                   borderRadius: 10,
-                  padding: 7,
+                  width: 34,
+                  height: 34,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: 'pointer',
                   color: 'var(--text-secondary)',
+                  flexShrink: 0,
                 }}
               >
-                <X size={18} />
+                <X size={17} />
               </button>
             </div>
 
             {/* Corpo em 2 colunas com scroll interno */}
             <div
               style={{
-                padding: 22,
+                padding: '18px 22px',
                 overflowY: 'auto',
+                flex: 1,
+                minHeight: 0,
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
                 gap: 20,
                 alignItems: 'start',
               }}
             >
               {/* COLUNA ESQUERDA: Conteúdo, Modelos, Checklist, Anexos, Comentários */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                 {/* Modelos Rápidos (somente na criação) */}
                 {!tarefaAtiva && isConsultor && (
                   <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <Sparkles size={13} style={{ color: 'var(--accent)' }} /> Modelos rápidos (preenche em 1 clique)
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <Sparkles size={13} style={{ color: 'var(--accent)' }} /> Modelos rápidos
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {MODELOS_RAPIDOS.map((m) => (
@@ -1256,29 +1296,27 @@ export default function TarefasPainel({ modo }: Props) {
 
                 {/* Título */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5 }}>Título da tarefa *</label>
+                  <label style={fieldLabelStyle}>Título da tarefa *</label>
                   <input
                     type="text"
-                    className="form-input"
                     placeholder="Ex.: Enviar extratos bancários e notas fiscais do mês"
                     value={titulo}
                     disabled={!isConsultor}
                     onChange={(e) => setTitulo(e.target.value)}
-                    style={{ width: '100%', fontSize: 14.5, fontWeight: 600, padding: '10px 12px' }}
+                    style={{ ...fieldBaseStyle, height: 44, fontSize: 14.5, fontWeight: 600 }}
                   />
                 </div>
 
                 {/* Descrição */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5 }}>Descrição e orientações</label>
+                  <label style={fieldLabelStyle}>Descrição e orientações</label>
                   <textarea
-                    className="form-input"
                     rows={4}
                     disabled={!isConsultor}
                     placeholder="Explique o que precisa ser feito, documentos esperados ou observações importantes..."
                     value={descricao}
                     onChange={(e) => setDescricao(e.target.value)}
-                    style={{ width: '100%', resize: 'vertical', lineHeight: 1.5 }}
+                    style={{ ...fieldBaseStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
                   />
                 </div>
 
@@ -1336,7 +1374,6 @@ export default function TarefasPainel({ modo }: Props) {
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input
                         type="text"
-                        className="form-input"
                         placeholder="Digite um item e pressione Enter..."
                         value={novaSubtarefaTexto}
                         onChange={(e) => setNovaSubtarefaTexto(e.target.value)}
@@ -1346,9 +1383,9 @@ export default function TarefasPainel({ modo }: Props) {
                             adicionarSubtarefa();
                           }
                         }}
-                        style={{ flex: 1, background: 'var(--bg-card)' }}
+                        style={{ ...fieldBaseStyle, height: 36, flex: 1 }}
                       />
-                      <button type="button" className="btn btn-secondary" onClick={adicionarSubtarefa}>
+                      <button type="button" className="btn btn-secondary" onClick={adicionarSubtarefa} style={{ height: 36, padding: '0 12px', fontSize: 12.5 }}>
                         <Plus size={14} /> Item
                       </button>
                     </div>
@@ -1428,7 +1465,6 @@ export default function TarefasPainel({ modo }: Props) {
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input
                         type="text"
-                        className="form-input"
                         placeholder="Escreva um comentário ou atualização..."
                         value={novoComentarioTexto}
                         onChange={(e) => setNovoComentarioTexto(e.target.value)}
@@ -1438,9 +1474,9 @@ export default function TarefasPainel({ modo }: Props) {
                             enviarComentario();
                           }
                         }}
-                        style={{ flex: 1 }}
+                        style={{ ...fieldBaseStyle, height: 36, flex: 1 }}
                       />
-                      <button type="button" className="btn btn-secondary" onClick={enviarComentario}>
+                      <button type="button" className="btn btn-secondary" onClick={enviarComentario} style={{ height: 36, padding: '0 12px', fontSize: 12.5 }}>
                         <Send size={14} /> Enviar
                       </button>
                     </div>
@@ -1453,7 +1489,7 @@ export default function TarefasPainel({ modo }: Props) {
                 {/* Destinatário */}
                 {isConsultor && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Users size={14} style={{ color: 'var(--accent)' }} /> Destinar para
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
@@ -1474,7 +1510,7 @@ export default function TarefasPainel({ modo }: Props) {
                               setVisivelClienteForm(v !== 'usuario');
                             }}
                             style={{
-                              padding: '8px 6px',
+                              height: 36,
                               borderRadius: 10,
                               fontSize: 12,
                               fontWeight: 700,
@@ -1496,8 +1532,8 @@ export default function TarefasPainel({ modo }: Props) {
 
                     {(destinoTipoForm === 'cliente' || destinoTipoForm === 'ambos') && (
                       <div>
-                        <label className="form-label">Empresa Cliente *</label>
-                        <select className="form-select" value={empresaIdForm} onChange={(e) => setEmpresaIdForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                        <label style={fieldLabelStyle}>Empresa Cliente *</label>
+                        <select value={empresaIdForm} onChange={(e) => setEmpresaIdForm(e.target.value)} style={fieldBaseStyle}>
                           <option value="">Selecione a empresa...</option>
                           {empresas.map((e) => (
                             <option key={e.id} value={e.id}>{e.nomeFantasia || e.razaoSocial}</option>
@@ -1508,8 +1544,8 @@ export default function TarefasPainel({ modo }: Props) {
 
                     {(destinoTipoForm === 'usuario' || destinoTipoForm === 'ambos') && (
                       <div>
-                        <label className="form-label">Usuário Responsável *</label>
-                        <select className="form-select" value={responsavelUserIdForm} onChange={(e) => setResponsavelUserIdForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                        <label style={fieldLabelStyle}>Usuário Responsável *</label>
+                        <select value={responsavelUserIdForm} onChange={(e) => setResponsavelUserIdForm(e.target.value)} style={fieldBaseStyle}>
                           <option value="">Selecione o usuário...</option>
                           {usuarios.map((u) => (
                             <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
@@ -1518,8 +1554,8 @@ export default function TarefasPainel({ modo }: Props) {
                       </div>
                     )}
 
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={visivelClienteForm} onChange={(e) => setVisivelClienteForm(e.target.checked)} />
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 2px' }}>
+                      <input type="checkbox" checked={visivelClienteForm} onChange={(e) => setVisivelClienteForm(e.target.checked)} style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
                       {visivelClienteForm ? <Eye size={14} style={{ color: '#16a34a' }} /> : <EyeOff size={14} />}
                       Visível no Portal do Cliente
                     </label>
@@ -1530,7 +1566,7 @@ export default function TarefasPainel({ modo }: Props) {
 
                 {/* Prioridade visual */}
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ ...fieldLabelStyle, color: 'var(--text-primary)', fontWeight: 800 }}>
                     <Flag size={13} style={{ color: 'var(--accent)' }} /> Prioridade
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -1544,9 +1580,9 @@ export default function TarefasPainel({ modo }: Props) {
                           disabled={!isConsultor}
                           onClick={() => setPrioridadeForm(pKey)}
                           style={{
-                            padding: '6px 4px',
-                            borderRadius: 8,
-                            fontSize: 11.5,
+                            height: 34,
+                            borderRadius: 9,
+                            fontSize: 12,
                             fontWeight: 700,
                             cursor: isConsultor ? 'pointer' : 'default',
                             border: `1.5px solid ${sel ? meta.cor : 'var(--border)'}`,
@@ -1561,21 +1597,23 @@ export default function TarefasPainel({ modo }: Props) {
                   </div>
                 </div>
 
-                {/* Status + Categoria */}
+                {/* Status + Categoria (perfeitamente alinhados) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div>
-                    <label className="form-label">Status</label>
-                    <select className="form-select" value={statusForm} onChange={(e) => setStatusForm(e.target.value as TarefaStatus)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                    <label style={fieldLabelStyle}>
+                      <CheckCircle2 size={13} style={{ color: 'var(--text-muted)' }} /> Status
+                    </label>
+                    <select value={statusForm} onChange={(e) => setStatusForm(e.target.value as TarefaStatus)} style={fieldBaseStyle}>
                       {COLUNAS.map((c) => (
                         <option key={c.id} value={c.id}>{c.label}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="form-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <FolderKanban size={12} /> Categoria
+                    <label style={fieldLabelStyle}>
+                      <FolderKanban size={13} style={{ color: 'var(--text-muted)' }} /> Categoria
                     </label>
-                    <select className="form-select" disabled={!isConsultor} value={categoriaForm} onChange={(e) => setCategoriaForm(e.target.value)} style={{ width: '100%', background: 'var(--bg-card)' }}>
+                    <select disabled={!isConsultor} value={categoriaForm} onChange={(e) => setCategoriaForm(e.target.value)} style={fieldBaseStyle}>
                       {CATEGORIAS_PADRAO.map((cat) => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
@@ -1585,53 +1623,56 @@ export default function TarefasPainel({ modo }: Props) {
 
                 {/* Prazo + Atalhos rápidos */}
                 <div>
-                  <label className="form-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <Calendar size={12} /> Prazo de entrega
+                  <label style={fieldLabelStyle}>
+                    <Calendar size={13} style={{ color: 'var(--text-muted)' }} /> Prazo de entrega
                   </label>
                   <input
                     type="date"
-                    className="form-input"
                     disabled={!isConsultor}
                     value={prazoForm}
                     onChange={(e) => setPrazoForm(e.target.value)}
-                    style={{ width: '100%', background: 'var(--bg-card)' }}
+                    style={fieldBaseStyle}
                   />
                   {isConsultor && (
-                    <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                       {[
                         { label: 'Hoje', dias: 0 },
                         { label: 'Amanhã', dias: 1 },
                         { label: '+3 dias', dias: 3 },
                         { label: '+7 dias', dias: 7 },
-                      ].map((at) => (
-                        <button
-                          key={at.label}
-                          type="button"
-                          onClick={() => setPrazoForm(somarDiasIso(at.dias))}
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-card)',
-                            color: 'var(--text-secondary)',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {at.label}
-                        </button>
-                      ))}
+                      ].map((at) => {
+                        const alvo = somarDiasIso(at.dias);
+                        const ativo = prazoForm === alvo;
+                        return (
+                          <button
+                            key={at.label}
+                            type="button"
+                            onClick={() => setPrazoForm(alvo)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 7,
+                              border: `1px solid ${ativo ? 'var(--accent)' : 'var(--border)'}`,
+                              background: ativo ? 'rgba(140,26,34,0.1)' : 'var(--bg-card)',
+                              color: ativo ? 'var(--accent)' : 'var(--text-secondary)',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {at.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 {/* Recorrência mensal */}
                 {isConsultor && (
-                  <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={recorrenteForm} onChange={(e) => setRecorrenteForm(e.target.checked)} />
-                      <Repeat size={13} style={{ color: '#2563eb' }} /> Recorrência mensal automática
+                  <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={recorrenteForm} onChange={(e) => setRecorrenteForm(e.target.checked)} style={{ accentColor: '#2563eb', width: 15, height: 15 }} />
+                      <Repeat size={14} style={{ color: '#2563eb' }} /> Recorrência mensal automática
                     </label>
                     {recorrenteForm && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -1640,10 +1681,9 @@ export default function TarefasPainel({ modo }: Props) {
                           type="number"
                           min={1}
                           max={31}
-                          className="form-input"
                           value={recorrenciaDiaForm}
                           onChange={(e) => setRecorrenciaDiaForm(Math.max(1, Math.min(31, Number(e.target.value) || 5)))}
-                          style={{ width: 62, padding: '4px 8px' }}
+                          style={{ ...fieldBaseStyle, width: 64, height: 32, padding: '0 8px' }}
                         />
                         <span>ao concluir</span>
                       </div>
@@ -1655,20 +1695,20 @@ export default function TarefasPainel({ modo }: Props) {
                 {isConsultor && !tarefaAtiva && (
                   <label
                     style={{
-                      padding: 10,
+                      padding: '10px 12px',
                       borderRadius: 10,
                       background: 'rgba(22,163,74,0.08)',
-                      border: '1px solid rgba(22,163,74,0.25)',
+                      border: '1px solid rgba(22,163,74,0.28)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: 700,
                       color: '#15803d',
                       cursor: 'pointer',
                     }}
                   >
-                    <input type="checkbox" checked={notificarWppAoCriar} onChange={(e) => setNotificarWppAoCriar(e.target.checked)} />
+                    <input type="checkbox" checked={notificarWppAoCriar} onChange={(e) => setNotificarWppAoCriar(e.target.checked)} style={{ accentColor: '#16a34a', width: 15, height: 15 }} />
                     <Bell size={14} /> Avisar automaticamente no WhatsApp ao criar
                   </label>
                 )}
@@ -1713,11 +1753,11 @@ export default function TarefasPainel({ modo }: Props) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setModalAberto(false)}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setModalAberto(false)} style={{ padding: '9px 16px' }}>
                   Cancelar
                 </button>
-                <button type="button" className="btn btn-primary" disabled={salvando} onClick={salvarModal}>
+                <button type="button" className="btn btn-primary" disabled={salvando} onClick={salvarModal} style={{ padding: '9px 20px' }}>
                   {salvando ? 'Salvando...' : tarefaAtiva ? 'Salvar Alterações' : 'Criar Tarefa'}
                 </button>
               </div>
