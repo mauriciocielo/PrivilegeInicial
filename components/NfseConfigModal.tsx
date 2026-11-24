@@ -116,6 +116,32 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
   const [senha, setSenha] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [buscandoSerpro, setBuscandoSerpro] = useState(false);
+  const [buscandoIbpt, setBuscandoIbpt] = useState(false);
+
+  const buscarIbpt = async () => {
+    setBuscandoIbpt(true);
+    try {
+      const qs = new URLSearchParams({ empresaId });
+      if (p.cTribNacPadrao) qs.set('codigoServico', p.cTribNacPadrao);
+      const res = await fetch(`/api/nfse/ibpt?${qs.toString()}`);
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(dados.error || 'Não foi possível consultar o IBPT.');
+        return;
+      }
+      setP(a => ({
+        ...a,
+        pTotTribFed: dados.pTotTribFed ?? a.pTotTribFed,
+        pTotTribEst: dados.pTotTribEst ?? a.pTotTribEst,
+        pTotTribMun: dados.pTotTribMun ?? a.pTotTribMun,
+      }));
+      toast.success(`Tributos preenchidos via ${dados.fonte || 'IBPT'} (${dados.pTotTribFed}% Fed / ${dados.pTotTribEst}% Est / ${dados.pTotTribMun}% Mun).`);
+    } catch {
+      toast.error('Erro de conexão ao consultar o IBPT.');
+    } finally {
+      setBuscandoIbpt(false);
+    }
+  };
 
   const buscarAliquotaSerpro = async () => {
     if (!empresaId) return;
@@ -344,7 +370,18 @@ export default function NfseConfigModal({ empresaId, cnpj, cnaes, config, onFech
           {p.opSimpNac === 1 && (
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Tributos aprox. federais (%)</label>
+                <div className="form-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Tributos aprox. federais (%)</label>
+                  <button
+                    type="button"
+                    onClick={buscarIbpt}
+                    disabled={buscandoIbpt}
+                    style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: 12.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                    title="Puxa automaticamente os percentuais aproximados de tributos do IBPT (Lei da Transparência)"
+                  >
+                    {buscandoIbpt ? 'Buscando...' : 'Buscar no IBPT'}
+                  </button>
+                </div>
                 <input type="number" step="0.01" min="0" className="form-control" value={p.pTotTribFed ?? ''} onChange={e => set('pTotTribFed', num(e.target.value))} />
               </div>
               <div className="form-group">

@@ -12,6 +12,7 @@ import {
 import { criarTransporteMtls, emitirNfse, SefinIndisponivelError } from '../../../../lib/nfse/sefin';
 import { totalRetidoFederal } from '../../../../lib/nfse/retencao';
 import { estimarValoresNota } from '../../../../lib/nfse/lote';
+import { consultarTributosIbpt } from '../../../../lib/nfse/ibpt';
 import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
 import { enviarEmailNfseEmitida } from '../../../../lib/nfse/enviar-email-nfse';
 import { enviarNfsePorWhatsAppAoEmissor } from '../../../../lib/nfse/enviar-whatsapp-nfse';
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     if (negado) return negado;
 
     const [empresa, config, existente] = await Promise.all([
-      db.empresa.findUnique({ where: { id: empresaId }, select: { cnpj: true, razaoSocial: true } }),
+      db.empresa.findUnique({ where: { id: empresaId }, select: { cnpj: true, razaoSocial: true, uf: true } }),
       db.nfseConfig.findUnique({ where: { empresaId } }),
       db.nfsE.findUnique({ where: { id: notaId } }),
     ]);
@@ -153,7 +154,32 @@ export async function POST(request: Request) {
     // A alíquota do Simples muda com o faturamento: a digitada na nota vale para esta emissão.
     const aliquotaDaNota = Number(body?.pTotTribSN);
     const usaAliquotaDaNota = config.opSimpNac === 3 && body?.pTotTribSN != null && aliquotaDaNota > 0 && aliquotaDaNota <= 100;
-    const cfg = configFiscal(usaAliquotaDaNota ? { ...config, pTotTribSN: aliquotaDaNota } : config, empresa.cnpj);
+    let configParaEmissao = usaAliquotaDaNota ? { ...config, pTotTribSN: aliquotaDaNota } : config;
+
+    // Para Não Optante do Simples (Lucro Presumido / Real), se os tributos aproximados
+    // (Federal / Estadual / Municipal) não estiverem cadastrados, busca automaticamente no IBPT.
+    if (
+      configParaEmissao.opSimpNac === 1 &&
+      configParaEmissao.pTotTribFed == null &&
+      configParaEmissao.pTotTribEst == null &&
+      configParaEmissao.pTotTribMun == null
+    ) {
+      const ibpt = await consultarTributosIbpt({
+        cnpj: empresa.cnpj,
+        codigoServico: dados.cTribNac,
+        uf: empresa.uf,
+        aliquotaIss: dados.aliquotaIss,
+        descricao: dados.descricao,
+      });
+      configParaEmissao = {
+        ...configParaEmissao,
+        pTotTribFed: ibpt.pTotTribFed,
+        pTotTribEst: ibpt.pTotTribEst,
+        pTotTribMun: ibpt.pTotTribMun,
+      };
+    }
+
+    const cfg = configFiscal(configParaEmissao, empresa.cnpj);
     const problemas = validarEmissao(cfg, dados);
     if (problemas.length > 0) return NextResponse.json({ error: problemas.join(' '), problemas }, { status: 422 });
 
