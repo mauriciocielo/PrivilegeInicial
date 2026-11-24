@@ -4,6 +4,7 @@ import { captureError } from '../../../../lib/sentry-helper';
 import {
   enviarRelatorioFiscalDiario, relatorioEmAndamento, type OpcoesRelatorioFiscal,
 } from '../../../../lib/nfse/relatorio-fiscal';
+import { obterEscritorioDoUsuario } from '../../../../lib/nfse/escritorios-terceiros';
 
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -11,7 +12,11 @@ async function autorizado(request: Request, token: string | null): Promise<boole
   const segredo = process.env.CRON_SECRET;
   if (segredo && token === segredo) return true;
   const auth = await requireAuth(request);
-  return !auth.error && auth.session.role !== 'cliente';
+  if (auth.error || auth.session.role === 'cliente') return false;
+  // Contador terceiro não pode disparar o relatório global de todas as empresas do servidor
+  const vinculoTerceiro = await obterEscritorioDoUsuario(auth.session.userId);
+  if (vinculoTerceiro) return false;
+  return true;
 }
 
 function iniciar(opcoes: OpcoesRelatorioFiscal) {

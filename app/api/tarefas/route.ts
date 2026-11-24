@@ -10,6 +10,7 @@ import {
   type TarefaPrioridade,
   type TarefaStatus,
 } from '../../../lib/tarefas-db';
+import { obterEscritorioDoUsuario } from '../../../lib/nfse/escritorios-terceiros';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,9 @@ export async function GET(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role !== 'administrador' && await obterEscritorioDoUsuario(auth.session.userId)) {
+      return NextResponse.json({ tarefas: [] });
+    }
     await ensureTarefasTable();
 
     const { searchParams } = new URL(request.url);
@@ -99,6 +103,9 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role !== 'administrador' && await obterEscritorioDoUsuario(auth.session.userId)) {
+      return NextResponse.json({ tarefas: [] });
+    }
     await ensureTarefasTable();
 
     const body = await request.json().catch(() => ({}));

@@ -8,6 +8,7 @@ import { hashPassword, isHashed } from '../../../lib/auth-hash';
 import type { SessionPayload } from '../../../lib/session';
 import { TIPO_EMPRESA_SO_EMISSOR } from '../../../lib/nfse/emissor';
 import { idsEmpresasDoCertificado } from '../../../lib/nfse/escopo';
+import { idsEmpresasDoEscritorio, obterEscritorioDoUsuario } from '../../../lib/nfse/escritorios-terceiros';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -2172,21 +2173,31 @@ export async function GET(request: Request) {
   const auth = await requireAuth(request);
   if (auth.error) return auth.error;
   try {
-    // administrador enxerga tudo (scope null); qualquer outro papel só vê as
-    // empresas atribuídas a ele na sessão — nunca o banco inteiro.
-    const scope: EmpresaScope = auth.session.role === 'administrador' ? null : auth.session.empresaIds;
+    // administrador enxerga tudo (scope null); contador terceiro só vê empresas do
+    // próprio escritório; qualquer outro papel só vê as empresas da própria sessão.
     const role = auth.session.role;
     const userId = auth.session.userId;
+    const vinculoTerceiro = role === 'administrador' ? null : await obterEscritorioDoUsuario(userId);
+    const scope: EmpresaScope = role === 'administrador'
+      ? null
+      : vinculoTerceiro
+        ? (vinculoTerceiro.ativo ? await idsEmpresasDoEscritorio(vinculoTerceiro.escritorioId) : [])
+        : auth.session.empresaIds;
 
     const { searchParams } = new URL(request.url);
     const requestedCollection = searchParams.get('collection');
+
+    const bloquearParaTerceiro = (col: string) =>
+      Boolean(vinculoTerceiro && (col === 'cf_inteligencia_docs' || col === 'cf_politicas_globais'));
 
     if (requestedCollection) {
       const query = QUERIES[requestedCollection];
       if (!query) {
         return NextResponse.json({ error: `Coleção desconhecida: ${requestedCollection}` }, { status: 400 });
       }
-      const collectionData = await query(scope, role, userId);
+      const collectionData = bloquearParaTerceiro(requestedCollection)
+        ? []
+        : await query(scope, role, userId);
       return NextResponse.json({
         version: '7',
         isPartial: true,
@@ -2198,7 +2209,9 @@ export async function GET(request: Request) {
     // Sem "collection" na query string: busca tudo de uma vez (usado no sync
     // inicial ao carregar o site e na inicialização de banco vazio).
     const entries = Object.entries(QUERIES);
-    const results = await Promise.all(entries.map(([, fn]) => fn(scope, role, userId)));
+    const results = await Promise.all(
+      entries.map(([key, fn]) => (bloquearParaTerceiro(key) ? Promise.resolve([]) : fn(scope, role, userId)))
+    );
     const backupData = Object.fromEntries(entries.map(([key], i) => [key, results[i]]));
 
     return NextResponse.json({
@@ -2360,7 +2373,13 @@ export async function POST(request: Request) {
     const collection = body.collection;
     const data = body.data;
     const isAdmin = auth.session.role === 'administrador';
-    const scopeFilter = isAdmin ? {} : { empresaId: { in: auth.session.empresaIds } };
+    const vinculoTerceiroPost = isAdmin ? null : await obterEscritorioDoUsuario(auth.session.userId);
+    const idsPermitidosPost = isAdmin
+      ? null
+      : vinculoTerceiroPost
+        ? (vinculoTerceiroPost.ativo ? await idsEmpresasDoEscritorio(vinculoTerceiroPost.escritorioId) : [])
+        : auth.session.empresaIds;
+    const scopeFilter = isAdmin ? {} : { empresaId: { in: idsPermitidosPost || [] } };
 
     if (!data) {
       return NextResponse.json({ error: 'Nenhum dado fornecido' }, { status: 400 });
@@ -2410,7 +2429,7 @@ export async function POST(request: Request) {
               });
               break;
             case 'cf_inteligencia_docs':
-              if (auth.session.role !== 'cliente') await db.inteligenciaDoc.deleteMany({ where: { id: record.id } });
+              if (auth.session.role !== 'cliente' && !vinculoTerceiroPost) await db.inteligenciaDoc.deleteMany({ where: { id: record.id } });
               break;
             case 'cf_unidades':
               await db.unidade.deleteMany({

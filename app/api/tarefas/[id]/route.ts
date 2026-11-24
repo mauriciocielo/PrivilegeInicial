@@ -9,6 +9,7 @@ import {
   mapRowToTarefa,
   type TarefaRecord,
 } from '../../../../lib/tarefas-db';
+import { obterEscritorioDoUsuario } from '../../../../lib/nfse/escritorios-terceiros';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,9 @@ export async function PATCH(
   try {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
+    if (auth.session.role !== 'administrador' && await obterEscritorioDoUsuario(auth.session.userId)) {
+      return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
+    }
     await ensureTarefasTable();
 
     const { id } = await context.params;

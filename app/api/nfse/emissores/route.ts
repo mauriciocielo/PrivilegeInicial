@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const certId = vinculoTerceiro ? vinculoTerceiro.escritorioId : ID_CERT_ESCRITORIO;
     const filtroEmpresas = await filtroEmpresasNfse(auth.session);
 
-    const [empresas, certificado, usuariosClientes] = await Promise.all([
+    const [empresas, certificado] = await Promise.all([
       db.empresa.findMany({
         where: filtroEmpresas,
         select: {
@@ -52,12 +52,16 @@ export async function GET(request: Request) {
         orderBy: { razaoSocial: 'asc' },
       }),
       db.nfseCertificadoEscritorio.findUnique({ where: { id: certId }, select: certificadoPublico }),
-      db.user.findMany({
-        where: { role: 'cliente' },
-        select: { id: true, name: true, email: true, empresaIds: true },
-        orderBy: { name: 'asc' },
-      }),
     ]);
+
+    const idsEmpresasVisiveis = empresas.map(e => e.id);
+    const usuariosClientes = idsEmpresasVisiveis.length > 0
+      ? await db.user.findMany({
+          where: { role: 'cliente', empresaIds: { hasSome: idsEmpresasVisiveis } },
+          select: { id: true, name: true, email: true, empresaIds: true },
+          orderBy: { name: 'asc' },
+        })
+      : [];
 
     const usuariosPorEmpresa = new Map<string, Array<{ id: string; name: string; email: string }>>();
     for (const u of usuariosClientes) {

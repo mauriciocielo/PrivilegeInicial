@@ -53,12 +53,13 @@ export async function POST(request: Request) {
     const todas = await db.empresa.findMany({ select: { id: true, cnpj: true, razaoSocial: true, nomeFantasia: true, tipo: true, nfseConfig: true } });
     const existente = todas.find(e => apenasDigitos(e.cnpj) === cnpj);
 
-    // Impede que um contador terceiro vincule uma empresa já ativa sob outro contador (isolamento total)
+    // Impede que um contador terceiro vincule/assuma qualquer empresa que já pertença
+    // à Privilege ('padrao') ou a outro escritório contábil terceiro (isolamento absoluto).
     if (existente && vinculoTerceiro) {
       const escAtual = await obterEscritorioDaEmpresa(existente.id);
-      if (escAtual !== vinculoTerceiro.escritorioId && existente.nfseConfig?.procuracaoStatus === 'ativa') {
+      if (escAtual !== vinculoTerceiro.escritorioId) {
         return NextResponse.json(
-          { error: 'Este CNPJ já está ativo sob outro escritório contábil na plataforma. Solicite a transferência ao suporte.' },
+          { error: 'Este CNPJ já está cadastrado sob outro escritório na plataforma. Somente o administrador pode transferir o vínculo.' },
           { status: 409 }
         );
       }
