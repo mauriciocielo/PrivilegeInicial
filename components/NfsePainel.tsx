@@ -269,19 +269,35 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     let totalEmitidas = 0;
     let totalTomadas = 0;
     let fora = 0;
+    let errosSeguidos = 0;
 
     try {
       for (let i = 0; i < 120; i++) {
-        const res = await fetch(`/api/nfse/emissores/${empIdAlvo}/notas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ meses, reiniciar: i === 0 && reiniciar }),
-        });
-        const dados = await res.json().catch(() => ({}));
+        let res: Response;
+        let dados: any = {};
+        try {
+          res = await fetch(`/api/nfse/emissores/${empIdAlvo}/notas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ meses, reiniciar: i === 0 && reiniciar && errosSeguidos === 0 }),
+          });
+          dados = await res.json().catch(() => ({}));
+        } catch {
+          res = new Response(null, { status: 503 });
+        }
+
         if (!res.ok) {
+          const transitorio = res.status === 503 || res.status === 502 || res.status === 504 || res.status === 429;
+          if (transitorio && errosSeguidos < 3) {
+            errosSeguidos++;
+            await new Promise(r => setTimeout(r, 2500 * errosSeguidos));
+            i--; // repete a página continuando do último NSU salvo
+            continue;
+          }
           toast.error(`${dados.error || 'Erro ao buscar notas no ADN.'}${total > 0 ? ` Já trazidas: ${total}.` : ''}`);
           return;
         }
+        errosSeguidos = 0;
         if (dados.notas?.length) {
           const locais = new Map(store.getNfsE(empIdAlvo).map(n => [n.id, n]));
           const mescladas: NfsE[] = dados.notas.map((n: NfsE) => ({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) }));
