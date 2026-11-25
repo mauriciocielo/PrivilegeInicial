@@ -20,14 +20,78 @@ import { toast } from 'sonner';
 import SaasEscritoriosNfseTab from '../../../components/SaasEscritoriosNfseTab';
 
 const ALL_MODULES = [
+  { id: 'fiscal', label: 'Emissão NFS-e' },
+  { id: 'financeiro', label: 'Financeiro & Conciliação' },
+  { id: 'inteligencia', label: 'Inteligência Fiscal & IA' },
   { id: 'administrativo', label: 'Administrativo' },
-  { id: 'financeiro', label: 'Financeiro' },
   { id: 'comercial', label: 'Comercial' },
   { id: 'marketing', label: 'Marketing' },
   { id: 'pessoas', label: 'Pessoas' },
 ];
 
-const PLANS = ['Starter', 'Pro 360º', 'Enterprise', 'BPO Completo', 'Somente WhatsApp', 'Personalizado'];
+interface SaasPlanSpec {
+  name: string;
+  group: 'nfse' | 'gestao' | 'custom';
+  groupLabel: string;
+  price: number;
+  summary: string;
+  modules: string[];
+}
+
+const SAAS_PLANS: SaasPlanSpec[] = [
+  {
+    name: 'Fiscal Start',
+    group: 'nfse',
+    groupLabel: 'Só Emissão de NFS-e',
+    price: 59.9,
+    summary: 'Até 25 Notas Fiscais/mês',
+    modules: ['fiscal'],
+  },
+  {
+    name: 'Fiscal Ilimitado',
+    group: 'nfse',
+    groupLabel: 'Só Emissão de NFS-e',
+    price: 99.9,
+    summary: 'Sem limite de Notas',
+    modules: ['fiscal'],
+  },
+  {
+    name: 'Gestão MEI',
+    group: 'gestao',
+    groupLabel: 'NFS-e + Conciliação Bancária',
+    price: 109.9,
+    summary: 'Emissão + Financeiro (1 banco)',
+    modules: ['fiscal', 'financeiro'],
+  },
+  {
+    name: 'Gestão Simples',
+    group: 'gestao',
+    groupLabel: 'NFS-e + Conciliação Bancária',
+    price: 149.9,
+    summary: 'Ilimitado + Inteligência Fiscal & IA',
+    modules: ['fiscal', 'financeiro', 'inteligencia'],
+  },
+  {
+    name: 'Gestão Normal',
+    group: 'gestao',
+    groupLabel: 'NFS-e + Conciliação Bancária',
+    price: 199.9,
+    summary: 'LP ou LR + BI e Copiloto IA',
+    modules: ['fiscal', 'financeiro', 'inteligencia', 'administrativo', 'comercial'],
+  },
+  {
+    name: 'Personalizado',
+    group: 'custom',
+    groupLabel: 'Sob Medida',
+    price: 0,
+    summary: 'Condição comercial personalizada',
+    modules: ['fiscal', 'financeiro'],
+  },
+];
+
+function findPlanSpec(planName: string): SaasPlanSpec | undefined {
+  return SAAS_PLANS.find(p => p.name.toLowerCase() === String(planName || '').toLowerCase());
+}
 
 function fmtBRL(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
@@ -62,11 +126,11 @@ export default function SaasBackofficePage() {
     contact_name: '',
     contact_email: '',
     contact_phone: '',
-    plan_name: 'Pro 360º',
-    monthly_value: 990,
+    plan_name: 'Fiscal Start',
+    monthly_value: 59.9,
     billing_day: 10,
     status: 'ativa',
-    modules: ['administrativo', 'financeiro', 'comercial', 'marketing', 'pessoas'],
+    modules: ['fiscal'],
     notes: '',
   });
   const [savingTenant, setSavingTenant] = useState(false);
@@ -189,7 +253,8 @@ export default function SaasBackofficePage() {
     });
   }, [movements, movTypeFilter, movStatusFilter]);
 
-  function openNewTenant() {
+  function openNewTenant(preselectedPlan?: SaasPlanSpec) {
+    const plano = preselectedPlan || SAAS_PLANS[0];
     setTenantForm({
       id: '',
       empresa_id: '',
@@ -198,12 +263,12 @@ export default function SaasBackofficePage() {
       contact_name: '',
       contact_email: '',
       contact_phone: '',
-      plan_name: 'Pro 360º',
-      monthly_value: 990,
+      plan_name: plano.name,
+      monthly_value: plano.price,
       billing_day: 10,
       status: 'ativa',
-      modules: ['administrativo', 'financeiro', 'comercial', 'marketing', 'pessoas'],
-      notes: '',
+      modules: [...plano.modules],
+      notes: plano.summary,
     });
     setShowTenantModal(true);
   }
@@ -440,7 +505,78 @@ export default function SaasBackofficePage() {
 
       {/* ABA 1: CADASTROS SAAS */}
       {activeTab === 'cadastros' && (
-        <div className="card" style={{ padding: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Tabela Oficial de Planos */}
+          <div className="card" style={{ padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Planos Oficiais Privilege</h2>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                  Clique em um plano para iniciar um novo cadastro SaaS com valor e módulos já preenchidos.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 14 }}>
+              {(['nfse', 'gestao'] as const).map(groupKey => {
+                const planosGrupo = SAAS_PLANS.filter(p => p.group === groupKey);
+                const tituloGrupo = groupKey === 'nfse' ? 'SÓ EMISSÃO DE NFS-e' : 'NFS-e + CONCILIAÇÃO BANCÁRIA';
+                return (
+                  <div
+                    key={groupKey}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      padding: 14,
+                      background: 'var(--bg-card2, #fafafa)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                      {tituloGrupo}
+                    </div>
+                    {planosGrupo.map(plano => (
+                      <div
+                        key={plano.name}
+                        style={{
+                          background: 'var(--bg-card, #fff)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 10,
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 14.5, fontWeight: 800 }}>{plano.name}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{plano.summary}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 15, fontWeight: 900, color: '#600000' }}>{fmtBRL(plano.price)}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>/mês</div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ padding: '5px 10px', fontSize: 12.5, whiteSpace: 'nowrap' }}
+                            onClick={() => openNewTenant(plano)}
+                          >
+                            + Usar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ position: 'relative' }}>
@@ -473,7 +609,7 @@ export default function SaasBackofficePage() {
               <button type="button" onClick={handleSyncEmpresas} className="btn btn-secondary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <RefreshCw size={14} /> Importar Empresas da Base
               </button>
-              <button type="button" onClick={openNewTenant} className="btn btn-primary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="button" onClick={() => openNewTenant()} className="btn btn-primary" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Plus size={14} /> Novo Cadastro SaaS
               </button>
             </div>
@@ -597,6 +733,7 @@ export default function SaasBackofficePage() {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       )}
@@ -856,10 +993,40 @@ export default function SaasBackofficePage() {
                 <select
                   className="form-control"
                   value={tenantForm.plan_name}
-                  onChange={e => setTenantForm((f: any) => ({ ...f, plan_name: e.target.value }))}
+                  onChange={e => {
+                    const novoNome = e.target.value;
+                    const spec = findPlanSpec(novoNome);
+                    setTenantForm((f: any) => ({
+                      ...f,
+                      plan_name: novoNome,
+                      ...(spec && spec.group !== 'custom'
+                        ? { monthly_value: spec.price, modules: [...spec.modules] }
+                        : {}),
+                    }));
+                  }}
                 >
-                  {PLANS.map(p => <option key={p} value={p}>{p}</option>)}
+                  <optgroup label="Só Emissão de NFS-e">
+                    {SAAS_PLANS.filter(p => p.group === 'nfse').map(p => (
+                      <option key={p.name} value={p.name}>{p.name} — {fmtBRL(p.price)}/mês</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="NFS-e + Conciliação Bancária">
+                    {SAAS_PLANS.filter(p => p.group === 'gestao').map(p => (
+                      <option key={p.name} value={p.name}>{p.name} — {fmtBRL(p.price)}/mês</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Outros">
+                    <option value="Personalizado">Personalizado</option>
+                    {tenantForm.plan_name && !findPlanSpec(tenantForm.plan_name) && (
+                      <option value={tenantForm.plan_name}>{tenantForm.plan_name} (legado)</option>
+                    )}
+                  </optgroup>
                 </select>
+                {findPlanSpec(tenantForm.plan_name)?.summary && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    {findPlanSpec(tenantForm.plan_name)?.summary}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="form-label">Valor Mensal (R$)</label>
