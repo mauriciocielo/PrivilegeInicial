@@ -156,7 +156,9 @@ export default function TransitionProvider({ children }: { children: React.React
       // (que depende dele para saber o que este usuário pode ver) vem correta.
       await refreshUserSession();
 
-      if (sessionStorage.getItem('cf_postgres_synced') === 'true') {
+      const syncedFlag = sessionStorage.getItem('cf_postgres_synced') === 'true';
+      const temEmpresasLocais = store.getEmpresas().length > 0;
+      if (syncedFlag && temEmpresasLocais) {
         window.dispatchEvent(new CustomEvent('cfSyncStatus', { detail: 'synced' }));
         return;
       }
@@ -279,7 +281,7 @@ export default function TransitionProvider({ children }: { children: React.React
       }
     };
     syncDb();
-  }, []);
+  }, [isPublicRoute]);
 
   // Auto-salvamento automático no PostgreSQL ao fazer alterações no sistema (Debounced em 300ms)
   useEffect(() => {

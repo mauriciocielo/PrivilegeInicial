@@ -525,9 +525,13 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     return () => window.removeEventListener('selecionarEmpresa', selecionar);
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     store.setCurrentUser(null);
-    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    try {
+      sessionStorage.removeItem('cf_postgres_synced');
+      sessionStorage.removeItem('cf_empresa_sel');
+    } catch {}
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     router.push('/');
   };
 
