@@ -259,7 +259,7 @@ export async function montarPdfPerfil(opcoes: OpcoesPdfPerfil): Promise<jsPDF> {
   doc.setTextColor(...DARK);
   doc.text(rel.perfil, M, y + 5);
   y += 12;
-  paragrafo(rel.titulo, { tamanho: 11, estilo: 'bold', depois: 2 });
+  paragrafo(`${rel.titulo} · Temperamento: ${rel.temperamento.combinacao}`, { tamanho: 11, estilo: 'bold', depois: 2 });
   rel.visaoGeral.forEach(p => paragrafo(p));
 
   // ---------------- DISC ----------------
@@ -311,6 +311,19 @@ export async function montarPdfPerfil(opcoes: OpcoesPdfPerfil): Promise<jsPDF> {
     y += 10;
     paragrafo(leitura, { depois: 3 });
   });
+
+  // ---------------- Temperamento ----------------
+  tituloSecao(
+    `Análise de temperamento: ${rel.temperamento.combinacao}`,
+    `${rel.temperamento.predominante.polaridade}. Distribuição estimada dos 4 temperamentos clássicos a partir do estilo natural DISC.`,
+  );
+  rel.temperamento.distribuicao.forEach(t => barraValor(t.nome, `${t.elemento} · ${t.fatorDisc} (${t.fatorNome})`, t.pct, '%'));
+  y += 2;
+  rel.temperamento.sintese.forEach(p => paragrafo(p));
+  blocoTexto('Expressão no trabalho', rel.temperamento.noTrabalho);
+  blocoLista('Forças naturais do temperamento', rel.temperamento.forcas);
+  blocoLista('Pontos de atenção e desequilíbrio', rel.temperamento.desafios);
+  blocoTexto('Como buscar equilíbrio', rel.temperamento.comoEquilibrar);
 
   // ---------------- Valores ----------------
   tituloSecao('Valores e motivadores', 'O que tende a impulsionar as escolhas da pessoa, do mais forte para o mais fraco.');

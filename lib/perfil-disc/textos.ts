@@ -298,8 +298,119 @@ export const PERGUNTAS_PLANO: readonly string[] = [
   'Como vou saber que a mudança está dando resultado?',
 ];
 
+export type TemperamentoId = 'colerico' | 'sanguineo' | 'fleumatico' | 'melancolico';
+
+export interface TextoTemperamento {
+  id: TemperamentoId;
+  nome: string;
+  elemento: string;
+  fatorDisc: Fator;
+  polaridade: string;
+  essencia: string;
+  complemento: string;
+  noTrabalho: string;
+  comoEquilibrar: string;
+  forcas: readonly string[];
+  desafios: readonly string[];
+}
+
+export const TEXTOS_TEMPERAMENTO: Record<TemperamentoId, TextoTemperamento> = {
+  colerico: {
+    id: 'colerico',
+    nome: 'Colérico',
+    elemento: 'Fogo',
+    fatorDisc: 'D',
+    polaridade: 'Quente e seco · Extrovertido e orientado à ação',
+    essencia: 'Temperamento de reação rápida, intensa e duradoura. Move-se pela conquista de resultados, pela autonomia e pela coragem de enfrentar problemas de frente, assumindo naturalmente a condução das situações.',
+    complemento: 'Como traço secundário, o temperamento colérico acrescenta firmeza, iniciativa e senso de urgência para transformar planos em entregas concretas.',
+    noTrabalho: 'Destaca-se em funções de liderança, decisão estratégica, negociação e metas desafiadoras. Prefere autonomia para executar e perde interesse em rotinas lentas ou burocráticas.',
+    comoEquilibrar: 'Treinar a escuta ativa antes de concluir, desacelerar nas conversas sensíveis e lembrar que o ritmo das pessoas nem sempre acompanha a própria velocidade.',
+    forcas: [
+      'Determinação elevada e foco claro em objetivos',
+      'Coragem para tomar decisões difíceis sob pressão',
+      'Alta energia de execução e iniciativa natural',
+      'Capacidade de mobilizar recursos e destravar impasses',
+    ],
+    desafios: [
+      'Impaciência com processos lentos ou indecisão alheia',
+      'Tom excessivamente direto que pode soar ríspido',
+      'Tendência a centralizar decisões e delegar menos',
+      'Dificuldade em admitir cansaço ou pedir ajuda',
+    ],
+  },
+  sanguineo: {
+    id: 'sanguineo',
+    nome: 'Sanguíneo',
+    elemento: 'Ar',
+    fatorDisc: 'I',
+    polaridade: 'Quente e úmido · Extrovertido e orientado a pessoas',
+    essencia: 'Temperamento expansivo, comunicativo e otimista, de reação rápida e flexível. Ganha energia no convívio social, cria conexões com facilidade e traz leveza, entusiasmo e criatividade para o ambiente.',
+    complemento: 'Como traço secundário, o temperamento sanguíneo traz calor humano, persuasão e facilidade para engajar pessoas ao redor de uma ideia.',
+    noTrabalho: 'Brilha em vendas, atendimento, relacionamento com clientes, apresentações, articulação de equipes e ambientes dinâmicos com variedade de demandas.',
+    comoEquilibrar: 'Registrar compromissos por escrito, priorizar a conclusão antes de abrir novas frentes e sustentar disciplina nos detalhes menos estimulantes.',
+    forcas: [
+      'Comunicação envolvente e facilidade para criar vínculos',
+      'Otimismo contagiante e resiliência emocional rápida',
+      'Criatividade e abertura para novidades e mudanças',
+      'Capacidade de inspirar e melhorar o clima do grupo',
+    ],
+    desafios: [
+      'Dispersão quando há muitas frentes abertas ao mesmo tempo',
+      'Risco de prometer além do tempo disponível por entusiasmo',
+      'Desconforto com rotinas repetitivas e controles rígidos',
+      'Tendência a adiar conversas difíceis para evitar desagradar',
+    ],
+  },
+  fleumatico: {
+    id: 'fleumatico',
+    nome: 'Fleumático',
+    elemento: 'Água',
+    fatorDisc: 'S',
+    polaridade: 'Frio e úmido · Introvertido e orientado à harmonia',
+    essencia: 'Temperamento calmo, constante e diplomático, de reação serena e ponderada. Valoriza a paz no ambiente, a lealdade e a previsibilidade, sendo um ponto de equilíbrio emocional para a equipe.',
+    complemento: 'Como traço secundário, o temperamento fleumático adiciona serenidade, paciência e capacidade de mediação para sustentar relações duradouras.',
+    noTrabalho: 'Rende muito em operações contínuas, suporte, atendimento consultivo, gestão de rotinas administrativas e papéis que exigem constância, escuta e confiabilidade.',
+    comoEquilibrar: 'Posicionar-se com mais clareza quando algo incomoda, definir prazos objetivos para decisões e não adiar conversas necessárias para preservar uma harmonia aparente.',
+    forcas: [
+      'Equilíbrio emocional e serenidade mesmo em crises',
+      'Escuta acolhedora, empatia e facilidade para mediar conflitos',
+      'Constância na execução e alta confiabilidade no longo prazo',
+      'Cooperação genuína e lealdade à equipe e à empresa',
+    ],
+    desafios: [
+      'Resistência inicial a mudanças bruscas ou sem aviso',
+      'Tendência a evitar confrontos necessários e guardar incômodos',
+      'Ritmo mais cauteloso diante de cobranças de alta urgência',
+      'Dificuldade em dizer "não" quando sobrecarregado',
+    ],
+  },
+  melancolico: {
+    id: 'melancolico',
+    nome: 'Melancólico',
+    elemento: 'Terra',
+    fatorDisc: 'C',
+    polaridade: 'Frio e seco · Introvertido e orientado à profundidade',
+    essencia: 'Temperamento analítico, criterioso e profundo, de reação reflexiva e duradoura. Busca sentido, qualidade e coerência no que faz, enxergando detalhes e riscos que costumam passar despercebidos.',
+    complemento: 'Como traço secundário, o temperamento melancólico acrescenta rigor técnico, planejamento cuidadoso e elevado padrão de qualidade às entregas.',
+    noTrabalho: 'Excelência em finanças, contabilidade, controladoria, engenharia, tecnologia, auditoria, planejamento estratégico e funções em que precisão e método são essenciais.',
+    comoEquilibrar: 'Aceitar o "bom o suficiente" quando o prazo aperta, evitar autocrítica excessiva e compartilhar entregas parciais antes de buscar a perfeição absoluta.',
+    forcas: [
+      'Profundidade analítica e senso crítico apurado',
+      'Alto padrão de qualidade, organização e responsabilidade',
+      'Capacidade de antecipar riscos e prevenir retrabalho',
+      'Fidelidade a princípios, método e compromissos assumidos',
+    ],
+    desafios: [
+      'Perfeccionismo que pode atrasar entregas ou gerar desgaste',
+      'Tendência à autocrítica severa e foco excessivo nas falhas',
+      'Cautela elevada que pode dificultar decisões com poucos dados',
+      'Reserva emocional ou distanciamento em situações de conflito',
+    ],
+  },
+};
+
 export const AVISO_METODOLOGICO =
-  'Este relatório é uma autoavaliação baseada nas teorias de Marston (DISC), Jung (tipos psicológicos) e Spranger (valores). '
+  'Este relatório é uma autoavaliação baseada nas teorias de Marston (DISC), Jung (tipos psicológicos), Spranger (valores) e dos quatro temperamentos clássicos (Hipócrates/Galeno, estimados a partir do perfil natural). '
   + 'Ele descreve preferências e tendências de comportamento no momento da resposta, sem medir inteligência, caráter ou capacidade. '
   + 'Não é um teste psicológico nem um diagnóstico e não deve ser o único critério para contratar, promover ou desligar alguém. '
   + 'As competências são estimativas calculadas a partir dos fatores DISC.';

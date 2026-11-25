@@ -197,7 +197,25 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
           </div>
         </div>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{rel.perfil}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 34, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{rel.perfil}</div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '5px 12px',
+                borderRadius: 99,
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border)',
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+              }}
+            >
+              Temperamento: {rel.temperamento.combinacao} ({rel.temperamento.predominante.elemento})
+            </span>
+          </div>
           <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary)', margin: '4px 0 8px' }}>{rel.titulo}</div>
           {rel.visaoGeral.map(p => <p key={p} style={{ ...texto, marginBottom: 6 }}>{p}</p>)}
         </div>
@@ -259,6 +277,32 @@ export default function RelatorioPerfil({ resultado, respondente }: { resultado:
 
       <Secao titulo={`Tipos psicológicos: ${rel.tipoJung}`} subtitulo="Preferências baseadas nos conceitos de Jung: onde foca a atenção, como capta informação e como tira conclusões.">
         {rel.jung.map(l => <BarraJung key={l.preferencia.letra} linha={l} />)}
+      </Secao>
+
+      <Secao
+        titulo={`Análise de temperamento: ${rel.temperamento.combinacao}`}
+        subtitulo={`${rel.temperamento.predominante.polaridade}. Distribuição estimada dos 4 temperamentos clássicos a partir do seu estilo natural DISC.`}
+      >
+        <div style={{ marginBottom: 14 }}>
+          {rel.temperamento.distribuicao.map(t => (
+            <BarraValor
+              key={t.id}
+              nome={t.nome}
+              detalhe={`${t.elemento} · ${t.fatorDisc} (${t.fatorNome})`}
+              valor={t.pct}
+              sufixo="%"
+            />
+          ))}
+        </div>
+        {rel.temperamento.sintese.map(p => (
+          <p key={p} style={{ ...texto, marginBottom: 8 }}>{p}</p>
+        ))}
+        <div className="pd-grade" style={{ marginTop: 12 }}>
+          <div><p style={rotulo}>Forças naturais do temperamento</p><Lista itens={rel.temperamento.forcas} /></div>
+          <div><p style={rotulo}>Pontos de atenção e desequilíbrio</p><Lista itens={rel.temperamento.desafios} /></div>
+          <div><p style={rotulo}>Expressão no trabalho</p><p style={texto}>{rel.temperamento.noTrabalho}</p></div>
+          <div><p style={rotulo}>Como buscar equilíbrio</p><p style={texto}>{rel.temperamento.comoEquilibrar}</p></div>
+        </div>
       </Secao>
 
       <Secao titulo="Valores e motivadores" subtitulo="O que tende a impulsionar as escolhas da pessoa, do mais forte para o mais fraco.">

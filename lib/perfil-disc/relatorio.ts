@@ -8,7 +8,8 @@ import { FATORES, VALORES, type Fator, type Valor } from './questionario';
 import { nivelValor, type NivelValor, type ResultadoPerfil, type ScoresDisc } from './pontuacao';
 import {
   ADAPTACAO_ESTAVEL, NOMES_NIVEL_VALOR, PERGUNTAS_PLANO, TEXTOS_COMPETENCIA, TEXTOS_ESFORCO,
-  TEXTOS_FATOR, TEXTOS_JUNG, TEXTOS_VALOR, TITULOS_PERFIL,
+  TEXTOS_FATOR, TEXTOS_JUNG, TEXTOS_TEMPERAMENTO, TEXTOS_VALOR, TITULOS_PERFIL,
+  type TemperamentoId,
 } from './textos';
 
 /** Diferença a partir da qual natural e adaptado são tratados como comportamentos distintos. */
@@ -81,6 +82,28 @@ export interface LinhaTendencia {
   lado: 'a' | 'b' | 'equilibrio';
 }
 
+export interface LinhaTemperamento {
+  id: TemperamentoId;
+  nome: string;
+  elemento: string;
+  fatorDisc: Fator;
+  fatorNome: string;
+  polaridade: string;
+  pct: number;
+}
+
+export interface AnaliseTemperamento {
+  predominante: LinhaTemperamento;
+  secundario: LinhaTemperamento | null;
+  combinacao: string;
+  sintese: string[];
+  noTrabalho: string;
+  comoEquilibrar: string;
+  forcas: string[];
+  desafios: string[];
+  distribuicao: LinhaTemperamento[];
+}
+
 export interface RelatorioMontado {
   perfil: string;
   titulo: string;
@@ -95,6 +118,7 @@ export interface RelatorioMontado {
   fatores: LinhaFator[];
   pressao: string[];
   esforco: { valor: number; faixa: FaixaEsforco; nome: string; texto: string };
+  temperamento: AnaliseTemperamento;
   jung: LinhaJung[];
   tipoJung: string;
   valores: LinhaValor[];
@@ -140,6 +164,69 @@ function montarTendencias({ D, I, S, C }: ScoresDisc): LinhaTendencia[] {
     b,
     lado: Math.abs(saldo) < MARGEM_TENDENCIA ? 'equilibrio' : saldo > 0 ? 'a' : 'b',
   }));
+}
+
+function montarTemperamento(natural: ScoresDisc): AnaliseTemperamento {
+  const mapa: Array<{ id: TemperamentoId; fator: Fator; peso: number }> = [
+    { id: 'colerico', fator: 'D', peso: Math.max(0, natural.D) },
+    { id: 'sanguineo', fator: 'I', peso: Math.max(0, natural.I) },
+    { id: 'fleumatico', fator: 'S', peso: Math.max(0, natural.S) },
+    { id: 'melancolico', fator: 'C', peso: Math.max(0, natural.C) },
+  ];
+
+  const soma = mapa.reduce((acc, item) => acc + item.peso, 0);
+  const pcts = soma > 0
+    ? mapa.map(item => Math.round((item.peso / soma) * 100))
+    : [25, 25, 25, 25];
+
+  // Garante fechamento exato em 100% ajustando o temperamento de maior peso
+  const diff = 100 - pcts.reduce((a, b) => a + b, 0);
+  if (diff !== 0) {
+    let idxMaior = 0;
+    for (let i = 1; i < pcts.length; i++) {
+      if (pcts[i] > pcts[idxMaior]) idxMaior = i;
+    }
+    pcts[idxMaior] = Math.max(0, pcts[idxMaior] + diff);
+  }
+
+  const distribuicao: LinhaTemperamento[] = mapa
+    .map((item, i) => {
+      const t = TEXTOS_TEMPERAMENTO[item.id];
+      return {
+        id: item.id,
+        nome: t.nome,
+        elemento: t.elemento,
+        fatorDisc: item.fator,
+        fatorNome: TEXTOS_FATOR[item.fator].nome,
+        polaridade: t.polaridade,
+        pct: pcts[i],
+      };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  const predominante = distribuicao[0];
+  const segundo = distribuicao[1];
+  const temSecundario = segundo && segundo.pct >= 20 && (predominante.pct - segundo.pct) <= 25;
+  const secundario = temSecundario ? segundo : null;
+
+  const tp = TEXTOS_TEMPERAMENTO[predominante.id];
+  const ts = secundario ? TEXTOS_TEMPERAMENTO[secundario.id] : null;
+  const combinacao = secundario ? `${predominante.nome}-${secundario.nome}` : `${predominante.nome} predominante`;
+
+  const unir = (a: readonly string[], b?: readonly string[]) =>
+    Array.from(new Set([...a.slice(0, 3), ...(b ? b.slice(0, 2) : a.slice(3, 4))]));
+
+  return {
+    predominante,
+    secundario,
+    combinacao,
+    sintese: ts ? [tp.essencia, ts.complemento] : [tp.essencia],
+    noTrabalho: tp.noTrabalho,
+    comoEquilibrar: tp.comoEquilibrar,
+    forcas: unir(tp.forcas, ts?.forcas),
+    desafios: unir(tp.desafios, ts?.desafios),
+    distribuicao,
+  };
 }
 
 function montarJung(j: ResultadoPerfil['jung']): LinhaJung[] {
@@ -225,6 +312,7 @@ export function montarRelatorio(r: ResultadoPerfil): RelatorioMontado {
     })),
     pressao: juntarListas(tp.pressao, ts?.pressao, 8),
     esforco: { valor: r.esforcoAdaptacao, faixa, nome: NOMES_ESFORCO[faixa], texto: TEXTOS_ESFORCO[faixa] },
+    temperamento: montarTemperamento(r.natural),
     jung: montarJung(r.jung),
     tipoJung: r.jung.tipo,
     valores,
