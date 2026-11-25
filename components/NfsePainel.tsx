@@ -16,7 +16,7 @@ import ComercialExportBar from './ComercialExportBar';
 import { base64ToUint8Array, criarZipBlobClient, type ArquivoZipClient } from '../lib/nfse/zip-client';
 import NfseFinanceiroCampos, { financeiroInvalido, type FinanceiroNota } from './NfseFinanceiroCampos';
 import { gerarBoletoSicoob } from '../lib/cnab/boleto-sicoob';
-import { MOTIVOS_CANCELAMENTO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
+import { MOTIVOS_CANCELAMENTO, MOTIVOS_SUBSTITUICAO, apenasDigitos, cnpjValido, enderecoObraCompleto, enderecoTomadorCompleto, exigeAliquotaNaDps, hojeBrasilia, servicoExigeObra } from '../lib/nfse/dps';
 import { diagnosticarErroNfse } from '../lib/nfse/erros-acionaveis';
 import { copiarParaCompetencia, estimarValoresNota, type DadosCopiaveis } from '../lib/nfse/lote';
 import NfseServicoPicker from './NfseServicoPicker';
@@ -31,6 +31,7 @@ const NfseCertificadoClienteModal = dynamic(() => import('./NfseCertificadoClien
 const NfseAcessoClienteModal = dynamic(() => import('./NfseAcessoClienteModal'), { ssr: false });
 const NfseCopiarModal = dynamic(() => import('./NfseCopiarModal'), { ssr: false });
 const NfseImportarModal = dynamic(() => import('./NfseImportarModal'), { ssr: false });
+const NfseRecorrenciasModal = dynamic(() => import('./NfseRecorrenciasModal'), { ssr: false });
 const BoletoSicoobOficial = dynamic(() => import('./BoletoSicoobOficial'), { ssr: false });
 const NfseBuscarNotasModal = dynamic(() => import('./NfseBuscarNotasModal'), { ssr: false });
 const CertidaoFederalModal = dynamic(() => import('./CertidaoFederalModal'), { ssr: false });
@@ -38,7 +39,7 @@ const NfseInsights = dynamic(() => import('./NfseInsights'), { ssr: false });
 import {
   Search, Download, FileCode, FileText, ArrowLeftRight, RefreshCw, Sparkles,
   ChevronDown, SlidersHorizontal, Settings, Plus, KeyRound, Users, Trash2,
-  CheckCircle2, AlertTriangle, ShieldCheck, Copy, UploadCloud, MessageSquare
+  CheckCircle2, AlertTriangle, ShieldCheck, Copy, UploadCloud, MessageSquare, CalendarClock
 } from 'lucide-react';
 import {
   SEM_RETENCAO, TRIBUTOS_RETIDOS, calcularRetidos, escolherRegra, percentuaisDosValores, totalRetidoFederal, type ValoresRetidos,
@@ -244,7 +245,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const [showAcessoClienteModal, setShowAcessoClienteModal] = useState(false);
   const [showCopiarModal, setShowCopiarModal] = useState(false);
   const [showImportarModal, setShowImportarModal] = useState(false);
+  const [showRecorrenciasModal, setShowRecorrenciasModal] = useState(false);
   const [showCndModal, setShowCndModal] = useState(false);
+  const [entregasMap, setEntregasMap] = useState<Record<string, { emailEnviadoEm: string | null; whatsappEnviadoEm: string | null; whatsappDestino: string | null }>>({});
+  const [reenviandoWppId, setReenviandoWppId] = useState<string | null>(null);
+  const [enviandoFechamentoWpp, setEnviandoFechamentoWpp] = useState(false);
+  const [substituicaoForm, setSubstituicaoForm] = useState<{ chaveSubstituida: string; numeroSubstituida: string; codigoMotivo: string; motivo: string } | null>(null);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [progressoLote, setProgressoLote] = useState<{ feitas: number; total: number } | null>(null);
 
@@ -451,6 +457,76 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     }, 180_000);
     return () => clearInterval(timer);
   }, [empresaId, sincronizarNotasAdnSilencioso]);
+
+  const carregarEntregas = useCallback(async (eId: string) => {
+    if (!eId) return;
+    try {
+      const res = await fetch(`/api/nfse/emissores/${eId}/entregas`);
+      const dados = await res.json().catch(() => ({}));
+      if (res.ok && dados.entregas) setEntregasMap(dados.entregas);
+    } catch {
+      // silencioso
+    }
+  }, []);
+
+  useEffect(() => {
+    if (empresaId) carregarEntregas(empresaId);
+    else setEntregasMap({});
+  }, [empresaId, carregarEntregas]);
+
+  const handleReenviarWhatsappNota = async (nota: NfsE) => {
+    if (!nota.chaveAcesso || reenviandoWppId) return;
+    const cli = clientes.find(c => apenasDigitos(c.cpfCnpj) === apenasDigitos(nota.tomadorCnpjCpf));
+    const telPadrao = nota.tomadorTelefone || entregasMap[nota.id]?.whatsappDestino || cli?.telefone || '';
+    const telefoneInformado = telPadrao || window.prompt(`Informe o WhatsApp do cliente (${nota.tomadorRazaoSocial}) com DDD:`, '');
+    if (!telefoneInformado || apenasDigitos(telefoneInformado).length < 10) {
+      if (telefoneInformado !== null) toast.error('Informe um número de WhatsApp válido com DDD.');
+      return;
+    }
+    setReenviandoWppId(nota.id);
+    try {
+      const res = await fetch(`/api/nfse/${nota.id}/reenviar-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: telefoneInformado }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(dados.error || 'Falha ao reenviar PDF no WhatsApp.');
+      toast.success(`PDF da NFS-e nº ${nota.numero} enviado para ${telefoneInformado} via (46) 99980-0010!`);
+      setEntregasMap(prev => ({
+        ...prev,
+        [nota.id]: {
+          emailEnviadoEm: prev[nota.id]?.emailEnviadoEm || null,
+          whatsappEnviadoEm: new Date().toISOString(),
+          whatsappDestino: telefoneInformado,
+        },
+      }));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setReenviandoWppId(null);
+    }
+  };
+
+  const handleEnviarFechamentoWhatsapp = async () => {
+    if (!empresaId || enviandoFechamentoWpp) return;
+    const comp = mesFiltro || hojeBrasilia().slice(0, 7);
+    setEnviandoFechamentoWpp(true);
+    try {
+      const res = await fetch(`/api/nfse/emissores/${empresaId}/fechamento-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competencia: comp }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(dados.error || 'Falha ao enviar fechamento no WhatsApp.');
+      toast.success(`Resumo mensal (${competenciaBr(comp)}) enviado no grupo WhatsApp da empresa via (46) 99980-0010!`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnviandoFechamentoWpp(false);
+    }
+  };
 
   const acessoCliente = useAcessoNfse(modoCliente);
 
@@ -842,6 +918,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
   const openNovo = () => {
     setCopiaDeNumero('');
+    setSubstituicaoForm(null);
     setPapelFiltro('prestadas');
     setPercentuaisRetencao(SEM_RETENCAO);
     setRetencaoManual(false);
@@ -1072,6 +1149,23 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
     toast.success(`Dados copiados da nota nº ${origem.numero}. Ajuste a descrição e o valor e transmita.`);
   };
 
+  /** Abre a emissão em modo Substituição Oficial (<subst>) vinculada à nota anterior. */
+  const substituirNota = (origem: NfsE) => {
+    if (!origem.chaveAcesso) {
+      toast.error('Somente notas já autorizadas com chave de acesso podem ser substituídas.');
+      return;
+    }
+    copiarNota(origem);
+    setCopiaDeNumero('');
+    setSubstituicaoForm({
+      chaveSubstituida: origem.chaveAcesso,
+      numeroSubstituida: origem.numero,
+      codigoMotivo: '01',
+      motivo: '',
+    });
+    toast.info(`Modo Substituição ativado para NFS-e nº ${origem.numero}. Ao transmitir, a nota anterior será cancelada automaticamente pelo SEFIN.`);
+  };
+
   /** Guarda a alíquota digitada para as próximas notas. Cliente só usa na nota: a configuração é do escritório. */
   const salvarAliquotaSimples = async (aliquota: number) => {
     if (modoCliente || !ehSimples || !aliquotaSimplesValida(aliquota) || aliquota === parametros?.pTotTribSN) return;
@@ -1231,6 +1325,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           empresaId,
           nota: notaAEnviar,
           ...(pTotTribSN !== undefined ? { pTotTribSN } : {}),
+          ...(substituicaoForm?.chaveSubstituida ? { substituicao: substituicaoForm } : {}),
           enviarWhatsappEmissor: enviarWppEmissor && apenasDigitos(wppEmissorNumero).length >= 10,
           whatsappEmissor: wppEmissorNumero,
           tomadorWhatsapp: nfse.tomadorTelefone || '',
@@ -1260,7 +1355,13 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       // A nota só entra no financeiro se marcado. Nota de teste não tem valor fiscal e nunca entra.
       const final = autorizada.gerarContaReceber && autorizada.ambiente === 'producao' ? gerarContaReceber(autorizada) : autorizada;
       store.saveNfsE(final);
+      if (substituicaoForm?.chaveSubstituida) {
+        const antiga = store.getNfsE(empresaId).find(x => x.chaveAcesso === substituicaoForm.chaveSubstituida);
+        if (antiga) store.saveNfsE({ ...antiga, status: 'cancelada' });
+        setSubstituicaoForm(null);
+      }
       setNfseList(store.getNfsE(empresaId));
+      carregarEntregas(empresaId);
       if (dados.whatsappEnviado?.enviado) {
         toast.success('PDF da NFS-e enviado no seu WhatsApp (pronto para encaminhar ao cliente)!');
       } else if (enviarWppEmissor && dados.whatsappEnviado?.motivo) {
@@ -2177,6 +2278,14 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 <button
                   type="button"
                   style={itemMenuDropdownStyle}
+                  onClick={() => { setShowMenuFerramentas(false); setShowRecorrenciasModal(true); }}
+                >
+                  <CalendarClock size={15} color="#600000" /> Contratos Mensais (Recorrência)
+                </button>
+
+                <button
+                  type="button"
+                  style={itemMenuDropdownStyle}
                   onClick={() => {
                     setShowMenuFerramentas(false);
                     setMesExportacao(mesFiltro || hojeBrasilia().slice(0, 7));
@@ -2185,6 +2294,15 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   }}
                 >
                   <Download size={15} color="#374151" /> Exportar Mês
+                </button>
+
+                <button
+                  type="button"
+                  style={itemMenuDropdownStyle}
+                  onClick={() => { setShowMenuFerramentas(false); handleEnviarFechamentoWhatsapp(); }}
+                  disabled={enviandoFechamentoWpp}
+                >
+                  <MessageSquare size={15} color="#15803d" /> {enviandoFechamentoWpp ? 'Enviando Fechamento...' : 'Fechamento Mensal no WhatsApp'}
                 </button>
 
                 <button
@@ -2747,6 +2865,26 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         <td style={{ fontSize: 14.5, color: '#525252' }}>{competenciaBr(n.dataCompetencia)}</td>
                         <td>
                           {statusBadge(n)}
+                          {!tomada && n.status === 'emitida' && entregasMap[n.id] && (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                              {entregasMap[n.id].emailEnviadoEm && (
+                                <span
+                                  title={`E-mail enviado em ${new Date(entregasMap[n.id].emailEnviadoEm!).toLocaleString('pt-BR')}`}
+                                  style={{ fontSize: 11.5, fontWeight: 600, padding: '1px 6px', borderRadius: 99, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                                >
+                                  ✓ E-mail
+                                </span>
+                              )}
+                              {entregasMap[n.id].whatsappEnviadoEm && (
+                                <span
+                                  title={`WhatsApp enviado para ${entregasMap[n.id].whatsappDestino || 'cliente'} em ${new Date(entregasMap[n.id].whatsappEnviadoEm!).toLocaleString('pt-BR')}`}
+                                  style={{ fontSize: 11.5, fontWeight: 600, padding: '1px 6px', borderRadius: 99, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}
+                                >
+                                  ✓ WhatsApp
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {n.chaveAcesso && n.ambiente === 'homologacao' && (
                             <div style={{ fontSize: 13, color: '#b45309', marginTop: 3 }}>Teste, sem valor fiscal</div>
                           )}
@@ -2873,6 +3011,17 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 {n.cobrancaBrcode ? '✓ Boleto / Pix' : 'Emitir Boleto'}
                               </button>
                             )}
+                            {!tomada && n.status === 'emitida' && n.chaveAcesso && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: 13.5, padding: '5px 9px', background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600 }}
+                                onClick={() => handleReenviarWhatsappNota(n)}
+                                disabled={reenviandoWppId === n.id}
+                                title="Enviar/reenviar PDF da NFS-e no WhatsApp do cliente via (46) 99980-0010"
+                              >
+                                <MessageSquare size={12} /> {reenviandoWppId === n.id ? 'Enviando...' : 'WhatsApp'}
+                              </button>
+                            )}
                             {!tomada && n.status !== 'rascunho' && (
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -2881,6 +3030,16 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 title="Criar uma nova nota com os mesmos dados"
                               >
                                 <Copy size={12} /> Copiar
+                              </button>
+                            )}
+                            {!tomada && n.status === 'emitida' && n.chaveAcesso && !n.cancelamentoEmAnalise && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: 13.5, padding: '5px 9px', background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600 }}
+                                onClick={() => substituirNota(n)}
+                                title="Substituir oficialmente esta NFS-e (emite a nova e cancela a anterior no SEFIN)"
+                              >
+                                <ArrowLeftRight size={12} /> Substituir
                               </button>
                             )}
                             {!tomada && n.status === 'emitida' && !n.cancelamentoEmAnalise && (
@@ -3233,14 +3392,79 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         />
       )}
 
+      {showRecorrenciasModal && empresaId && (
+        <NfseRecorrenciasModal
+          empresaId={empresaId}
+          empresaNome={empresa?.nomeFantasia || empresa?.razaoSocial || 'Empresa'}
+          notasPrestadas={nfseList.filter(n => !ehNotaTomada(n, cnpjEmpresaAtual) && n.status === 'emitida')}
+          codigoServicoPadrao={parametros?.cTribNacPadrao}
+          cTribMunPadrao={parametros?.cTribMunPadrao}
+          cNbsPadrao={parametros?.cNbsPadrao}
+          municipioPrestacaoPadrao={parametros?.codigoMunicipio}
+          onFechar={() => setShowRecorrenciasModal(false)}
+          onGerarRascunhos={itens => criarRascunhos(itens, { gerarContaReceber: false, vencimento: hojeBrasilia(), portadorId: '', planoContaId: '' })}
+        />
+      )}
+
       {/* ======================== MODAL NOVA / EDITAR (NÃO FECHA AO CLICAR FORA) ======================== */}
       {modalMode === 'novo' && (
         <div className="modal-overlay nfse-ui">
           <div className="modal modal-lg" style={{ maxWidth: 860, maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10 }}>
-              <h2 className="modal-title">{form.id ? 'Editar rascunho de NFS-e' : copiaDeNumero ? `Nova nota (cópia da nº ${copiaDeNumero})` : 'Nova nota manual'}</h2>
-              <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>
+              <h2 className="modal-title">
+                {substituicaoForm
+                  ? `Substituir NFS-e nº ${substituicaoForm.numeroSubstituida}`
+                  : form.id
+                    ? 'Editar rascunho de NFS-e'
+                    : copiaDeNumero
+                      ? `Nova nota (cópia da nº ${copiaDeNumero})`
+                      : 'Nova nota manual'}
+              </h2>
+              <button className="modal-close" onClick={() => { setModalMode(null); setSubstituicaoForm(null); }}>✕</button>
             </div>
+
+            {substituicaoForm && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ArrowLeftRight size={15} /> Substituição Oficial (NFS-e nº {substituicaoForm.numeroSubstituida})
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSubstituicaoForm(null)}
+                    style={{ background: 'transparent', border: 'none', color: '#92400e', fontSize: 12.5, textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Emitir como nota normal (desvincular)
+                  </button>
+                </div>
+                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#78350f' }}>
+                  Ao transmitir, o SEFIN emitirá esta nova nota e cancelará automaticamente a nota nº {substituicaoForm.numeroSubstituida}.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: '#78350f', display: 'block', marginBottom: 4 }}>Motivo da Substituição *</label>
+                    <select
+                      className="form-control"
+                      value={substituicaoForm.codigoMotivo}
+                      onChange={e => setSubstituicaoForm(s => (s ? { ...s, codigoMotivo: e.target.value } : null))}
+                    >
+                      {MOTIVOS_SUBSTITUICAO.map(m => (
+                        <option key={m.codigo} value={m.codigo}>{m.codigo} — {m.descricao}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: '#78350f', display: 'block', marginBottom: 4 }}>Descrição do motivo (opcional)</label>
+                    <input
+                      className="form-control"
+                      value={substituicaoForm.motivo}
+                      onChange={e => setSubstituicaoForm(s => (s ? { ...s, motivo: e.target.value } : null))}
+                      placeholder="Ex.: Ajuste no valor / discriminação do serviço"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {form.ultimoErro && (() => {
               const diag = diagnosticarErroNfse(form.ultimoErro);

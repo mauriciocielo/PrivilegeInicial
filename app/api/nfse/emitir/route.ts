@@ -16,6 +16,7 @@ import { consultarTributosIbpt } from '../../../../lib/nfse/ibpt';
 import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
 import { enviarEmailNfseEmitida } from '../../../../lib/nfse/enviar-email-nfse';
 import { enviarNfsePorWhatsAppAoEmissor } from '../../../../lib/nfse/enviar-whatsapp-nfse';
+import { registrarEntregaNfse } from '../../../../lib/nfse/entregas-db';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const textoOuNull = (v: unknown) => texto(v) || null;
@@ -149,6 +150,13 @@ export async function POST(request: Request) {
         complemento: textoOuNull(n.obraComplemento),
         bairro: textoOuNull(n.obraBairro),
       },
+      substituicao: body?.substituicao?.chaveSubstituida
+        ? {
+            chaveSubstituida: texto(body.substituicao.chaveSubstituida),
+            codigoMotivo: texto(body.substituicao.codigoMotivo) || '01',
+            motivo: textoOuNull(body.substituicao.motivo),
+          }
+        : null,
     };
 
     // A alíquota do Simples muda com o faturamento: a digitada na nota vale para esta emissão.
@@ -394,6 +402,25 @@ export async function POST(request: Request) {
         ambiente,
       })
       : { enviado: false };
+
+    // Se esta emissão substituiu uma NFS-e anterior, marca a substituída como cancelada
+    if (dados.substituicao?.chaveSubstituida) {
+      await db.nfsE.updateMany({
+        where: { empresaId, chaveAcesso: dados.substituicao.chaveSubstituida },
+        data: { status: 'cancelada' },
+      }).catch(() => {});
+    }
+
+    // Registra histórico de entrega (e-mail / WhatsApp) para exibição no painel
+    await registrarEntregaNfse({
+      nfseId: autorizada.id,
+      empresaId,
+      emailEnviado: Boolean(emailEnviado?.enviado),
+      whatsappEnviado: Boolean(whatsappTomadorEnviado?.enviado || whatsappEnviado?.enviado),
+      whatsappDestino: whatsappTomadorEnviado?.enviado
+        ? tomadorWhatsapp
+        : (whatsappEnviado?.enviado ? whatsappEmissor : null),
+    });
 
     return NextResponse.json({
       recuperada: resultado.recuperada,

@@ -60,6 +60,21 @@ export interface DadosObraDps {
   bairro?: string | null;
 }
 
+export const MOTIVOS_SUBSTITUICAO = [
+  { codigo: '01', descricao: 'Desenquadramento de NFS-e do Simples Nacional' },
+  { codigo: '02', descricao: 'Enquadramento de NFS-e no Simples Nacional' },
+  { codigo: '03', descricao: 'Inclusão Retroativa de Imunidade/Isenção para NFS-e' },
+  { codigo: '04', descricao: 'Exclusão Retroativa de Imunidade/Isenção para NFS-e' },
+  { codigo: '05', descricao: 'Rejeição de NFS-e pelo tomador ou pelo intermediário se responsável pelo recolhimento do tributo' },
+  { codigo: '99', descricao: 'Outros' },
+] as const;
+
+export interface DadosSubstituicaoDps {
+  chaveSubstituida: string;
+  codigoMotivo: string;
+  motivo?: string | null;
+}
+
 export interface DadosDps {
   ambiente: AmbienteNfse;
   serie: string;
@@ -88,6 +103,8 @@ export interface DadosDps {
   tomadorBairro?: string | null;
   /** Grupo <obra> (TCInfoObra) — obrigatório para serviços de construção civil/obra (ex: 07.02.xx). */
   obra?: DadosObraDps | null;
+  /** Grupo <subst> (TCSubstituicao) — substitui e cancela oficialmente uma NFS-e anterior. */
+  substituicao?: DadosSubstituicaoDps | null;
 }
 
 export const apenasDigitos = (v?: string | null) => (v || '').replace(/\D/g, '');
@@ -420,6 +437,14 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
       : tag('vDedRed', txt('vDR', dec2(valorDeducoes))))
     : '';
 
+  const substBloco = d.substituicao && apenasDigitos(d.substituicao.chaveSubstituida).length === 50
+    ? tag('subst',
+        txt('chSubstda', apenasDigitos(d.substituicao.chaveSubstituida)),
+        txt('cMotivo', d.substituicao.codigoMotivo || '99'),
+        !!limparTexto(d.substituicao.motivo || '') && txt('xMotivo', limparTexto(d.substituicao.motivo || '').slice(0, 255)),
+      )
+    : '';
+
   const infDps = [
     txt('tpAmb', d.ambiente === 'producao' ? '1' : '2'),
     txt('dhEmi', dataHoraFiscal(agora)),
@@ -430,6 +455,7 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
     txt('tpEmit', '1'),
     nt009 && txt('finNFSe', '0'),
     txt('cLocEmi', apenasDigitos(cfg.codigoMunicipio)),
+    substBloco,
     // Com tpEmit=1 o Sefin puxa nome e endereço do cadastro: enviá-los dá E0128/E0121.
     tag('prest',
       txt('CNPJ', apenasDigitos(cfg.cnpj)),
