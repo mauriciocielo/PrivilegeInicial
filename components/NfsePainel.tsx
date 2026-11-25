@@ -256,6 +256,61 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
   const [form, setForm] = useState<Partial<NfsE>>({});
   const [showBuscarNotas, setShowBuscarNotas] = useState(false);
+  const [buscaAdnBg, setBuscaAdnBg] = useState<{ empresaId: string; empresaNome: string; criadas: number } | null>(null);
+
+  const iniciarBuscaAdnEmSegundoPlano = async (meses: number, reiniciar: boolean) => {
+    if (!empresaId || buscaAdnBg) return;
+    const empIdAlvo = empresaId;
+    const empNomeAlvo = empresa?.nomeFantasia || empresa?.razaoSocial || 'Empresa';
+    setBuscaAdnBg({ empresaId: empIdAlvo, empresaNome: empNomeAlvo, criadas: 0 });
+    toast.info(`Buscando notas de ${empNomeAlvo} no ADN em segundo plano... Você pode continuar usando o sistema.`);
+
+    let total = 0;
+    let totalEmitidas = 0;
+    let totalTomadas = 0;
+    let fora = 0;
+
+    try {
+      for (let i = 0; i < 120; i++) {
+        const res = await fetch(`/api/nfse/emissores/${empIdAlvo}/notas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meses, reiniciar: i === 0 && reiniciar }),
+        });
+        const dados = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(`${dados.error || 'Erro ao buscar notas no ADN.'}${total > 0 ? ` Já trazidas: ${total}.` : ''}`);
+          return;
+        }
+        if (dados.notas?.length) {
+          const locais = new Map(store.getNfsE(empIdAlvo).map(n => [n.id, n]));
+          const mescladas: NfsE[] = dados.notas.map((n: NfsE) => ({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) }));
+          store.saveManyNfsE(mescladas, true);
+          setNfseList(prev => (empIdAlvo === empresaId ? store.getNfsE(empIdAlvo) : prev));
+        }
+        total += dados.criadas || 0;
+        totalEmitidas += dados.criadasEmitidas || 0;
+        totalTomadas += dados.criadasTomadas || 0;
+        fora += dados.foraDoPeriodo || 0;
+        setBuscaAdnBg({ empresaId: empIdAlvo, empresaNome: empNomeAlvo, criadas: total });
+
+        if (!dados.temMais) {
+          if (total > 0) {
+            toast.success(`ADN (${empNomeAlvo}): ${total} nota(s) nova(s) (${totalEmitidas} emitidas, ${totalTomadas} tomadas).`);
+          } else {
+            toast.success(`ADN (${empNomeAlvo}): nenhuma nota nova neste período.${fora > 0 ? ` (${fora} mais antiga(s) fora do filtro)` : ''}`);
+          }
+          carregarConfig(empIdAlvo);
+          return;
+        }
+      }
+      toast.info(`ADN (${empNomeAlvo}): ${total} nota(s) lida(s). Clique novamente para continuar de onde parou.`);
+    } catch {
+      toast.error(`Conexão interrompida na busca do ADN (${empNomeAlvo}). Tente novamente para continuar.`);
+    } finally {
+      setBuscaAdnBg(null);
+    }
+  };
   const [percentuaisRetencao, setPercentuaisRetencao] = useState<ValoresRetidos>(SEM_RETENCAO);
   // Depois que a pessoa mexe nas retenções da nota, a regra não sobrescreve mais.
   const [retencaoManual, setRetencaoManual] = useState(false);
@@ -2000,9 +2055,10 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             }}
             onClick={() => setShowBuscarNotas(true)}
             disabled={!config}
-            title="Sincronizar notas emitidas e tomadas diretamente no ADN Nacional"
+            title="Sincronizar notas emitidas e tomadas diretamente no ADN Nacional (em segundo plano)"
           >
-            <RefreshCw size={14} /> Buscar no ADN
+            <RefreshCw size={14} className={buscaAdnBg ? 'animate-spin' : ''} />{' '}
+            {buscaAdnBg ? `Buscando ADN... (${buscaAdnBg.criadas})` : 'Buscar no ADN'}
           </button>
 
           {/* Menu Dropdown de Ferramentas e Gestão */}
@@ -3116,17 +3172,12 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
 
       {showBuscarNotas && (
         <NfseBuscarNotasModal
-          empresaId={empresaId}
           empresaNome={empresa?.nomeFantasia || empresa?.razaoSocial || ''}
+          buscandoEmSegundoPlano={Boolean(buscaAdnBg)}
           onFechar={() => setShowBuscarNotas(false)}
-          onNotas={notas => {
-            // Mescla com a cópia local: portador e vencimento de uma nota já conhecida são preservados.
-            const locais = new Map(store.getNfsE(empresaId).map(n => [n.id, n]));
-            const mescladas: NfsE[] = notas.map(n => ({ ...locais.get(n.id), ...n, createdAt: String(n.createdAt) }));
-            store.saveManyNfsE(mescladas, true);
-            setNfseList(store.getNfsE(empresaId));
+          onIniciarBusca={(meses, reiniciar) => {
+            iniciarBuscaAdnEmSegundoPlano(meses, reiniciar);
           }}
-          onConcluir={() => carregarConfig(empresaId)}
         />
       )}
 
