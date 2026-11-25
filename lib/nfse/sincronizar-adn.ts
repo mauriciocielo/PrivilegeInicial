@@ -178,15 +178,17 @@ export async function sincronizarNotasAdn(
     select: { numero: true, nDps: true },
   });
 
+  // Ignora numerações municipais longas (ex: 2026000000100) que excedem INT4 do PostgreSQL
+  const MAX_NDPS_INT4 = 2_000_000_000;
   let maiorNumeroEmitido = 0;
   for (const n of notasEmitidas) {
     const num = parseInt(n.numero || '0', 10);
-    if (!isNaN(num) && num > maiorNumeroEmitido) maiorNumeroEmitido = num;
+    if (!isNaN(num) && num > maiorNumeroEmitido && num <= MAX_NDPS_INT4) maiorNumeroEmitido = num;
     const dps = parseInt(n.nDps || '0', 10);
-    if (!isNaN(dps) && dps > maiorNumeroEmitido) maiorNumeroEmitido = dps;
+    if (!isNaN(dps) && dps > maiorNumeroEmitido && dps <= MAX_NDPS_INT4) maiorNumeroEmitido = dps;
   }
 
-  const proximoNDpsProducao = Math.max(config.proximoNDpsProducao || 1, maiorNumeroEmitido + 1);
+  const proximoNDpsProducao = Math.min(MAX_NDPS_INT4, Math.max(config.proximoNDpsProducao || 1, maiorNumeroEmitido + 1));
 
   await db.nfseConfig.update({
     where: { empresaId },

@@ -80,8 +80,9 @@ export async function coletarCertificadosEmAtencao(): Promise<CertificadoEmAtenc
   }
 
   try {
+    // Monitora TODOS os certificados A1 cadastrados nas empresas (mesmo quando emitem NFS-e por procuração)
     const certsEmp = await db.nfseConfig.findMany({
-      where: { usarProcuracao: false, certValidoAte: { lte: em30Dias } },
+      where: { certValidoAte: { not: null, lte: em30Dias } },
       select: {
         empresaId: true,
         certTitular: true,

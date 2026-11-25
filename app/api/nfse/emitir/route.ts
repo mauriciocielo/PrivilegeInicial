@@ -41,12 +41,14 @@ async function reservarNDps(empresaId: string, ambiente: AmbienteNfse, cnpjPrest
       select: { numero: true, nDps: true },
     });
 
+    // Ignora numerações municipais longas (ex: 2026000000100) que excedem INT4 do PostgreSQL
+    const MAX_NDPS_INT4 = 2_000_000_000;
     let maxEmitido = 0;
     for (const nota of notasEmitidas) {
       const num = parseInt(nota.numero || '0', 10);
-      if (!isNaN(num) && num > maxEmitido) maxEmitido = num;
+      if (!isNaN(num) && num > maxEmitido && num <= MAX_NDPS_INT4) maxEmitido = num;
       const dps = parseInt(nota.nDps || '0', 10);
-      if (!isNaN(dps) && dps > maxEmitido) maxEmitido = dps;
+      if (!isNaN(dps) && dps > maxEmitido && dps <= MAX_NDPS_INT4) maxEmitido = dps;
     }
 
     const cfgAtual = await db.nfseConfig.findUnique({ where: { empresaId }, select: { proximoNDpsProducao: true } });
