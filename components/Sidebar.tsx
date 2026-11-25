@@ -593,8 +593,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     const filterByCompany = (item: NavItem) => {
       if (item.href === '/consultor/dashboard' || item.href === '/consultor/dashboard2') return true;
       if (item.href === '/consultor/administrativo') return true;
-      // Escolhem a empresa na própria tela: a selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
-      if (item.href === '/consultor/nfse' || item.href === '/consultor/nfe-destinadas' || item.href === '/consultor/cnd-federal' || item.href === '/consultor/comparador-sped' || item.href === '/consultor/dashboard2' || item.href === '/consultor/whatsapp') return true;
+      // Escolhem a empresa na própria tela ou são ferramentas pessoais do consultor (Agenda, Tarefas, Atividades, WhatsApp):
+      // a empresa selecionada no menu não decide se aparecem (ver app/consultor/layout.tsx).
+      if (
+        item.href === '/consultor/nfse'
+        || item.href === '/consultor/nfe-destinadas'
+        || item.href === '/consultor/cnd-federal'
+        || item.href === '/consultor/comparador-sped'
+        || item.href === '/consultor/dashboard2'
+        || item.href === '/consultor/whatsapp'
+        || item.href === '/consultor/agenda'
+        || item.href === '/consultor/tarefas'
+        || item.href === '/consultor/atividades'
+      ) return true;
       if (companyAllowed.length > 0) {
         return companyAllowed.some(route => item.href.startsWith(route));
       }
