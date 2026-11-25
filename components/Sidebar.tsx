@@ -21,6 +21,7 @@ import {
 // (esconde o Dashboard Financeiro). Precisa ser idêntico ao usado na tela de Usuários.
 export const ROTA_SOMENTE_FISCAL = 'somente-painel-fiscal';
 export const ROTA_SOMENTE_WHATSAPP = 'somente-whatsapp';
+export const ROTA_CONTADOR_TERCEIRO = 'contador-terceiro-nfse';
 
 const getAvatarGradient = (name: string) => {
   const colors = [
@@ -539,8 +540,21 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   // Financeiro e deixar o usuário apenas no painel fiscal. Ausente = mostra os dois (padrão).
   const somenteFiscal = (user?.allowedRoutes || []).includes(ROTA_SOMENTE_FISCAL);
   const somenteWhatsApp = (user?.allowedRoutes || []).includes(ROTA_SOMENTE_WHATSAPP);
+  const ehContadorTerceiro = (user?.allowedRoutes || []).includes(ROTA_CONTADOR_TERCEIRO);
 
   const getFilteredNav = () => {
+    if (ehContadorTerceiro) {
+      return [
+        {
+          section: 'Fiscal',
+          items: [
+            { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
+            { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
+          ],
+        },
+      ];
+    }
+
     if (somenteWhatsApp) {
       return [
         {
@@ -579,7 +593,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       if (allowedClient.length === 0) return navClienteBase;
       return navClienteBase.map(section => {
         const items = section.items.filter(item => {
-          if (item.href === '/cliente/dashboard') return !somenteFiscal;
+          if (item.href === '/cliente/dashboard') return !somenteFiscal && allowedClient.includes('/cliente/dashboard');
           if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped' || item.href === '/cliente/whatsapp') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
@@ -617,14 +631,14 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
     }
 
     // Se consultor, filtra itens do consultor + empresa
-    const allowed = user?.allowedRoutes || ['/consultor/dashboard', '/consultor/dashboard2'];
+    const allowed = user?.allowedRoutes || ['/consultor/dashboard2'];
     // Quem opera o módulo fiscal (NFS-e / NF-e / CND) enxerga também o Comparador de SPED,
     // mesmo sem a rota explícita no allowedRoutes — era por isso que não aparecia para o setor fiscal.
     const operaFiscal = (user?.allowedRoutes || []).some(r => r.includes('nfse') || r.includes('nfe-destinadas') || r.includes('cnd'));
 
     return baseNav.map(section => {
       const items = section.items.filter(item => {
-        if (item.href === '/consultor/dashboard') return !somenteFiscal;
+        if (item.href === '/consultor/dashboard') return !somenteFiscal && allowed.includes('/consultor/dashboard');
         if (item.href === '/consultor/dashboard2') return true;
         if (item.href === '/consultor/whatsapp') return true;
         if (item.href === '/consultor/comparador-sped') return operaFiscal || allowed.some(route => item.href.startsWith(route));
@@ -681,11 +695,17 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           flexShrink: 0,
         }}
         onClick={() => router.push(
-          somenteWhatsApp
+          ehContadorTerceiro
+            ? '/consultor/nfse'
+            : somenteWhatsApp
             ? (role === 'cliente' ? '/cliente/whatsapp' : '/consultor/whatsapp')
-            : somenteFiscal
-            ? (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard2')
-            : (role === 'cliente' ? '/cliente/dashboard2' : '/consultor/dashboard')
+            : role === 'administrador'
+            ? '/consultor/dashboard'
+            : role === 'cliente'
+            ? '/cliente/dashboard2'
+            : (!somenteFiscal && (user?.allowedRoutes || []).includes('/consultor/dashboard'))
+            ? '/consultor/dashboard'
+            : '/consultor/dashboard2'
         )}
       >
         <BrandLogo size={42} />
@@ -929,7 +949,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
 
-        {role !== 'cliente' && (
+        {role !== 'cliente' && !ehContadorTerceiro && (
         <button
           type="button"
           onClick={() => router.push('/consultor/whatsapp')}

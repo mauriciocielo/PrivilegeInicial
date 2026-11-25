@@ -9,6 +9,21 @@ import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
 import { inter as sans } from '../fonts';
 
+function destinoPosLogin(user: { role?: string; allowedRoutes?: string[] } | null | undefined): string {
+  const routes = Array.isArray(user?.allowedRoutes) ? user!.allowedRoutes : [];
+  if (user?.role === 'administrador') return '/consultor/dashboard';
+  if (user?.role === 'consultor') {
+    if (routes.includes('contador-terceiro-nfse')) return '/consultor/nfse';
+    if (routes.includes('somente-whatsapp')) return '/consultor/whatsapp';
+    if (routes.includes('/consultor/dashboard') && !routes.includes('somente-painel-fiscal')) {
+      return '/consultor/dashboard';
+    }
+    return '/consultor/dashboard2';
+  }
+  if (routes.includes('somente-whatsapp')) return '/cliente/whatsapp';
+  return '/cliente/dashboard2';
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -81,7 +96,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
+      router.replace(destinoPosLogin(result.user));
     } catch (err: any) {
       setError('Erro de conexão ao tentar entrar.');
       setLoading(false);
@@ -122,7 +137,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
+      router.replace(destinoPosLogin(result.user));
     } catch (err) {
       setError('Erro de conexão ao verificar o código.');
       setLoading(false);
@@ -179,7 +194,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
+      router.replace(destinoPosLogin(result.user));
     } catch (err) {
       setError('Falha ao processar o Login com o Google.');
       setLoading(false);
@@ -230,7 +245,7 @@ export default function LoginPage() {
         await store.pullFromServer(empIds[0]);
       }
 
-      router.replace(result.user.role === 'consultor' || result.user.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
+      router.replace(destinoPosLogin(result.user));
     } catch (err) {
       setError('Falha ao processar vinculação.');
       setLoading(false);
@@ -370,7 +385,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => {
                     store.setCurrentUser(lockedUser);
-                    router.replace(lockedUser.role === 'consultor' || lockedUser.role === 'administrador' ? '/consultor/dashboard' : '/cliente/dashboard2');
+                    router.replace(destinoPosLogin(lockedUser));
                   }}
                   style={{
                     width: '100%', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'center',

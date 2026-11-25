@@ -12,7 +12,8 @@ import { Pencil as IcoPencil, Trash2 as IcoTrash2 } from 'lucide-react';
 const ROTA_CLIENTE_NFSE = '/cliente/nfse';
 
 const AVAILABLE_SCREENS = [
-  { label: 'Dashboard', route: '/consultor/dashboard' },
+  { label: 'Dashboard 2 (Fiscal & CNDs)', route: '/consultor/dashboard2' },
+  { label: 'Dashboard Financeiro', route: '/consultor/dashboard' },
   { label: 'Radar Administrativo', route: '/consultor/administrativo' },
   { label: 'Inteligência Tributária', route: '/consultor/inteligencia-tributaria' },
   { label: 'Diagnóstico 360º', route: '/consultor/diagnostico-360' },
@@ -208,7 +209,7 @@ export default function UsuariosPage() {
     setForm({
       role: 'cliente',
       empresaIds: [],
-      allowedRoutes: modoInicial === 'nfse' ? [ROTA_CLIENTE_NFSE] : ['/cliente/dashboard'],
+      allowedRoutes: modoInicial === 'nfse' ? [ROTA_CLIENTE_NFSE] : ['/cliente/dashboard2'],
       newPassword: modoInicial === 'nfse' ? gerarSenhaSugerida() : '',
     });
     setShowModal(true);
@@ -971,7 +972,7 @@ export default function UsuariosPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 8, padding: '12px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   {(form.role === 'consultor' ? AVAILABLE_SCREENS : AVAILABLE_CLIENT_SCREENS).map(screen => {
                     const checked = (form.allowedRoutes || []).includes(screen.route);
-                    const isDashboard = screen.route.includes('/dashboard');
+                    const isDashboard2 = screen.route.endsWith('/dashboard2');
                     return (
                       <label
                         key={screen.route}
@@ -981,18 +982,18 @@ export default function UsuariosPage() {
                           gap: 8,
                           padding: '6px 10px',
                           borderRadius: 'var(--radius-sm)',
-                          border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-light)'}`,
-                          cursor: isDashboard ? 'not-allowed' : 'pointer',
-                          background: checked ? 'var(--accent-glow)' : 'transparent',
+                          border: `1px solid ${checked || isDashboard2 ? 'var(--accent)' : 'var(--border-light)'}`,
+                          cursor: isDashboard2 ? 'not-allowed' : 'pointer',
+                          background: checked || isDashboard2 ? 'var(--accent-glow)' : 'transparent',
                           fontSize: 14,
-                          color: checked ? 'var(--accent-light)' : 'var(--text-secondary)',
-                          opacity: isDashboard ? 0.7 : 1,
+                          color: checked || isDashboard2 ? 'var(--accent-light)' : 'var(--text-secondary)',
+                          opacity: isDashboard2 ? 0.75 : 1,
                         }}
                       >
                         <input
                           type="checkbox"
-                          checked={checked || isDashboard}
-                          disabled={isDashboard}
+                          checked={checked || isDashboard2}
+                          disabled={isDashboard2}
                           onChange={() => toggleRoute(screen.route)}
                         />
                         {screen.label}

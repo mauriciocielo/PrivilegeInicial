@@ -152,7 +152,7 @@ export async function POST(request: Request) {
           role: 'consultor',
           phone: telefone || null,
           empresaIds: [],
-          allowedRoutes: ['/consultor/nfse', 'somente-painel-fiscal'],
+          allowedRoutes: ['contador-terceiro-nfse', '/consultor/nfse', '/consultor/nfe-destinadas', 'somente-painel-fiscal'],
         },
         select: { id: true, email: true },
       });
