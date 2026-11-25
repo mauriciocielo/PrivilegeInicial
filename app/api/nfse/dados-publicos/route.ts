@@ -45,50 +45,59 @@ export async function GET(request: Request) {
 
     if (cpf) {
       if (!cpfValido(cpf)) return NextResponse.json({ error: 'CPF inválido.' }, { status: 400 });
-      if (!empresaId) return NextResponse.json({ error: 'Selecione a empresa antes de consultar o CPF.' }, { status: 400 });
 
-      const negado = await acessoEmissaoNegado(auth.session, empresaId);
-      if (negado) return negado;
+      if (empresaId) {
+        const negado = await acessoEmissaoNegado(auth.session, empresaId);
+        if (negado) return negado;
+      }
 
-      // 1. Busca na última NFS-e já emitida por esta empresa para este CPF (tem endereço completo + IBGE)
+      // 1. Busca em NFS-e já emitidas (prioriza a empresa atual; se não houver, busca na base geral do banco)
+      //    Retorna SOMENTE os dados cadastrais da pessoa (nome/e-mail/endereço), sem expor empresa ou nota de terceiros.
       const nfseRows = await db.$queryRawUnsafe<any[]>(
         `SELECT
            "tomadorRazaoSocial", "tomadorEmail", "tomadorEndereco", "tomadorNumero",
            "tomadorBairro", "tomadorCep", "tomadorCodigoMunicipio", "tomadorCidade", "tomadorUf"
          FROM "NfsE"
-         WHERE "empresaId" = $1
-           AND regexp_replace("tomadorCnpjCpf", '[^0-9]', '', 'g') = $2
-         ORDER BY "createdAt" DESC
+         WHERE regexp_replace("tomadorCnpjCpf", '[^0-9]', '', 'g') = $1
+           AND COALESCE(TRIM("tomadorRazaoSocial"), '') <> ''
+         ORDER BY
+           CASE WHEN $2 <> '' AND "empresaId" = $2 THEN 0 ELSE 1 END ASC,
+           CASE WHEN COALESCE(TRIM("tomadorCep"), '') <> '' THEN 0 ELSE 1 END ASC,
+           "createdAt" DESC
          LIMIT 1`,
-        empresaId,
-        cpf
+        cpf,
+        empresaId
       );
 
-      // 2. Busca no cadastro de Clientes desta empresa
+      // 2. Busca no cadastro de Clientes (prioriza a empresa atual, depois base geral)
       const cliRows = await db.$queryRawUnsafe<any[]>(
         `SELECT nome, email, endereco, cep, cidade, estado
          FROM "Cliente"
-         WHERE "empresaId" = $1
-           AND regexp_replace("cpfCnpj", '[^0-9]', '', 'g') = $2
-         ORDER BY "createdAt" DESC
+         WHERE regexp_replace("cpfCnpj", '[^0-9]', '', 'g') = $1
+           AND COALESCE(TRIM(nome), '') <> ''
+         ORDER BY
+           CASE WHEN $2 <> '' AND "empresaId" = $2 THEN 0 ELSE 1 END ASC,
+           CASE WHEN COALESCE(TRIM(cep), '') <> '' THEN 0 ELSE 1 END ASC,
+           "createdAt" DESC
          LIMIT 1`,
-        empresaId,
-        cpf
+        cpf,
+        empresaId
       );
 
-      // 3. Busca em Unidades de condomínio desta empresa (proprietário ou morador)
+      // 3. Busca em Unidades de condomínio (prioriza a empresa atual, depois base geral)
       const uniRows = await db.$queryRawUnsafe<any[]>(
         `SELECT proprietario, email, "moradorNome", "moradorEmail",
                 regexp_replace(COALESCE("proprietarioCpf", ''), '[^0-9]', '', 'g') AS prop_cpf
          FROM "Unidade"
-         WHERE "condominioId" = $1
-           AND (
-             regexp_replace(COALESCE("proprietarioCpf", ''), '[^0-9]', '', 'g') = $2
-             OR regexp_replace(COALESCE("moradorCpf", ''), '[^0-9]', '', 'g') = $2
-           )
+         WHERE (
+           regexp_replace(COALESCE("proprietarioCpf", ''), '[^0-9]', '', 'g') = $1
+           OR regexp_replace(COALESCE("moradorCpf", ''), '[^0-9]', '', 'g') = $1
+         )
+         ORDER BY
+           CASE WHEN $2 <> '' AND "condominioId" = $2 THEN 0 ELSE 1 END ASC
          LIMIT 1`,
-        empresaId,
-        cpf
+        cpf,
+        empresaId
       );
 
       const n = nfseRows[0] || null;
@@ -97,7 +106,7 @@ export async function GET(request: Request) {
 
       if (!n && !c && !u) {
         return NextResponse.json(
-          { error: 'CPF ainda não encontrado no histórico desta empresa (por LGPD, a Receita não libera consulta pública de CPF). Preencha uma vez e nas próximas será automático.' },
+          { error: 'CPF ainda não encontrado na base do sistema (por LGPD, a Receita não libera consulta pública de CPF). Preencha uma vez e nas próximas será automático.' },
           { status: 404 }
         );
       }
