@@ -878,20 +878,29 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   };
 
   const preencherTomadorPeloCnpj = async (documento: string, soCamposVazios: boolean) => {
-    const cnpj = apenasDigitos(documento);
-    if (!cnpjValido(cnpj)) return;
-    ultimaConsultaTomador.current = cnpj;
+    const doc = apenasDigitos(documento);
+    const ehCnpj = cnpjValido(doc);
+    const ehCpf = doc.length === 11 && !/^(\d)\1{10}$/.test(doc);
+    if (!ehCnpj && !ehCpf) return;
+    ultimaConsultaTomador.current = doc;
     setBuscandoTomador(true);
     setOrigemEndereco('');
     try {
-      const res = await fetch(`/api/nfse/dados-publicos?cnpj=${cnpj}`);
+      const urlConsulta = ehCnpj
+        ? `/api/nfse/dados-publicos?cnpj=${doc}`
+        : `/api/nfse/dados-publicos?cpf=${doc}&empresaId=${encodeURIComponent(empresaId)}`;
+      const res = await fetch(urlConsulta);
       const dados = await res.json().catch(() => ({}));
-      if (ultimaConsultaTomador.current !== cnpj) return;
-      if (!res.ok) { toast.warning(dados.error || 'Não foi possível consultar o CNPJ. Preencha os dados à mão.'); return; }
+      if (ultimaConsultaTomador.current !== doc) return;
+      if (!res.ok) {
+        if (ehCnpj) toast.warning(dados.error || 'Não foi possível consultar o CNPJ. Preencha os dados à mão.');
+        else if (res.status === 404 && !soCamposVazios) toast.info(dados.error || 'CPF ainda não encontrado no histórico. Preencha uma vez e nas próximas será automático.');
+        return;
+      }
       const valor = (atual: string | null | undefined, novo: string | null | undefined) => (soCamposVazios ? atual || novo || '' : novo || atual || '');
       setForm(f => {
-        // A pessoa pode ter trocado o CNPJ enquanto a consulta estava em andamento.
-        if (apenasDigitos(f.tomadorCnpjCpf || '') !== cnpj) return f;
+        // A pessoa pode ter trocado o CPF/CNPJ enquanto a consulta estava em andamento.
+        if (apenasDigitos(f.tomadorCnpjCpf || '') !== doc) return f;
         return {
           ...f,
           tomadorRazaoSocial: valor(f.tomadorRazaoSocial, dados.razaoSocial),
@@ -905,11 +914,15 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           tomadorUf: valor(f.tomadorUf, dados.uf),
         };
       });
-      setOrigemEndereco('Preenchido pelo cadastro público do CNPJ. Confira antes de emitir.');
+      setOrigemEndereco(
+        ehCnpj
+          ? 'Preenchido pelo cadastro público do CNPJ. Confira antes de emitir.'
+          : 'Preenchido automaticamente pelo histórico/cadastro do CPF nesta empresa. Confira antes de emitir.'
+      );
     } catch {
-      if (ultimaConsultaTomador.current === cnpj) toast.warning('Sem conexão para consultar o CNPJ.');
+      if (ultimaConsultaTomador.current === doc && ehCnpj) toast.warning('Sem conexão para consultar o CNPJ.');
     } finally {
-      if (ultimaConsultaTomador.current === cnpj) setBuscandoTomador(false);
+      if (ultimaConsultaTomador.current === doc) setBuscandoTomador(false);
     }
   };
 
@@ -3243,7 +3256,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                         const continuaCliente = cliente && apenasDigitos(cliente.cpfCnpj) === digitos;
                         return { ...f, tomadorCnpjCpf: documento, clienteId: continuaCliente ? f.clienteId : undefined };
                       });
-                      if (cnpjValido(digitos)) preencherTomadorPeloCnpj(digitos, false);
+                      if (cnpjValido(digitos) || digitos.length === 11) preencherTomadorPeloCnpj(digitos, false);
                       else if (buscandoTomador) { ultimaConsultaTomador.current = ''; setBuscandoTomador(false); }
                     }}
                   />
