@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { CalendarClock, Plus, Sparkles, Trash2, Pause, Play, X, Download } from 'lucide-react';
 import type { NfsE } from '../lib/store';
 import type { DadosCopiaveis } from '../lib/nfse/lote';
-import { expandirDescricaoRecorrente, type NfseRecorrenciaRecord } from '../lib/nfse/recorrencias-db';
+import { expandirDescricaoRecorrente, type NfseRecorrenciaRecord } from '../lib/nfse/recorrencias-utils';
 import { hojeBrasilia } from '../lib/nfse/dps';
 import { fmt } from '../lib/reports';
 import { formatarCpfCnpj } from '../lib/formatar-documento';
