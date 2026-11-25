@@ -446,6 +446,7 @@ export interface NfsE {
   tomadorCnpjCpf: string;
   tomadorRazaoSocial: string;
   tomadorEmail?: string;
+  tomadorTelefone?: string;
   tomadorEndereco?: string;
   tomadorCidade?: string;
   tomadorUf?: string;

@@ -939,6 +939,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       tomadorCnpjCpf: cli.cpfCnpj,
       tomadorRazaoSocial: cli.nome,
       tomadorEmail: cli.email || '',
+      tomadorTelefone: cli.celular || cli.telefone || '',
       tomadorEndereco: cli.endereco || '',
       tomadorCidade: cli.cidade || '',
       tomadorUf: cli.estado || '',
@@ -976,6 +977,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           ...f,
           tomadorRazaoSocial: valor(f.tomadorRazaoSocial, dados.razaoSocial),
           tomadorEmail: valor(f.tomadorEmail, dados.email),
+          tomadorTelefone: valor(f.tomadorTelefone, dados.telefone),
           tomadorEndereco: valor(f.tomadorEndereco, dados.logradouro),
           tomadorNumero: valor(f.tomadorNumero, dados.numero),
           tomadorBairro: valor(f.tomadorBairro, dados.bairro),
@@ -1231,6 +1233,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           ...(pTotTribSN !== undefined ? { pTotTribSN } : {}),
           enviarWhatsappEmissor: enviarWppEmissor && apenasDigitos(wppEmissorNumero).length >= 10,
           whatsappEmissor: wppEmissorNumero,
+          tomadorWhatsapp: nfse.tomadorTelefone || '',
         }),
       });
       const dados = await res.json().catch(() => ({}));
@@ -1262,6 +1265,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
         toast.success('PDF da NFS-e enviado no seu WhatsApp (pronto para encaminhar ao cliente)!');
       } else if (enviarWppEmissor && dados.whatsappEnviado?.motivo) {
         toast.warning(`Nota emitida, mas o WhatsApp não foi enviado: ${dados.whatsappEnviado.motivo}`);
+      }
+      if (dados.whatsappTomadorEnviado?.enviado) {
+        toast.success('PDF da NFS-e enviado automaticamente no WhatsApp do cliente via (46) 99980-0010!');
+      } else if (apenasDigitos(nfse.tomadorTelefone || '').length >= 10 && dados.whatsappTomadorEnviado?.motivo) {
+        toast.warning(`Nota emitida, mas o WhatsApp do cliente falhou: ${dados.whatsappTomadorEnviado.motivo}`);
       }
       return { resultado: 'autorizada', nota: final, recuperada: !!dados.recuperada, alertas: dados.alertas || [] };
     } catch {
@@ -3337,9 +3345,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 </div>
               </div>
               <div className="form-row">
-                <div className="form-group" style={{ flex: 2 }}>
+                <div className="form-group" style={{ flex: 1.5 }}>
                   <label className="form-label">E-mail</label>
                   <input type="email" className="form-control" value={form.tomadorEmail || ''} onChange={e => setForm(f => ({ ...f, tomadorEmail: e.target.value }))} />
+                </div>
+                <div className="form-group" style={{ flex: 1.2 }}>
+                  <label className="form-label">WhatsApp do Cliente (envia PDF ao emitir)</label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="(46) 99999-9999"
+                    value={form.tomadorTelefone || ''}
+                    onChange={e => setForm(f => ({ ...f, tomadorTelefone: e.target.value }))}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Inscrição municipal</label>

@@ -376,12 +376,32 @@ export async function POST(request: Request) {
       })
       : { enviado: false };
 
+    // Envio direto ao WhatsApp do cliente/tomador informado na nota via (46) 99980-0010
+    // (funciona para todos: Privilege, contadores terceiros e clientes externos)
+    const tomadorWhatsapp = texto(body?.tomadorWhatsapp) || texto(n.tomadorTelefone);
+    const digTomador = apenasDigitos(tomadorWhatsapp);
+    const digEmissor = apenasDigitos(whatsappEmissor);
+    const mesmoNumeroJaEnviado = Boolean(whatsappEnviado.enviado && digEmissor && digTomador.slice(-8) === digEmissor.slice(-8));
+    const whatsappTomadorEnviado = digTomador.length >= 10 && !mesmoNumeroJaEnviado
+      ? await enviarNfsePorWhatsAppAoEmissor({
+        telefoneDestino: tomadorWhatsapp,
+        numero: autorizada.numero || '',
+        dataEmissao: autorizada.dataEmissao,
+        prestadorNome: autorizada.prestadorRazaoSocial,
+        tomadorNome: dados.tomadorNome,
+        valorLiquido: autorizada.valorLiquido,
+        nfseXml: resultado.nfseXml,
+        ambiente,
+      })
+      : { enviado: false };
+
     return NextResponse.json({
       recuperada: resultado.recuperada,
       alertas: [...alertasEmissao(cfg, dados), ...resultado.alertas],
       aliquotaNaDps: exigeAliquotaNaDps(cfg, issRetido),
       emailEnviado,
       whatsappEnviado,
+      whatsappTomadorEnviado,
       nota: {
         status: autorizada.status,
         numero: autorizada.numero,

@@ -71,7 +71,7 @@ export async function GET(request: Request) {
 
       // 2. Busca no cadastro de Clientes (prioriza a empresa atual, depois base geral)
       const cliRows = await db.$queryRawUnsafe<any[]>(
-        `SELECT nome, email, endereco, cep, cidade, estado
+        `SELECT nome, email, telefone, celular, endereco, cep, cidade, estado
          FROM "Cliente"
          WHERE regexp_replace("cpfCnpj", '[^0-9]', '', 'g') = $1
            AND COALESCE(TRIM(nome), '') <> ''
@@ -137,6 +137,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         razaoSocial: n?.tomadorRazaoSocial || c?.nome || nomeUnidade || null,
         email: n?.tomadorEmail || c?.email || emailUnidade || null,
+        telefone: c?.celular || c?.telefone || null,
         logradouro,
         numero,
         bairro,
