@@ -5,6 +5,7 @@ import { listCampaigns, startCampaignWorker } from '@/lib/campaign-manager';
 import { iniciarWorkerFilaEmail } from '@/lib/email-queue';
 import { processarLembretesAgenda24h, processarResumoMatinalConsultores24h } from '@/lib/agenda-lembretes';
 import { processarAlertasCertificados24h } from '@/lib/certificado-alertas';
+import { processarSincronizacaoNfse24h } from '@/lib/nfse/sincronizar-adn';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ async function executeDaemonTick() {
   const lembretesAgenda = await processarLembretesAgenda24h().catch(() => ({ enviados24h: 0, enviados1h: 0 }));
   const resumoMatinal = await processarResumoMatinalConsultores24h().catch(() => ({ enviados: 0 }));
   const alertasCertificados = await processarAlertasCertificados24h().catch(() => ({ enviados: 0 }));
+  const nfseAuto = processarSincronizacaoNfse24h();
   return {
     success: true,
     startedOwners,
@@ -32,6 +34,7 @@ async function executeDaemonTick() {
     lembretesAgenda,
     resumoMatinal,
     alertasCertificados,
+    nfseAuto,
     timestamp: new Date().toISOString(),
   };
 }

@@ -3280,25 +3280,11 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 </div>
               </div>
               <div className="form-row">
-                <div className="form-group" style={{ flex: 2 }}>
-                  <label className="form-label">Logradouro</label>
-                  <input className="form-control" value={form.tomadorEndereco || ''} onChange={e => setForm(f => ({ ...f, tomadorEndereco: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Número</label>
-                  <input className="form-control" value={form.tomadorNumero || ''} onChange={e => setForm(f => ({ ...f, tomadorNumero: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Bairro</label>
-                  <input className="form-control" value={form.tomadorBairro || ''} onChange={e => setForm(f => ({ ...f, tomadorBairro: e.target.value }))} />
-                </div>
-              </div>
-              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">CEP</label>
                   <input
                     className="form-control"
-                    placeholder="Preenche o endereço"
+                    placeholder="Informe o CEP (busca automático)"
                     value={form.tomadorCep || ''}
                     onChange={e => {
                       const cep = e.target.value;
@@ -3311,6 +3297,20 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                   <label className="form-label">Município (código IBGE)</label>
                   <input className="form-control" maxLength={7} value={form.tomadorCodigoMunicipio || ''} onChange={e => setForm(f => ({ ...f, tomadorCodigoMunicipio: e.target.value, tomadorCidade: '', tomadorUf: '' }))} />
                   {form.tomadorCidade && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{form.tomadorCidade}{form.tomadorUf ? `/${form.tomadorUf}` : ''}</div>}
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 2 }}>
+                  <label className="form-label">Logradouro</label>
+                  <input className="form-control" value={form.tomadorEndereco || ''} onChange={e => setForm(f => ({ ...f, tomadorEndereco: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Número</label>
+                  <input className="form-control" value={form.tomadorNumero || ''} onChange={e => setForm(f => ({ ...f, tomadorNumero: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bairro</label>
+                  <input className="form-control" value={form.tomadorBairro || ''} onChange={e => setForm(f => ({ ...f, tomadorBairro: e.target.value }))} />
                 </div>
               </div>
               {origemEndereco && <div style={{ fontSize: 13, color: 'var(--accent)', marginBottom: 4 }}>{origemEndereco}</div>}

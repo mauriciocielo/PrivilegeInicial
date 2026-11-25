@@ -332,8 +332,10 @@ export async function sincronizarLoteNfseAdn(
     detalhes: [],
   };
 
-  for (const cfg of configs) {
+  for (let i = 0; i < configs.length; i++) {
+    const cfg = configs[i];
     if (limite()) break;
+    if (i > 0) await new Promise(r => setTimeout(r, 900)); // respeita taxa do ADN (HTTP 429)
     try {
       const sync = await sincronizarNotasAdn(cfg.empresaId, { meses: 3 });
       if (sync.ok) {
@@ -390,5 +392,41 @@ export async function sincronizarLoteNfseAdn(
 
   return res;
 }
+
+const INTERVALO_AUTO_NFSE_MS = 15 * 60 * 1000; // roda rodadas rotativas a cada 15 min
+let ultimoCicloNfseMs = 0;
+let cicloNfseEmAndamento = false;
+
+/**
+ * Chamado pelo daemon 24h (a cada 30s). A cada 15 minutos dispara em segundo plano
+ * uma rodada rotativa de leitura do ADN Nacional (12 empresas por ciclo, priorizando
+ * as menos recentemente sincronizadas), mantendo todas as notas de serviço sempre em dia.
+ */
+export function processarSincronizacaoNfse24h(): { iniciado: boolean; emAndamento: boolean } {
+  const agora = Date.now();
+  if (cicloNfseEmAndamento) return { iniciado: false, emAndamento: true };
+  if (agora - ultimoCicloNfseMs < INTERVALO_AUTO_NFSE_MS) return { iniciado: false, emAndamento: false };
+
+  cicloNfseEmAndamento = true;
+  ultimoCicloNfseMs = agora;
+
+  sincronizarLoteNfseAdn(12, 55_000)
+    .then((r) => {
+      if (r.novas > 0 || r.falhas > 0) {
+        console.log(
+          `[nfse-auto-24h] Consultadas: ${r.consultadas} | Novas: ${r.novas} (${r.novasEmitidas} emitidas, ${r.novasTomadas} tomadas) | Falhas: ${r.falhas}`
+        );
+      }
+    })
+    .catch((err) => {
+      console.error('[nfse-auto-24h] Erro no ciclo automático:', err);
+    })
+    .finally(() => {
+      cicloNfseEmAndamento = false;
+    });
+
+  return { iniciado: true, emAndamento: true };
+}
+
 
 
