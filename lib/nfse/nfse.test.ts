@@ -141,12 +141,52 @@ describe('montagem da DPS', () => {
     expect(regular).toContain('<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>');
   });
 
-  it('emite o grupo IBS/CBS conforme o leiaute', () => {
+  it('emite o grupo IBS/CBS conforme o leiaute (Produção vs NT 009 Release 2)', () => {
     const cfg = { ...cfgBase, ibsCbsCIndOp: '030101', ibsCbsCst: '000', ibsCbsCClassTrib: '000001', ibsCbsIndFinal: '0' };
     const producao = montarDps(cfg, { ...dadosBase, cNbs: '123456789' }, AGORA).xml;
     expect(producao).toContain('<IBSCBS><finNFSe>0</finNFSe><indFinal>0</indFinal><cIndOp>030101</cIndOp><indDest>0</indDest><valores><trib><gIBSCBS><CST>000</CST>');
     const nt009 = montarDps(cfg, { ...dadosBase, ambiente: 'homologacao', cNbs: '123456789' }, AGORA).xml;
-    expect(nt009).toContain('<valores><trib><CST>000</CST><cClassTrib>000001</cClassTrib></trib></valores></IBSCBS>');
+    // Release 2 (Item 2.10): <indDest> vai na raiz de <infDPS>, logo após </toma> e antes de <serv>, e sai de <IBSCBS>
+    expect(nt009).toContain('</toma><indDest>0</indDest><serv>');
+    expect(nt009).toContain('<IBSCBS><indFinal>0</indFinal><cIndOp>030101</cIndOp><valores><trib><CST>000</CST><cClassTrib>000001</cClassTrib></trib></valores></IBSCBS>');
+  });
+
+  it('NT 009 Release 2: suporta destinatário distinto (<dest>), ajuste ComExt (<vAjusteBCIBSCBSComExt>) e evento (<atvEvento>)', () => {
+    const { xml } = montarDps(cfgBase, {
+      ...dadosBase,
+      ambiente: 'homologacao',
+      valorDeducoes: 100,
+      valorAjusteBcIbsCbsComExt: -50.25,
+      destinatario: {
+        documento: '11222333000181',
+        nome: 'Destinatário Final Ltda',
+        codigoMunicipio: '4305108',
+        cep: '95000000',
+        logradouro: 'Av. Principal',
+        numero: '100',
+        bairro: 'Centro',
+      },
+      evento: {
+        xNome: 'Feira Empresarial',
+        dtIni: '2026-11-10',
+        dtFim: '2026-11-12',
+        codigoMunicipio: '4305108',
+        cep: '95000000',
+        logradouro: 'Parque de Eventos',
+        numero: '1',
+        bairro: 'Exposições',
+      },
+    }, AGORA);
+    expect(xml).toContain('</toma><indDest>1</indDest><dest><CNPJ>11222333000181</CNPJ><xNome>Destinatário Final Ltda</xNome>');
+    expect(xml).toContain('<vAjusteBC><vAjusteBCISSQN>100.00</vAjusteBCISSQN><vAjusteBCIBSCBSComExt>-50.25</vAjusteBCIBSCBSComExt></vAjusteBC>');
+    expect(xml).toContain('<atvEvento><xNome>Feira Empresarial</xNome><dtIni>2026-11-10</dtIni><dtFim>2026-11-12</dtFim><cLocEvento>4305108</cLocEvento>');
+  });
+
+  it('NT 009 Release 2: exige endereço completo do tomador no subitem 17.05 e lê verCalcIBSCBS na resposta', () => {
+    const problemas = validarEmissao(cfgBase, { ...dadosBase, cTribNac: '170501' }, AGORA).join(' ');
+    expect(problemas).toContain('17.05');
+    const valores = lerValoresNfse('<NFSe><infNFSe><nNFSe>42</nNFSe><verCalcIBSCBS>1.2.0</verCalcIBSCBS><vLiq>1000.00</vLiq></infNFSe></NFSe>');
+    expect(valores.verCalcIBSCBS).toBe('1.2.0');
   });
 
   it('omite o endereço do tomador se incompleto e o envia na ordem do XSD se completo', () => {

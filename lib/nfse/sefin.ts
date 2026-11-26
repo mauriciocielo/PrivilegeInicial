@@ -239,6 +239,8 @@ export interface ValoresNfse {
   valorIss: number | null;
   valorBaseCalculo: number | null;
   aliquotaIss: number | null;
+  /** NT 009 v1.01 Release 2: versão da Calculadora de Tributos IBS/CBS usada pela Sefin Nacional. */
+  verCalcIBSCBS?: string | null;
 }
 
 const numeroDaTag = (xml: string, nome: string) => {
@@ -255,6 +257,7 @@ export function lerValoresNfse(xml: string): ValoresNfse {
     valorIss: numeroDaTag(xml, 'vISSQN'),
     valorBaseCalculo: numeroDaTag(xml, 'vBC'),
     aliquotaIss: numeroDaTag(xml, 'pAliqAplic'),
+    verCalcIBSCBS: lerTag(xml, 'verCalcIBSCBS'),
   };
 }
 

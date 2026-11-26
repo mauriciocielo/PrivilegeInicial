@@ -14,7 +14,7 @@ const VER_APLIC = 'CashflowNFSe-1.0'; // máximo de 20 caracteres (E1235)
 export type AmbienteNfse = 'homologacao' | 'producao';
 
 // Os dois pacotes de esquemas têm o mesmo versao="1.01"; quem define qual vale é
-// o ambiente. A produção restrita já aplica a NT 009 (20/10/2026). `leiaute` na
+// o ambiente. A produção restrita já aplica a NT 009 v1.01 (Release 2). `leiaute` na
 // configuração permite forçar o pacote no dia em que a produção virar.
 export const LEIAUTE_PRODUCAO = '20260209';
 export const LEIAUTE_NT009 = '20261020';
@@ -75,6 +75,32 @@ export interface DadosSubstituicaoDps {
   motivo?: string | null;
 }
 
+/** NT 009 v1.01 Release 2 (Item 2.10): Destinatário distinto do tomador na raiz de <infDPS>. */
+export interface DadosDestinatarioDps {
+  documento: string; // CPF ou CNPJ
+  nome: string;
+  email?: string | null;
+  codigoMunicipio?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+}
+
+/** NT 009 v1.01 Release 2 (Itens 2.13 e 2.14): Atividade de evento (<atvEvento>) dentro de <serv>. */
+export interface DadosEventoDps {
+  xNome: string;
+  dtIni: string; // AAAA-MM-DD
+  dtFim: string; // AAAA-MM-DD
+  idAtvEvt?: string | null;
+  codigoMunicipio?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+}
+
 export interface DadosDps {
   ambiente: AmbienteNfse;
   serie: string;
@@ -84,6 +110,8 @@ export interface DadosDps {
   valorServicos: number;
   /** Dedução/redução da base de cálculo do ISSQN, em reais (ex: materiais na construção civil). */
   valorDeducoes?: number | null;
+  /** NT 009 Release 2 (Item 2.12): Ajuste (positivo ou negativo) na BC de IBS/CBS em Comércio Exterior. */
+  valorAjusteBcIbsCbsComExt?: number | null;
   cTribNac: string;
   cTribMun?: string | null;
   cNbs?: string | null;
@@ -101,8 +129,12 @@ export interface DadosDps {
   tomadorLogradouro?: string | null;
   tomadorNumero?: string | null;
   tomadorBairro?: string | null;
+  /** NT 009 Release 2 (Item 2.10): Destinatário distinto do tomador (gera indDest=1 + <dest>). */
+  destinatario?: DadosDestinatarioDps | null;
   /** Grupo <obra> (TCInfoObra) — obrigatório para serviços de construção civil/obra (ex: 07.02.xx). */
   obra?: DadosObraDps | null;
+  /** NT 009 Release 2 (Itens 2.13/2.14): Grupo <atvEvento> para serviços prestados em eventos. */
+  evento?: DadosEventoDps | null;
   /** Grupo <subst> (TCSubstituicao) — substitui e cancela oficialmente uma NFS-e anterior. */
   substituicao?: DadosSubstituicaoDps | null;
 }
@@ -294,6 +326,22 @@ export function validarEmissao(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date =
     problemas.push('Dados da obra incompletos: informe o Código da Obra (CNO) ou preencha CEP (8 dígitos), logradouro e bairro da obra.');
   }
 
+  // NT 009 v1.01 Release 2: validação rígida de endereço para o subitem 17.05 (Fornecimento de Mão de Obra)
+  if (apenasDigitos(d.cTribNac).startsWith('1705') && !enderecoTomadorCompleto(d)) {
+    problemas.push('NT 009 (subitem 17.05 — Fornecimento de Mão de Obra): informe o endereço completo do tomador (município IBGE, CEP, logradouro e bairro) para definição do local de incidência do ISSQN.');
+  }
+
+  // NT 009 v1.01 Release 2 (Item 2.10): validação do destinatário distinto do tomador, quando informado
+  if (d.destinatario) {
+    const docDest = apenasDigitos(d.destinatario.documento);
+    if (!cnpjValido(docDest) && !cpfValido(docDest)) {
+      problemas.push('CPF/CNPJ do destinatário inválido.');
+    }
+    if (!d.destinatario.nome?.trim()) {
+      problemas.push('Informe o nome/razão social do destinatário.');
+    }
+  }
+
   return problemas;
 }
 
@@ -379,6 +427,63 @@ function montarObra(obra?: DadosObraDps | null): string {
   );
 }
 
+function montarDestinatario(dest?: DadosDestinatarioDps | null): string {
+  if (!dest) return '';
+  const doc = apenasDigitos(dest.documento);
+  if (doc.length !== 11 && doc.length !== 14) return '';
+  const email = limparTexto(dest.email || '');
+  const endOk =
+    apenasDigitos(dest.codigoMunicipio).length === 7
+    && apenasDigitos(dest.cep).length === 8
+    && Boolean((dest.logradouro || '').trim())
+    && Boolean((dest.bairro || '').trim());
+  const endBloco = endOk
+    ? tag('end',
+        tag('endNac', txt('cMun', apenasDigitos(dest.codigoMunicipio)), txt('CEP', apenasDigitos(dest.cep))),
+        txt('xLgr', limparTexto(dest.logradouro || '').slice(0, 255)),
+        txt('nro', limparTexto(dest.numero || '').slice(0, 60) || 'S/N'),
+        txt('xBairro', limparTexto(dest.bairro || '').slice(0, 60)),
+      )
+    : '';
+  return tag('dest',
+    txt(doc.length === 14 ? 'CNPJ' : 'CPF', doc),
+    txt('xNome', limparTexto(dest.nome).slice(0, 300)),
+    endBloco,
+    !!email && txt('email', email.slice(0, 80)),
+  );
+}
+
+/** NT 009 v1.01 Release 2 (Itens 2.13 e 2.14): <atvEvento> dentro de <serv>. */
+function montarEvento(ev?: DadosEventoDps | null, nt009 = false): string {
+  if (!ev || !ev.xNome?.trim() || !ev.dtIni || !ev.dtFim) return '';
+  const idAtvEvt = limparTexto(ev.idAtvEvt || '').slice(0, 30);
+  const cMunEvento = apenasDigitos(ev.codigoMunicipio);
+  const endOk =
+    apenasDigitos(ev.cep).length === 8
+    && Boolean((ev.logradouro || '').trim())
+    && Boolean((ev.bairro || '').trim());
+  const cpl = limparTexto(ev.complemento || '').slice(0, 156);
+  const blocoLocal = idAtvEvt
+    ? txt('idAtvEvt', idAtvEvt)
+    : endOk
+      ? tag('end',
+          txt('CEP', apenasDigitos(ev.cep)),
+          txt('xLgr', limparTexto(ev.logradouro || '').slice(0, 255)),
+          txt('nro', limparTexto(ev.numero || '').slice(0, 60) || 'S/N'),
+          !!cpl && txt('xCpl', cpl),
+          txt('xBairro', limparTexto(ev.bairro || '').slice(0, 60)),
+        )
+      : '';
+
+  return tag('atvEvento',
+    txt('xNome', limparTexto(ev.xNome).slice(0, 255)),
+    txt('dtIni', ev.dtIni.slice(0, 10)),
+    txt('dtFim', ev.dtFim.slice(0, 10)),
+    nt009 && cMunEvento.length === 7 && txt('cLocEvento', cMunEvento),
+    blocoLocal,
+  );
+}
+
 function montarIbsCbs(cfg: ConfigFiscalNfse, nt009: boolean): string {
   if (!grupoIbsCbsCompleto(cfg)) return '';
   const classificacao = [txt('CST', cfg.ibsCbsCst!), txt('cClassTrib', cfg.ibsCbsCClassTrib!)].join('');
@@ -386,7 +491,8 @@ function montarIbsCbs(cfg: ConfigFiscalNfse, nt009: boolean): string {
     !nt009 && txt('finNFSe', '0'),
     !!cfg.ibsCbsIndFinal && txt('indFinal', cfg.ibsCbsIndFinal),
     txt('cIndOp', cfg.ibsCbsCIndOp!),
-    txt('indDest', '0'),
+    // Na NT 009 Release 2 (Item 2.10), <indDest> foi movido para a raiz de <infDPS> (logo após <toma>).
+    !nt009 && txt('indDest', '0'),
     tag('valores', tag('trib', nt009 ? classificacao : tag('gIBSCBS', classificacao))),
   );
 }
@@ -431,11 +537,18 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
   const tipoSemRetencao = cfg.tpRetPisCofins === '0' || cfg.tpRetPisCofins === '2' ? cfg.tpRetPisCofins : null;
   const somaContribuicoes = retencao.pis + retencao.cofins + retencao.csll;
   const valorDeducoes = Math.max(0, Math.round((Number(d.valorDeducoes) || 0) * 100) / 100);
-  const blocoDeducoes = valorDeducoes > 0
-    ? (nt009
-      ? tag('vAjusteBC', txt('vAjusteBCISSQN', dec2(valorDeducoes)))
-      : tag('vDedRed', txt('vDR', dec2(valorDeducoes))))
-    : '';
+  const ajusteComExt = Math.round((Number(d.valorAjusteBcIbsCbsComExt) || 0) * 100) / 100;
+  const blocoDeducoes = nt009
+    ? (valorDeducoes > 0 || ajusteComExt !== 0
+      ? tag('vAjusteBC',
+          valorDeducoes > 0 && txt('vAjusteBCISSQN', dec2(valorDeducoes)),
+          ajusteComExt !== 0 && txt('vAjusteBCIBSCBSComExt', dec2(ajusteComExt)),
+        )
+      : '')
+    : (valorDeducoes > 0 ? tag('vDedRed', txt('vDR', dec2(valorDeducoes))) : '');
+
+  const destBloco = nt009 ? montarDestinatario(d.destinatario) : '';
+  const indDestRaiz = nt009 ? txt('indDest', destBloco ? '1' : '0') : '';
 
   const substBloco = d.substituicao && apenasDigitos(d.substituicao.chaveSubstituida).length === 50
     ? tag('subst',
@@ -474,6 +587,9 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
       montarEnderecoTomador(d),
       !!email && txt('email', email.slice(0, 80)),
     ),
+    // NT 009 v1.01 Release 2 (Item 2.10): <indDest> e <dest> na raiz de <infDPS>, logo após <toma>
+    indDestRaiz,
+    destBloco,
     tag('serv',
       tag('locPrest', txt('cLocPrestacao', apenasDigitos(d.municipioPrestacao))),
       tag('cServ',
@@ -484,6 +600,7 @@ export function montarDps(cfg: ConfigFiscalNfse, d: DadosDps, agora: Date = new 
         nt009 && descricao,
       ),
       montarObra(d.obra),
+      montarEvento(d.evento, nt009),
     ),
     tag('valores',
       tag('vServPrest', txt('vServ', dec2(d.valorServicos))),
