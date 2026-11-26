@@ -8,12 +8,14 @@ import {
   ExternalLink, Eye, X, Layers, Play, Moon, Sun, Sparkles, KeyRound, Upload, Building,
   Calculator, Globe, UploadCloud, ArrowUpRight, ArrowDownLeft,
   Edit3, Lock, Settings, MoreHorizontal, CheckCircle, ArrowLeftRight, BarChart3, Truck,
-  Activity, AlertTriangle
+  Activity, AlertTriangle, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
+import { store } from '../lib/store';
 import ComercialExportBar from './ComercialExportBar';
 import type { GraficoMensalDados } from './NfeGraficoMensalArquivos';
+import type { NotaParaImportarPagar } from './ImportarNotaPagarModal';
 import { confirmAsync } from './ConfirmProvider';
 import { lerJsonResposta } from '../lib/nfe/resposta-cliente';
 
@@ -26,6 +28,7 @@ const NfeImportarXmlModal = dynamic(() => import('./NfeImportarXmlModal'), { ssr
 const CadastrarCnpjModal = dynamic(() => import('./CadastrarCnpjModal'), { ssr: false });
 const NfeGraficoMensalArquivos = dynamic(() => import('./NfeGraficoMensalArquivos'), { ssr: false });
 const NfeMonitorLogsPainel = dynamic(() => import('./NfeMonitorLogsPainel'), { ssr: false });
+const ImportarNotaPagarModal = dynamic(() => import('./ImportarNotaPagarModal'), { ssr: false });
 
 interface EmpresaMonitor {
   id: string;
@@ -112,10 +115,12 @@ function labelManifestacao(sit?: string | null): { rotulo: string; classe: strin
   return { rotulo: 'Sem Manifesto', classe: 'badge-amber' };
 }
 
-export default function NfeDestinadasPainel() {
+export default function NfeDestinadasPainel({ modoCliente = false }: { modoCliente?: boolean } = {}) {
   const [empresas, setEmpresas] = useState<EmpresaMonitor[]>([]);
   const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [empresaIdSelecionada, setEmpresaIdSelecionada] = useState<string>('');
+  const [notaParaPagar, setNotaParaPagar] = useState<NotaParaImportarPagar | null>(null);
+  const [chavesLancadasPagar, setChavesLancadasPagar] = useState<Set<string>>(new Set());
   const [abaPrincipal, setAbaPrincipal] = useState<'recebidas' | 'emitidas' | 'todas' | 'grafico' | 'certificados' | 'carteira' | 'logs'>('recebidas');
   const [filtroStatusRapido, setFiltroStatusRapido] = useState<string>('todas');
   const [ehHorarioNoturno, setEhHorarioNoturno] = useState(false);
@@ -176,6 +181,25 @@ export default function NfeDestinadasPainel() {
     setEhHorarioNoturno(hora >= 22 || hora < 5);
   }, []);
 
+  // Identifica notas já lançadas no Contas a Pagar desta empresa (evita duplicidade visual)
+  const atualizarChavesLancadas = useCallback((empId: string) => {
+    if (!empId) {
+      setChavesLancadasPagar(new Set());
+      return;
+    }
+    const lancs = store.getLancamentos(empId).filter(l => l.tipo === 'despesa' && l.observacao);
+    const set = new Set<string>();
+    for (const l of lancs) {
+      const m = String(l.observacao || '').match(/Chave:\s*([0-9A-Za-z]+)/i);
+      if (m?.[1]) set.add(m[1]);
+    }
+    setChavesLancadasPagar(set);
+  }, []);
+
+  useEffect(() => {
+    atualizarChavesLancadas(empresaIdSelecionada);
+  }, [empresaIdSelecionada, atualizarChavesLancadas]);
+
   // Carrega Empresas do Monitor
   const carregarEmpresas = useCallback(async () => {
     try {
@@ -186,8 +210,10 @@ export default function NfeDestinadasPainel() {
         setEmpresas(data.empresas);
         if (!inicializadoRef.current) {
           inicializadoRef.current = true;
-          // Tenta recuperar a última empresa usada na inicialização
-          const salva = sessionStorage.getItem('cf_nfe_empresa_id');
+          // No portal do cliente prioriza a empresa selecionada no menu; no consultor a última do monitor
+          const salva = modoCliente
+            ? (sessionStorage.getItem('cf_empresa_sel') || sessionStorage.getItem('cf_nfe_empresa_id'))
+            : sessionStorage.getItem('cf_nfe_empresa_id');
           if (salva && data.empresas.some((e: EmpresaMonitor) => e.id === salva)) {
             setEmpresaIdSelecionada(salva);
           } else if (data.empresas.length > 0) {
@@ -1781,6 +1807,61 @@ export default function NfeDestinadasPainel() {
                                 >
                                   Ver
                                 </button>
+
+                                {abaPrincipal !== 'emitidas' && n.situacao !== 'cancelada' && (
+                                  chavesLancadasPagar.has(n.chaveAcesso) ? (
+                                    <span
+                                      style={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        padding: '3px 8px',
+                                        borderRadius: 6,
+                                        background: '#dcfce7',
+                                        color: '#166534',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                      title="Nota já importada para o Contas a Pagar"
+                                    >
+                                      ✓ No Pagar
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setNotaParaPagar({
+                                          origem: 'nfe',
+                                          notaId: n.id,
+                                          empresaId: empresaIdSelecionada,
+                                          chaveAcesso: n.chaveAcesso,
+                                          numero: n.numero || n.chaveAcesso.slice(25, 34),
+                                          dataEmissao: String(n.dataEmissao || '').slice(0, 10),
+                                          valorTotal: Number(n.valorNf || 0),
+                                          descricaoPadrao: `NF-e ${n.numero || ''} — ${n.emitenteNome}`,
+                                          fornecedor: {
+                                            cpfCnpj: n.emitenteCnpj,
+                                            nome: n.emitenteNome,
+                                          },
+                                        })
+                                      }
+                                      className="btn btn-secondary btn-sm"
+                                      style={{
+                                        background: '#f0fdf4',
+                                        border: '1px solid #86efac',
+                                        color: '#15803d',
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        padding: '3px 8px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                      title="Cadastrar fornecedor e lançar esta NF-e no Contas a Pagar"
+                                    >
+                                      <Wallet size={12} /> Contas a Pagar
+                                    </button>
+                                  )
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -2815,6 +2896,17 @@ export default function NfeDestinadasPainel() {
         <CadastrarCnpjModal
           onFechar={() => setShowCadastrarCnpjModal(false)}
           onEmpresaCadastrada={carregarEmpresas}
+        />
+      )}
+
+      {/* Modal de Importação de NF-e Recebida para Fornecedor + Contas a Pagar */}
+      {notaParaPagar && (
+        <ImportarNotaPagarModal
+          nota={notaParaPagar}
+          onFechar={() => setNotaParaPagar(null)}
+          onImportado={({ chaveAcesso }) => {
+            setChavesLancadasPagar(prev => new Set(prev).add(chaveAcesso));
+          }}
         />
       )}
     </>

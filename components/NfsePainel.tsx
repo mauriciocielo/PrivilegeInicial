@@ -32,6 +32,8 @@ const NfseAcessoClienteModal = dynamic(() => import('./NfseAcessoClienteModal'),
 const NfseCopiarModal = dynamic(() => import('./NfseCopiarModal'), { ssr: false });
 const NfseImportarModal = dynamic(() => import('./NfseImportarModal'), { ssr: false });
 const NfseRecorrenciasModal = dynamic(() => import('./NfseRecorrenciasModal'), { ssr: false });
+const ImportarNotaPagarModal = dynamic(() => import('./ImportarNotaPagarModal'), { ssr: false });
+import type { NotaParaImportarPagar } from './ImportarNotaPagarModal';
 const BoletoSicoobOficial = dynamic(() => import('./BoletoSicoobOficial'), { ssr: false });
 const NfseBuscarNotasModal = dynamic(() => import('./NfseBuscarNotasModal'), { ssr: false });
 const CertidaoFederalModal = dynamic(() => import('./CertidaoFederalModal'), { ssr: false });
@@ -246,6 +248,8 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const [showCopiarModal, setShowCopiarModal] = useState(false);
   const [showImportarModal, setShowImportarModal] = useState(false);
   const [showRecorrenciasModal, setShowRecorrenciasModal] = useState(false);
+  const [notaTomadaParaPagar, setNotaTomadaParaPagar] = useState<NotaParaImportarPagar | null>(null);
+  const [chavesTomadasLancadas, setChavesTomadasLancadas] = useState<Set<string>>(new Set());
   const [showCndModal, setShowCndModal] = useState(false);
   const [entregasMap, setEntregasMap] = useState<Record<string, { emailEnviadoEm: string | null; whatsappEnviadoEm: string | null; whatsappDestino: string | null }>>({});
   const [reenviandoWppId, setReenviandoWppId] = useState<string | null>(null);
@@ -470,8 +474,19 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   }, []);
 
   useEffect(() => {
-    if (empresaId) carregarEntregas(empresaId);
-    else setEntregasMap({});
+    if (empresaId) {
+      carregarEntregas(empresaId);
+      const lancs = store.getLancamentos(empresaId).filter(l => l.tipo === 'despesa' && l.observacao);
+      const set = new Set<string>();
+      for (const l of lancs) {
+        const m = String(l.observacao || '').match(/Chave:\s*([0-9A-Za-z]+)/i);
+        if (m?.[1]) set.add(m[1]);
+      }
+      setChavesTomadasLancadas(set);
+    } else {
+      setEntregasMap({});
+      setChavesTomadasLancadas(new Set());
+    }
   }, [empresaId, carregarEntregas]);
 
   const handleReenviarWhatsappNota = async (nota: NfsE) => {
@@ -3011,6 +3026,58 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 {n.cobrancaBrcode ? '✓ Boleto / Pix' : 'Emitir Boleto'}
                               </button>
                             )}
+                            {tomada && n.status !== 'cancelada' && (
+                              chavesTomadasLancadas.has(n.chaveAcesso || n.id) ? (
+                                <span
+                                  style={{
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                    padding: '4px 9px',
+                                    borderRadius: 6,
+                                    background: '#dcfce7',
+                                    color: '#166534',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title="NFS-e tomada já lançada no Contas a Pagar"
+                                >
+                                  ✓ No Pagar
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{
+                                    fontSize: 13.5,
+                                    padding: '5px 9px',
+                                    background: '#f0fdf4',
+                                    border: '1px solid #86efac',
+                                    color: '#15803d',
+                                    borderRadius: 6,
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  onClick={() =>
+                                    setNotaTomadaParaPagar({
+                                      origem: 'nfse',
+                                      notaId: n.id,
+                                      empresaId,
+                                      chaveAcesso: n.chaveAcesso || n.id,
+                                      numero: n.numero || 'S/N',
+                                      dataEmissao: String(n.dataEmissao || '').slice(0, 10),
+                                      valorTotal: Number(n.valorLiquido || n.valorServicos || 0),
+                                      descricaoPadrao: `NFS-e ${n.numero || ''} — ${n.prestadorRazaoSocial || 'Prestador'}`,
+                                      fornecedor: {
+                                        cpfCnpj: n.prestadorCnpj || '',
+                                        nome: n.prestadorRazaoSocial || 'Fornecedor de Serviço',
+                                      },
+                                    })
+                                  }
+                                  title="Cadastrar fornecedor e lançar esta NFS-e tomada no Contas a Pagar"
+                                >
+                                  + Contas a Pagar
+                                </button>
+                              )
+                            )}
                             {!tomada && n.status === 'emitida' && n.chaveAcesso && (
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -3403,6 +3470,17 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
           municipioPrestacaoPadrao={parametros?.codigoMunicipio}
           onFechar={() => setShowRecorrenciasModal(false)}
           onGerarRascunhos={itens => criarRascunhos(itens, { gerarContaReceber: false, vencimento: hojeBrasilia(), portadorId: '', planoContaId: '' })}
+        />
+      )}
+
+      {notaTomadaParaPagar && (
+        <ImportarNotaPagarModal
+          nota={notaTomadaParaPagar}
+          onFechar={() => setNotaTomadaParaPagar(null)}
+          onImportado={({ chaveAcesso }) => {
+            setChavesTomadasLancadas(prev => new Set(prev).add(chaveAcesso));
+            setClientes(store.getClientes(empresaId).filter(c => c.ativo));
+          }}
         />
       )}
 
