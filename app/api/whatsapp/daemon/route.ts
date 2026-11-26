@@ -6,6 +6,7 @@ import { iniciarWorkerFilaEmail } from '@/lib/email-queue';
 import { processarLembretesAgenda24h, processarResumoMatinalConsultores24h } from '@/lib/agenda-lembretes';
 import { processarAlertasCertificados24h } from '@/lib/certificado-alertas';
 import { processarSincronizacaoNfse24h } from '@/lib/nfse/sincronizar-adn';
+import { processarAtualizacaoMensalAliquotaSimples24h } from '@/lib/serpro/atualizacao-mensal-simples';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ async function executeDaemonTick() {
   const resumoMatinal = await processarResumoMatinalConsultores24h().catch(() => ({ enviados: 0 }));
   const alertasCertificados = await processarAlertasCertificados24h().catch(() => ({ enviados: 0 }));
   const nfseAuto = processarSincronizacaoNfse24h();
+  const serproSimplesAuto = processarAtualizacaoMensalAliquotaSimples24h();
   return {
     success: true,
     startedOwners,
@@ -35,6 +37,7 @@ async function executeDaemonTick() {
     resumoMatinal,
     alertasCertificados,
     nfseAuto,
+    serproSimplesAuto,
     timestamp: new Date().toISOString(),
   };
 }
