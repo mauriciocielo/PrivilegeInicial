@@ -323,11 +323,22 @@ export default function ContasReceberPage() {
     setSelectedIds(prev => prev.filter(x => x !== id));
   };
 
+  const podeEmitirBoleto = (() => {
+    if (!empresa) return false;
+    const cnpjLimpo = String(empresa.cnpj || '').replace(/\D/g, '');
+    if (cnpjLimpo === '58033979000184') return true;
+    const texto = `${empresa.razaoSocial || ''} ${empresa.nomeFantasia || ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+    return texto.includes('PRIVILEGE CONSULTORIA');
+  })();
+
   const openNew = () => {
     setEditItem(null);
     setContaSearch('');
     setTriedSave(false);
-    setEmitirBoletoAoSalvar(true);
+    setEmitirBoletoAoSalvar(podeEmitirBoleto);
     setForm({ tipo: 'receita', status: 'previsto', origem: 'manual', data: todayStr, empresaId });
     setShowModal(true);
   };
@@ -446,7 +457,7 @@ export default function ContasReceberPage() {
     load(empresaId);
     setShowModal(false);
     setSaving(false);
-    if (emitirBoletoAoSalvar && lanc.status === 'previsto') {
+    if (podeEmitirBoleto && emitirBoletoAoSalvar && lanc.status === 'previsto') {
       openC6Boleto(lanc);
     }
   };
@@ -513,12 +524,16 @@ export default function ContasReceberPage() {
               }}>
                 Excluir ({selectedIds.length})
               </button>
-              <button className="btn btn-secondary" onClick={gerarRemessaSicoob} title="Gerar o arquivo de remessa CNAB 240 do Sicoob com os boletos selecionados">
-                Gerar Remessa Sicoob ({selectedIds.length})
-              </button>
+              {podeEmitirBoleto && (
+                <button className="btn btn-secondary" onClick={gerarRemessaSicoob} title="Gerar o arquivo de remessa CNAB 240 do Sicoob com os boletos selecionados">
+                  Gerar Remessa Sicoob ({selectedIds.length})
+                </button>
+              )}
             </>
           )}
-          <button className="btn btn-secondary btn-sm" onClick={() => { setRascunhoCfg(configSicoob); setShowRemessaConfig(true); }} title="Dados de cobrança do Sicoob (agência, conta, carteira) para a remessa CNAB">Cobrança Sicoob</button>
+          {podeEmitirBoleto && (
+            <button className="btn btn-secondary btn-sm" onClick={() => { setRascunhoCfg(configSicoob); setShowRemessaConfig(true); }} title="Dados de cobrança do Sicoob (agência, conta, carteira) para a remessa CNAB">Cobrança Sicoob</button>
+          )}
           <button className="btn btn-secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Exportar a lista filtrada para CSV">⬇️ Exportar CSV</button>
           <button className="btn btn-primary" onClick={openNew}>＋ Nova Conta a Receber</button>
         </div>
@@ -676,8 +691,8 @@ export default function ContasReceberPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {/* Boleto (Sicoob quando houver config de cobrança; C6 quando habilitado) */}
-                          {l.status === 'previsto' && (hasC6 || (!!configSicoob.agencia && !!configSicoob.convenio)) && (
+                          {/* Boleto (exclusivo PRIVILEGE CONSULTORIA LTDA) */}
+                          {podeEmitirBoleto && l.status === 'previsto' && (hasC6 || (!!configSicoob.agencia && !!configSicoob.convenio)) && (
                             <button
                               className="btn btn-sm"
                               style={{ padding: '4px 8px', fontSize: 13, background: '#003641', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
@@ -840,7 +855,7 @@ export default function ContasReceberPage() {
               </div>
             </div>
 
-            {(form.status || 'previsto') === 'previsto' && (
+            {podeEmitirBoleto && (form.status || 'previsto') === 'previsto' && (
               <div
                 style={{
                   marginTop: 10,
@@ -866,7 +881,7 @@ export default function ContasReceberPage() {
 
             <div className="form-actions" style={{ marginTop: 24 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : emitirBoletoAoSalvar && (form.status || 'previsto') === 'previsto' ? '✓ Salvar e Emitir Boleto Sicoob' : '✓ Salvar'}</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : podeEmitirBoleto && emitirBoletoAoSalvar && (form.status || 'previsto') === 'previsto' ? '✓ Salvar e Emitir Boleto Sicoob' : '✓ Salvar'}</button>
             </div>
           </div>
         </div>

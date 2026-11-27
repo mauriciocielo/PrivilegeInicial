@@ -201,6 +201,16 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
   const modoCliente = modoClienteProp || ehClienteSessao;
   const [empresaId, setEmpresaId] = useState('');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const podeEmitirBoleto = (() => {
+    if (!empresa) return false;
+    const cnpjLimpo = String(empresa.cnpj || '').replace(/\D/g, '');
+    if (cnpjLimpo === '58033979000184') return true;
+    const texto = `${empresa.razaoSocial || ''} ${empresa.nomeFantasia || ''}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+    return texto.includes('PRIVILEGE CONSULTORIA');
+  })();
   const [empresasDisponiveis, setEmpresasDisponiveis] = useState<EmpresaEmissora[]>([]);
   const [buscaEmpresaRapida, setBuscaEmpresaRapida] = useState('');
   const [nfseList, setNfseList] = useState<NfsE[]>([]);
@@ -1421,7 +1431,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       ? `NFS-e ${envio.nota.numero} recuperada: a tentativa anterior já havia sido autorizada.`
       : `NFS-e ${envio.nota.numero} autorizada pelo Sefin.`);
     envio.alertas.forEach(alerta => toast.warning(alerta, { duration: 12000 }));
-    if (envio.nota.emitirBoletoSicoob || nfse.emitirBoletoSicoob) {
+    if (podeEmitirBoleto && (envio.nota.emitirBoletoSicoob || nfse.emitirBoletoSicoob)) {
       abrirModalCobrancaNfse(envio.nota, true);
     }
     return true;
@@ -3008,7 +3018,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                                 </button>
                               </>
                             )}
-                            {!tomada && n.status === 'emitida' && (
+                            {podeEmitirBoleto && !tomada && n.status === 'emitida' && (
                               <button
                                 className="btn btn-secondary btn-sm"
                                 style={{
@@ -4207,6 +4217,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
                 valor={financeiroForm}
                 portadores={portadores}
                 planoContas={planoContas}
+                permitirBoletoSicoob={podeEmitirBoleto}
                 onChange={f => setForm(atual => ({ ...atual, ...f }))}
               />
             </div>
@@ -4286,13 +4297,15 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', gap: 8, flexWrap: 'wrap' }}>
               <h2 className="modal-title" style={{ margin: 0 }}>NFS-e Nº {viewItem.numero}</h2>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button
-                  className="btn btn-secondary"
-                  style={{ borderColor: '#00a859', color: '#008a49', fontWeight: 700 }}
-                  onClick={() => abrirModalCobrancaNfse(viewItem, false)}
-                >
-                  Emitir Boleto / Pix Sicoob
-                </button>
+                {podeEmitirBoleto && (
+                  <button
+                    className="btn btn-secondary"
+                    style={{ borderColor: '#00a859', color: '#008a49', fontWeight: 700 }}
+                    onClick={() => abrirModalCobrancaNfse(viewItem, false)}
+                  >
+                    Emitir Boleto / Pix Sicoob
+                  </button>
+                )}
                 <a className="btn btn-primary" style={{ background: '#600000', borderColor: '#600000' }} href={`/api/nfse/${viewItem.id}/danfse?baixar=1`}>Baixar PDF</a>
                 <a className="btn btn-secondary" href={`/api/nfse/${viewItem.id}/xml`} download>Baixar XML</a>
                 <button className="modal-close" onClick={() => setModalMode(null)}>✕</button>

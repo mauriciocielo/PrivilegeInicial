@@ -24,62 +24,70 @@ interface Props {
   onChange: (valor: FinanceiroNota) => void;
   /** Em lote o vencimento pode vir da planilha. */
   ajudaVencimento?: string;
+  /** Emissão de boleto Sicoob habilitada apenas para PRIVILEGE CONSULTORIA LTDA. */
+  permitirBoletoSicoob?: boolean;
 }
 
 /** A conta a receber é opcional: por padrão a nota é apenas emitida para o cliente. */
-export default function NfseFinanceiroCampos({ valor, portadores, planoContas, onChange, ajudaVencimento }: Props) {
+export default function NfseFinanceiroCampos({ valor, portadores, planoContas, onChange, ajudaVencimento, permitirBoletoSicoob = false }: Props) {
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <label
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          fontSize: 14.5,
-          fontWeight: 700,
-          color: '#008a49',
-          background: 'rgba(0, 168, 89, 0.08)',
-          border: '1px solid rgba(0, 168, 89, 0.28)',
-          padding: '8px 12px',
-          borderRadius: 8,
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={Boolean(valor.emitirBoletoSicoob)}
-          onChange={e =>
-            onChange({
-              ...valor,
-              emitirBoletoSicoob: e.target.checked,
-              vencimento:
-                valor.vencimento ||
-                (() => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + 7);
-                  return d.toISOString().slice(0, 10);
-                })(),
-            })
-          }
-        />
-        Emitir Boleto / Cobrança Pix Sicoob (API Direta mTLS) ao autorizar a NFS-e
-      </label>
+      {permitirBoletoSicoob && (
+        <>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              fontSize: 14.5,
+              fontWeight: 700,
+              color: '#008a49',
+              background: 'rgba(0, 168, 89, 0.08)',
+              border: '1px solid rgba(0, 168, 89, 0.28)',
+              padding: '8px 12px',
+              borderRadius: 8,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(valor.emitirBoletoSicoob)}
+              onChange={e =>
+                onChange({
+                  ...valor,
+                  emitirBoletoSicoob: e.target.checked,
+                  vencimento:
+                    valor.vencimento ||
+                    (() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 7);
+                      return d.toISOString().slice(0, 10);
+                    })(),
+                })
+              }
+            />
+            Emitir Boleto / Cobrança Pix Sicoob (API Direta mTLS) ao autorizar a NFS-e
+          </label>
 
-      {valor.emitirBoletoSicoob && !valor.gerarContaReceber && (
-        <div className="form-group" style={{ maxWidth: 220, marginBottom: 0 }}>
-          <label className="form-label">Vencimento da Cobrança / Boleto</label>
-          <input
-            type="date"
-            className="form-control"
-            value={valor.vencimento}
-            onChange={e => onChange({ ...valor, vencimento: e.target.value })}
-          />
-        </div>
+          {valor.emitirBoletoSicoob && !valor.gerarContaReceber && (
+            <div className="form-group" style={{ maxWidth: 220, marginBottom: 0 }}>
+              <label className="form-label">Vencimento da Cobrança / Boleto</label>
+              <input
+                type="date"
+                className="form-control"
+                value={valor.vencimento}
+                onChange={e => onChange({ ...valor, vencimento: e.target.value })}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {portadores.length === 0 && !valor.gerarContaReceber ? (
         <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-          Esta empresa não tem portadores internos cadastrados para conciliação local, mas pode emitir Cobrança / Boleto Sicoob via API normalmente.
+          {permitirBoletoSicoob
+            ? 'Esta empresa não tem portadores internos cadastrados para conciliação local, mas pode emitir Cobrança / Boleto Sicoob via API normalmente.'
+            : 'Cadastre um portador no módulo financeiro desta empresa para gerar contas a receber automaticamente.'}
         </div>
       ) : (
         <>
