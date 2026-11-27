@@ -87,10 +87,44 @@ interface MetaPf {
   percentual: number;
 }
 
+interface ItemExtratoPreview {
+  idx: number;
+  data: string;
+  tipo: 'despesa' | 'receita';
+  valor: number;
+  descricao: string;
+  jaLancado: boolean;
+  motivoMatch: string | null;
+  selecionado: boolean;
+  categoria: string;
+  destino: 'lancamento' | 'rendimento_investimento';
+  tipoRendimento: string;
+  dedutivelIrpf: boolean;
+  origemClassificacao: 'existente' | 'historico' | 'ia' | 'regra';
+  motivoClassificacao: string;
+}
+
+interface PreviewExtratoState {
+  nomeArquivo: string;
+  resumo: {
+    totalLidas: number;
+    novos: number;
+    jaLancados: number;
+    classificadosPorHistorico: number;
+    classificadosPorIa: number;
+    rendimentosDetectados: number;
+    irpfDetectados: number;
+  };
+  itens: ItemExtratoPreview[];
+}
+
 export default function FinancasPessoaisPainel() {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [aba, setAba] = useState<'geral' | 'cartoes' | 'investimentos' | 'relatorios' | 'irpf'>('geral');
   const [importandoExtrato, setImportandoExtrato] = useState(false);
+  const [previewExtrato, setPreviewExtrato] = useState<PreviewExtratoState | null>(null);
+  const [mostrarJaLancados, setMostrarJaLancados] = useState(true);
+  const [confirmandoExtrato, setConfirmandoExtrato] = useState(false);
   const { data: wealthData, recarregar: recarregarWealth } = useWealthData(mes);
   const [carregando, setCarregando] = useState(true);
   const [whatsappVinculado, setWhatsappVinculado] = useState(false);
@@ -270,23 +304,70 @@ export default function FinancasPessoaisPainel() {
       const res = await fetch('/api/financas-pessoais/importar-extrato', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conteudo, nomeArquivo: file.name }),
+        body: JSON.stringify({ modo: 'analisar', conteudo, nomeArquivo: file.name }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(d.error || 'Não foi possível conciliar o extrato.');
+        toast.error(d.error || 'Não foi possível analisar o extrato.');
         return;
       }
+      setPreviewExtrato({
+        nomeArquivo: d.nomeArquivo || file.name,
+        resumo: d.resumo,
+        itens: Array.isArray(d.itens) ? d.itens : [],
+      });
+      setMostrarJaLancados(true);
       toast.success(
-        `Extrato conciliado! ${d.importados} novo(s) lançamento(s) · ${d.duplicados} já existente(s) pulado(s)${d.irpfDetectados ? ` · ${d.irpfDetectados} dedutível(is) IRPF` : ''}.`
+        `IA analisou ${d.resumo?.totalLidas || 0} lançamento(s): ${d.resumo?.novos || 0} novo(s) e ${d.resumo?.jaLancados || 0} já lançado(s).`
       );
-      carregar(mes);
-      recarregarWealth();
     } catch {
       toast.error('Erro ao ler arquivo de extrato.');
     } finally {
       setImportandoExtrato(false);
     }
+  };
+
+  const handleConfirmarExtrato = async () => {
+    if (!previewExtrato) return;
+    const selecionados = previewExtrato.itens.filter((i) => i.selecionado);
+    if (selecionados.length === 0) {
+      toast.error('Selecione pelo menos 1 item para lançar.');
+      return;
+    }
+    setConfirmandoExtrato(true);
+    try {
+      const res = await fetch('/api/financas-pessoais/importar-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'confirmar', itens: selecionados }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao gravar itens conciliados.');
+        return;
+      }
+      toast.success(
+        `Conciliação concluída! ${d.importados} lançado(s)${d.rendimentosCriados ? ` · ${d.rendimentosCriados} rendimento(s)` : ''}${d.irpfDetectados ? ` · ${d.irpfDetectados} dedutível(is) IRPF` : ''}.`
+      );
+      setPreviewExtrato(null);
+      carregar(mes);
+      recarregarWealth();
+    } catch {
+      toast.error('Erro de conexão ao confirmar conciliação.');
+    } finally {
+      setConfirmandoExtrato(false);
+    }
+  };
+
+  const atualizarItemPreview = (idx: number, patch: Partial<ItemExtratoPreview>) => {
+    setPreviewExtrato((prev) =>
+      prev
+        ? {
+            ...prev,
+            itens: prev.itens.map((it) => (it.idx === idx ? { ...it, ...patch } : it)),
+          }
+        : null
+    );
   };
 
   const handleExportarIrpfExcel = () => {
@@ -817,6 +898,198 @@ export default function FinancasPessoaisPainel() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal Conciliação Inteligente de Extrato com IA */}
+      {previewExtrato && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => !confirmandoExtrato && setPreviewExtrato(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 1020, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Brain size={19} color="var(--accent, #600000)" /> Conciliação Inteligente de Extrato ({previewExtrato.nomeArquivo})
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12.5, color: '#64748b' }}>
+                  A IA comparou com o que você já lançou, aprendeu com o seu histórico e sugeriu a categoria e destino de cada item. Revise e confirme:
+                </p>
+              </div>
+              <button type="button" disabled={confirmandoExtrato} onClick={() => setPreviewExtrato(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Resumo em Badges */}
+            <div style={{ padding: '12px 22px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#e2e8f0', color: '#0f172a' }}>
+                  Total lido: {previewExtrato.resumo.totalLidas}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#dcfce7', color: '#166534' }}>
+                  Novos: {previewExtrato.resumo.novos}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#f1f5f9', color: '#475569' }}>
+                  Já lançados (ignorados): {previewExtrato.resumo.jaLancados}
+                </span>
+                {previewExtrato.resumo.classificadosPorHistorico > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#f3e8ff', color: '#6b21a8' }}>
+                    Pelo seu histórico: {previewExtrato.resumo.classificadosPorHistorico}
+                  </span>
+                )}
+                {previewExtrato.resumo.classificadosPorIa > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#dbeafe', color: '#1d4ed8' }}>
+                    Classificados pela IA: {previewExtrato.resumo.classificadosPorIa}
+                  </span>
+                )}
+                {previewExtrato.resumo.rendimentosDetectados > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#ecfdf5', color: '#047857' }}>
+                    Rendimentos detectados: {previewExtrato.resumo.rendimentosDetectados}
+                  </span>
+                )}
+              </div>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+                <input type="checkbox" checked={mostrarJaLancados} onChange={(e) => setMostrarJaLancados(e.target.checked)} />
+                Mostrar já lançados
+              </label>
+            </div>
+
+            {/* Tabela Revisável */}
+            <div style={{ overflow: 'auto', flex: 1, padding: '0 14px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#475569', fontSize: 12 }}>
+                    <th style={{ padding: '10px 6px' }}>Lançar</th>
+                    <th style={{ padding: '10px 6px' }}>Data</th>
+                    <th style={{ padding: '10px 6px' }}>Descrição & Inteligência</th>
+                    <th style={{ padding: '10px 6px' }}>Destino</th>
+                    <th style={{ padding: '10px 6px' }}>Categoria</th>
+                    <th style={{ padding: '10px 6px' }}>IRPF</th>
+                    <th style={{ padding: '10px 6px', textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewExtrato.itens
+                    .filter((it) => mostrarJaLancados || !it.jaLancado)
+                    .map((it) => (
+                      <tr
+                        key={it.idx}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          background: it.jaLancado && !it.selecionado ? '#f8fafc' : '#fff',
+                          opacity: it.jaLancado && !it.selecionado ? 0.65 : 1,
+                        }}
+                      >
+                        <td style={{ padding: '8px 6px' }}>
+                          <input
+                            type="checkbox"
+                            checked={it.selecionado}
+                            onChange={(e) => atualizarItemPreview(it.idx, { selecionado: e.target.checked })}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 6px', whiteSpace: 'nowrap', color: '#475569' }}>{it.data}</td>
+                        <td style={{ padding: '8px 6px', minWidth: 220 }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{it.descricao}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginTop: 3 }}>
+                            {it.jaLancado && (
+                              <span style={{ fontSize: 10.5, fontWeight: 800, background: '#e2e8f0', color: '#334155', padding: '1px 7px', borderRadius: 99 }}>
+                                Já lançado
+                              </span>
+                            )}
+                            {it.origemClassificacao === 'historico' && (
+                              <span style={{ fontSize: 10.5, fontWeight: 800, background: '#f3e8ff', color: '#6b21a8', padding: '1px 7px', borderRadius: 99 }}>
+                                Histórico
+                              </span>
+                            )}
+                            {it.origemClassificacao === 'ia' && (
+                              <span style={{ fontSize: 10.5, fontWeight: 800, background: '#dbeafe', color: '#1d4ed8', padding: '1px 7px', borderRadius: 99 }}>
+                                IA
+                              </span>
+                            )}
+                            <span style={{ fontSize: 11, color: '#64748b' }}>{it.motivoClassificacao}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          {it.tipo === 'receita' ? (
+                            <select
+                              className="form-control"
+                              style={{ fontSize: 12, padding: '4px 6px', minWidth: 135 }}
+                              value={it.destino}
+                              onChange={(e) =>
+                                atualizarItemPreview(it.idx, {
+                                  destino: e.target.value === 'rendimento_investimento' ? 'rendimento_investimento' : 'lancamento',
+                                  categoria: e.target.value === 'rendimento_investimento' ? 'Investimentos' : it.categoria,
+                                })
+                              }
+                            >
+                              <option value="lancamento">Caixa Normal</option>
+                              <option value="rendimento_investimento">Rendimento Invest.</option>
+                            </select>
+                          ) : (
+                            <span style={{ fontSize: 12, color: '#64748b' }}>Caixa Normal</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <select
+                            className="form-control"
+                            style={{ fontSize: 12, padding: '4px 6px', minWidth: 140 }}
+                            value={it.categoria}
+                            onChange={(e) => atualizarItemPreview(it.idx, { categoria: e.target.value })}
+                          >
+                            {CATEGORIAS.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                          {it.tipo === 'despesa' ? (
+                            <input
+                              type="checkbox"
+                              title="Marcar como dedutível no IRPF"
+                              checked={it.dedutivelIrpf}
+                              onChange={(e) => atualizarItemPreview(it.idx, { dedutivelIrpf: e.target.checked })}
+                            />
+                          ) : (
+                            <span style={{ color: '#cbd5e1' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800, color: it.tipo === 'receita' ? '#15803d' : '#b91c1c' }}>
+                          {it.tipo === 'receita' ? '+' : '-'} {fmt.currency(it.valor)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ padding: '14px 22px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, background: '#f8fafc' }}>
+              <div style={{ fontSize: 13, color: '#475569' }}>
+                Selecionados para lançar:{' '}
+                <strong style={{ color: '#0f172a' }}>{previewExtrato.itens.filter((i) => i.selecionado).length}</strong> de {previewExtrato.itens.length}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" disabled={confirmandoExtrato} onClick={() => setPreviewExtrato(null)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={confirmandoExtrato || previewExtrato.itens.filter((i) => i.selecionado).length === 0}
+                  onClick={handleConfirmarExtrato}
+                  style={{ background: '#15803d', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, padding: '8px 16px' }}
+                >
+                  {confirmandoExtrato
+                    ? 'Lançando...'
+                    : `Confirmar e Lançar (${previewExtrato.itens.filter((i) => i.selecionado).length})`}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

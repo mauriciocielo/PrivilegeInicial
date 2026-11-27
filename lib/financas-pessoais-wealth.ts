@@ -66,6 +66,25 @@ export async function ensureFinancasWealthTables() {
     `CREATE INDEX IF NOT EXISTS idx_fp_dividas_owner ON financas_pessoais_dividas(owner_key)`
   );
 
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS financas_pessoais_rendimentos (
+      id TEXT PRIMARY KEY,
+      owner_key TEXT NOT NULL,
+      patrimonio_id TEXT,
+      ativo_nome TEXT NOT NULL,
+      tipo_rendimento TEXT NOT NULL DEFAULT 'dividendo',
+      valor_bruto DOUBLE PRECISION NOT NULL DEFAULT 0,
+      ir_retido DOUBLE PRECISION NOT NULL DEFAULT 0,
+      valor_liquido DOUBLE PRECISION NOT NULL DEFAULT 0,
+      data TEXT NOT NULL,
+      observacao TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS idx_fp_rend_owner_data ON financas_pessoais_rendimentos(owner_key, data DESC)`
+  );
+
   tabelasWealthGarantidas = true;
 }
 

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const seteDiasAtras = new Date(hoje.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const inicio6Meses = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1).toISOString().slice(0, 10);
 
-    const [cartoesRaw, patrimonioRaw, dividasRaw, lancs6m] = await Promise.all([
+    const [cartoesRaw, patrimonioRaw, dividasRaw, lancs6m, rendimentosRaw] = await Promise.all([
       db.$queryRawUnsafe<any[]>(
         `SELECT * FROM financas_pessoais_cartoes WHERE owner_key = ANY($1::text[]) ORDER BY created_at DESC`,
         allKeys
@@ -50,6 +50,10 @@ export async function GET(request: Request) {
          WHERE owner_key = ANY($1::text[]) AND data >= $2`,
         allKeys,
         inicio6Meses
+      ),
+      db.$queryRawUnsafe<any[]>(
+        `SELECT * FROM financas_pessoais_rendimentos WHERE owner_key = ANY($1::text[]) ORDER BY data DESC, created_at DESC LIMIT 200`,
+        allKeys
       ),
     ]);
 
@@ -98,6 +102,26 @@ export async function GET(request: Request) {
       parcelasRestantes: Number(d.parcelas_restantes || 1),
       diaVencimento: Number(d.dia_vencimento || 10),
     }));
+
+    const rendimentos = rendimentosRaw.map((r) => ({
+      id: String(r.id),
+      patrimonioId: r.patrimonio_id ? String(r.patrimonio_id) : null,
+      ativoNome: String(r.ativo_nome || ''),
+      tipoRendimento: String(r.tipo_rendimento || 'dividendo'),
+      valorBruto: Number(r.valor_bruto || 0),
+      irRetido: Number(r.ir_retido || 0),
+      valorLiquido: Number(r.valor_liquido || 0),
+      data: String(r.data || ''),
+      observacao: String(r.observacao || ''),
+    }));
+
+    const anoSel = mes.slice(0, 4);
+    const rendimentosMes = Math.round(
+      rendimentos.filter((r) => r.data.startsWith(mes)).reduce((acc, r) => acc + r.valorLiquido, 0) * 100
+    ) / 100;
+    const rendimentosAno = Math.round(
+      rendimentos.filter((r) => r.data.startsWith(anoSel)).reduce((acc, r) => acc + r.valorLiquido, 0) * 100
+    ) / 100;
 
     // Day Trade: resultado líquido do mês e DARF 20% (alíquota oficial de Day Trade em Bolsa no Brasil)
     const dayTradesMes = patrimonio.filter((p) => p.classe === 'day_trade' && (!p.dataReferencia || p.dataReferencia.startsWith(mes)));
@@ -163,6 +187,8 @@ export async function GET(request: Request) {
         parcelaMensalDividas,
         lucroDayTradeMes,
         darfDayTradeEstimado,
+        rendimentosMes,
+        rendimentosAno,
       },
       relatorioSemanal: {
         periodoInicio: seteDiasAtras,
@@ -175,6 +201,7 @@ export async function GET(request: Request) {
       cartoes,
       patrimonio,
       dividas,
+      rendimentos,
     });
   } catch (error) {
     console.error('Erro em GET /api/financas-pessoais/wealth:', error);
@@ -192,8 +219,8 @@ export async function POST(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
-    await ensureFinancasWealthTables();
-    const { primaryKey } = await resolverChavesFinancasUsuario(auth.session.userId);
+    await Promise.all([ensureFinancasPessoaisTables(), ensureFinancasWealthTables()]);
+    const { primaryKey, phone } = await resolverChavesFinancasUsuario(auth.session.userId);
     const body = await request.json().catch(() => ({}));
     const recurso = String(body?.recurso || '');
     const id = crypto.randomUUID();
@@ -264,6 +291,66 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, id });
     }
 
+    if (recurso === 'rendimento') {
+      const ativoNome = String(body?.ativoNome || '').trim();
+      const tipoRendimento = String(body?.tipoRendimento || 'dividendo').trim();
+      const valorBruto = Math.max(0, Number(body?.valorBruto || 0));
+      const irRetido = Math.max(0, Number(body?.irRetido || 0));
+      const valorLiquido = Math.max(0, Math.round((valorBruto - irRetido) * 100) / 100);
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(String(body?.data || ''))
+        ? String(body.data)
+        : new Date().toISOString().slice(0, 10);
+      const patrimonioId = body?.patrimonioId ? String(body.patrimonioId).trim() : null;
+      const observacao = String(body?.observacao || '').trim().slice(0, 200);
+      const lancarNoCaixa = body?.lancarNoCaixa !== false;
+
+      if (!ativoNome || valorBruto <= 0) {
+        return NextResponse.json({ error: 'Informe o ativo e o valor do rendimento.' }, { status: 400 });
+      }
+
+      await db.$executeRawUnsafe(
+        `INSERT INTO financas_pessoais_rendimentos
+          (id, owner_key, patrimonio_id, ativo_nome, tipo_rendimento, valor_bruto, ir_retido, valor_liquido, data, observacao, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+        id,
+        primaryKey,
+        patrimonioId,
+        ativoNome,
+        tipoRendimento,
+        valorBruto,
+        irRetido,
+        valorLiquido,
+        data,
+        observacao
+      );
+
+      if (lancarNoCaixa && valorLiquido > 0) {
+        const rotulosTipo: Record<string, string> = {
+          dividendo: 'Dividendos',
+          jcp: 'JCP',
+          aluguel_fii: 'Rendimento FII',
+          renda_fixa: 'Rendimento Renda Fixa',
+          fundo: 'Rendimento Fundo',
+          outros: 'Rendimento',
+        };
+        const descCaixa = `${rotulosTipo[tipoRendimento] || 'Rendimento'} — ${ativoNome}`;
+        await db.$executeRawUnsafe(
+          `INSERT INTO financas_pessoais_lancamentos
+            (id, owner_key, user_id, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, created_at)
+           VALUES ($1, $2, $3, $4, 'receita', $5, 'Investimentos', 'Rendimento', $6, $7, 'pago', FALSE, 'painel', NOW())`,
+          crypto.randomUUID(),
+          primaryKey,
+          auth.session.userId,
+          phone,
+          valorLiquido,
+          descCaixa,
+          data
+        );
+      }
+
+      return NextResponse.json({ ok: true, id, valorLiquido });
+    }
+
     return NextResponse.json({ error: 'Recurso inválido.' }, { status: 400 });
   } catch (error) {
     console.error('Erro em POST /api/financas-pessoais/wealth:', error);
@@ -290,6 +377,8 @@ export async function DELETE(request: Request) {
         ? 'financas_pessoais_patrimonio'
         : recurso === 'divida'
         ? 'financas_pessoais_dividas'
+        : recurso === 'rendimento'
+        ? 'financas_pessoais_rendimentos'
         : null;
     if (!tabela) return NextResponse.json({ error: 'Recurso inválido.' }, { status: 400 });
 
