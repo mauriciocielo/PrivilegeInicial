@@ -322,15 +322,32 @@ export async function processarComandoNfseWhatsApp(params: {
         let aliquotaEscolhida = dadosSalvos.aliquotaIss || 0;
         let issRetidoEscolhido = Boolean(dadosSalvos.issRetido);
 
-        // 1a. Respondeu com o número da opção da lista (ex.: "1", "2", "opção 1")
-        const mNum = limpo.match(/^(?:op[cç][aã]o\s*)?(\d{1,2})$/i);
-        if (mNum && opcoes.length > 0) {
-          const idx = Number(mNum[1]) - 1;
-          if (idx >= 0 && idx < opcoes.length) {
-            codigoEscolhido = opcoes[idx].codigo;
-            aliquotaEscolhida = opcoes[idx].aliquotaIss;
-            issRetidoEscolhido = opcoes[idx].issRetido;
+        // 1a. Respondeu com o número da opção do menu (ex.: "1", "2", "opção 1", "um", "primeira", "dois", "segunda")
+        const mapaExtenso: Record<string, number> = {
+          um: 1, uma: 1, primeiro: 1, primeira: 1,
+          dois: 2, duas: 2, segundo: 2, segunda: 2,
+          tres: 3, três: 3, terceiro: 3, terceira: 3,
+          quatro: 4, quarto: 4, quarta: 4,
+          cinco: 5, quinto: 5, quinta: 5,
+          seis: 6, sexto: 6, sexta: 6,
+          sete: 7, setimo: 7, sétimo: 7, setima: 7, sétima: 7,
+          oito: 8, oitavo: 8, oitava: 8,
+        };
+        const mNum = limpo.match(/^(?:a\s+|o\s+)?(?:op[cç][aã]o\s*|n[uú]mero\s*)?(\d{1,2})\b/i);
+        let idxEscolhido = mNum ? Number(mNum[1]) - 1 : -1;
+        if (idxEscolhido < 0) {
+          const palavras = limpo.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/);
+          for (const p of palavras) {
+            if (mapaExtenso[p]) {
+              idxEscolhido = mapaExtenso[p] - 1;
+              break;
+            }
           }
+        }
+        if (idxEscolhido >= 0 && idxEscolhido < opcoes.length) {
+          codigoEscolhido = opcoes[idxEscolhido].codigo;
+          aliquotaEscolhida = opcoes[idxEscolhido].aliquotaIss;
+          issRetidoEscolhido = opcoes[idxEscolhido].issRetido;
         }
 
         // 1b. Ou digitou/falou um código de serviço diretamente (ex.: "17.01.01", "07.02", "170101")
@@ -348,12 +365,33 @@ export async function processarComandoNfseWhatsApp(params: {
           }
         }
 
+        // 1c. Ou falou/escreveu parte da descrição do serviço do menu (ex.: "o de consultoria", "manutenção")
+        if (!codigoEscolhido && opcoes.length > 0) {
+          const tokens = limpo
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .split(/[^a-z0-9]+/)
+            .filter((t) => t.length >= 4 && !['codigo', 'servico', 'emitir', 'nota', 'opcao', 'pode', 'usar', 'esse', 'essa'].includes(t));
+          if (tokens.length > 0) {
+            const matchDesc = opcoes.find((o) => {
+              const descNorm = o.descricao.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              return tokens.some((t) => descNorm.includes(t));
+            });
+            if (matchDesc) {
+              codigoEscolhido = matchDesc.codigo;
+              aliquotaEscolhida = matchDesc.aliquotaIss;
+              issRetidoEscolhido = matchDesc.issRetido;
+            }
+          }
+        }
+
         if (!codigoEscolhido) {
           await params.enviarMensagem(
             params.sendJid,
             opcoes.length > 0
-              ? `Não entendi o código escolhido. Responda com o *número da opção* (1 a ${opcoes.length}) ou digite o *código de serviço* (ex.: 17.01.01). Para cancelar, responda *NÃO*.`
-              : `Informe o *código de serviço* desejado (ex.: 17.01.01 ou 07.02.01). Para cancelar, responda *NÃO*.`
+              ? `Não entendi qual serviço escolher. Você pode responder o *número do menu* (1 a ${opcoes.length}), digitar o *código* (ex.: 17.01.01) ou falar/escrever o *nome do serviço*. Para cancelar, responda *NÃO*.`
+              : `Informe o *código de serviço* desejado por texto ou áudio (ex.: 17.01.01 ou 07.02.01). Para cancelar, responda *NÃO*.`
           );
           return true;
         }
@@ -741,13 +779,13 @@ export async function processarComandoNfseWhatsApp(params: {
         '',
         ...(linhasOpcoes.length > 0
           ? [
-              `Códigos utilizados pela empresa:`,
+              `Menu de serviços da empresa:`,
               ...linhasOpcoes,
               '',
-              `👉 Responda com o *número da opção* (ex.: *1*) ou digite o *código de serviço* desejado (ex.: *17.01.01*). Para cancelar, responda *NÃO*.${assinatura}`,
+              `👉 Responda pelo *menu* (ex.: *1*), digite o *código* (ex.: *17.01.01*) ou mande por *áudio/escrito* (ex.: "opção um" ou "o de consultoria"). Para cancelar, responda *NÃO*.${assinatura}`,
             ]
           : [
-              `👉 Responda informando o *código de serviço* desejado (ex.: *17.01.01* ou *07.02.01*). Para cancelar, responda *NÃO*.${assinatura}`,
+              `👉 Responda por *texto ou áudio* informando o *código de serviço* desejado (ex.: *17.01.01* ou *07.02.01*). Para cancelar, responda *NÃO*.${assinatura}`,
             ]),
       ].join('\n')
     );
