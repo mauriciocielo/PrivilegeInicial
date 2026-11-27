@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import SaasEscritoriosNfseTab from '../../../components/SaasEscritoriosNfseTab';
+import SaasAssinantesPfTab from '../../../components/SaasAssinantesPfTab';
 
 const ALL_MODULES = [
   { id: 'fiscal', label: 'Emissão NFS-e' },
@@ -98,7 +99,7 @@ function fmtBRL(v: number) {
 }
 
 export default function SaasBackofficePage() {
-  const [activeTab, setActiveTab] = useState<'cadastros' | 'movimentacoes' | 'contadores'>('cadastros');
+  const [activeTab, setActiveTab] = useState<'cadastros' | 'movimentacoes' | 'contadores' | 'financas_pf'>('cadastros');
   const [tenants, setTenants] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
   const [availableEmpresas, setAvailableEmpresas] = useState<any[]>([]);
@@ -499,9 +500,18 @@ export default function SaasBackofficePage() {
         >
           <Users size={15} /> Contadores Terceiros (NFS-e)
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('financas_pf')}
+          className={activeTab === 'financas_pf' ? 'btn btn-primary' : 'btn btn-secondary'}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', fontSize: 13.5 }}
+        >
+          <Zap size={15} /> Assinantes PF (Finanças)
+        </button>
       </div>
 
       {activeTab === 'contadores' && <SaasEscritoriosNfseTab />}
+      {activeTab === 'financas_pf' && <SaasAssinantesPfTab />}
 
       {/* ABA 1: CADASTROS SAAS */}
       {activeTab === 'cadastros' && (

@@ -68,6 +68,7 @@ const AVAILABLE_SCREENS = [
 ];
 
 const AVAILABLE_CLIENT_SCREENS = [
+  { label: 'Minhas Finanças Pessoais (PF)', route: '/cliente/financas-pessoais' },
   { label: 'Dashboard', route: '/cliente/dashboard' },
   { label: 'Dashboard 2 (Fiscal & CNDs)', route: '/cliente/dashboard2' },
   { label: 'NFS-e / Emissão', route: '/cliente/nfse' },

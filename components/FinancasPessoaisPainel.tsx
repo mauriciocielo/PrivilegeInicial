@@ -389,9 +389,98 @@ export default function FinancasPessoaisPainel() {
   };
 
   return (
-    <div className="page-body" style={{ padding: '24px 32px', background: '#f8fafc', minHeight: '100%' }}>
+    <div className="page-body fp-shell" style={{ padding: '24px 32px', background: '#f8fafc', minHeight: '100%' }}>
+      <style jsx global>{`
+        .fp-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 18px;
+          flex-wrap: wrap;
+        }
+        .fp-tabs::-webkit-scrollbar {
+          height: 4px;
+        }
+        .fp-tabs::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 99px;
+        }
+        .fp-shell .table-wrap {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        @media (max-width: 768px) {
+          .fp-shell {
+            padding: 14px 12px 72px !important;
+          }
+          .fp-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            margin-bottom: 14px !important;
+          }
+          .fp-header h1 {
+            font-size: 22px !important;
+          }
+          .fp-header-actions {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            width: 100%;
+          }
+          .fp-header-actions .fp-btn-full {
+            grid-column: 1 / -1 !important;
+            justify-content: center !important;
+            min-height: 42px;
+          }
+          .fp-header-actions .btn,
+          .fp-header-actions input {
+            width: 100% !important;
+            justify-content: center !important;
+            min-height: 40px;
+            font-size: 13px !important;
+          }
+          .fp-kpis {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+            margin-bottom: 14px !important;
+          }
+          .fp-kpis > div {
+            padding: 13px 12px !important;
+            border-radius: 13px !important;
+          }
+          .fp-kpis .fp-kpi-val {
+            font-size: 18px !important;
+          }
+          .fp-tabs {
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+            margin-left: -4px;
+            margin-right: -4px;
+            padding-left: 4px;
+            padding-right: 4px;
+          }
+          .fp-tabs > button {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            min-height: 40px;
+            font-size: 13px !important;
+          }
+          .fp-shell input,
+          .fp-shell select {
+            font-size: 16px !important;
+          }
+          .fp-modal-card {
+            max-height: 92vh !important;
+            border-radius: 14px !important;
+          }
+        }
+      `}</style>
+
       {/* Cabeçalho estilo App Digital */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 22 }}>
+      <div className="fp-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 22 }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent, #600000)' }}>
             Controle Financeiro Pessoal (PF) · Integrado ao WhatsApp
@@ -404,7 +493,7 @@ export default function FinancasPessoaisPainel() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className="fp-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <input
             type="month"
             className="form-control"
@@ -416,11 +505,11 @@ export default function FinancasPessoaisPainel() {
             <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
           </button>
           <label
-            className="btn btn-secondary"
+            className="btn btn-secondary fp-btn-full"
             style={{ borderRadius: 10, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0 }}
-            title="Importar e conciliar extrato bancário pessoal (OFX ou CSV) sem duplicar"
+            title="Importar e conciliar extrato bancário pessoal (OFX ou CSV) com IA sem duplicar"
           >
-            <Upload size={14} /> {importandoExtrato ? 'Conciliando...' : 'Importar Extrato (OFX/CSV)'}
+            <Upload size={14} /> {importandoExtrato ? 'Analisando com IA...' : 'Conciliar Extrato IA (OFX/CSV)'}
             <input type="file" accept=".ofx,.csv,.txt" onChange={handleImportarExtrato} style={{ display: 'none' }} disabled={importandoExtrato} />
           </label>
           <button
@@ -433,7 +522,7 @@ export default function FinancasPessoaisPainel() {
           </button>
           <button
             type="button"
-            className="btn"
+            className="btn fp-btn-full"
             onClick={() => setModalNovo(true)}
             style={{ background: 'var(--accent, #600000)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
@@ -443,26 +532,26 @@ export default function FinancasPessoaisPainel() {
       </div>
 
       {/* 4 Cards Principais */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 22 }}>
+      <div className="fp-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 22 }}>
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#15803d' }}>
             <ArrowUpCircle size={15} /> Entrou ({mes})
           </div>
-          <div style={{ fontSize: 25, fontWeight: 800, color: '#15803d', marginTop: 6 }}>{fmt.currency(resumo.entrou)}</div>
+          <div className="fp-kpi-val" style={{ fontSize: 25, fontWeight: 800, color: '#15803d', marginTop: 6 }}>{fmt.currency(resumo.entrou)}</div>
         </div>
 
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#b91c1c' }}>
             <ArrowDownCircle size={15} /> Saiu ({mes})
           </div>
-          <div style={{ fontSize: 25, fontWeight: 800, color: '#b91c1c', marginTop: 6 }}>{fmt.currency(resumo.saiu)}</div>
+          <div className="fp-kpi-val" style={{ fontSize: 25, fontWeight: 800, color: '#b91c1c', marginTop: 6 }}>{fmt.currency(resumo.saiu)}</div>
         </div>
 
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
             <Wallet size={15} /> Saldo do Mês
           </div>
-          <div style={{ fontSize: 25, fontWeight: 800, color: resumo.saldo >= 0 ? '#0f172a' : '#b91c1c', marginTop: 6 }}>
+          <div className="fp-kpi-val" style={{ fontSize: 25, fontWeight: 800, color: resumo.saldo >= 0 ? '#0f172a' : '#b91c1c', marginTop: 6 }}>
             {fmt.currency(resumo.saldo)}
           </div>
         </div>
@@ -471,7 +560,7 @@ export default function FinancasPessoaisPainel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#166534' }}>
             <ShieldCheck size={15} /> Dedutíveis IRPF ({mes.slice(0, 4)})
           </div>
-          <div style={{ fontSize: 25, fontWeight: 800, color: '#15803d', marginTop: 6 }}>
+          <div className="fp-kpi-val" style={{ fontSize: 25, fontWeight: 800, color: '#15803d', marginTop: 6 }}>
             {fmt.currency(resumo.totalDedutivelAno)}
           </div>
           <div style={{ fontSize: 11.5, color: '#166534', marginTop: 2 }}>Saúde, Educação e Previdência</div>
@@ -507,7 +596,7 @@ export default function FinancasPessoaisPainel() {
       </div>
 
       {/* Abas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="fp-tabs">
         <button
           type="button"
           onClick={() => setAba('geral')}
@@ -908,6 +997,7 @@ export default function FinancasPessoaisPainel() {
           onClick={() => !confirmandoExtrato && setPreviewExtrato(null)}
         >
           <div
+            className="fp-modal-card"
             style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 1020, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1099,7 +1189,7 @@ export default function FinancasPessoaisPainel() {
           style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={() => setModalNovo(false)}
         >
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+          <div className="fp-modal-card" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Novo Lançamento Pessoal</h3>
               <button type="button" onClick={() => setModalNovo(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
