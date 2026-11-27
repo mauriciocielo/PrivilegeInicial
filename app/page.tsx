@@ -176,10 +176,11 @@ export default function HomePage() {
           </Link>
           <div className="nav-links">
             <a href="#solucoes" className="nav-link">Serviços</a>
+            <Link href="/financas-pessoais" className="nav-link" style={{ color: 'var(--accent)', fontWeight: 700 }}>Finanças Pessoais</Link>
             <a href="#quem-somos" className="nav-link">Quem Somos</a>
             <a href="#cnds" className="nav-link">Certidões</a>
             <a href="#faq" className="nav-link">Dúvidas</a>
-            <Link href="/agendar" className="nav-link" style={{ color: 'var(--accent)', fontWeight: 700 }}>Agendar Reunião</Link>
+            <Link href="/agendar" className="nav-link">Agendar Reunião</Link>
             <Link href="/contato" className="nav-link">Contato</Link>
             <Link href="/login" className="client-btn">Área do Cliente</Link>
           </div>
@@ -289,6 +290,54 @@ export default function HomePage() {
                 Ver Soluções para o Agro <ArrowRight size={14} />
               </span>
             </Link>
+          </div>
+
+          {/* Destaque Controle de Finanças Pessoais (PF) */}
+          <div
+            style={{
+              marginTop: 22,
+              background: '#ffffff',
+              border: '1px solid var(--border)',
+              borderLeft: '5px solid var(--accent)',
+              borderRadius: 18,
+              padding: '28px 32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 24,
+              boxShadow: '0 8px 24px -12px rgba(20,20,22,0.08)',
+            }}
+          >
+            <div style={{ flex: '1 1 420px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <span className="hub-tag" style={{ marginBottom: 0 }}>Novo · Pessoa Física (PF)</span>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: 'rgba(21,128,61,0.09)', color: '#15803d' }}>
+                  7 dias grátis · R$ 29,90/mês
+                </span>
+              </div>
+              <h3 style={{ fontSize: 24, margin: '0 0 8px', color: '#111113' }}>
+                Controle de Finanças Pessoais pelo WhatsApp + IA
+              </h3>
+              <p style={{ fontSize: 15.5, color: 'var(--text-light)', margin: '0 0 14px', lineHeight: 1.55 }}>
+                Organize sua vida financeira pessoal separada da empresa: lance gastos por áudio, texto ou foto de cupom no WhatsApp, concilie seu extrato bancário com IA, acompanhe cartões, investimentos, rendimentos e guarde seus recibos em PDF prontos na <strong>Pasta do IRPF</strong>.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13.5, fontWeight: 600, color: '#3f3f46' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle2 size={15} color="var(--accent)" /> Áudio e Foto no WhatsApp</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle2 size={15} color="var(--accent)" /> Conciliação de Extrato com IA</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle2 size={15} color="var(--accent)" /> Investimentos & Rendimentos</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle2 size={15} color="var(--accent)" /> Pasta IRPF com PDF</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', flexShrink: 0 }}>
+              <Link href="/financas-pessoais" className="hero-btn" style={{ padding: '14px 26px', fontSize: 15 }}>
+                Conhecer e Testar Grátis <ArrowRight size={17} />
+              </Link>
+              <span style={{ fontSize: 12.5, color: 'var(--text-light)' }}>
+                Acesso imediato no celular e computador · Sem cartão agora
+              </span>
+            </div>
           </div>
         </section>
 
