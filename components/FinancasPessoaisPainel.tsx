@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  Brain,
   CheckCircle2,
   Clock,
+  CreditCard,
   Download,
   FileSpreadsheet,
   MessageSquare,
@@ -15,6 +17,8 @@ import {
   ShieldCheck,
   Target,
   Trash2,
+  TrendingUp,
+  Upload,
   Wallet,
   X,
 } from 'lucide-react';
@@ -23,6 +27,12 @@ import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { fmt } from '../lib/reports';
 import { confirmAsync } from './ConfirmProvider';
+import {
+  CartoesDividasTab,
+  InvestimentosWealthTab,
+  RelatoriosConsultorIaTab,
+  useWealthData,
+} from './FinancasPessoaisWealthTabs';
 
 const CATEGORIAS = [
   'Alimentação',
@@ -66,7 +76,9 @@ interface MetaPf {
 
 export default function FinancasPessoaisPainel() {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
-  const [aba, setAba] = useState<'geral' | 'irpf'>('geral');
+  const [aba, setAba] = useState<'geral' | 'cartoes' | 'investimentos' | 'relatorios' | 'irpf'>('geral');
+  const [importandoExtrato, setImportandoExtrato] = useState(false);
+  const { data: wealthData, recarregar: recarregarWealth } = useWealthData(mes);
   const [carregando, setCarregando] = useState(true);
   const [whatsappVinculado, setWhatsappVinculado] = useState(false);
   const [telefone, setTelefone] = useState<string | null>(null);
@@ -193,6 +205,35 @@ export default function FinancasPessoaisPainel() {
     carregar(mes);
   };
 
+  const handleImportarExtrato = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportandoExtrato(true);
+    try {
+      const conteudo = await file.text();
+      const res = await fetch('/api/financas-pessoais/importar-extrato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conteudo, nomeArquivo: file.name }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Não foi possível conciliar o extrato.');
+        return;
+      }
+      toast.success(
+        `Extrato conciliado! ${d.importados} novo(s) lançamento(s) · ${d.duplicados} já existente(s) pulado(s)${d.irpfDetectados ? ` · ${d.irpfDetectados} dedutível(is) IRPF` : ''}.`
+      );
+      carregar(mes);
+      recarregarWealth();
+    } catch {
+      toast.error('Erro ao ler arquivo de extrato.');
+    } finally {
+      setImportandoExtrato(false);
+    }
+  };
+
   const handleExportarIrpfExcel = () => {
     const ano = mes.slice(0, 4);
     const linhas = dedutiveisIrpf.map((d) => ({
@@ -238,6 +279,14 @@ export default function FinancasPessoaisPainel() {
           <button type="button" className="btn btn-secondary" onClick={() => carregar(mes)} style={{ borderRadius: 10 }}>
             <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
           </button>
+          <label
+            className="btn btn-secondary"
+            style={{ borderRadius: 10, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0 }}
+            title="Importar e conciliar extrato bancário pessoal (OFX ou CSV) sem duplicar"
+          >
+            <Upload size={14} /> {importandoExtrato ? 'Conciliando...' : 'Importar Extrato (OFX/CSV)'}
+            <input type="file" accept=".ofx,.csv,.txt" onChange={handleImportarExtrato} style={{ display: 'none' }} disabled={importandoExtrato} />
+          </label>
           <button
             type="button"
             className="btn btn-secondary"
@@ -322,7 +371,7 @@ export default function FinancasPessoaisPainel() {
       </div>
 
       {/* Abas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setAba('geral')}
@@ -332,7 +381,7 @@ export default function FinancasPessoaisPainel() {
             border: 'none',
             cursor: 'pointer',
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 13.5,
             background: aba === 'geral' ? 'var(--accent, #600000)' : '#e2e8f0',
             color: aba === 'geral' ? '#fff' : '#334155',
             display: 'inline-flex',
@@ -340,7 +389,64 @@ export default function FinancasPessoaisPainel() {
             gap: 6,
           }}
         >
-          <PiggyBank size={15} /> Visão Geral & Lançamentos ({lancamentos.length})
+          <PiggyBank size={15} /> Gastos & Extrato ({lancamentos.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setAba('cartoes')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13.5,
+            background: aba === 'cartoes' ? 'var(--accent, #600000)' : '#e2e8f0',
+            color: aba === 'cartoes' ? '#fff' : '#334155',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <CreditCard size={15} /> Cartões & Dívidas ({(wealthData?.cartoes.length || 0) + (wealthData?.dividas.length || 0)})
+        </button>
+        <button
+          type="button"
+          onClick={() => setAba('investimentos')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13.5,
+            background: aba === 'investimentos' ? 'var(--accent, #600000)' : '#e2e8f0',
+            color: aba === 'investimentos' ? '#fff' : '#334155',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <TrendingUp size={15} /> Investimentos, Bolsa, Day Trade & Consórcios ({wealthData?.patrimonio.length || 0})
+        </button>
+        <button
+          type="button"
+          onClick={() => setAba('relatorios')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13.5,
+            background: aba === 'relatorios' ? 'var(--accent, #600000)' : '#e2e8f0',
+            color: aba === 'relatorios' ? '#fff' : '#334155',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Brain size={15} /> Relatórios & Consultor IA
         </button>
         <button
           type="button"
@@ -351,7 +457,7 @@ export default function FinancasPessoaisPainel() {
             border: 'none',
             cursor: 'pointer',
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 13.5,
             background: aba === 'irpf' ? '#15803d' : '#e2e8f0',
             color: aba === 'irpf' ? '#fff' : '#334155',
             display: 'inline-flex',
@@ -359,7 +465,7 @@ export default function FinancasPessoaisPainel() {
             gap: 6,
           }}
         >
-          <FileSpreadsheet size={15} /> Pasta IRPF — Dedutíveis ({dedutiveisIrpf.length})
+          <FileSpreadsheet size={15} /> Pasta IRPF ({dedutiveisIrpf.length})
         </button>
       </div>
 
@@ -506,6 +612,12 @@ export default function FinancasPessoaisPainel() {
             )}
           </div>
         </>
+      ) : aba === 'cartoes' ? (
+        <CartoesDividasTab wealth={wealthData} onAtualizado={recarregarWealth} />
+      ) : aba === 'investimentos' ? (
+        <InvestimentosWealthTab wealth={wealthData} onAtualizado={recarregarWealth} />
+      ) : aba === 'relatorios' ? (
+        <RelatoriosConsultorIaTab wealth={wealthData} mes={mes} />
       ) : (
         /* Pasta Dedutíveis IRPF */
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20 }}>
