@@ -15,6 +15,7 @@ import {
   apenasDigitos,
   hojeBrasilia,
   idDps,
+  montarCancelamento,
   montarDps,
   validarEmissao,
   type AmbienteNfse,
@@ -22,10 +23,10 @@ import {
 } from './dps';
 import { abrirCredencial, configFiscal, resumirErros } from './servidor';
 import { assinarXml } from './assinatura';
-import { criarTransporteMtls, emitirNfse } from './sefin';
+import { criarTransporteMtls, emitirNfse, registrarEvento } from './sefin';
 import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } from './danfse';
-import { obterBrandingDaEmpresa } from './escritorios-terceiros';
-import { enviarEmailNfseEmitida } from './enviar-email-nfse';
+import { obterBrandingDaEmpresa, idsEmpresasDoEscritorio, obterEscritorioDoUsuario } from './escritorios-terceiros';
+import { enviarEmailNfseCancelada, enviarEmailNfseEmitida } from './enviar-email-nfse';
 import { registrarAuditoriaEscritorio } from '../escritorio-recursos';
 import { generateText } from '../ai-provider';
 
@@ -62,9 +63,67 @@ function parseValorMonetario(texto: string): number {
 export interface PedidoEmissaoWhatsApp {
   valor: number;
   tomadorBusca: string;
+  prestadorBusca?: string;
   documento?: string;
   email?: string;
   descricao: string;
+}
+
+const DESCRICAO_LC116_CURTA: Record<string, string> = {
+  '0101': 'Análise e desenvolvimento de sistemas',
+  '0107': 'Suporte técnico em informática',
+  '0702': 'Execução de obras e construção civil',
+  '0802': 'Instrução, treinamento e ensino',
+  '1005': 'Agenciamento e intermediação de serviços',
+  '1401': 'Manutenção e conservação de máquinas/equipamentos',
+  '1701': 'Assessoria ou consultoria de qualquer natureza',
+  '1702': 'Apoio administrativo e datilografia',
+  '1712': 'Administração e serviços de escritório',
+  '1719': 'Contabilidade e auditoria',
+  '1720': 'Consultoria e assessoria econômica ou financeira',
+  '2401': 'Serviços de chaveiro e confecção de chaves',
+};
+
+function formatarCodigoServico(cod: string): string {
+  const d = apenasDigitos(cod);
+  if (d.length === 6) return `${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4, 6)}`;
+  if (d.length === 4) return `${d.slice(0, 2)}.${d.slice(2, 4)}`;
+  return cod.trim();
+}
+
+function limparDescricaoMenu(cod: string, descOriginal?: string): string {
+  const d4 = apenasDigitos(cod).slice(0, 4);
+  if (DESCRICAO_LC116_CURTA[d4]) return DESCRICAO_LC116_CURTA[d4];
+  const limpa = String(descOriginal || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\bchave\s*pix\s*:.*$/i, '')
+    .replace(/\bid\s*opera[cç][aã]o\s*:.*$/i, '')
+    .replace(/\bref(?:erente)?\.?\s*(?:a\s+)?(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|[0-9]{2}\/[0-9]{4}).*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (limpa || 'Serviço cadastrado').slice(0, 52);
+}
+
+function extrairPrestadorTexto(texto: string): string {
+  const mLabel = texto.match(/\b(?:prestador|empresa\s+emissora|emissor)\s*[:=-]\s*([^\n]+)/i);
+  if (mLabel?.[1]) return mLabel[1].trim();
+  const mFrase = texto.match(/\b(?:pela\s+empresa|da\s+empresa|em\s+nome\s+da|pela)\s+([A-Za-zÀ-ÿ0-9 &.-]{3,45}?)(?=\s+(?:uma\s+nota|nota|nfse|de\s+r?\$?|no\s+valor|para|pro|pra)\b|[,\n]|$)/i);
+  return mFrase?.[1]?.trim() || '';
+}
+
+function interpretarComandoCancelamento(textoBruto: string): {
+  numero: string;
+  motivo: string;
+  prestadorBusca?: string;
+} | null {
+  const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
+  const m = limpo.match(/\b(?:cancel[ae]r?)\s+(?:a\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?)\s*(?:n[º°o.]?\s*)?(\d{1,12})\b/i);
+  if (!m) return null;
+  const numero = m[1];
+  const mMotivo = limpo.match(/\b(?:motivo|por|porque|justificativa)\s*[:=-]?\s*(.+)$/i);
+  const motivo = (mMotivo?.[1] || 'Erro na emissão da nota fiscal de serviço').trim();
+  const prestadorBusca = extrairPrestadorTexto(limpo) || undefined;
+  return { numero, motivo: motivo.length >= 15 ? motivo : `${motivo} — cancelamento solicitado via WhatsApp`, prestadorBusca };
 }
 
 function extrairDocumentoTexto(texto: string): string {
@@ -108,10 +167,12 @@ export function interpretarFichaEscritaNfse(textoBruto: string): PedidoEmissaoWh
 
   const tomadorBusca = nome || documento;
   if (!tomadorBusca) return null;
+  const prestadorBusca = extrairPrestadorTexto(limpo) || undefined;
 
   return {
     valor: Math.round(valor * 100) / 100,
     tomadorBusca,
+    prestadorBusca,
     documento: documento || undefined,
     email: email || undefined,
     descricao,
@@ -142,9 +203,11 @@ export function interpretarComandoEmissaoNfse(textoBruto: string): PedidoEmissao
   const descricao = (mDesc?.[1] || '').trim();
 
   if (!tomadorBusca) return null;
+  const prestadorBusca = extrairPrestadorTexto(limpo) || undefined;
   return {
     valor: Math.round(valor * 100) / 100,
     tomadorBusca,
+    prestadorBusca,
     documento: documento || undefined,
     email: email || undefined,
     descricao,
@@ -221,7 +284,12 @@ async function consultarRazaoReceitaCnpj(cnpj14: string): Promise<{ razaoSocial:
   );
 }
 
-async function localizarEmpresaPorChat(rawJid: string, cleanPhone: string, isGroup: boolean) {
+async function localizarEmpresaPorChat(
+  rawJid: string,
+  cleanPhone: string,
+  isGroup: boolean,
+  prestadorBusca?: string
+) {
   if (isGroup) {
     try {
       const rows = await db.$queryRawUnsafe<Array<{ empresa_id: string }>>(
@@ -246,15 +314,36 @@ async function localizarEmpresaPorChat(rawJid: string, cleanPhone: string, isGro
     where: { nfseConfig: { isNot: null } },
     include: { nfseConfig: true },
   });
-  const porTelefoneEmpresa = candidatas.find((e) => apenasDigitos(e.telefone).endsWith(ult8));
-  if (porTelefoneEmpresa) return porTelefoneEmpresa;
 
-  // Fallback: verifica se o telefone pertence a um usuário cadastrado (cliente, contador parceiro ou administrador)
+  // Se o remetente é um usuário (admin ou contador parceiro) e informou "pela empresa X", busca na carteira dele!
   const usuarios = await db.user.findMany({
     where: { phone: { not: null } },
     select: { id: true, role: true, phone: true, empresaIds: true },
   });
   const usuario = usuarios.find((u) => apenasDigitos(u.phone || '').endsWith(ult8));
+
+  if (usuario && prestadorBusca) {
+    const q = prestadorBusca.toLowerCase().trim();
+    const qDig = apenasDigitos(prestadorBusca);
+    let permitidas = candidatas;
+    if (usuario.role !== 'administrador') {
+      const vinculo = await obterEscritorioDoUsuario(usuario.id);
+      const idsEsc = vinculo ? await idsEmpresasDoEscritorio(vinculo.escritorioId) : [];
+      const setPerm = new Set([...(usuario.empresaIds || []), ...idsEsc]);
+      permitidas = candidatas.filter((e) => setPerm.has(e.id));
+    }
+    const escolhida = permitidas.find(
+      (e) =>
+        (qDig.length === 14 && apenasDigitos(e.cnpj) === qDig) ||
+        e.razaoSocial.toLowerCase().includes(q) ||
+        (e.nomeFantasia || '').toLowerCase().includes(q)
+    );
+    if (escolhida) return escolhida;
+  }
+
+  const porTelefoneEmpresa = candidatas.find((e) => apenasDigitos(e.telefone).endsWith(ult8));
+  if (porTelefoneEmpresa) return porTelefoneEmpresa;
+
   if (!usuario) return null;
 
   if (Array.isArray(usuario.empresaIds) && usuario.empresaIds.length > 0) {
@@ -325,7 +414,10 @@ export async function processarComandoNfseWhatsApp(params: {
       }
 
       const dadosSalvos = rascunho.dados_json as {
-        etapa?: 'escolher_servico' | 'confirmar';
+        etapa?: 'escolher_servico' | 'confirmar' | 'confirmar_cancelamento';
+        notaId?: string;
+        numeroNota?: string;
+        motivoCancelamento?: string;
         empresaId: string;
         empresaNome?: string;
         tomadorNome: string;
@@ -339,6 +431,89 @@ export async function processarComandoNfseWhatsApp(params: {
         issRetido: boolean;
         opcoesServico?: Array<{ codigo: string; descricao: string; aliquotaIss: number; issRetido: boolean }>;
       };
+
+      // Confirmação de CANCELAMENTO de NFS-e via WhatsApp
+      if (dadosSalvos.etapa === 'confirmar_cancelamento' && ehConfirmacao && dadosSalvos.notaId) {
+        await db.$executeRawUnsafe(`DELETE FROM nfse_whatsapp_rascunhos WHERE jid = $1`, params.sendJid);
+        const nota = await db.nfsE.findUnique({
+          where: { id: dadosSalvos.notaId },
+          include: { documento: true },
+        });
+        if (!nota || !nota.chaveAcesso || nota.status === 'cancelada') {
+          await params.enviarMensagem(params.sendJid, '⚠️ Esta nota não pode ser cancelada ou já está cancelada.');
+          return true;
+        }
+        const cfg = await db.nfseConfig.findUnique({ where: { empresaId: nota.empresaId } });
+        if (!cfg) {
+          await params.enviarMensagem(params.sendJid, '⚠️ Configuração fiscal da empresa não encontrada.');
+          return true;
+        }
+        const aberta = await abrirCredencial(cfg);
+        if ('erro' in aberta) {
+          await params.enviarMensagem(params.sendJid, `⚠️ Certificado indisponível: ${aberta.erro}`);
+          return true;
+        }
+        const ambiente = (nota.ambiente === 'producao' ? 'producao' : 'homologacao') as AmbienteNfse;
+        const justificativa = dadosSalvos.motivoCancelamento || 'Erro na emissão da nota fiscal de serviço';
+        const pedido = montarCancelamento({
+          chave: nota.chaveAcesso,
+          cnpjAutor: nota.prestadorCnpj,
+          motivo: 1,
+          justificativa,
+          ambiente,
+          modo: 'direto',
+        });
+        const assinado = assinarXml(pedido.xml, 'infPedReg', pedido.id, aberta.credencial);
+        const resCanc = await registrarEvento(criarTransporteMtls(ambiente, aberta.credencial), nota.chaveAcesso, assinado);
+
+        if (!resCanc.ok && !resCanc.erros.some((e) => e.codigo === 'E0840')) {
+          const msgErro = resumirErros(resCanc.erros, resCanc.mensagem, cfg.usarProcuracao);
+          await params.enviarMensagem(params.sendJid, `❌ Não foi possível cancelar no Sefin Nacional:\n${msgErro}`);
+          return true;
+        }
+
+        const motivoFinal = `Erro na emissão: ${justificativa}`;
+        await db.nfsE.update({
+          where: { id: nota.id },
+          data: {
+            status: 'cancelada',
+            motivoCancelamento: motivoFinal,
+            cancelamentoEmAnalise: false,
+            ...(resCanc.ok ? { documento: { update: { eventoXml: resCanc.eventoXml } } } : {}),
+          },
+        });
+
+        await registrarAuditoriaEscritorio({
+          userId: 'whatsapp-bot',
+          userNome: `WhatsApp (${params.cleanPhone})`,
+          acao: 'nfse_cancelada',
+          empresaId: nota.empresaId,
+          empresaNome: nota.prestadorRazaoSocial,
+          detalhes: `Cancelou NFS-e nº ${nota.numero} via WhatsApp (${motivoFinal})`,
+        });
+
+        enviarEmailNfseCancelada({
+          empresaId: nota.empresaId,
+          numero: nota.numero,
+          dataEmissao: nota.dataEmissao,
+          prestadorNome: nota.prestadorRazaoSocial,
+          tomadorNome: nota.tomadorRazaoSocial,
+          tomadorDocumento: nota.tomadorCnpjCpf,
+          tomadorEmail: nota.tomadorEmail,
+          valorLiquido: Number(nota.valorLiquido || nota.valorServicos || 0),
+          motivoCancelamento: motivoFinal,
+          chaveAcesso: nota.chaveAcesso,
+          nfseXml: nota.documento?.nfseXml || null,
+          eventoXml: resCanc.ok ? resCanc.eventoXml : null,
+          ambiente,
+        }).catch(() => {});
+
+        await params.enviarMensagem(
+          params.sendJid,
+          `✅ *NFS-e nº ${nota.numero} cancelada oficialmente!* O cliente também foi comunicado por e-mail.`
+        );
+        return true;
+      }
 
       // Etapa intermediária: aguardando o usuário escolher qual código de serviço emitir
       if (dadosSalvos.etapa === 'escolher_servico') {
@@ -625,7 +800,69 @@ export async function processarComandoNfseWhatsApp(params: {
       }
     }
 
-    // 2. Verifica se é um novo comando de emissão natural (ficha escrita, frase livre ou áudio transcrito)
+    // 2. Verifica se é um pedido de CANCELAMENTO de NFS-e via WhatsApp
+    const cmdCanc = interpretarComandoCancelamento(limpo);
+    if (cmdCanc) {
+      const empCanc = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup, cmdCanc.prestadorBusca);
+      if (!empCanc || !empCanc.nfseConfig) {
+        await params.enviarMensagem(params.sendJid, '⚠️ Não identifiquei a empresa emissora vinculada a este WhatsApp.');
+        return true;
+      }
+      const notaAlvo = await db.nfsE.findFirst({
+        where: { empresaId: empCanc.id, numero: cmdCanc.numero, status: 'emitida' },
+        orderBy: { dataEmissao: 'desc' },
+      });
+      if (!notaAlvo) {
+        await params.enviarMensagem(
+          params.sendJid,
+          `⚠️ Não encontrei a NFS-e nº *${cmdCanc.numero}* com status emitida em *${empCanc.nomeFantasia || empCanc.razaoSocial}*.`
+        );
+        return true;
+      }
+      await ensureRascunhosTable();
+      const expCanc = new Date(Date.now() + 15 * 60 * 1000);
+      await db.$executeRawUnsafe(
+        `INSERT INTO nfse_whatsapp_rascunhos (jid, empresa_id, dados_json, expires_at, created_at)
+         VALUES ($1, $2, $3::jsonb, $4, NOW())
+         ON CONFLICT (jid) DO UPDATE SET empresa_id = EXCLUDED.empresa_id, dados_json = EXCLUDED.dados_json, expires_at = EXCLUDED.expires_at`,
+        params.sendJid,
+        empCanc.id,
+        JSON.stringify({
+          etapa: 'confirmar_cancelamento',
+          notaId: notaAlvo.id,
+          numeroNota: notaAlvo.numero,
+          motivoCancelamento: cmdCanc.motivo,
+          empresaId: empCanc.id,
+          empresaNome: empCanc.nomeFantasia || empCanc.razaoSocial,
+          tomadorNome: notaAlvo.tomadorRazaoSocial,
+          tomadorDocumento: notaAlvo.tomadorCnpjCpf,
+          tomadorEmail: notaAlvo.tomadorEmail,
+          codigoServico: notaAlvo.codigoServico,
+          municipioPrestacao: notaAlvo.municipioPrestacao || '',
+          descricao: notaAlvo.discriminacao,
+          valorServicos: notaAlvo.valorServicos,
+          aliquotaIss: notaAlvo.aliquotaIss,
+          issRetido: notaAlvo.issRetido,
+        }),
+        expCanc
+      );
+      await params.enviarMensagem(
+        params.sendJid,
+        [
+          `⚠️ *Confirmar CANCELAMENTO da NFS-e nº ${notaAlvo.numero}?*`,
+          '',
+          `• *Prestador:* ${empCanc.nomeFantasia || empCanc.razaoSocial}`,
+          `• *Tomador:* ${notaAlvo.tomadorRazaoSocial}`,
+          `• *Valor:* ${fmtBRL(notaAlvo.valorServicos)}`,
+          `• *Motivo:* ${cmdCanc.motivo}`,
+          '',
+          `👉 Responda *SIM* para cancelar oficialmente no Sefin Nacional ou *NÃO* para desistir.`,
+        ].join('\n')
+      );
+      return true;
+    }
+
+    // 3. Verifica se é um novo comando de emissão natural (ficha escrita, frase livre ou áudio transcrito)
     const cmd = interpretarComandoEmissaoNfse(limpo) || (await interpretarComandoEmissaoComIA(limpo));
 
     // Se o cliente pediu para emitir nota mas ainda não passou os dados, envia o modelo pronto para preencher!
@@ -653,7 +890,7 @@ export async function processarComandoNfseWhatsApp(params: {
       return true;
     }
 
-    const empresa = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup);
+    const empresa = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup, cmd.prestadorBusca);
     if (!empresa || !empresa.nfseConfig) {
       await params.enviarMensagem(
         params.sendJid,
@@ -740,7 +977,7 @@ export async function processarComandoNfseWhatsApp(params: {
       if (!cod || mapaServicos.has(cod)) continue;
       mapaServicos.set(cod, {
         codigo: cod,
-        descricao: String(s?.descricao || s?.xDescServ || 'Serviço cadastrado').slice(0, 65),
+        descricao: limparDescricaoMenu(cod, s?.descricao || s?.xDescServ),
         aliquotaIss: Number(s?.aliquotaIss || aliquotaIss || 0),
         issRetido: Boolean(s?.issRetido),
       });
@@ -750,7 +987,7 @@ export async function processarComandoNfseWhatsApp(params: {
       if (!cod || mapaServicos.has(cod)) continue;
       mapaServicos.set(cod, {
         codigo: cod,
-        descricao: String(n.discriminacao || 'Serviço do histórico').replace(/\s+/g, ' ').slice(0, 65),
+        descricao: limparDescricaoMenu(cod, n.discriminacao),
         aliquotaIss: Number(n.aliquotaIss || 0),
         issRetido: Boolean(n.issRetido),
       });
@@ -789,7 +1026,7 @@ export async function processarComandoNfseWhatsApp(params: {
     const assinatura = branding ? `\n\n_${branding.nome}_` : '';
 
     const linhasOpcoes = opcoesServico.map(
-      (op, idx) => `*${idx + 1}* — \`${op.codigo}\` (${op.descricao})`
+      (op, idx) => `*${idx + 1}* — \`${formatarCodigoServico(op.codigo)}\` (${op.descricao})`
     );
 
     await params.enviarMensagem(
