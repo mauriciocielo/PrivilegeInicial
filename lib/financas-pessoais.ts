@@ -294,12 +294,33 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
   }
 
   // 4. Lançamento de Gasto ou Receita Pessoal por Texto, Áudio ou Foto!
-  const gatilhoGasto = /\b(gastei|paguei|comprei|despesa\s+pessoal|lan[cç]a(?:r)?\s+gasto|anota(?:r)?\s+gasto|passei\s+no\s+cart[aã]o|irpf|recibo|nota\s+m[eé]dica|dentista|escola|faculdade|plano\s+de\s+sa[uú]de)\b/i;
-  const gatilhoReceita = /\b(recebi|entrou\s+(?:r\$|\d)|ganhei|receita\s+pessoal|lan[cç]a(?:r)?\s+receita)\b/i;
+  // Verifica se o número pertence a um assinante PF cadastrado (para ser ainda mais permissivo com linguagem natural)
+  let ehAssinantePf = false;
+  try {
+    const ult8 = apenasDigitos(params.cleanPhone).slice(-8);
+    if (ult8.length === 8) {
+      const assin = await db.$queryRawUnsafe<Array<{ id: string }>>(
+        `SELECT id FROM financas_pessoais_assinaturas
+         WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 8) = $1
+            OR RIGHT(REGEXP_REPLACE(COALESCE(conjuge_phone, ''), '[^0-9]', '', 'g'), 8) = $1
+         LIMIT 1`,
+        ult8
+      );
+      ehAssinantePf = Boolean(assin[0]);
+    }
+  } catch {
+    // ignora se tabela ainda não existir
+  }
+
+  const gatilhoGasto = /\b(gastei|gasto|paguei|pagar|comprei|compra|abasteci|almocei|jantei|despesa|lan[cç]a(?:r)?|anota(?:r)?|registra(?:r)?|coloca(?:r)?|passei\s+no\s+cart[aã]o|no\s+pix|no\s+cr[eé]dito|no\s+d[eé]bito|irpf|recibo|nota\s+m[eé]dica|dentista|escola|faculdade|plano\s+de\s+sa[uú]de|mercado|supermercado|farm[aá]cia|posto|gasolina|almo[cç]o|jantar|uber|ifood|padaria)\b/i;
+  const gatilhoReceita = /\b(recebi|recebimento|entrou\s+(?:r\$|\d)|ganhei|sal[aá]rio|pr[oó]-?labore|freela|dividendo|rendimento|receita\s+pessoal|lan[cç]a(?:r)?\s+receita)\b/i;
+  const temValorNaFrase = /(?:r\$\s*\d|\b\d+(?:[.,]\d{1,2})?\s*(?:reais|real|conto|pila)\b|\b(?:dez|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|mil)\s+reais\b)/i.test(lower);
   const ehFotoComprovante = lower.includes('[análise da imagem enviada pelo cliente:') && /\b(pix|cupom|nota\s+fiscal|comprovante|pagamento|total|r\$|recibo|consulta|m[eé]dic|dentista|escola)\b/i.test(lower);
   const ehDocIrpf = Boolean(params.mediaUrl && /\b(irpf|imposto\s+de\s+renda|recibo|sa[uú]de|m[eé]dic|dentista|escola|faculdade|previd[eê]ncia)\b/i.test(lower));
 
-  if (!gatilhoGasto.test(lower) && !gatilhoReceita.test(lower) && !ehFotoComprovante && !ehDocIrpf) {
+  const podeSerLancamentoNatural = ehAssinantePf && (/\d/.test(lower) || temValorNaFrase);
+
+  if (!gatilhoGasto.test(lower) && !gatilhoReceita.test(lower) && !temValorNaFrase && !ehFotoComprovante && !ehDocIrpf && !podeSerLancamentoNatural) {
     return false;
   }
 

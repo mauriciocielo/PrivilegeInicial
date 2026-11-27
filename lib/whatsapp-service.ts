@@ -2026,7 +2026,15 @@ export async function processIncomingMessage(params: {
           text: cleanText,
           mediaUrl: params.mediaUrl || null,
           fileName: params.fileName || null,
-          enviarMensagem: (jid, msg) => sendBaileysLiveMessage(jid, msg, undefined, ownerId),
+          enviarMensagem: async (_jid, msg) => {
+            await dispatchBotReply({
+              chatId: params.chatId,
+              text: msg,
+              config,
+              isIncomingAudio,
+              ownerId,
+            });
+          },
         });
         if (tratadoPf) {
           return { source: 'ai' };
