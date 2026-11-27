@@ -49,7 +49,92 @@ export async function ensureFinancasAssinaturasTable() {
     `CREATE INDEX IF NOT EXISTS idx_fp_assin_email ON financas_pessoais_assinaturas(email)`
   );
 
+  // Colunas de cupom/valor de renovação (idempotente)
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS cupom_codigo TEXT NOT NULL DEFAULT ''`
+  );
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS valor_renovacao DOUBLE PRECISION NOT NULL DEFAULT 29.9`
+  );
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS financas_pessoais_cupons (
+      id TEXT PRIMARY KEY,
+      codigo TEXT UNIQUE NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'percentual',
+      valor DOUBLE PRECISION NOT NULL DEFAULT 0,
+      dias_trial_extra INTEGER NOT NULL DEFAULT 0,
+      limite_usos INTEGER,
+      usos_atuais INTEGER NOT NULL DEFAULT 0,
+      valido_ate TEXT,
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
   tabelaAssinaturasGarantida = true;
+}
+
+export async function validarCupomPf(codigoRaw: string, valorBase = 29.9): Promise<{
+  valido: boolean;
+  erro?: string;
+  codigo?: string;
+  tipo?: 'percentual' | 'fixo';
+  valorDescontoConfig?: number;
+  valorOriginal: number;
+  desconto: number;
+  valorFinal: number;
+  diasTrialExtra: number;
+}> {
+  await ensureFinancasAssinaturasTable();
+  const codigo = String(codigoRaw || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  if (!codigo) {
+    return { valido: false, erro: 'Informe um código de cupom.', valorOriginal: valorBase, desconto: 0, valorFinal: valorBase, diasTrialExtra: 0 };
+  }
+
+  const rows = await db.$queryRawUnsafe<any[]>(
+    `SELECT * FROM financas_pessoais_cupons WHERE codigo = $1 LIMIT 1`,
+    codigo
+  );
+  const c = rows[0];
+  if (!c || !c.ativo) {
+    return { valido: false, erro: 'Cupom inválido ou inativo.', valorOriginal: valorBase, desconto: 0, valorFinal: valorBase, diasTrialExtra: 0 };
+  }
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (c.valido_ate && String(c.valido_ate) < hoje) {
+    return { valido: false, erro: 'Este cupom já expirou.', valorOriginal: valorBase, desconto: 0, valorFinal: valorBase, diasTrialExtra: 0 };
+  }
+  if (c.limite_usos !== null && c.limite_usos !== undefined && Number(c.usos_atuais || 0) >= Number(c.limite_usos)) {
+    return { valido: false, erro: 'Este cupom atingiu o limite de usos.', valorOriginal: valorBase, desconto: 0, valorFinal: valorBase, diasTrialExtra: 0 };
+  }
+
+  const tipo: 'percentual' | 'fixo' = c.tipo === 'fixo' ? 'fixo' : 'percentual';
+  const valCfg = Math.max(0, Number(c.valor || 0));
+  const descontoBruto = tipo === 'percentual' ? valorBase * (Math.min(100, valCfg) / 100) : valCfg;
+  const desconto = Math.round(Math.min(valorBase, descontoBruto) * 100) / 100;
+  const valorFinal = Math.max(0, Math.round((valorBase - desconto) * 100) / 100);
+  const diasTrialExtra = Math.max(0, Number(c.dias_trial_extra || 0));
+
+  return {
+    valido: true,
+    codigo,
+    tipo,
+    valorDescontoConfig: valCfg,
+    valorOriginal: valorBase,
+    desconto,
+    valorFinal,
+    diasTrialExtra,
+  };
+}
+
+export async function consumirCupomPf(codigo: string) {
+  if (!codigo) return;
+  await ensureFinancasAssinaturasTable();
+  await db.$executeRawUnsafe(
+    `UPDATE financas_pessoais_cupons SET usos_atuais = usos_atuais + 1 WHERE codigo = $1`,
+    codigo.trim().toUpperCase()
+  );
 }
 
 export function normalizarTelefoneBr(tel: string): string {
@@ -130,6 +215,8 @@ export async function criarOuAtivarAssinantePf(params: {
   origem?: string;
   gateway?: string;
   externalId?: string;
+  cupomCodigo?: string;
+  valorRenovacao?: number;
   enviarWhatsapp?: boolean;
   appUrl?: string;
 }) {
@@ -195,14 +282,22 @@ export async function criarOuAtivarAssinantePf(params: {
   );
 
   let assinaturaId = existentes[0]?.id;
+  const cupomCodigo = String(params.cupomCodigo || '').trim().toUpperCase();
+  const valorRenovacao =
+    typeof params.valorRenovacao === 'number' && Number.isFinite(params.valorRenovacao)
+      ? Math.max(0, params.valorRenovacao)
+      : PLANOS_PF.mensal.valorMensal;
+
   if (assinaturaId) {
     await db.$executeRawUnsafe(
       `UPDATE financas_pessoais_assinaturas
        SET nome = $1, phone = $2, plano = $3, valor_mensal = $4, status = $5, valido_ate = $6,
            gateway = COALESCE(NULLIF($7, ''), gateway),
            external_id = COALESCE(NULLIF($8, ''), external_id),
+           cupom_codigo = COALESCE(NULLIF($9, ''), cupom_codigo),
+           valor_renovacao = CASE WHEN $10 >= 0 THEN $10 ELSE valor_renovacao END,
            updated_at = NOW()
-       WHERE id = $9`,
+       WHERE id = $11`,
       nome || user.name,
       phone || user.phone || '',
       planoKey,
@@ -211,14 +306,16 @@ export async function criarOuAtivarAssinantePf(params: {
       validoAte,
       params.gateway || '',
       params.externalId || '',
+      cupomCodigo,
+      typeof params.valorRenovacao === 'number' ? valorRenovacao : -1,
       assinaturaId
     );
   } else {
     assinaturaId = crypto.randomUUID();
     await db.$executeRawUnsafe(
       `INSERT INTO financas_pessoais_assinaturas
-        (id, user_id, nome, email, phone, plano, valor_mensal, status, valido_ate, origem, gateway, external_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+        (id, user_id, nome, email, phone, plano, valor_mensal, status, valido_ate, origem, gateway, external_id, cupom_codigo, valor_renovacao, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())`,
       assinaturaId,
       user.id,
       nome || user.name,
@@ -230,7 +327,9 @@ export async function criarOuAtivarAssinantePf(params: {
       validoAte,
       params.origem || 'painel',
       params.gateway || '',
-      params.externalId || ''
+      params.externalId || '',
+      cupomCodigo,
+      valorRenovacao
     );
   }
 

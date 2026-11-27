@@ -31,10 +31,32 @@ interface AssinantePf {
   gateway: string;
 }
 
+interface CupomPf {
+  id: string;
+  codigo: string;
+  tipo: 'percentual' | 'fixo';
+  valor: number;
+  diasTrialExtra: number;
+  limiteUsos: number | null;
+  usosAtuais: number;
+  validoAte: string | null;
+  ativo: boolean;
+}
+
 export default function SaasAssinantesPfTab() {
   const [carregando, setCarregando] = useState(true);
   const [kpis, setKpis] = useState({ total: 0, ativos: 0, emTrial: 0, expirados: 0, mrr: 0 });
   const [assinantes, setAssinantes] = useState<AssinantePf[]>([]);
+  const [cupons, setCupons] = useState<CupomPf[]>([]);
+
+  // Form Novo Cupom PF
+  const [cupomCodigo, setCupomCodigo] = useState('');
+  const [cupomTipo, setCupomTipo] = useState<'percentual' | 'fixo'>('percentual');
+  const [cupomValor, setCupomValor] = useState('20');
+  const [cupomDiasExtra, setCupomDiasExtra] = useState('0');
+  const [cupomLimite, setCupomLimite] = useState('');
+  const [cupomValidade, setCupomValidade] = useState('');
+  const [salvandoCupom, setSalvandoCupom] = useState(false);
 
   // Form Novo Assinante PF
   const [nome, setNome] = useState('');
@@ -48,11 +70,18 @@ export default function SaasAssinantesPfTab() {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const res = await fetch('/api/financas-pessoais/assinantes');
+      const [res, resCup] = await Promise.all([
+        fetch('/api/financas-pessoais/assinantes'),
+        fetch('/api/financas-pessoais/cupons'),
+      ]);
       const d = await res.json().catch(() => ({}));
+      const dc = await resCup.json().catch(() => ({}));
       if (res.ok) {
         setKpis(d.kpis || { total: 0, ativos: 0, emTrial: 0, expirados: 0, mrr: 0 });
         setAssinantes(Array.isArray(d.assinantes) ? d.assinantes : []);
+      }
+      if (resCup.ok) {
+        setCupons(Array.isArray(dc.cupons) ? dc.cupons : []);
       }
     } catch {
       toast.error('Erro ao carregar assinantes PF.');
@@ -60,6 +89,55 @@ export default function SaasAssinantesPfTab() {
       setCarregando(false);
     }
   }, []);
+
+  const handleCriarCupom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSalvandoCupom(true);
+    try {
+      const res = await fetch('/api/financas-pessoais/cupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: cupomCodigo,
+          tipo: cupomTipo,
+          valor: parseFloat(cupomValor.replace(',', '.')) || 0,
+          diasTrialExtra: Number(cupomDiasExtra) || 0,
+          limiteUsos: cupomLimite ? Number(cupomLimite) : null,
+          validoAte: cupomValidade || null,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao criar cupom.');
+        return;
+      }
+      toast.success(`Cupom ${d.codigo} criado!`);
+      setCupomCodigo('');
+      setCupomLimite('');
+      setCupomValidade('');
+      carregar();
+    } finally {
+      setSalvandoCupom(false);
+    }
+  };
+
+  const handleToggleCupom = async (c: CupomPf) => {
+    await fetch('/api/financas-pessoais/cupons', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: c.id, ativo: !c.ativo }),
+    });
+    toast.success(c.ativo ? `Cupom ${c.codigo} pausado.` : `Cupom ${c.codigo} ativado!`);
+    carregar();
+  };
+
+  const handleExcluirCupom = async (c: CupomPf) => {
+    const ok = await confirmAsync(`Excluir o cupom "${c.codigo}"?`);
+    if (!ok) return;
+    await fetch(`/api/financas-pessoais/cupons?id=${encodeURIComponent(c.id)}`, { method: 'DELETE' });
+    toast.success('Cupom excluído.');
+    carregar();
+  };
 
   useEffect(() => {
     carregar();
@@ -209,6 +287,141 @@ export default function SaasAssinantesPfTab() {
             Enviar automaticamente o link, login, senha e tutorial no WhatsApp do cliente
           </label>
         </form>
+      </div>
+
+      {/* Cupons de Desconto para a Página de Vendas PF */}
+      <div className="card" style={{ padding: 18 }}>
+        <div style={{ marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>
+            🏷️ Cupons de Desconto — Página de Vendas (/financas-pessoais)
+          </h3>
+          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+            Crie cupons em % ou R$ (e dias grátis extras). Você também pode divulgar já aplicado no link: <code>/financas-pessoais?cupom=SEUCODIGO</code>.
+          </p>
+        </div>
+
+        <form onSubmit={handleCriarCupom} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 14 }}>
+          <input
+            className="form-control"
+            required
+            placeholder="Código (ex.: PRIVILEGE20)"
+            value={cupomCodigo}
+            onChange={(e) => setCupomCodigo(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+          />
+          <select className="form-control" value={cupomTipo} onChange={(e) => setCupomTipo(e.target.value === 'fixo' ? 'fixo' : 'percentual')}>
+            <option value="percentual">Desconto em %</option>
+            <option value="fixo">Desconto fixo (R$)</option>
+          </select>
+          <input
+            className="form-control"
+            required
+            placeholder={cupomTipo === 'percentual' ? '% (ex.: 20)' : 'R$ (ex.: 10)'}
+            value={cupomValor}
+            onChange={(e) => setCupomValor(e.target.value)}
+          />
+          <input
+            className="form-control"
+            type="number"
+            min={0}
+            placeholder="Dias trial extras"
+            title="Dias grátis extras somados aos 7 dias padrão"
+            value={cupomDiasExtra}
+            onChange={(e) => setCupomDiasExtra(e.target.value)}
+          />
+          <input
+            className="form-control"
+            type="number"
+            min={1}
+            placeholder="Limite usos (opc.)"
+            value={cupomLimite}
+            onChange={(e) => setCupomLimite(e.target.value)}
+          />
+          <input
+            className="form-control"
+            type="date"
+            title="Validade do cupom (opcional)"
+            value={cupomValidade}
+            onChange={(e) => setCupomValidade(e.target.value)}
+          />
+          <button type="submit" disabled={salvandoCupom} className="btn btn-primary" style={{ fontWeight: 700 }}>
+            <Plus size={14} /> {salvandoCupom ? 'Criando...' : 'Criar Cupom'}
+          </button>
+        </form>
+
+        {cupons.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Benefício</th>
+                  <th>Usos</th>
+                  <th>Validade</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cupons.map((c) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 13.5 }}>{c.codigo}</td>
+                    <td style={{ fontSize: 13 }}>
+                      <strong>{c.tipo === 'percentual' ? `${c.valor}% OFF` : `${fmt.currency(c.valor)} OFF`}</strong>
+                      {c.diasTrialExtra > 0 ? ` + ${c.diasTrialExtra}d grátis` : ''}
+                    </td>
+                    <td style={{ fontSize: 13 }}>
+                      {c.usosAtuais}
+                      {c.limiteUsos ? ` / ${c.limiteUsos}` : ' (ilimitado)'}
+                    </td>
+                    <td style={{ fontSize: 13 }}>{c.validoAte || 'Sem expiração'}</td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 99,
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          background: c.ativo ? '#dcfce7' : '#f1f5f9',
+                          color: c.ativo ? '#166534' : '#64748b',
+                        }}
+                      >
+                        {c.ativo ? 'Ativo' : 'Pausado'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', gap: 5 }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 11.5, padding: '4px 8px' }}
+                          onClick={() => copiarLink(`/financas-pessoais?cupom=${c.codigo}`, `Link com cupom ${c.codigo}`)}
+                        >
+                          <Copy size={12} /> Link
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 11.5, padding: '4px 8px' }}
+                          onClick={() => handleToggleCupom(c)}
+                        >
+                          {c.ativo ? 'Pausar' : 'Ativar'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 11.5, padding: '4px 8px', color: '#b91c1c' }}
+                          onClick={() => handleExcluirCupom(c)}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Lista de Assinantes PF */}

@@ -3,7 +3,11 @@ import db from '../../../../../lib/prisma';
 import { checkRateLimit, getClientKey } from '../../../../../lib/rate-limit';
 import { createSessionToken, extractWhatsAppScopeFromRoutes, sessionCookieHeader } from '../../../../../lib/session';
 import { captureError } from '../../../../../lib/sentry-helper';
-import { criarOuAtivarAssinantePf } from '../../../../../lib/financas-pessoais-assinaturas';
+import {
+  consumirCupomPf,
+  criarOuAtivarAssinantePf,
+  validarCupomPf,
+} from '../../../../../lib/financas-pessoais-assinaturas';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +31,7 @@ export async function POST(request: Request) {
     const email = String(body?.email || '').trim().toLowerCase();
     const phone = String(body?.phone || '').trim();
     const senha = String(body?.senha || '').trim();
+    const cupomRaw = String(body?.cupom || '').trim();
 
     if (!nome || nome.length < 2) {
       return NextResponse.json({ error: 'Informe seu nome completo.' }, { status: 400 });
@@ -49,6 +54,20 @@ export async function POST(request: Request) {
       );
     }
 
+    let cupomAplicado = '';
+    let valorRenovacao = 29.9;
+    let diasTrial = 7;
+
+    if (cupomRaw) {
+      const check = await validarCupomPf(cupomRaw, 29.9);
+      if (!check.valido) {
+        return NextResponse.json({ error: check.erro || 'Cupom de desconto inválido.' }, { status: 400 });
+      }
+      cupomAplicado = check.codigo || '';
+      valorRenovacao = check.valorFinal;
+      diasTrial = 7 + check.diasTrialExtra;
+    }
+
     const origin = new URL(request.url).origin;
     const res = await criarOuAtivarAssinantePf({
       nome,
@@ -56,10 +75,17 @@ export async function POST(request: Request) {
       phone,
       senha,
       plano: 'trial_7d',
-      origem: 'pagina_vendas',
+      diasValidade: diasTrial,
+      cupomCodigo: cupomAplicado,
+      valorRenovacao,
+      origem: cupomAplicado ? `pagina_vendas:${cupomAplicado}` : 'pagina_vendas',
       enviarWhatsapp: true,
       appUrl: origin,
     });
+
+    if (cupomAplicado) {
+      await consumirCupomPf(cupomAplicado).catch(() => {});
+    }
 
     const token = createSessionToken({
       userId: res.user.id,

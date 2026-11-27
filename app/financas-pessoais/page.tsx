@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,7 +24,53 @@ export default function VendasFinancasPessoaisPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [senha, setSenha] = useState('');
+  const [cupomInput, setCupomInput] = useState('');
+  const [validandoCupom, setValidandoCupom] = useState(false);
+  const [cupomAplicado, setCupomAplicado] = useState<{
+    codigo: string;
+    valorOriginal: number;
+    desconto: number;
+    valorFinal: number;
+    diasTrialExtra: number;
+  } | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  const aplicarCupom = useCallback(async (codigoRaw: string, silencioso = false) => {
+    const cod = codigoRaw.trim().toUpperCase();
+    if (!cod) return;
+    setValidandoCupom(true);
+    try {
+      const res = await fetch(`/api/public/financas-pessoais/cupom?codigo=${encodeURIComponent(cod)}`);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.valido) {
+        setCupomAplicado(null);
+        if (!silencioso) toast.error(d.error || 'Cupom inválido ou expirado.');
+        return;
+      }
+      setCupomAplicado({
+        codigo: d.codigo,
+        valorOriginal: d.valorOriginal,
+        desconto: d.desconto,
+        valorFinal: d.valorFinal,
+        diasTrialExtra: d.diasTrialExtra || 0,
+      });
+      if (!silencioso) toast.success(`Cupom ${d.codigo} aplicado!`);
+    } catch {
+      if (!silencioso) toast.error('Erro ao validar cupom.');
+    } finally {
+      setValidandoCupom(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const codUrl = new URLSearchParams(window.location.search).get('cupom');
+    if (codUrl) {
+      const limpo = codUrl.trim().toUpperCase();
+      setCupomInput(limpo);
+      aplicarCupom(limpo, true);
+    }
+  }, [aplicarCupom]);
 
   const handleCadastrar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +79,7 @@ export default function VendasFinancasPessoaisPage() {
       const res = await fetch('/api/public/financas-pessoais/cadastro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, email, phone, senha }),
+        body: JSON.stringify({ nome, email, phone, senha, cupom: cupomAplicado?.codigo || '' }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -328,11 +374,20 @@ export default function VendasFinancasPessoaisPage() {
               }}
             >
               <div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted, #6e6c66)', fontWeight: 600 }}>Após os 7 dias grátis</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted, #6e6c66)', fontWeight: 600 }}>
+                  Após os {7 + (cupomAplicado?.diasTrialExtra || 0)} dias grátis
+                </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted, #6e6c66)' }}>Cancele quando quiser</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent, #600000)' }}>R$ 29,90</span>
+                {cupomAplicado && (
+                  <div style={{ fontSize: 12.5, color: '#6e6c66', textDecoration: 'line-through' }}>
+                    R$ {cupomAplicado.valorOriginal.toFixed(2).replace('.', ',')}
+                  </div>
+                )}
+                <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent, #600000)' }}>
+                  R$ {(cupomAplicado ? cupomAplicado.valorFinal : 29.9).toFixed(2).replace('.', ',')}
+                </span>
                 <span style={{ fontSize: 12.5, color: 'var(--text-muted, #6e6c66)' }}>/mês</span>
               </div>
             </div>
@@ -393,6 +448,57 @@ export default function VendasFinancasPessoaisPage() {
                   placeholder="••••••"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                  Cupom de desconto (opcional)
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="form-control"
+                    value={cupomInput}
+                    onChange={(e) => setCupomInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                    placeholder="Ex.: PRIVILEGE20"
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                  />
+                  <button
+                    type="button"
+                    disabled={validandoCupom || !cupomInput.trim()}
+                    onClick={() => aplicarCupom(cupomInput)}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: '1px solid var(--accent, #600000)',
+                      background: '#fff',
+                      color: 'var(--accent, #600000)',
+                      fontWeight: 700,
+                      fontSize: 13.5,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {validandoCupom ? '...' : 'Aplicar'}
+                  </button>
+                </div>
+                {cupomAplicado && (
+                  <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 700, color: '#15803d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      ✓ Cupom {cupomAplicado.codigo} aplicado (economia de R$ {cupomAplicado.desconto.toFixed(2).replace('.', ',')}
+                      {cupomAplicado.diasTrialExtra > 0 ? ` + ${cupomAplicado.diasTrialExtra} dias grátis` : ''})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCupomAplicado(null);
+                        setCupomInput('');
+                      }}
+                      style={{ background: 'transparent', border: 'none', color: '#b91c1c', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                )}
               </div>
 
               <button

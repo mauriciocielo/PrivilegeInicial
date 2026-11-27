@@ -7,7 +7,10 @@ import {
   criarCobrancaPixSicoob,
   ensureFinancasPixTable,
 } from '../../../../lib/sicoob-pix';
-import { criarOuAtivarAssinantePf } from '../../../../lib/financas-pessoais-assinaturas';
+import {
+  criarOuAtivarAssinantePf,
+  ensureFinancasAssinaturasTable,
+} from '../../../../lib/financas-pessoais-assinaturas';
 import { encontrarSessaoAdminPorNumero } from '../../../../lib/nfse/enviar-whatsapp-nfse';
 import { sendBaileysLiveMessage } from '../../../../lib/baileys-manager';
 import { apenasDigitos } from '../../../../lib/nfse/dps';
@@ -24,19 +27,30 @@ export async function POST(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
-    await ensureFinancasPixTable();
+    await Promise.all([ensureFinancasPixTable(), ensureFinancasAssinaturasTable()]);
     const body = await request.json().catch(() => ({}));
     const plano = body?.plano === 'anual' ? 'anual' : 'mensal';
-    const valor = plano === 'anual' ? 297.0 : 29.9;
     const enviarWhatsapp = Boolean(body?.enviarWhatsapp);
 
-    const user = await db.user.findUnique({ where: { id: auth.session.userId } });
+    const [user, assinRows] = await Promise.all([
+      db.user.findUnique({ where: { id: auth.session.userId } }),
+      db.$queryRawUnsafe<Array<{ valor_renovacao: number; cupom_codigo: string }>>(
+        `SELECT valor_renovacao, cupom_codigo FROM financas_pessoais_assinaturas WHERE user_id = $1 LIMIT 1`,
+        auth.session.userId
+      ),
+    ]);
     if (!user) return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
+
+    const valorMensalCliente =
+      assinRows[0]?.valor_renovacao && Number(assinRows[0].valor_renovacao) > 0
+        ? Math.round(Number(assinRows[0].valor_renovacao) * 100) / 100
+        : 29.9;
+    const valor = plano === 'anual' ? Math.round(valorMensalCliente * 10 * 100) / 100 : valorMensalCliente;
 
     const descricao =
       plano === 'anual'
         ? `Privilege Finanças PF — Plano Anual (${user.email})`
-        : `Privilege Finanças PF — Mensalidade R$ 29,90 (${user.email})`;
+        : `Privilege Finanças PF — Mensalidade R$ ${valor.toFixed(2).replace('.', ',')} (${user.email})`;
 
     const cob = await criarCobrancaPixSicoob({
       valor,
