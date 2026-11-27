@@ -377,17 +377,54 @@ export default function FinancasPessoaisPainel() {
     carregar(mes);
   };
 
+  const extrairTextoPdfExtrato = async (file: File): Promise<string> => {
+    const pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+    const buffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const linhas: string[] = [];
+    const maxPages = Math.min(doc.numPages, 25);
+
+    for (let p = 1; p <= maxPages; p++) {
+      const page = await doc.getPage(p);
+      const content = await page.getTextContent();
+      const byY = new Map<number, { x: number; str: string }[]>();
+      (content.items as any[]).forEach((item) => {
+        const y = Math.round(item.transform[5]);
+        if (!byY.has(y)) byY.set(y, []);
+        byY.get(y)!.push({ x: item.transform[4], str: item.str });
+      });
+      const sortedYs = Array.from(byY.keys()).sort((a, b) => b - a);
+      sortedYs.forEach((y) => {
+        const cells = byY.get(y)!.sort((a, b) => a.x - b.x);
+        const linha = cells.map((c) => c.str).join(' ').trim();
+        if (linha) linhas.push(linha);
+      });
+    }
+    return linhas.join('\n');
+  };
+
   const handleImportarExtrato = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     setImportandoExtrato(true);
     try {
-      const conteudo = await file.text();
+      const ehPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+      const conteudo = ehPdf ? await extrairTextoPdfExtrato(file) : await file.text();
+      if (!conteudo.trim()) {
+        toast.error(ehPdf ? 'Não foi possível ler texto neste PDF (pode ser uma imagem escaneada).' : 'Arquivo vazio.');
+        return;
+      }
       const res = await fetch('/api/financas-pessoais/importar-extrato', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modo: 'analisar', conteudo, nomeArquivo: file.name }),
+        body: JSON.stringify({
+          modo: 'analisar',
+          tipoArquivo: ehPdf ? 'pdf' : 'texto',
+          conteudo,
+          nomeArquivo: file.name,
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -635,10 +672,10 @@ export default function FinancasPessoaisPainel() {
           <label
             className="btn btn-secondary fp-btn-full"
             style={{ borderRadius: 10, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0 }}
-            title="Importar e conciliar extrato bancário pessoal (OFX ou CSV) com IA sem duplicar"
+            title="Importar e conciliar extrato bancário pessoal (PDF, OFX ou CSV) com IA sem duplicar"
           >
-            <Upload size={14} /> {importandoExtrato ? 'Analisando com IA...' : 'Conciliar Extrato IA (OFX/CSV)'}
-            <input type="file" accept=".ofx,.csv,.txt" onChange={handleImportarExtrato} style={{ display: 'none' }} disabled={importandoExtrato} />
+            <Upload size={14} /> {importandoExtrato ? 'Analisando com IA...' : 'Conciliar Extrato IA (PDF/OFX/CSV)'}
+            <input type="file" accept=".pdf,.ofx,.csv,.txt,application/pdf" onChange={handleImportarExtrato} style={{ display: 'none' }} disabled={importandoExtrato} />
           </label>
           <button
             type="button"

@@ -181,3 +181,75 @@ export function parseExtratoBancarioPf(conteudo: string, nomeArquivo: string): T
 
   return out;
 }
+
+/**
+ * Fallback determinístico para texto extraído de extratos bancários em PDF
+ * (Nubank, Sicoob, Itaú, Bradesco, Inter, BB, Caixa, C6, Santander).
+ */
+export function parseTextoExtratoPdfPf(texto: string): TransacaoExtratoPf[] {
+  const linhas = (texto || '')
+    .split(/\r?\n/)
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  const out: TransacaoExtratoPf[] = [];
+  const anoAtual = new Date().getFullYear();
+
+  // Tenta detectar ano de referência no cabeçalho do extrato
+  let anoRef = anoAtual;
+  const mAno = texto.match(/\b(202[0-9])\b/);
+  if (mAno) anoRef = Number(mAno[1]);
+
+  for (const linha of linhas) {
+    if (/(saldo\s+(anterior|atual|final|bloqueado|dispon[ií]vel|total)|total\s+de\s+(entradas|sa[ií]das)|extrato\s+de\s+conta)/i.test(linha)) {
+      continue;
+    }
+
+    // Data DD/MM/YYYY ou DD/MM
+    const mDataFull = linha.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
+    const mDataCurta = !mDataFull ? linha.match(/^(\d{2})\/(\d{2})\b/) : null;
+    if (!mDataFull && !mDataCurta) continue;
+
+    const data = mDataFull
+      ? `${mDataFull[3]}-${mDataFull[2]}-${mDataFull[1]}`
+      : `${anoRef}-${mDataCurta![2]}-${mDataCurta![1]}`;
+
+    // Valor monetário brasileiro (ex.: -120,50 | 1.250,00 D | + 500,00 | R$ 85,00-)
+    const mValores = [...linha.matchAll(/([-+]?\s*(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\s*[-+CD]?)/gi)];
+    if (mValores.length === 0) continue;
+
+    // Pega o penúltimo valor se houver 2 valores na mesma linha (valor + saldo do dia), senão o único
+    const rawValMatch = mValores.length >= 2 ? mValores[mValores.length - 2][1] : mValores[0][1];
+    const cleanVal = rawValMatch.trim();
+    const isNeg =
+      cleanVal.startsWith('-') ||
+      cleanVal.endsWith('-') ||
+      /\bD$/i.test(cleanVal) ||
+      /(pix\s+enviado|pagto|pagamento|compra|d[eé]bito|tarifa|saque|boleto\s+pago)/i.test(linha);
+    const isPos =
+      cleanVal.startsWith('+') ||
+      cleanVal.endsWith('+') ||
+      /\bC$/i.test(cleanVal) ||
+      /(pix\s+recebido|cr[eé]dito|dep[oó]sito|sal[aá]rio|dividendo|rendimento|resgate|ted\s+receb)/i.test(linha);
+
+    const numStr = cleanVal.replace(/[^\d,]/g, '').replace(',', '.');
+    const valor = Math.round(parseFloat(numStr) * 100) / 100;
+    if (!Number.isFinite(valor) || valor <= 0) continue;
+
+    const descricao = linha
+      .replace(/\b\d{2}\/\d{2}(?:\/\d{4})?\b/g, '')
+      .replace(/[-+]?\s*(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\s*[-+CD]?/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120);
+
+    out.push({
+      data,
+      descricao: descricao || 'Movimentação bancária (PDF)',
+      valor,
+      tipo: isPos && !isNeg ? 'receita' : isNeg ? 'despesa' : 'despesa',
+    });
+  }
+
+  return out;
+}

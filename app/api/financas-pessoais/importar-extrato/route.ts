@@ -11,6 +11,8 @@ import {
 import {
   ensureFinancasWealthTables,
   parseExtratoBancarioPf,
+  parseTextoExtratoPdfPf,
+  type TransacaoExtratoPf,
 } from '../../../../lib/financas-pessoais-wealth';
 
 export const dynamic = 'force-dynamic';
@@ -283,6 +285,71 @@ ${itensTxt}`;
   return mapa;
 }
 
+async function extrairTransacoesPdfComIA(textoPdf: string): Promise<TransacaoExtratoPf[]> {
+  const groqKey = process.env.GROQ_API_KEY;
+  const limpo = (textoPdf || '').trim();
+  if (!groqKey || limpo.length < 20) return [];
+
+  const anoAtual = new Date().getFullYear();
+  const trecho = limpo.slice(0, 24000);
+  const prompt = `Você é um extrator de transações de extratos bancários brasileiros (PDF convertido em texto).
+Extraia TODAS as movimentações reais (entradas e saídas) do texto abaixo.
+REGRAS IMPORTANTES:
+- IGNORE cabeçalhos, dados da conta, "Saldo Anterior", "Saldo do Dia", "Saldo Final", "Saldo Disponível", "Total de Entradas/Saídas".
+- Se a data não tiver ano, use o ano que aparecer no cabeçalho do extrato (ou ${anoAtual}).
+- Formate data como YYYY-MM-DD.
+- valor deve ser número positivo (ex: 85.5).
+- tipo deve ser "receita" (crédito/entrada/pix recebido/C/+) ou "despesa" (débito/saída/pagamento/compra/pix enviado/D/-).
+- Responda APENAS JSON válido no formato:
+{"transacoes":[{"data":"2026-11-15","descricao":"Supermercado Muffato","valor":185.4,"tipo":"despesa"}]}
+
+Texto do extrato PDF:
+${trecho}`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${groqKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.05,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: 'Responda estritamente em JSON válido.' },
+          { role: 'user', content: prompt },
+        ],
+      }),
+      signal: AbortSignal.timeout(22000),
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+    const raw = data?.choices?.[0]?.message?.content || '';
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed?.transacoes) ? parsed.transacoes : [];
+
+    const out: TransacaoExtratoPf[] = [];
+    for (const item of arr) {
+      const dataStr = String(item?.data || '').trim();
+      const val = Math.round(Math.abs(Number(item?.valor || 0)) * 100) / 100;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataStr) || !Number.isFinite(val) || val <= 0) continue;
+      out.push({
+        data: dataStr,
+        descricao: String(item?.descricao || 'Movimentação bancária (PDF)').trim().slice(0, 120),
+        valor: val,
+        tipo: item?.tipo === 'receita' ? 'receita' : 'despesa',
+      });
+    }
+    return out;
+  } catch (err) {
+    console.warn('Extração IA de extrato PDF falhou (usando parser heurístico):', err);
+    return [];
+  }
+}
+
 /**
  * POST /api/financas-pessoais/importar-extrato
  * Suporta:
@@ -388,15 +455,29 @@ export async function POST(request: Request) {
     }
 
     // =========================================================
-    // MODO ANALISAR: lê OFX/CSV, concilia com histórico + IA
+    // MODO ANALISAR: lê PDF, OFX ou CSV, concilia com histórico + IA
     // =========================================================
     const conteudo = String(body?.conteudo || '');
     const nomeArquivo = String(body?.nomeArquivo || 'extrato.ofx');
+    const ehPdf = body?.tipoArquivo === 'pdf' || nomeArquivo.toLowerCase().endsWith('.pdf');
 
-    const transacoes = parseExtratoBancarioPf(conteudo, nomeArquivo);
+    let transacoes: TransacaoExtratoPf[] = [];
+    if (ehPdf) {
+      transacoes = await extrairTransacoesPdfComIA(conteudo);
+      if (transacoes.length === 0) {
+        transacoes = parseTextoExtratoPdfPf(conteudo);
+      }
+    } else {
+      transacoes = parseExtratoBancarioPf(conteudo, nomeArquivo);
+    }
+
     if (transacoes.length === 0) {
       return NextResponse.json(
-        { error: 'Nenhuma transação encontrada no arquivo. Envie um extrato OFX ou CSV válido do seu banco.' },
+        {
+          error: ehPdf
+            ? 'Nenhuma movimentação encontrada neste PDF. Verifique se o PDF possui texto selecionável (não é apenas foto escaneada) ou tente baixar em OFX/CSV.'
+            : 'Nenhuma transação encontrada no arquivo. Envie um extrato PDF, OFX ou CSV válido do seu banco.',
+        },
         { status: 400 }
       );
     }
