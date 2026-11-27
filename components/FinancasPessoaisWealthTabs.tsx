@@ -13,6 +13,8 @@ import {
   Sparkles,
   Trash2,
   TrendingUp,
+  Upload,
+  X,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
@@ -84,7 +86,64 @@ export interface WealthData {
     data: string;
     observacao: string;
   }>;
+  assinaturasCartao?: Array<{
+    id: string;
+    cartaoId: string | null;
+    cartaoNome: string;
+    nome: string;
+    categoria: string;
+    valorMensal: number;
+    diaCobranca: number;
+    ativa: boolean;
+  }>;
 }
+
+interface ItemFaturaPreview {
+  idx: number;
+  data: string;
+  descricao: string;
+  valor: number;
+  parcela: string;
+  categoria: string;
+  dedutivelIrpf: boolean;
+  jaLancado: boolean;
+  motivoMatch: string | null;
+  lancar: boolean;
+  pareceAssinatura: boolean;
+  jaEhAssinatura: boolean;
+  salvarAssinatura: boolean;
+}
+
+interface FaturaPreviewState {
+  nomeArquivo: string;
+  cartaoId: string;
+  cartaoNome: string;
+  resumo: {
+    totalItens: number;
+    conferidos: number;
+    faltando: number;
+    assinaturasDetectadas: number;
+    totalFatura: number;
+    totalConferido: number;
+    totalFaltando: number;
+  };
+  itens: ItemFaturaPreview[];
+}
+
+const CATEGORIAS_FATURA = [
+  'Alimentação',
+  'Moradia',
+  'Transporte',
+  'Saúde',
+  'Educação',
+  'Lazer',
+  'Cartão de Crédito',
+  'Compras',
+  'Contas Fixas',
+  'Investimentos',
+  'Previdência',
+  'Outros',
+];
 
 const TIPOS_RENDIMENTO: Record<string, { label: string; cor: string }> = {
   dividendo: { label: 'Dividendos', cor: '#15803d' },
@@ -140,6 +199,20 @@ export function CartoesDividasTab({
   const [limiteCartao, setLimiteCartao] = useState('');
   const [diaFech, setDiaFech] = useState('5');
   const [diaVenc, setDiaVenc] = useState('15');
+
+  // Conferência de Fatura PDF com IA
+  const [cartaoFaturaId, setCartaoFaturaId] = useState('');
+  const [analisandoFatura, setAnalisandoFatura] = useState(false);
+  const [confirmandoFatura, setConfirmandoFatura] = useState(false);
+  const [faturaPreview, setFaturaPreview] = useState<FaturaPreviewState | null>(null);
+
+  // Form Assinatura Recorrente no Cartão
+  const [assinCartaoId, setAssinCartaoId] = useState('');
+  const [assinNome, setAssinNome] = useState('');
+  const [assinCategoria, setAssinCategoria] = useState('Lazer');
+  const [assinValor, setAssinValor] = useState('');
+  const [assinDia, setAssinDia] = useState('10');
+  const [lancandoAssinMes, setLancandoAssinMes] = useState(false);
 
   // Form Dívida / Empréstimo
   const [credor, setCredor] = useState('');
@@ -201,13 +274,168 @@ export function CartoesDividasTab({
     onAtualizado();
   };
 
-  const handleExcluir = async (recurso: 'cartao' | 'divida', id: string, label: string) => {
+  const handleExcluir = async (recurso: 'cartao' | 'divida' | 'assinatura_cartao', id: string, label: string) => {
     const ok = await confirmAsync(`Remover "${label}"?`);
     if (!ok) return;
     await fetch(`/api/financas-pessoais/wealth?recurso=${recurso}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     toast.success('Removido!');
     onAtualizado();
   };
+
+  const handleAddAssinatura = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cartaoSel = (wealth?.cartoes || []).find((c) => c.id === assinCartaoId);
+    const res = await fetch('/api/financas-pessoais/wealth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recurso: 'assinatura_cartao',
+        cartaoId: assinCartaoId || null,
+        cartaoNome: cartaoSel?.nome || '',
+        nome: assinNome,
+        categoria: assinCategoria,
+        valorMensal: parseFloat(assinValor.replace(',', '.')) || 0,
+        diaCobranca: Number(assinDia) || 10,
+      }),
+    });
+    if (!res.ok) {
+      toast.error('Preencha nome e valor mensal da assinatura.');
+      return;
+    }
+    toast.success('Assinatura cadastrada no cartão!');
+    setAssinNome('');
+    setAssinValor('');
+    onAtualizado();
+  };
+
+  const handleLancarAssinaturasMes = async () => {
+    setLancandoAssinMes(true);
+    try {
+      const res = await fetch('/api/financas-pessoais/wealth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recurso: 'lancar_assinaturas_mes', mes: wealth?.mes }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao lançar assinaturas.');
+        return;
+      }
+      toast.success(`Assinaturas do mês: ${d.lancadas || 0} lançada(s) · ${d.puladas || 0} já existente(s).`);
+      onAtualizado();
+    } finally {
+      setLancandoAssinMes(false);
+    }
+  };
+
+  const handleImportarFaturaPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAnalisandoFatura(true);
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+      const buffer = await file.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const linhas: string[] = [];
+      const maxPages = Math.min(doc.numPages, 25);
+      for (let p = 1; p <= maxPages; p++) {
+        const page = await doc.getPage(p);
+        const content = await page.getTextContent();
+        const byY = new Map<number, { x: number; str: string }[]>();
+        (content.items as any[]).forEach((item) => {
+          const y = Math.round(item.transform[5]);
+          if (!byY.has(y)) byY.set(y, []);
+          byY.get(y)!.push({ x: item.transform[4], str: item.str });
+        });
+        Array.from(byY.keys())
+          .sort((a, b) => b - a)
+          .forEach((y) => {
+            const linha = byY
+              .get(y)!
+              .sort((a, b) => a.x - b.x)
+              .map((c) => c.str)
+              .join(' ')
+              .trim();
+            if (linha) linhas.push(linha);
+          });
+      }
+      const textoPdf = linhas.join('\n');
+      if (!textoPdf.trim()) {
+        toast.error('Não foi possível extrair texto deste PDF de fatura.');
+        return;
+      }
+      const cartaoSel = (wealth?.cartoes || []).find((c) => c.id === cartaoFaturaId);
+      const res = await fetch('/api/financas-pessoais/fatura-cartao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modo: 'analisar',
+          conteudo: textoPdf,
+          nomeArquivo: file.name,
+          cartaoId: cartaoSel?.id || '',
+          cartaoNome: cartaoSel?.nome || '',
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao analisar fatura em PDF.');
+        return;
+      }
+      setFaturaPreview(d);
+      toast.success(
+        `Fatura conferida! ${d.resumo?.conferidos || 0} já lançado(s) · ${d.resumo?.faltando || 0} faltando lançar.`
+      );
+    } catch {
+      toast.error('Erro ao ler PDF da fatura.');
+    } finally {
+      setAnalisandoFatura(false);
+    }
+  };
+
+  const handleConfirmarFatura = async () => {
+    if (!faturaPreview) return;
+    const ativos = faturaPreview.itens.filter((i) => i.lancar || i.salvarAssinatura);
+    if (ativos.length === 0) {
+      toast.error('Selecione pelo menos 1 item para lançar ou salvar como assinatura.');
+      return;
+    }
+    setConfirmandoFatura(true);
+    try {
+      const res = await fetch('/api/financas-pessoais/fatura-cartao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modo: 'confirmar',
+          cartaoId: faturaPreview.cartaoId,
+          cartaoNome: faturaPreview.cartaoNome,
+          itens: ativos,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao gravar itens da fatura.');
+        return;
+      }
+      toast.success(
+        `Fatura conciliada! ${d.lancados || 0} lançamento(s) incluído(s)${d.assinaturasCriadas ? ` · ${d.assinaturasCriadas} assinatura(s) salva(s)` : ''}.`
+      );
+      setFaturaPreview(null);
+      onAtualizado();
+    } finally {
+      setConfirmandoFatura(false);
+    }
+  };
+
+  const atualizarItemFatura = (idx: number, patch: Partial<ItemFaturaPreview>) => {
+    setFaturaPreview((prev) =>
+      prev ? { ...prev, itens: prev.itens.map((it) => (it.idx === idx ? { ...it, ...patch } : it)) } : null
+    );
+  };
+
+  const assinaturasLista = wealth?.assinaturasCartao || [];
+  const totalAssinaturasMes = assinaturasLista.filter((a) => a.ativa).reduce((acc, a) => acc + a.valorMensal, 0);
 
   const limiteTotalCartoes = (wealth?.cartoes || []).reduce((a, c) => a + c.limiteTotal, 0);
   const gastoCred = wealth?.gastoCreditoMes || 0;
@@ -225,6 +453,41 @@ export function CartoesDividasTab({
             <p style={{ margin: '3px 0 0', fontSize: 13, color: '#64748b' }}>
               Gastos no crédito no mês: <strong>{fmt.currency(gastoCred)}</strong> · Limite somado: <strong>{fmt.currency(limiteTotalCartoes)}</strong> ({pctUsoGlobal}% usado)
             </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {(wealth?.cartoes || []).length > 0 && (
+              <select
+                className="form-control"
+                style={{ width: 'auto', minWidth: 150, fontSize: 13 }}
+                value={cartaoFaturaId}
+                onChange={(e) => setCartaoFaturaId(e.target.value)}
+              >
+                <option value="">Cartão da fatura (opc.)</option>
+                {(wealth?.cartoes || []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            )}
+            <label
+              className="btn"
+              style={{
+                background: 'var(--accent, #600000)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: 13,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                margin: 0,
+              }}
+              title="Suba o PDF da fatura do cartão para conferir se todas as compras foram lançadas e detectar assinaturas"
+            >
+              <Upload size={14} /> {analisandoFatura ? 'Conferindo PDF com IA...' : 'Conferir Fatura PDF (IA)'}
+              <input type="file" accept=".pdf,application/pdf" style={{ display: 'none' }} disabled={analisandoFatura} onChange={handleImportarFaturaPdf} />
+            </label>
           </div>
         </div>
 
@@ -262,6 +525,245 @@ export function CartoesDividasTab({
           </div>
         )}
       </div>
+
+      {/* Assinaturas Recorrentes no Cartão */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={17} color="#7c3aed" /> Assinaturas Recorrentes no Cartão
+            </h3>
+            <p style={{ margin: '3px 0 0', fontSize: 13, color: '#64748b' }}>
+              Total mensal fixo: <strong style={{ color: '#7c3aed' }}>{fmt.currency(totalAssinaturasMes)}/mês</strong> · Custo anual projetado:{' '}
+              <strong>{fmt.currency(totalAssinaturasMes * 12)}/ano</strong>
+            </p>
+          </div>
+          {assinaturasLista.length > 0 && (
+            <button
+              type="button"
+              disabled={lancandoAssinMes}
+              onClick={handleLancarAssinaturasMes}
+              className="btn btn-secondary"
+              style={{ borderRadius: 10, fontWeight: 700, fontSize: 12.5 }}
+            >
+              {lancandoAssinMes ? 'Lançando...' : `Lançar assinaturas em ${wealth?.mes || 'mês atual'}`}
+            </button>
+          )}
+        </div>
+
+        <form onSubmit={handleAddAssinatura} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 8, marginBottom: 16 }}>
+          <select className="form-control" value={assinCartaoId} onChange={(e) => setAssinCartaoId(e.target.value)}>
+            <option value="">Qualquer cartão</option>
+            {(wealth?.cartoes || []).map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+          <input className="form-control" required placeholder="Assinatura (ex.: Netflix, iCloud)" value={assinNome} onChange={(e) => setAssinNome(e.target.value)} />
+          <select className="form-control" value={assinCategoria} onChange={(e) => setAssinCategoria(e.target.value)}>
+            {CATEGORIAS_FATURA.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input className="form-control" required placeholder="Valor R$/mês" value={assinValor} onChange={(e) => setAssinValor(e.target.value)} />
+          <input className="form-control" type="number" min={1} max={31} placeholder="Dia cobrança" value={assinDia} onChange={(e) => setAssinDia(e.target.value)} />
+          <button type="submit" className="btn" style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}>
+            <Plus size={14} /> Assinatura
+          </button>
+        </form>
+
+        {assinaturasLista.length === 0 ? (
+          <div style={{ padding: 18, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+            Nenhuma assinatura cadastrada ainda. Cadastre acima ou importe a fatura em PDF para a IA detectar automaticamente!
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Assinatura</th>
+                  <th>Cartão</th>
+                  <th>Categoria</th>
+                  <th>Dia</th>
+                  <th>Valor/Mês</th>
+                  <th>Custo/Ano</th>
+                  <th style={{ textAlign: 'right' }}>Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assinaturasLista.map((a) => (
+                  <tr key={a.id}>
+                    <td style={{ fontWeight: 700 }}>{a.nome}</td>
+                    <td style={{ fontSize: 13, color: '#64748b' }}>{a.cartaoNome || 'Cartão'}</td>
+                    <td style={{ fontSize: 13 }}>{a.categoria}</td>
+                    <td style={{ fontSize: 13 }}>Dia {a.diaCobranca}</td>
+                    <td style={{ fontWeight: 800, color: '#7c3aed' }}>{fmt.currency(a.valorMensal)}</td>
+                    <td style={{ fontSize: 13, color: '#475569' }}>{fmt.currency(a.valorMensal * 12)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ color: '#b91c1c', padding: '4px 8px' }}
+                        onClick={() => handleExcluir('assinatura_cartao', a.id, a.nome)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de Conferência de Fatura PDF com IA */}
+      {faturaPreview && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}
+          onClick={() => !confirmandoFatura && setFaturaPreview(null)}
+        >
+          <div
+            className="fp-modal-card"
+            style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 1020, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17.5, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CreditCard size={18} color="var(--accent, #600000)" /> Conferência de Fatura PDF ({faturaPreview.nomeArquivo})
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12.5, color: '#64748b' }}>
+                  Validamos cada compra da fatura contra o que você já lançou. Itens faltantes já vêm marcados e assinaturas recorrentes podem ser salvas em 1 clique.
+                </p>
+              </div>
+              <button type="button" disabled={confirmandoFatura} onClick={() => setFaturaPreview(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '12px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#e2e8f0', color: '#0f172a' }}>
+                Total Fatura: {fmt.currency(faturaPreview.resumo.totalFatura)} ({faturaPreview.resumo.totalItens} itens)
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#dcfce7', color: '#166534' }}>
+                ✓ Conferidos: {faturaPreview.resumo.conferidos} ({fmt.currency(faturaPreview.resumo.totalConferido)})
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>
+                Faltando lançar: {faturaPreview.resumo.faltando} ({fmt.currency(faturaPreview.resumo.totalFaltando)})
+              </span>
+              {faturaPreview.resumo.assinaturasDetectadas > 0 && (
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: '#f3e8ff', color: '#6b21a8' }}>
+                  Assinaturas detectadas: {faturaPreview.resumo.assinaturasDetectadas}
+                </span>
+              )}
+            </div>
+
+            <div style={{ overflow: 'auto', flex: 1, padding: '0 14px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', color: '#475569', fontSize: 12 }}>
+                    <th style={{ padding: '10px 6px' }}>Lançar</th>
+                    <th style={{ padding: '10px 6px' }}>Data</th>
+                    <th style={{ padding: '10px 6px' }}>Compra na Fatura</th>
+                    <th style={{ padding: '10px 6px' }}>Categoria</th>
+                    <th style={{ padding: '10px 6px', textAlign: 'center' }}>Assinatura?</th>
+                    <th style={{ padding: '10px 6px', textAlign: 'center' }}>IRPF</th>
+                    <th style={{ padding: '10px 6px', textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faturaPreview.itens.map((it) => (
+                    <tr key={it.idx} style={{ borderBottom: '1px solid #f1f5f9', background: it.jaLancado && !it.lancar ? '#f8fafc' : '#fff' }}>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={it.lancar}
+                          onChange={(e) => atualizarItemFatura(it.idx, { lancar: e.target.checked })}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px', whiteSpace: 'nowrap', color: '#475569' }}>{it.data}</td>
+                      <td style={{ padding: '8px 6px', minWidth: 210 }}>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {it.descricao} {it.parcela ? <span style={{ fontSize: 11.5, color: '#1d4ed8' }}>({it.parcela})</span> : null}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 3 }}>
+                          {it.jaLancado ? (
+                            <span style={{ fontSize: 10.5, fontWeight: 800, background: '#dcfce7', color: '#166534', padding: '1px 7px', borderRadius: 99 }}>
+                              ✓ Já lançado
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 10.5, fontWeight: 800, background: '#fee2e2', color: '#b91c1c', padding: '1px 7px', borderRadius: 99 }}>
+                              Faltando
+                            </span>
+                          )}
+                          {it.pareceAssinatura && (
+                            <span style={{ fontSize: 10.5, fontWeight: 800, background: '#f3e8ff', color: '#6b21a8', padding: '1px 7px', borderRadius: 99 }}>
+                              Assinatura
+                            </span>
+                          )}
+                          {it.motivoMatch && <span style={{ fontSize: 11, color: '#64748b' }}>{it.motivoMatch}</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <select
+                          className="form-control"
+                          style={{ fontSize: 12, padding: '4px 6px', minWidth: 130 }}
+                          value={it.categoria}
+                          onChange={(e) => atualizarItemFatura(it.idx, { categoria: e.target.value })}
+                        >
+                          {CATEGORIAS_FATURA.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                        {it.jaEhAssinatura ? (
+                          <span style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700 }}>Já salva</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            title="Incluir na lista de Assinaturas Recorrentes do Cartão"
+                            checked={it.salvarAssinatura}
+                            onChange={(e) => atualizarItemFatura(it.idx, { salvarAssinatura: e.target.checked })}
+                          />
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          title="Dedutível no IRPF"
+                          checked={it.dedutivelIrpf}
+                          onChange={(e) => atualizarItemFatura(it.idx, { dedutivelIrpf: e.target.checked })}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800, color: '#b91c1c' }}>
+                        {fmt.currency(it.valor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: '#f8fafc' }}>
+              <div style={{ fontSize: 13, color: '#475569' }}>
+                Lançar: <strong>{faturaPreview.itens.filter((i) => i.lancar).length}</strong> · Salvar assinaturas:{' '}
+                <strong>{faturaPreview.itens.filter((i) => i.salvarAssinatura).length}</strong>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" disabled={confirmandoFatura} onClick={() => setFaturaPreview(null)}>
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={confirmandoFatura}
+                  onClick={handleConfirmarFatura}
+                  style={{ background: '#15803d', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, padding: '8px 16px' }}
+                >
+                  {confirmandoFatura ? 'Salvando...' : 'Confirmar Conferência da Fatura'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Empréstimos & Dívidas */}
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20 }}>

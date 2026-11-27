@@ -85,6 +85,24 @@ export async function ensureFinancasWealthTables() {
     `CREATE INDEX IF NOT EXISTS idx_fp_rend_owner_data ON financas_pessoais_rendimentos(owner_key, data DESC)`
   );
 
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS financas_pessoais_assinaturas_cartao (
+      id TEXT PRIMARY KEY,
+      owner_key TEXT NOT NULL,
+      cartao_id TEXT,
+      cartao_nome TEXT NOT NULL DEFAULT '',
+      nome TEXT NOT NULL,
+      categoria TEXT NOT NULL DEFAULT 'Lazer',
+      valor_mensal DOUBLE PRECISION NOT NULL DEFAULT 0,
+      dia_cobranca INTEGER NOT NULL DEFAULT 10,
+      ativa BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS idx_fp_assin_cartao_owner ON financas_pessoais_assinaturas_cartao(owner_key)`
+  );
+
   tabelasWealthGarantidas = true;
 }
 

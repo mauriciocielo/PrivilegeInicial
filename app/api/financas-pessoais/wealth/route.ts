@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const seteDiasAtras = new Date(hoje.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const inicio6Meses = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1).toISOString().slice(0, 10);
 
-    const [cartoesRaw, patrimonioRaw, dividasRaw, lancs6m, rendimentosRaw] = await Promise.all([
+    const [cartoesRaw, patrimonioRaw, dividasRaw, lancs6m, rendimentosRaw, assinCartaoRaw] = await Promise.all([
       db.$queryRawUnsafe<any[]>(
         `SELECT * FROM financas_pessoais_cartoes WHERE owner_key = ANY($1::text[]) ORDER BY created_at DESC`,
         allKeys
@@ -53,6 +53,10 @@ export async function GET(request: Request) {
       ),
       db.$queryRawUnsafe<any[]>(
         `SELECT * FROM financas_pessoais_rendimentos WHERE owner_key = ANY($1::text[]) ORDER BY data DESC, created_at DESC LIMIT 200`,
+        allKeys
+      ),
+      db.$queryRawUnsafe<any[]>(
+        `SELECT * FROM financas_pessoais_assinaturas_cartao WHERE owner_key = ANY($1::text[]) ORDER BY valor_mensal DESC, nome ASC`,
         allKeys
       ),
     ]);
@@ -123,6 +127,17 @@ export async function GET(request: Request) {
       valorLiquido: Number(r.valor_liquido || 0),
       data: String(r.data || ''),
       observacao: String(r.observacao || ''),
+    }));
+
+    const assinaturasCartao = assinCartaoRaw.map((a) => ({
+      id: String(a.id),
+      cartaoId: a.cartao_id ? String(a.cartao_id) : null,
+      cartaoNome: String(a.cartao_nome || ''),
+      nome: String(a.nome || ''),
+      categoria: String(a.categoria || 'Lazer'),
+      valorMensal: Number(a.valor_mensal || 0),
+      diaCobranca: Number(a.dia_cobranca || 10),
+      ativa: Boolean(a.ativa),
     }));
 
     const anoSel = mes.slice(0, 4);
@@ -212,6 +227,7 @@ export async function GET(request: Request) {
       patrimonio,
       dividas,
       rendimentos,
+      assinaturasCartao,
     });
   } catch (error) {
     console.error('Erro em GET /api/financas-pessoais/wealth:', error);
@@ -395,6 +411,93 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, id, valorLiquido });
     }
 
+    if (recurso === 'assinatura_cartao') {
+      const nome = String(body?.nome || '').trim();
+      const valorMensal = Math.max(0, Number(body?.valorMensal || 0));
+      const categoria = String(body?.categoria || 'Lazer').trim();
+      const diaCobranca = Math.min(31, Math.max(1, Number(body?.diaCobranca || 10)));
+      const cartaoId = body?.cartaoId ? String(body.cartaoId).trim() : null;
+      let cartaoNome = String(body?.cartaoNome || '').trim();
+
+      if (!nome || valorMensal <= 0) {
+        return NextResponse.json({ error: 'Informe o nome e o valor mensal da assinatura.' }, { status: 400 });
+      }
+      if (cartaoId && !cartaoNome) {
+        const cRows = await db.$queryRawUnsafe<Array<{ nome: string }>>(
+          `SELECT nome FROM financas_pessoais_cartoes WHERE id = $1 AND owner_key = ANY($2::text[]) LIMIT 1`,
+          cartaoId,
+          allKeys
+        );
+        cartaoNome = cRows[0]?.nome || '';
+      }
+
+      await db.$executeRawUnsafe(
+        `INSERT INTO financas_pessoais_assinaturas_cartao
+          (id, owner_key, cartao_id, cartao_nome, nome, categoria, valor_mensal, dia_cobranca, ativa, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW())`,
+        id,
+        primaryKey,
+        cartaoId,
+        cartaoNome,
+        nome,
+        categoria,
+        valorMensal,
+        diaCobranca
+      );
+      return NextResponse.json({ ok: true, id });
+    }
+
+    if (recurso === 'lancar_assinaturas_mes') {
+      const mesAlvo = /^\d{4}-\d{2}$/.test(String(body?.mes || ''))
+        ? String(body.mes)
+        : new Date().toISOString().slice(0, 7);
+      const [ativas, jaMes] = await Promise.all([
+        db.$queryRawUnsafe<any[]>(
+          `SELECT * FROM financas_pessoais_assinaturas_cartao WHERE owner_key = ANY($1::text[]) AND ativa = TRUE`,
+          allKeys
+        ),
+        db.$queryRawUnsafe<Array<{ descricao: string; valor: number }>>(
+          `SELECT descricao, valor FROM financas_pessoais_lancamentos WHERE owner_key = ANY($1::text[]) AND data LIKE $2 AND tipo = 'despesa'`,
+          allKeys,
+          `${mesAlvo}%`
+        ),
+      ]);
+
+      let lancadas = 0;
+      let puladas = 0;
+      for (const a of ativas) {
+        const val = Math.round(Number(a.valor_mensal || 0) * 100) / 100;
+        const nomeAssin = String(a.nome || '').trim();
+        const jaTem = jaMes.some(
+          (l) =>
+            Math.round(Number(l.valor || 0) * 100) === Math.round(val * 100) &&
+            String(l.descricao || '').toLowerCase().includes(nomeAssin.toLowerCase().slice(0, 8))
+        );
+        if (jaTem) {
+          puladas++;
+          continue;
+        }
+        const dia = String(Math.min(28, Math.max(1, Number(a.dia_cobranca || 10)))).padStart(2, '0');
+        const dataLanc = `${mesAlvo}-${dia}`;
+        const desc = a.cartao_nome ? `${nomeAssin} (${a.cartao_nome})` : nomeAssin;
+        await db.$executeRawUnsafe(
+          `INSERT INTO financas_pessoais_lancamentos
+            (id, owner_key, user_id, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, created_at)
+           VALUES ($1, $2, $3, $4, 'despesa', $5, $6, 'Cartão de Crédito', $7, $8, 'pago', FALSE, 'assinatura', NOW())`,
+          crypto.randomUUID(),
+          primaryKey,
+          auth.session.userId,
+          phone,
+          val,
+          String(a.categoria || 'Lazer'),
+          desc,
+          dataLanc
+        );
+        lancadas++;
+      }
+      return NextResponse.json({ ok: true, lancadas, puladas });
+    }
+
     return NextResponse.json({ error: 'Recurso inválido.' }, { status: 400 });
   } catch (error) {
     console.error('Erro em POST /api/financas-pessoais/wealth:', error);
@@ -423,6 +526,8 @@ export async function DELETE(request: Request) {
         ? 'financas_pessoais_dividas'
         : recurso === 'rendimento'
         ? 'financas_pessoais_rendimentos'
+        : recurso === 'assinatura_cartao'
+        ? 'financas_pessoais_assinaturas_cartao'
         : null;
     if (!tabela) return NextResponse.json({ error: 'Recurso inválido.' }, { status: 400 });
 
