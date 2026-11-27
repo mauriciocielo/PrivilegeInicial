@@ -991,23 +991,6 @@ export async function startBaileysSocket(
           mediaType,
           profilePic: profilePic || undefined,
         });
-
-        // Emissor de NFS-e por comando natural no WhatsApp (prévia + confirmação SIM)
-        if (text && mediaType === 'text') {
-          import('./nfse/whatsapp-emissor-bot')
-            .then(({ processarComandoNfseWhatsApp }) =>
-              processarComandoNfseWhatsApp({
-                rawJid,
-                sendJid,
-                cleanPhone,
-                isGroup,
-                text,
-                ownerId,
-                enviarMensagem: (jid, msg, media) => sendBaileysLiveMessage(jid, msg, media, ownerId),
-              })
-            )
-            .catch(() => {});
-        }
       }
     });
 

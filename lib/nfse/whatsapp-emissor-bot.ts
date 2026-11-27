@@ -27,6 +27,7 @@ import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } 
 import { obterBrandingDaEmpresa } from './escritorios-terceiros';
 import { enviarEmailNfseEmitida } from './enviar-email-nfse';
 import { registrarAuditoriaEscritorio } from '../escritorio-recursos';
+import { generateText } from '../ai-provider';
 
 let tabelaRascunhoGarantida = false;
 
@@ -65,21 +66,62 @@ export function interpretarComandoEmissaoNfse(textoBruto: string): {
 } | null {
   // Remove prefixo de grupo "[Nome]: ..."
   const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
-  const gatilho = /^(?:\/emitir\b|emit[aei]r?\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?))/i;
+  const gatilho = /(?:^\/emitir\b|\b(?:emit[aei]r?|faz(?:er)?|tir[ae]r?|ger[ae]r?|lan[cç][ae]r?)\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?))/i;
   if (!gatilho.test(limpo)) return null;
 
   const valor = parseValorMonetario(limpo);
   if (valor <= 0) return null;
 
   // Extrai tomador após "para", "pro", "pra" até "referente", "ref", "sobre", "servico" ou fim
-  const mToma = limpo.match(/\b(?:para|pro|pra)\s+(?:a\s+|o\s+)?(.+?)(?=\s+(?:referente|ref\.?|sobre|servi[cç]o|desc(?:ri[cç][aã]o)?)\b|$)/i);
+  const mToma = limpo.match(/\b(?:para|pro|pra)\s+(?:a\s+|o\s+)?(.+?)(?=\s+(?:referente|ref\.?|sobre|servi[cç]o|desc(?:ri[cç][aã]o)?|no\s+valor)\b|$)/i);
   const tomadorBusca = (mToma?.[1] || '').trim().replace(/[.,;]+$/, '');
 
-  const mDesc = limpo.match(/\b(?:referente\s+a|referente|ref\.?|sobre|servi[cç]o(?:\s+de)?|desc(?:ri[cç][aã]o)?)\s+(.+)$/i);
+  const mDesc = limpo.match(/\b(?:referente\s+a[o]?|referente|ref\.?|sobre|servi[cç]o(?:\s+de)?|desc(?:ri[cç][aã]o)?)\s+(.+)$/i);
   const descricao = (mDesc?.[1] || '').trim();
 
   if (!tomadorBusca) return null;
   return { valor: Math.round(valor * 100) / 100, tomadorBusca, descricao };
+}
+
+/**
+ * Fallback com IA para entender fala natural (especialmente áudios transcritos),
+ * como "Oi Léo, tira uma nota de dois mil e quinhentos pro Condomínio Solaris de manutenção".
+ */
+async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<{
+  valor: number;
+  tomadorBusca: string;
+  descricao: string;
+} | null> {
+  const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
+  const parecePedidoNota =
+    /\b(nota|nfse|nfs-e|faturar|emitir|emite|tira(?:r)?\s+uma\s+nota|faz(?:er)?\s+uma\s+nota)\b/i.test(limpo) &&
+    limpo.length >= 12;
+  if (!parecePedidoNota) return null;
+
+  try {
+    const ai = await generateText({
+      jsonMode: true,
+      maxTokens: 220,
+      temperature: 0.1,
+      timeoutMs: 10000,
+      system:
+        'Você extrai pedidos de emissão de Nota Fiscal de Serviço (NFS-e) de mensagens ou áudios transcritos de WhatsApp. ' +
+        'Se a mensagem NÃO for um pedido claro para emitir uma nota fiscal (por exemplo, se for apenas uma dúvida sobre notas fiscais), retorne {"ehPedido": false}. ' +
+        'Se FOR um pedido para emitir uma nota, retorne {"ehPedido": true, "valor": numero_float, "tomador": "nome ou CNPJ/CPF do cliente/tomador", "descricao": "descrição do serviço ou vazio"}. ' +
+        'Converta valores por extenso (ex.: "dois mil e quinhentos") para número (2500).',
+      prompt: limpo,
+    });
+    if (!ai.text) return null;
+    const parsed = JSON.parse(ai.text);
+    if (!parsed?.ehPedido) return null;
+    const valor = Math.round((Number(parsed.valor) || 0) * 100) / 100;
+    const tomadorBusca = String(parsed.tomador || '').trim();
+    const descricao = String(parsed.descricao || '').trim();
+    if (valor <= 0 || !tomadorBusca) return null;
+    return { valor, tomadorBusca, descricao };
+  } catch {
+    return null;
+  }
 }
 
 async function localizarEmpresaPorChat(rawJid: string, cleanPhone: string, isGroup: boolean) {
@@ -341,8 +383,8 @@ export async function processarComandoNfseWhatsApp(params: {
       return true;
     }
 
-    // 2. Verifica se é um novo comando de emissão natural
-    const cmd = interpretarComandoEmissaoNfse(limpo);
+    // 2. Verifica se é um novo comando de emissão natural (texto ou áudio transcrito)
+    const cmd = interpretarComandoEmissaoNfse(limpo) || (await interpretarComandoEmissaoComIA(limpo));
     if (!cmd) return false;
 
     const empresa = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup);

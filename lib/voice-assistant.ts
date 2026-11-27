@@ -52,15 +52,48 @@ export function cleanTextForSpeech(text: string): string {
  */
 export async function transcribeWhatsAppAudio(params: {
   mediaUrl: string;
+  groqKey?: string;
   geminiKey?: string;
   openaiKey?: string;
 }): Promise<string | null> {
   const { mediaUrl, geminiKey, openaiKey } = params;
+  const groqKey = (params.groqKey || process.env.GROQ_API_KEY || '').trim();
   if (!mediaUrl || !mediaUrl.includes('base64,')) return null;
 
   const [header, base64Data] = mediaUrl.split('base64,');
   const mimeMatch = header.match(/^data:([^;]+);/);
   const mimeType = mimeMatch ? mimeMatch[1].split(';')[0].trim() : 'audio/ogg';
+
+  // 0. Tenta transcrever via Groq Whisper (whisper-large-v3-turbo — gratuito, ultra-rápido e excelente em PT-BR)
+  if (groqKey && groqKey.length > 15) {
+    try {
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      const ext = mimeType.includes('mp4') || mimeType.includes('m4a')
+        ? 'm4a'
+        : mimeType.includes('mpeg') || mimeType.includes('mp3')
+        ? 'mp3'
+        : 'ogg';
+      const form = new FormData();
+      form.append('file', new Blob([audioBuffer], { type: mimeType }), `audio.${ext}`);
+      form.append('model', 'whisper-large-v3-turbo');
+      form.append('language', 'pt');
+      form.append('response_format', 'json');
+
+      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groqKey}` },
+        body: form,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        const json = await res.json().catch(() => null);
+        const transcript = typeof json?.text === 'string' ? json.text.trim() : '';
+        if (transcript) return transcript;
+      }
+    } catch (err) {
+      console.warn('[VoiceAssistant] Falha na transcrição Groq Whisper:', err);
+    }
+  }
 
   // 1. Tenta transcrever via Google Gemini 2.5 Flash (suporta audio/ogg, audio/mp4, audio/mpeg nativamente)
   if (geminiKey && geminiKey.length > 25) {
@@ -129,37 +162,6 @@ export async function transcribeWhatsAppAudio(params: {
       }
     } catch (err) {
       console.warn('[VoiceAssistant] Aviso na transcrição OpenAI Whisper:', err);
-    }
-  }
-
-  // 3. Tenta transcrever via Groq Whisper (cota gratuita) se GROQ_API_KEY estiver configurada
-  const groqKey = (process.env.GROQ_API_KEY || '').trim();
-  if (groqKey) {
-    try {
-      const audioBuffer = Buffer.from(base64Data, 'base64');
-      const formData = new FormData();
-      const blob = new Blob([audioBuffer], { type: mimeType });
-      formData.append('file', blob, 'audio.ogg');
-      formData.append('model', 'whisper-large-v3-turbo');
-      formData.append('language', 'pt');
-
-      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${groqKey}` },
-        body: formData,
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.text && json.text.trim()) {
-          return json.text.trim();
-        }
-      } else {
-        console.warn('[VoiceAssistant] Groq Whisper respondeu', res.status);
-      }
-    } catch (err) {
-      console.warn('[VoiceAssistant] Aviso na transcrição Groq Whisper:', err);
     }
   }
 

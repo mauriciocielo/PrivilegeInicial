@@ -1839,6 +1839,7 @@ export async function processIncomingMessage(params: {
 
     const transcript = await transcribeWhatsAppAudio({
       mediaUrl: params.mediaUrl,
+      groqKey: process.env.GROQ_API_KEY || (config.api_key && config.api_key.startsWith('gsk_') ? config.api_key : ''),
       geminiKey,
       openaiKey,
     }).catch(() => null);
@@ -1945,6 +1946,28 @@ export async function processIncomingMessage(params: {
     (params.remoteJid && params.remoteJid.includes('@g.us')) ||
     (params.chatId && params.chatId.includes('@g.us'))
   );
+
+  // Emissor de NFS-e via WhatsApp (funciona com TEXTO ou ÁUDIO transcrito, no privado ou em grupo vinculado à empresa!)
+  if (cleanText && cleanText !== '🎤 Mensagem de áudio') {
+    try {
+      const { processarComandoNfseWhatsApp } = await import('./nfse/whatsapp-emissor-bot');
+      const sendTarget = params.remoteJid || params.phone;
+      const tratadoNfse = await processarComandoNfseWhatsApp({
+        rawJid: params.remoteJid || params.chatId,
+        sendJid: sendTarget,
+        cleanPhone: params.phone,
+        isGroup: ehGrupo,
+        text: cleanText,
+        ownerId,
+        enviarMensagem: (jid, msg, media) => sendBaileysLiveMessage(jid, msg, media, ownerId),
+      });
+      if (tratadoNfse) {
+        return { source: 'ai' };
+      }
+    } catch (err) {
+      console.warn('[WhatsApp] Erro no emissor de NFS-e via WhatsApp:', err);
+    }
+  }
 
   // Bot nunca responde automaticamente em grupos de WhatsApp (evita excesso de mensagens)
   if (ehGrupo) {
