@@ -32,6 +32,14 @@ export async function POST(request: Request) {
     const phone = String(body?.phone || '').trim();
     const senha = String(body?.senha || '').trim();
     const cupomRaw = String(body?.cupom || '').trim();
+    const cpf = String(body?.cpf || '').trim();
+    const cep = String(body?.cep || '').trim();
+    const endereco = String(body?.endereco || '').trim();
+    const cidade = String(body?.cidade || '').trim();
+    const uf = String(body?.uf || '').trim();
+    const empregoEmpresa = String(body?.empregoEmpresa || '').trim();
+    const empregoCargo = String(body?.empregoCargo || '').trim();
+    const empregoTipo = String(body?.empregoTipo || 'clt').trim();
 
     if (!nome || nome.length < 2) {
       return NextResponse.json({ error: 'Informe seu nome completo.' }, { status: 400 });
@@ -78,6 +86,14 @@ export async function POST(request: Request) {
       diasValidade: diasTrial,
       cupomCodigo: cupomAplicado,
       valorRenovacao,
+      cpf,
+      cep,
+      endereco,
+      cidade,
+      uf,
+      empregoEmpresa,
+      empregoCargo,
+      empregoTipo,
       origem: cupomAplicado ? `pagina_vendas:${cupomAplicado}` : 'pagina_vendas',
       enviarWhatsapp: true,
       appUrl: origin,

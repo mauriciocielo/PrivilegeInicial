@@ -23,6 +23,14 @@ export default function VendasFinancasPessoaisPage() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cep, setCep] = useState('');
+  const [endereco, setEndereco] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [uf, setUf] = useState('');
+  const [empregoEmpresa, setEmpregoEmpresa] = useState('');
+  const [empregoCargo, setEmpregoCargo] = useState('');
+  const [empregoTipo, setEmpregoTipo] = useState('clt');
   const [senha, setSenha] = useState('');
   const [cupomInput, setCupomInput] = useState('');
   const [validandoCupom, setValidandoCupom] = useState(false);
@@ -72,6 +80,22 @@ export default function VendasFinancasPessoaisPage() {
     }
   }, [aplicarCupom]);
 
+  const buscarCep = async (cepRaw: string) => {
+    const dig = cepRaw.replace(/\D/g, '');
+    if (dig.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${dig}/json/`);
+      const d = await res.json();
+      if (!d.erro) {
+        setEndereco([d.logradouro, d.bairro].filter(Boolean).join(', '));
+        setCidade(d.localidade || '');
+        setUf(d.uf || '');
+      }
+    } catch {
+      // ignora
+    }
+  };
+
   const handleCadastrar = async (e: React.FormEvent) => {
     e.preventDefault();
     setEnviando(true);
@@ -79,7 +103,21 @@ export default function VendasFinancasPessoaisPage() {
       const res = await fetch('/api/public/financas-pessoais/cadastro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, email, phone, senha, cupom: cupomAplicado?.codigo || '' }),
+        body: JSON.stringify({
+          nome,
+          email,
+          phone,
+          cpf,
+          cep,
+          endereco,
+          cidade,
+          uf,
+          empregoEmpresa,
+          empregoCargo,
+          empregoTipo,
+          senha,
+          cupom: cupomAplicado?.codigo || '',
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -420,19 +458,127 @@ export default function VendasFinancasPessoaisPage() {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
               </div>
-              <div>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
-                  WhatsApp com DDD
-                </label>
-                <input
-                  className="form-control"
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(46) 99999-9999"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    WhatsApp com DDD *
+                  </label>
+                  <input
+                    className="form-control"
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(46) 99999-9999"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    CPF *
+                  </label>
+                  <input
+                    className="form-control"
+                    required
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    CEP *
+                  </label>
+                  <input
+                    className="form-control"
+                    required
+                    value={cep}
+                    onChange={(e) => {
+                      setCep(e.target.value);
+                      if (e.target.value.replace(/\D/g, '').length === 8) buscarCep(e.target.value);
+                    }}
+                    placeholder="85601-000"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    Endereço (Rua, nº, bairro) *
+                  </label>
+                  <input
+                    className="form-control"
+                    required
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder="Rua Exemplo, 123, Centro"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    Cidade
+                  </label>
+                  <input
+                    className="form-control"
+                    value={cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    placeholder="Francisco Beltrão"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    UF
+                  </label>
+                  <input
+                    className="form-control"
+                    maxLength={2}
+                    value={uf}
+                    onChange={(e) => setUf(e.target.value.toUpperCase())}
+                    placeholder="PR"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    Emprego / Ocupação
+                  </label>
+                  <select
+                    className="form-control"
+                    value={empregoTipo}
+                    onChange={(e) => setEmpregoTipo(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box', background: '#fff' }}
+                  >
+                    <option value="clt">CLT</option>
+                    <option value="pj_socio">Empresário / PJ</option>
+                    <option value="autonomo">Autônomo</option>
+                    <option value="servidor">Servidor Público</option>
+                    <option value="aposentado">Aposentado</option>
+                    <option value="outros">Outros</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                    Empresa / Cargo (opc.)
+                  </label>
+                  <input
+                    className="form-control"
+                    value={empregoEmpresa}
+                    onChange={(e) => {
+                      setEmpregoEmpresa(e.target.value);
+                      setEmpregoCargo(e.target.value);
+                    }}
+                    placeholder="Ex.: Analista na Empresa X"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
+                  />
+                </div>
               </div>
               <div>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>

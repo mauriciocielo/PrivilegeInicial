@@ -97,8 +97,34 @@ export async function resolverChavesFinancasUsuario(userId: string): Promise<{
   const userKey = `user:${userId}`;
   // Se o usuário tem telefone cadastrado, prioriza phone:<ult8> como chave principal para casar 100% com o WhatsApp
   const primaryKey = phoneKey || userKey;
-  const allKeys = Array.from(new Set([primaryKey, userKey, ...(phoneKey ? [phoneKey] : [])]));
-  return { primaryKey, allKeys, phone: user?.phone || null };
+  const keysSet = new Set<string>([primaryKey, userKey, ...(phoneKey ? [phoneKey] : [])]);
+
+  // Se houver cônjuge vinculado com compartilhamento ativo, une as chaves do casal
+  try {
+    const vinculos = await db.$queryRawUnsafe<
+      Array<{ user_id: string; phone: string; conjuge_user_id: string | null; conjuge_phone: string }>
+    >(
+      `SELECT user_id, phone, conjuge_user_id, conjuge_phone
+       FROM financas_pessoais_assinaturas
+       WHERE compartilhar_financas = TRUE
+         AND (user_id = $1 OR conjuge_user_id = $1)
+       LIMIT 1`,
+      userId
+    );
+    const v = vinculos[0];
+    if (v) {
+      if (v.user_id) keysSet.add(`user:${v.user_id}`);
+      if (v.conjuge_user_id) keysSet.add(`user:${v.conjuge_user_id}`);
+      const pkTit = normalizarOwnerKeyTelefone(v.phone);
+      const pkConj = normalizarOwnerKeyTelefone(v.conjuge_phone);
+      if (pkTit) keysSet.add(pkTit);
+      if (pkConj) keysSet.add(pkConj);
+    }
+  } catch {
+    // tabela pode ainda não ter colunas em ambientes antigos — ignora silenciosamente
+  }
+
+  return { primaryKey, allKeys: Array.from(keysSet), phone: user?.phone || null };
 }
 
 function fmtBRL(v: number): string {

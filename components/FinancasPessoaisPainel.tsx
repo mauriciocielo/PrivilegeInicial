@@ -19,6 +19,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  Users,
   Wallet,
   X,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ import {
   RelatoriosConsultorIaTab,
   useWealthData,
 } from './FinancasPessoaisWealthTabs';
+import FinancasPessoaisPerfilTab from './FinancasPessoaisPerfilTab';
 
 const CATEGORIAS = [
   'Alimentação',
@@ -121,7 +123,7 @@ interface PreviewExtratoState {
 
 export default function FinancasPessoaisPainel() {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
-  const [aba, setAba] = useState<'geral' | 'cartoes' | 'investimentos' | 'relatorios' | 'irpf'>('geral');
+  const [aba, setAba] = useState<'geral' | 'cartoes' | 'investimentos' | 'relatorios' | 'irpf' | 'perfil'>('geral');
   const [importandoExtrato, setImportandoExtrato] = useState(false);
   const [previewExtrato, setPreviewExtrato] = useState<PreviewExtratoState | null>(null);
   const [mostrarJaLancados, setMostrarJaLancados] = useState(true);
@@ -857,6 +859,25 @@ export default function FinancasPessoaisPainel() {
         >
           <FileSpreadsheet size={15} /> Pasta IRPF ({dedutiveisIrpf.length})
         </button>
+        <button
+          type="button"
+          onClick={() => setAba('perfil')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13.5,
+            background: aba === 'perfil' ? 'var(--accent, #600000)' : '#e2e8f0',
+            color: aba === 'perfil' ? '#fff' : '#334155',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Users size={15} /> Perfil, Emprego & Casal
+        </button>
       </div>
 
       {aba === 'geral' ? (
@@ -1018,6 +1039,13 @@ export default function FinancasPessoaisPainel() {
         <InvestimentosWealthTab wealth={wealthData} onAtualizado={recarregarWealth} />
       ) : aba === 'relatorios' ? (
         <RelatoriosConsultorIaTab wealth={wealthData} mes={mes} />
+      ) : aba === 'perfil' ? (
+        <FinancasPessoaisPerfilTab
+          onAtualizado={() => {
+            carregar(mes);
+            recarregarWealth();
+          }}
+        />
       ) : (
         /* Pasta Dedutíveis IRPF */
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20 }}>

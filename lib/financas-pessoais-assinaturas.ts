@@ -62,6 +62,28 @@ export async function ensureFinancasAssinaturasTable() {
   await db.$executeRawUnsafe(
     `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS ultimo_lembrete_data TEXT NOT NULL DEFAULT ''`
   );
+  // Dados pessoais, endereço, emprego e compartilhamento com cônjuge (idempotente)
+  const colunasExtras = [
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS cpf TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS cep TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS endereco TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS cidade TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS uf TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS emprego_empresa TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS emprego_cargo TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS emprego_tipo TEXT NOT NULL DEFAULT 'clt'`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS renda_mensal DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS dia_pagamento INTEGER NOT NULL DEFAULT 5`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS titular_assinatura_id TEXT`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS conjuge_user_id TEXT`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS conjuge_nome TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS conjuge_email TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS conjuge_phone TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS compartilhar_financas BOOLEAN NOT NULL DEFAULT TRUE`,
+  ];
+  for (const sql of colunasExtras) {
+    await db.$executeRawUnsafe(sql);
+  }
 
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS financas_pessoais_cupons (
@@ -223,6 +245,16 @@ export async function criarOuAtivarAssinantePf(params: {
   externalId?: string;
   cupomCodigo?: string;
   valorRenovacao?: number;
+  cpf?: string;
+  cep?: string;
+  endereco?: string;
+  cidade?: string;
+  uf?: string;
+  empregoEmpresa?: string;
+  empregoCargo?: string;
+  empregoTipo?: string;
+  rendaMensal?: number;
+  diaPagamento?: number;
   enviarWhatsapp?: boolean;
   appUrl?: string;
 }) {
@@ -302,8 +334,18 @@ export async function criarOuAtivarAssinantePf(params: {
            external_id = COALESCE(NULLIF($8, ''), external_id),
            cupom_codigo = COALESCE(NULLIF($9, ''), cupom_codigo),
            valor_renovacao = CASE WHEN $10 >= 0 THEN $10 ELSE valor_renovacao END,
+           cpf = COALESCE(NULLIF($11, ''), cpf),
+           cep = COALESCE(NULLIF($12, ''), cep),
+           endereco = COALESCE(NULLIF($13, ''), endereco),
+           cidade = COALESCE(NULLIF($14, ''), cidade),
+           uf = COALESCE(NULLIF($15, ''), uf),
+           emprego_empresa = COALESCE(NULLIF($16, ''), emprego_empresa),
+           emprego_cargo = COALESCE(NULLIF($17, ''), emprego_cargo),
+           emprego_tipo = COALESCE(NULLIF($18, ''), emprego_tipo),
+           renda_mensal = CASE WHEN $19 > 0 THEN $19 ELSE renda_mensal END,
+           dia_pagamento = CASE WHEN $20 > 0 THEN $20 ELSE dia_pagamento END,
            updated_at = NOW()
-       WHERE id = $11`,
+       WHERE id = $21`,
       nome || user.name,
       phone || user.phone || '',
       planoKey,
@@ -314,14 +356,25 @@ export async function criarOuAtivarAssinantePf(params: {
       params.externalId || '',
       cupomCodigo,
       typeof params.valorRenovacao === 'number' ? valorRenovacao : -1,
+      String(params.cpf || '').trim(),
+      String(params.cep || '').trim(),
+      String(params.endereco || '').trim(),
+      String(params.cidade || '').trim(),
+      String(params.uf || '').trim().toUpperCase().slice(0, 2),
+      String(params.empregoEmpresa || '').trim(),
+      String(params.empregoCargo || '').trim(),
+      String(params.empregoTipo || '').trim(),
+      Number(params.rendaMensal || 0),
+      Number(params.diaPagamento || 0),
       assinaturaId
     );
   } else {
     assinaturaId = crypto.randomUUID();
     await db.$executeRawUnsafe(
       `INSERT INTO financas_pessoais_assinaturas
-        (id, user_id, nome, email, phone, plano, valor_mensal, status, valido_ate, origem, gateway, external_id, cupom_codigo, valor_renovacao, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())`,
+        (id, user_id, nome, email, phone, plano, valor_mensal, status, valido_ate, origem, gateway, external_id, cupom_codigo, valor_renovacao,
+         cpf, cep, endereco, cidade, uf, emprego_empresa, emprego_cargo, emprego_tipo, renda_mensal, dia_pagamento, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, NOW(), NOW())`,
       assinaturaId,
       user.id,
       nome || user.name,
@@ -335,7 +388,17 @@ export async function criarOuAtivarAssinantePf(params: {
       params.gateway || '',
       params.externalId || '',
       cupomCodigo,
-      valorRenovacao
+      valorRenovacao,
+      String(params.cpf || '').trim(),
+      String(params.cep || '').trim(),
+      String(params.endereco || '').trim(),
+      String(params.cidade || '').trim(),
+      String(params.uf || '').trim().toUpperCase().slice(0, 2),
+      String(params.empregoEmpresa || '').trim(),
+      String(params.empregoCargo || '').trim(),
+      String(params.empregoTipo || 'clt').trim(),
+      Math.max(0, Number(params.rendaMensal || 0)),
+      Math.min(31, Math.max(1, Number(params.diaPagamento || 5)))
     );
   }
 
