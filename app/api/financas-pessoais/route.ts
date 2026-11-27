@@ -8,6 +8,7 @@ import {
   ensureFinancasPessoaisTables,
   resolverChavesFinancasUsuario,
 } from '../../../lib/financas-pessoais';
+import { ensureFinancasAssinaturasTable } from '../../../lib/financas-pessoais-assinaturas';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
 
-    await ensureFinancasPessoaisTables();
+    await Promise.all([ensureFinancasPessoaisTables(), ensureFinancasAssinaturasTable()]);
     const url = new URL(request.url);
     const mesParam = (url.searchParams.get('mes') || '').trim();
     const mes = /^\d{4}-\d{2}$/.test(mesParam) ? mesParam : new Date().toISOString().slice(0, 7);
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
     const { allKeys, phone } = await resolverChavesFinancasUsuario(auth.session.userId);
 
-    const [lancsMes, metasRaw, irpfAno] = await Promise.all([
+    const [lancsMes, metasRaw, irpfAno, assinRows] = await Promise.all([
       db.$queryRawUnsafe<any[]>(
         `SELECT * FROM financas_pessoais_lancamentos
          WHERE owner_key = ANY($1::text[]) AND data LIKE $2
@@ -49,7 +50,37 @@ export async function GET(request: Request) {
         allKeys,
         `${ano}%`
       ),
+      db.$queryRawUnsafe<any[]>(
+        `SELECT status, plano, valido_ate FROM financas_pessoais_assinaturas WHERE user_id = $1 LIMIT 1`,
+        auth.session.userId
+      ),
     ]);
+
+    let assinatura: {
+      status: string;
+      plano: string;
+      validoAte: string;
+      diasRestantes: number;
+      checkoutUrl: string;
+    } | null = null;
+
+    if (assinRows[0]) {
+      const st = String(assinRows[0].status || 'trial');
+      const validoAte = String(assinRows[0].valido_ate || '');
+      const hojeMs = Date.parse(`${new Date().toISOString().slice(0, 10)}T12:00:00Z`);
+      const validMs = validoAte ? Date.parse(`${validoAte}T12:00:00Z`) : hojeMs;
+      const diasRestantes = Math.ceil((validMs - hojeMs) / (24 * 60 * 60 * 1000));
+      const expirado = (st === 'trial' || st === 'ativo') && diasRestantes < 0;
+      assinatura = {
+        status: expirado ? 'expirado' : st,
+        plano: String(assinRows[0].plano || 'trial_7d'),
+        validoAte,
+        diasRestantes,
+        checkoutUrl:
+          process.env.NEXT_PUBLIC_PF_CHECKOUT_URL ||
+          'https://wa.me/5546999800010?text=Ol%C3%A1!%20Quero%20ativar%20minha%20assinatura%20do%20Minhas%20Finan%C3%A7as%20PF%20(R%24%2029%2C90%2Fm%C3%AAs).',
+      };
+    }
 
     let entrou = 0;
     let saiu = 0;
@@ -108,6 +139,7 @@ export async function GET(request: Request) {
       ano,
       whatsappVinculado: Boolean(phone),
       telefone: phone,
+      assinatura,
       resumo: {
         entrou: Math.round(entrou * 100) / 100,
         saiu: Math.round(saiu * 100) / 100,

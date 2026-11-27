@@ -130,6 +130,13 @@ export default function FinancasPessoaisPainel() {
   const [carregando, setCarregando] = useState(true);
   const [whatsappVinculado, setWhatsappVinculado] = useState(false);
   const [telefone, setTelefone] = useState<string | null>(null);
+  const [assinaturaPf, setAssinaturaPf] = useState<{
+    status: string;
+    plano: string;
+    validoAte: string;
+    diasRestantes: number;
+    checkoutUrl: string;
+  } | null>(null);
   const [resumo, setResumo] = useState({ entrou: 0, saiu: 0, saldo: 0, totalDedutivelAno: 0 });
   const [porCategoria, setPorCategoria] = useState<Array<{ categoria: string; total: number }>>([]);
   const [metas, setMetas] = useState<MetaPf[]>([]);
@@ -166,6 +173,7 @@ export default function FinancasPessoaisPainel() {
       }
       setWhatsappVinculado(Boolean(d.whatsappVinculado));
       setTelefone(d.telefone || null);
+      setAssinaturaPf(d.assinatura || null);
       setResumo(d.resumo || { entrou: 0, saiu: 0, saldo: 0, totalDedutivelAno: 0 });
       setPorCategoria(Array.isArray(d.porCategoria) ? d.porCategoria : []);
       setMetas(Array.isArray(d.metas) ? d.metas : []);
@@ -479,6 +487,49 @@ export default function FinancasPessoaisPainel() {
           }
         }
       `}</style>
+
+      {/* Banner de Trial / Renovação Assinatura PF */}
+      {assinaturaPf && ['trial', 'expirado', 'suspenso'].includes(assinaturaPf.status) && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            borderRadius: 14,
+            background: assinaturaPf.status === 'trial' ? '#eff6ff' : '#fef2f2',
+            border: `1px solid ${assinaturaPf.status === 'trial' ? '#bfdbfe' : '#fecaca'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13.5, color: assinaturaPf.status === 'trial' ? '#1e3a8a' : '#991b1b', fontWeight: 600 }}>
+            {assinaturaPf.status === 'trial'
+              ? `🎁 Você está no Teste Grátis de 7 dias (${Math.max(0, assinaturaPf.diasRestantes)} dia(s) restante(s) · até ${assinaturaPf.validoAte}). Garanta seu acesso contínuo por R$ 29,90/mês.`
+              : `⚠️ Sua assinatura do Minhas Finanças PF expirou em ${assinaturaPf.validoAte}. Renove por R$ 29,90/mês para continuar lançando pelo WhatsApp e painel.`}
+          </div>
+          <a
+            href={assinaturaPf.checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn"
+            style={{
+              background: assinaturaPf.status === 'trial' ? '#1d4ed8' : '#b91c1c',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: 'none',
+              padding: '8px 14px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {assinaturaPf.status === 'trial' ? 'Assinar por R$ 29,90/mês' : 'Renovar agora (R$ 29,90/mês)'}
+          </a>
+        </div>
+      )}
 
       {/* Cabeçalho estilo App Digital */}
       <div className="fp-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 22 }}>
