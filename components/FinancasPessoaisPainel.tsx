@@ -157,6 +157,19 @@ export default function FinancasPessoaisPainel() {
   const [comprovanteNome, setComprovanteNome] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  // Modal Pagamento Pix Sicoob
+  const [modalPix, setModalPix] = useState(false);
+  const [pixPlano, setPixPlano] = useState<'mensal' | 'anual'>('mensal');
+  const [gerandoPix, setGerandoPix] = useState(false);
+  const [verificandoPix, setVerificandoPix] = useState(false);
+  const [pixCobranca, setPixCobranca] = useState<{
+    txid: string;
+    brcode: string;
+    qrCodeUrl: string;
+    valor: number;
+    plano: string;
+  } | null>(null);
+
   // Modal Nova Meta
   const [modalMeta, setModalMeta] = useState(false);
   const [metaCategoria, setMetaCategoria] = useState('Alimentação');
@@ -189,6 +202,67 @@ export default function FinancasPessoaisPainel() {
   useEffect(() => {
     carregar(mes);
   }, [mes, carregar]);
+
+  const handleGerarPixSicoob = async (planoSel: 'mensal' | 'anual') => {
+    setGerandoPix(true);
+    setPixCobranca(null);
+    try {
+      const res = await fetch('/api/financas-pessoais/pix-sicoob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano: planoSel, enviarWhatsapp: true }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Não foi possível gerar o Pix no Sicoob.');
+        return;
+      }
+      setPixCobranca({
+        txid: d.txid,
+        brcode: d.brcode,
+        qrCodeUrl: d.qrCodeUrl,
+        valor: d.valor,
+        plano: d.plano,
+      });
+      toast.success('Pix Sicoob gerado! Escaneie o QR Code ou copie o código.');
+    } catch {
+      toast.error('Erro de conexão ao gerar Pix.');
+    } finally {
+      setGerandoPix(false);
+    }
+  };
+
+  const handleVerificarPixSicoob = useCallback(
+    async (silencioso = false) => {
+      if (!pixCobranca?.txid) return;
+      if (!silencioso) setVerificandoPix(true);
+      try {
+        const res = await fetch(`/api/financas-pessoais/pix-sicoob?txid=${encodeURIComponent(pixCobranca.txid)}`);
+        const d = await res.json().catch(() => ({}));
+        if (res.ok && d.pago) {
+          toast.success('Pagamento Pix confirmado pelo Sicoob! Sua assinatura está ativa!');
+          setPixCobranca(null);
+          setModalPix(false);
+          carregar(mes);
+        } else if (!silencioso) {
+          toast.info('Pagamento ainda não identificado pelo Sicoob. Aguarde alguns segundos e tente novamente.');
+        }
+      } catch {
+        if (!silencioso) toast.error('Erro ao consultar o Sicoob.');
+      } finally {
+        if (!silencioso) setVerificandoPix(false);
+      }
+    },
+    [pixCobranca?.txid, carregar, mes]
+  );
+
+  useEffect(() => {
+    if (!modalPix || !pixCobranca?.txid) return;
+    const timer = setInterval(() => {
+      handleVerificarPixSicoob(true);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [modalPix, pixCobranca?.txid, handleVerificarPixSicoob]);
 
   const lerArquivoComoDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -509,25 +583,27 @@ export default function FinancasPessoaisPainel() {
               ? `🎁 Você está no Teste Grátis de 7 dias (${Math.max(0, assinaturaPf.diasRestantes)} dia(s) restante(s) · até ${assinaturaPf.validoAte}). Garanta seu acesso contínuo por R$ 29,90/mês.`
               : `⚠️ Sua assinatura do Minhas Finanças PF expirou em ${assinaturaPf.validoAte}. Renove por R$ 29,90/mês para continuar lançando pelo WhatsApp e painel.`}
           </div>
-          <a
-            href={assinaturaPf.checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => {
+              setModalPix(true);
+              setPixCobranca(null);
+            }}
             className="btn"
             style={{
-              background: assinaturaPf.status === 'trial' ? '#1d4ed8' : '#b91c1c',
+              background: assinaturaPf.status === 'trial' ? 'var(--accent, #600000)' : '#b91c1c',
               color: '#fff',
               border: 'none',
               borderRadius: 10,
               fontWeight: 700,
               fontSize: 13,
-              textDecoration: 'none',
               padding: '8px 14px',
               whiteSpace: 'nowrap',
+              cursor: 'pointer',
             }}
           >
-            {assinaturaPf.status === 'trial' ? 'Assinar por R$ 29,90/mês' : 'Renovar agora (R$ 29,90/mês)'}
-          </a>
+            {assinaturaPf.status === 'trial' ? 'Assinar via Pix Sicoob (R$ 29,90/mês)' : 'Renovar via Pix Sicoob (R$ 29,90/mês)'}
+          </button>
         </div>
       )}
 
@@ -1039,6 +1115,139 @@ export default function FinancasPessoaisPainel() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal Pagamento Pix Sicoob */}
+      {modalPix && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(20, 20, 19, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setModalPix(false)}
+        >
+          <div
+            className="fp-modal-card"
+            style={{ background: '#fff', borderRadius: 16, borderTop: '4px solid var(--accent, #600000)', width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e6e4de', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#141413' }}>Assinar via Pix (Sicoob)</h3>
+                <div style={{ fontSize: 12, color: '#6e6c66' }}>Liberação automática segundos após o pagamento</div>
+              </div>
+              <button type="button" onClick={() => setModalPix(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPixPlano('mensal');
+                    setPixCobranca(null);
+                  }}
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: `2px solid ${pixPlano === 'mensal' ? 'var(--accent, #600000)' : '#e6e4de'}`,
+                    background: pixPlano === 'mensal' ? 'rgba(96, 0, 0, 0.05)' : '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#6e6c66' }}>Plano Mensal</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent, #600000)', marginTop: 2 }}>R$ 29,90</div>
+                  <div style={{ fontSize: 11.5, color: '#6e6c66' }}>30 dias de acesso</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPixPlano('anual');
+                    setPixCobranca(null);
+                  }}
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: `2px solid ${pixPlano === 'anual' ? 'var(--accent, #600000)' : '#e6e4de'}`,
+                    background: pixPlano === 'anual' ? 'rgba(96, 0, 0, 0.05)' : '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>Plano Anual · 2 meses grátis</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent, #600000)', marginTop: 2 }}>R$ 297,00</div>
+                  <div style={{ fontSize: 11.5, color: '#6e6c66' }}>365 dias de acesso</div>
+                </button>
+              </div>
+
+              {!pixCobranca ? (
+                <button
+                  type="button"
+                  disabled={gerandoPix}
+                  onClick={() => handleGerarPixSicoob(pixPlano)}
+                  className="btn"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'var(--accent, #600000)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: 14.5,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {gerandoPix ? 'Gerando QR Code Pix no Sicoob...' : `Gerar QR Code Pix (${pixPlano === 'anual' ? 'R$ 297,00' : 'R$ 29,90'})`}
+                </button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <img
+                    src={pixCobranca.qrCodeUrl}
+                    alt="QR Code Pix Sicoob"
+                    style={{ width: 210, height: 210, borderRadius: 12, border: '1px solid #e6e4de', background: '#fff', padding: 6 }}
+                  />
+                  <div style={{ width: '100%' }}>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#4a4945', display: 'block', marginBottom: 4 }}>
+                      Pix Copia e Cola
+                    </label>
+                    <textarea
+                      readOnly
+                      rows={3}
+                      value={pixCobranca.brcode}
+                      style={{ width: '100%', fontSize: 11.5, padding: 8, borderRadius: 8, border: '1px solid #d3d0c8', background: '#f6f5f2', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ flex: 1, fontWeight: 700, borderRadius: 10 }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixCobranca.brcode);
+                        toast.success('Código Pix copiado!');
+                      }}
+                    >
+                      Copiar Código Pix
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={verificandoPix}
+                      onClick={() => handleVerificarPixSicoob(false)}
+                      style={{ flex: 1, background: '#15803d', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700 }}
+                    >
+                      {verificandoPix ? 'Verificando...' : 'Já paguei'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6e6c66', textAlign: 'center' }}>
+                    Aguardando confirmação automática do Sicoob... (também enviamos o código no seu WhatsApp)
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

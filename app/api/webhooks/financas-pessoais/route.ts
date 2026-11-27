@@ -5,6 +5,7 @@ import {
   criarOuAtivarAssinantePf,
   ensureFinancasAssinaturasTable,
 } from '../../../../lib/financas-pessoais-assinaturas';
+import { ensureFinancasPixTable } from '../../../../lib/sicoob-pix';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,41 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    await ensureFinancasAssinaturasTable();
+    await Promise.all([ensureFinancasAssinaturasTable(), ensureFinancasPixTable()]);
+
+    // 0. Formato oficial Webhook Pix BACEN / Sicoob: { pix: [{ txid, valor, horario, endToEndId }] }
+    if (Array.isArray(body?.pix) && body.pix.length > 0) {
+      let ativados = 0;
+      for (const p of body.pix) {
+        const txid = String(p?.txid || '').trim();
+        if (!txid) continue;
+        const rows = await db.$queryRawUnsafe<any[]>(
+          `SELECT * FROM financas_pessoais_cobrancas_pix WHERE txid = $1 LIMIT 1`,
+          txid
+        );
+        const reg = rows[0];
+        if (!reg || String(reg.status).toUpperCase() === 'CONCLUIDA') continue;
+
+        await db.$executeRawUnsafe(
+          `UPDATE financas_pessoais_cobrancas_pix SET status = 'CONCLUIDA', paid_at = NOW() WHERE txid = $1`,
+          txid
+        );
+        await criarOuAtivarAssinantePf({
+          nome: String(reg.nome || 'Assinante PF'),
+          email: String(reg.email),
+          phone: String(reg.phone || ''),
+          plano: String(reg.plano) === 'anual' ? 'anual' : 'mensal',
+          status: 'ativo',
+          origem: 'webhook_sicoob_pix',
+          gateway: 'sicoob_pix',
+          externalId: txid,
+          enviarWhatsapp: true,
+          appUrl: new URL(request.url).origin,
+        });
+        ativados++;
+      }
+      return NextResponse.json({ ok: true, gateway: 'sicoob_pix', ativados });
+    }
 
     // Normalização multi-gateway (Asaas, Kiwify, Hotmart, Mercado Pago, Custom)
     const rawEvent = String(
