@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/daily-report", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/financas-pessoais-lembrete", "schedule": "0 23 * * *" },
     { "path": "/api/nfe/monitor/executar", "schedule": "0 1 * * *" },
     { "path": "/api/nfe/monitor/executar", "schedule": "0 4 * * *" },
     { "path": "/api/nfe/monitor/executar", "schedule": "0 7 * * *" },

@@ -57,6 +57,24 @@ export default function SaasAssinantesPfTab() {
   const [cupomLimite, setCupomLimite] = useState('');
   const [cupomValidade, setCupomValidade] = useState('');
   const [salvandoCupom, setSalvandoCupom] = useState(false);
+  const [disparandoLembretes, setDisparandoLembretes] = useState(false);
+
+  const handleDispararLembretes = async () => {
+    setDisparandoLembretes(true);
+    try {
+      const res = await fetch('/api/cron/financas-pessoais-lembrete', { method: 'POST' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao disparar lembretes.');
+        return;
+      }
+      toast.success(
+        `Concluído! ${d.lembretesEnviados || 0} lembrete(s) de 1 dia sem envio + ${d.boasVindasReenviadas || 0} boas-vindas pendente(s).`
+      );
+    } finally {
+      setDisparandoLembretes(false);
+    }
+  };
 
   // Form Novo Assinante PF
   const [nome, setNome] = useState('');
@@ -231,6 +249,16 @@ export default function SaasAssinantesPfTab() {
               style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
               <Copy size={14} /> Copiar Webhook Pagamento
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={disparandoLembretes}
+              onClick={handleDispararLembretes}
+              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              title="Envia lembrete no WhatsApp para quem está há 1 dia sem registrar gastos (também roda automaticamente todo dia às 20h)"
+            >
+              <MessageSquare size={14} /> {disparandoLembretes ? 'Enviando...' : 'Disparar Lembretes (1d)'}
             </button>
           </div>
         </div>

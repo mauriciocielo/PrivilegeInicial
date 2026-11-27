@@ -56,6 +56,12 @@ export async function ensureFinancasAssinaturasTable() {
   await db.$executeRawUnsafe(
     `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS valor_renovacao DOUBLE PRECISION NOT NULL DEFAULT 29.9`
   );
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS boas_vindas_enviadas_em TIMESTAMP`
+  );
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_assinaturas ADD COLUMN IF NOT EXISTS ultimo_lembrete_data TEXT NOT NULL DEFAULT ''`
+  );
 
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS financas_pessoais_cupons (
@@ -344,6 +350,12 @@ export async function criarOuAtivarAssinantePf(params: {
       validoAte,
       appUrl: params.appUrl,
     });
+    if (whatsappEnviado) {
+      await db.$executeRawUnsafe(
+        `UPDATE financas_pessoais_assinaturas SET boas_vindas_enviadas_em = NOW() WHERE id = $1`,
+        assinaturaId
+      );
+    }
   }
 
   return {
