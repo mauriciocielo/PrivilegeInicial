@@ -594,6 +594,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           items: [
             { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
             { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
+            { label: 'Controle de Certificados', href: '/consultor/nfe-destinadas?aba=certificados', icon: ShieldCheck },
           ],
         },
       ];

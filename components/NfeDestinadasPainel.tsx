@@ -175,10 +175,16 @@ export default function NfeDestinadasPainel({ modoCliente = false }: { modoClien
   const [exportando, setExportando] = useState(false);
   const [formatoExportacao, setFormatoExportacao] = useState<'ambos' | 'pdf' | 'xml' | 'pdf_unico'>('ambos');
 
-  // Consulta de Horário Noturno
+  // Consulta de Horário Noturno e leitura de ?aba=certificados na URL
   useEffect(() => {
     const hora = new Date().getHours();
     setEhHorarioNoturno(hora >= 22 || hora < 5);
+    if (typeof window !== 'undefined') {
+      const abaUrl = new URLSearchParams(window.location.search).get('aba');
+      if (abaUrl === 'certificados' || abaUrl === 'recebidas' || abaUrl === 'emitidas' || abaUrl === 'todas' || abaUrl === 'grafico' || abaUrl === 'carteira' || abaUrl === 'logs') {
+        setAbaPrincipal(abaUrl);
+      }
+    }
   }, []);
 
   // Identifica notas já lançadas no Contas a Pagar desta empresa (evita duplicidade visual)
