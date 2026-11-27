@@ -259,7 +259,48 @@ async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<Pedid
   }
 }
 
-async function consultarRazaoReceitaCnpj(cnpj14: string): Promise<{ razaoSocial: string; email: string | null } | null> {
+async function consultarViaCep(cep8: string): Promise<{
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  codigoMunicipio: string;
+} | null> {
+  const c = apenasDigitos(cep8);
+  if (c.length !== 8) return null;
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${c}/json/`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(4500),
+    });
+    if (!res.ok) return null;
+    const d = await res.json().catch(() => null);
+    if (!d || d.erro) return null;
+    return {
+      cep: c,
+      logradouro: String(d.logradouro || '').trim(),
+      bairro: String(d.bairro || '').trim(),
+      cidade: String(d.localidade || '').trim(),
+      uf: String(d.uf || '').trim().toUpperCase(),
+      codigoMunicipio: apenasDigitos(String(d.ibge || '')),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function consultarRazaoReceitaCnpj(cnpj14: string): Promise<{
+  razaoSocial: string;
+  email: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  codigoMunicipio: string | null;
+} | null> {
   if (cnpj14.length !== 14) return null;
   const tentar = async (url: string) => {
     try {
@@ -272,7 +313,28 @@ async function consultarRazaoReceitaCnpj(cnpj14: string): Promise<{ razaoSocial:
       const razao = String(d?.razao_social || d?.nome || '').trim();
       if (!razao) return null;
       const emailRaw = String(d?.email || d?.estabelecimento?.email || '').trim().toLowerCase();
-      return { razaoSocial: razao, email: emailRaw.includes('@') ? emailRaw : null };
+      const cepRaw = apenasDigitos(String(d?.cep || d?.estabelecimento?.cep || ''));
+      const logradouro = String(d?.logradouro || d?.estabelecimento?.logradouro || '').trim() || null;
+      const numero = String(d?.numero || d?.estabelecimento?.numero || '').trim() || null;
+      const bairro = String(d?.bairro || d?.estabelecimento?.bairro || '').trim() || null;
+      const cidade = String(d?.municipio || d?.estabelecimento?.cidade?.nome || '').trim() || null;
+      const uf = String(d?.uf || d?.estabelecimento?.estado?.sigla || '').trim().toUpperCase() || null;
+      let codigoMunicipio = apenasDigitos(String(d?.codigo_municipio_ibge || d?.estabelecimento?.cidade?.ibge_id || '')) || null;
+      if (!codigoMunicipio && cepRaw.length === 8) {
+        const via = await consultarViaCep(cepRaw);
+        if (via?.codigoMunicipio) codigoMunicipio = via.codigoMunicipio;
+      }
+      return {
+        razaoSocial: razao,
+        email: emailRaw.includes('@') ? emailRaw : null,
+        cep: cepRaw.length === 8 ? cepRaw : null,
+        logradouro,
+        numero,
+        bairro,
+        cidade,
+        uf,
+        codigoMunicipio,
+      };
     } catch {
       return null;
     }
@@ -414,7 +476,16 @@ export async function processarComandoNfseWhatsApp(params: {
       }
 
       const dadosSalvos = rascunho.dados_json as {
-        etapa?: 'escolher_servico' | 'confirmar' | 'confirmar_cancelamento';
+        etapa?:
+          | 'pedir_tomador'
+          | 'pedir_nome_tomador'
+          | 'pedir_cep'
+          | 'pedir_numero_endereco'
+          | 'pedir_valor'
+          | 'pedir_descricao'
+          | 'escolher_servico'
+          | 'confirmar'
+          | 'confirmar_cancelamento';
         notaId?: string;
         numeroNota?: string;
         motivoCancelamento?: string;
@@ -423,6 +494,14 @@ export async function processarComandoNfseWhatsApp(params: {
         tomadorNome: string;
         tomadorDocumento: string;
         tomadorEmail: string | null;
+        tomadorCep?: string | null;
+        tomadorLogradouro?: string | null;
+        tomadorNumero?: string | null;
+        tomadorBairro?: string | null;
+        tomadorCidade?: string | null;
+        tomadorUf?: string | null;
+        tomadorCodigoMunicipio?: string | null;
+        cepPulado?: boolean;
         codigoServico: string;
         municipioPrestacao: string;
         descricao: string;
@@ -431,6 +510,240 @@ export async function processarComandoNfseWhatsApp(params: {
         issRetido: boolean;
         opcoesServico?: Array<{ codigo: string; descricao: string; aliquotaIss: number; issRetido: boolean }>;
       };
+
+      // Helper interno para salvar rascunho atualizado e avançar automaticamente para a próxima pergunta que faltar
+      const salvarEAvancar = async (estado: typeof dadosSalvos) => {
+        const exp = new Date(Date.now() + 15 * 60 * 1000);
+        const persistir = async (st: typeof dadosSalvos) => {
+          await db.$executeRawUnsafe(
+            `UPDATE nfse_whatsapp_rascunhos SET dados_json = $2::jsonb, expires_at = $3 WHERE jid = $1`,
+            params.sendJid,
+            JSON.stringify(st),
+            exp
+          );
+        };
+
+        // 1. Falta documento do tomador?
+        if (!estado.tomadorDocumento) {
+          estado.etapa = 'pedir_tomador';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `1️⃣ Qual o *CNPJ ou CPF* (ou *Nome* de um cliente já atendido) do tomador?\n_(Responda *NÃO* a qualquer momento para cancelar)_`
+          );
+          return true;
+        }
+        // 2. Falta nome do tomador (ex.: CPF novo)?
+        if (!estado.tomadorNome) {
+          estado.etapa = 'pedir_nome_tomador';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `Qual o *nome completo* do tomador (CPF ${estado.tomadorDocumento})?`
+          );
+          return true;
+        }
+        // 3. Falta CEP do tomador?
+        if (!estado.tomadorCep && !estado.cepPulado) {
+          estado.etapa = 'pedir_cep';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `2️⃣ Qual o *CEP* do endereço de *${estado.tomadorNome}*? _(Ex.: 85601-290 — ou responda *PULAR* se não tiver)_`
+          );
+          return true;
+        }
+        // 4. Tem CEP/logradouro mas falta número?
+        if (estado.tomadorCep && estado.tomadorLogradouro && !estado.tomadorNumero && !estado.cepPulado) {
+          estado.etapa = 'pedir_numero_endereco';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `📍 Endereço encontrado: *${estado.tomadorLogradouro}${estado.tomadorBairro ? `, ${estado.tomadorBairro}` : ''}${estado.tomadorCidade ? ` — ${estado.tomadorCidade}/${estado.tomadorUf || ''}` : ''}*.\nQual o *número* do imóvel? _(Ex.: 127 ou *S/N*)_`
+          );
+          return true;
+        }
+        // 5. Falta valor?
+        if (!estado.valorServicos || estado.valorServicos <= 0) {
+          estado.etapa = 'pedir_valor';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `3️⃣ Qual o *valor* do serviço para *${estado.tomadorNome}*? _(Ex.: 1.500,00)_`
+          );
+          return true;
+        }
+        // 6. Falta descrição?
+        if (!estado.descricao) {
+          estado.etapa = 'pedir_descricao';
+          await persistir(estado);
+          await params.enviarMensagem(
+            params.sendJid,
+            `4️⃣ Qual a *descrição do serviço* que deve aparecer na nota?`
+          );
+          return true;
+        }
+        // 7. Sempre pede o código de serviço (menu)
+        estado.etapa = 'escolher_servico';
+        await persistir(estado);
+        const opcoes = Array.isArray(estado.opcoesServico) ? estado.opcoesServico : [];
+        const branding = await obterBrandingDaEmpresa(estado.empresaId);
+        const assinatura = branding ? `\n\n_${branding.nome}_` : '';
+        const linhasOpcoes = opcoes.map((op, idx) => `*${idx + 1}* — \`${formatarCodigoServico(op.codigo)}\` (${op.descricao})`);
+        await params.enviarMensagem(
+          params.sendJid,
+          [
+            `5️⃣ *Qual código de serviço deseja usar nesta NFS-e?*`,
+            '',
+            `• *Tomador:* ${estado.tomadorNome} (${estado.tomadorDocumento})`,
+            estado.tomadorLogradouro
+              ? `• *Endereço:* ${estado.tomadorLogradouro}, ${estado.tomadorNumero || 'S/N'} — CEP ${estado.tomadorCep || ''}`
+              : '',
+            `• *Valor:* ${fmtBRL(estado.valorServicos)}`,
+            `• *Descrição:* ${estado.descricao}`,
+            '',
+            ...(linhasOpcoes.length > 0
+              ? [
+                  `Menu de serviços da empresa:`,
+                  ...linhasOpcoes,
+                  '',
+                  `👉 Responda pelo *menu* (ex.: *1*), digite o *código* (ex.: *17.01.01*) ou mande por *áudio/escrito* (ex.: "opção um" ou "o de consultoria").${assinatura}`,
+                ]
+              : [
+                  `👉 Responda por *texto ou áudio* informando o *código de serviço* desejado (ex.: *17.01.01*).${assinatura}`,
+                ]),
+          ]
+            .filter(Boolean)
+            .join('\n')
+        );
+        return true;
+      };
+
+      // Etapas guiadas (1 informação por vez)
+      if (dadosSalvos.etapa === 'pedir_tomador') {
+        const dig = extrairDocumentoTexto(limpo) || apenasDigitos(limpo);
+        const notasEmp = await db.nfsE.findMany({
+          where: { empresaId: dadosSalvos.empresaId, status: 'emitida' },
+          orderBy: { dataEmissao: 'desc' },
+          take: 150,
+        });
+        const termo = limpo.toLowerCase();
+        const notaHist = notasEmp.find(
+          (n) => (dig.length >= 11 && apenasDigitos(n.tomadorCnpjCpf) === dig) || (termo.length >= 3 && (n.tomadorRazaoSocial || '').toLowerCase().includes(termo))
+        );
+        if (notaHist) {
+          dadosSalvos.tomadorNome = notaHist.tomadorRazaoSocial;
+          dadosSalvos.tomadorDocumento = notaHist.tomadorCnpjCpf;
+          dadosSalvos.tomadorEmail = dadosSalvos.tomadorEmail || notaHist.tomadorEmail || null;
+          dadosSalvos.tomadorCep = notaHist.tomadorCep ? apenasDigitos(notaHist.tomadorCep) : null;
+          dadosSalvos.tomadorLogradouro = notaHist.tomadorEndereco || null;
+          dadosSalvos.tomadorNumero = notaHist.tomadorNumero || null;
+          dadosSalvos.tomadorBairro = notaHist.tomadorBairro || null;
+          dadosSalvos.tomadorCidade = notaHist.tomadorCidade || null;
+          dadosSalvos.tomadorUf = notaHist.tomadorUf || null;
+          dadosSalvos.tomadorCodigoMunicipio = notaHist.tomadorCodigoMunicipio || null;
+        } else if (dig.length === 14) {
+          const rf = await consultarRazaoReceitaCnpj(dig);
+          dadosSalvos.tomadorDocumento = dig;
+          if (rf) {
+            dadosSalvos.tomadorNome = rf.razaoSocial;
+            dadosSalvos.tomadorEmail = dadosSalvos.tomadorEmail || rf.email;
+            dadosSalvos.tomadorCep = rf.cep;
+            dadosSalvos.tomadorLogradouro = rf.logradouro;
+            dadosSalvos.tomadorNumero = rf.numero;
+            dadosSalvos.tomadorBairro = rf.bairro;
+            dadosSalvos.tomadorCidade = rf.cidade;
+            dadosSalvos.tomadorUf = rf.uf;
+            dadosSalvos.tomadorCodigoMunicipio = rf.codigoMunicipio;
+          }
+        } else if (dig.length === 11) {
+          dadosSalvos.tomadorDocumento = dig;
+          const nomeLimpo = limpo.replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/, '').replace(/\bcpf\b/i, '').trim();
+          if (nomeLimpo.length >= 3) dadosSalvos.tomadorNome = nomeLimpo;
+        } else {
+          const clientes = await db.cliente.findMany({ where: { empresaId: dadosSalvos.empresaId }, take: 200 });
+          const cli = clientes.find((c) => termo.length >= 3 && c.nome.toLowerCase().includes(termo));
+          if (cli) {
+            dadosSalvos.tomadorNome = cli.nome;
+            dadosSalvos.tomadorDocumento = cli.cpfCnpj;
+            dadosSalvos.tomadorEmail = dadosSalvos.tomadorEmail || cli.email || null;
+            dadosSalvos.tomadorCep = cli.cep ? apenasDigitos(cli.cep) : null;
+            dadosSalvos.tomadorLogradouro = cli.endereco || null;
+            dadosSalvos.tomadorCidade = cli.cidade || null;
+            dadosSalvos.tomadorUf = cli.estado || null;
+          } else {
+            await params.enviarMensagem(
+              params.sendJid,
+              `Não encontrei *"${limpo}"* no histórico. Por favor, informe o *CNPJ* (14 dígitos) ou *CPF* (11 dígitos) do tomador:`
+            );
+            return true;
+          }
+        }
+        return await salvarEAvancar(dadosSalvos);
+      }
+
+      if (dadosSalvos.etapa === 'pedir_nome_tomador') {
+        if (limpo.length < 3) {
+          await params.enviarMensagem(params.sendJid, 'Por favor, informe o *nome completo* do tomador:');
+          return true;
+        }
+        dadosSalvos.tomadorNome = limpo.slice(0, 140);
+        return await salvarEAvancar(dadosSalvos);
+      }
+
+      if (dadosSalvos.etapa === 'pedir_cep') {
+        if (/^(pular|sem\s+cep|n[aã]o\s+tenho|nao\s+tenho)$/i.test(limpo)) {
+          dadosSalvos.cepPulado = true;
+          return await salvarEAvancar(dadosSalvos);
+        }
+        const cepDig = apenasDigitos(limpo);
+        if (cepDig.length !== 8) {
+          await params.enviarMensagem(
+            params.sendJid,
+            'CEP inválido. Digite os *8 números do CEP* (ex.: `85601-290`) ou responda *PULAR*.'
+          );
+          return true;
+        }
+        const via = await consultarViaCep(cepDig);
+        if (!via) {
+          await params.enviarMensagem(
+            params.sendJid,
+            `Não encontrei o CEP *${cepDig}* nos Correios. Confira os números ou responda *PULAR*.`
+          );
+          return true;
+        }
+        dadosSalvos.tomadorCep = via.cep;
+        dadosSalvos.tomadorLogradouro = via.logradouro || 'Centro';
+        dadosSalvos.tomadorBairro = via.bairro || 'Centro';
+        dadosSalvos.tomadorCidade = via.cidade;
+        dadosSalvos.tomadorUf = via.uf;
+        dadosSalvos.tomadorCodigoMunicipio = via.codigoMunicipio || null;
+        return await salvarEAvancar(dadosSalvos);
+      }
+
+      if (dadosSalvos.etapa === 'pedir_numero_endereco') {
+        dadosSalvos.tomadorNumero = limpo.slice(0, 20) || 'S/N';
+        return await salvarEAvancar(dadosSalvos);
+      }
+
+      if (dadosSalvos.etapa === 'pedir_valor') {
+        const val = parseValorMonetario(limpo);
+        if (val <= 0) {
+          await params.enviarMensagem(params.sendJid, 'Valor inválido. Informe o valor em reais (ex.: `1.500,00` ou `250`):');
+          return true;
+        }
+        dadosSalvos.valorServicos = Math.round(val * 100) / 100;
+        return await salvarEAvancar(dadosSalvos);
+      }
+
+      if (dadosSalvos.etapa === 'pedir_descricao') {
+        if (limpo.length < 3) {
+          await params.enviarMensagem(params.sendJid, 'Informe uma descrição curta do serviço (ex.: *Consultoria mensal*):');
+          return true;
+        }
+        dadosSalvos.descricao = limpo.slice(0, 500);
+        return await salvarEAvancar(dadosSalvos);
+      }
 
       // Confirmação de CANCELAMENTO de NFS-e via WhatsApp
       if (dadosSalvos.etapa === 'confirmar_cancelamento' && ehConfirmacao && dadosSalvos.notaId) {
@@ -620,12 +933,17 @@ export async function processarComandoNfseWhatsApp(params: {
             '',
             `• *Prestador:* ${dadosSalvos.empresaNome || 'Empresa'}`,
             `• *Tomador:* ${dadosSalvos.tomadorNome} (${dadosSalvos.tomadorDocumento})`,
+            dadosSalvos.tomadorLogradouro
+              ? `• *Endereço:* ${dadosSalvos.tomadorLogradouro}, ${dadosSalvos.tomadorNumero || 'S/N'}${dadosSalvos.tomadorBairro ? ` — ${dadosSalvos.tomadorBairro}` : ''}${dadosSalvos.tomadorCidade ? `, ${dadosSalvos.tomadorCidade}/${dadosSalvos.tomadorUf || ''}` : ''} (CEP ${dadosSalvos.tomadorCep || ''})`
+              : '',
             `• *Valor:* ${fmtBRL(dadosSalvos.valorServicos)}`,
-            `• *Cód. Serviço:* ${codigoEscolhido}${issRetidoEscolhido ? ' (ISS Retido)' : ''}`,
+            `• *Cód. Serviço:* ${formatarCodigoServico(codigoEscolhido)}${issRetidoEscolhido ? ' (ISS Retido)' : ''}`,
             `• *Serviço:* ${dadosSalvos.descricao}`,
             '',
             `👉 Responda *SIM* para emitir oficialmente agora ou *NÃO* para cancelar.${assinatura}`,
-          ].join('\n')
+          ]
+            .filter(Boolean)
+            .join('\n')
         );
         return true;
       }
@@ -664,6 +982,11 @@ export async function processarComandoNfseWhatsApp(params: {
         tomadorDocumento: dadosSalvos.tomadorDocumento,
         tomadorNome: dadosSalvos.tomadorNome,
         tomadorEmail: dadosSalvos.tomadorEmail || null,
+        tomadorCep: dadosSalvos.tomadorCep || null,
+        tomadorLogradouro: dadosSalvos.tomadorLogradouro || null,
+        tomadorNumero: dadosSalvos.tomadorNumero || null,
+        tomadorBairro: dadosSalvos.tomadorBairro || null,
+        tomadorCodigoMunicipio: dadosSalvos.tomadorCodigoMunicipio || null,
         cTribNac: dadosSalvos.codigoServico,
         municipioPrestacao: dadosSalvos.municipioPrestacao || cfg.codigoMunicipio || '',
         descricao: dadosSalvos.descricao,
@@ -721,8 +1044,15 @@ export async function processarComandoNfseWhatsApp(params: {
           tomadorCnpjCpf: dadosSalvos.tomadorDocumento,
           tomadorRazaoSocial: dadosSalvos.tomadorNome,
           tomadorEmail: dadosSalvos.tomadorEmail,
+          tomadorCep: dadosSalvos.tomadorCep || null,
+          tomadorEndereco: dadosSalvos.tomadorLogradouro || null,
+          tomadorNumero: dadosSalvos.tomadorNumero || null,
+          tomadorBairro: dadosSalvos.tomadorBairro || null,
+          tomadorCidade: dadosSalvos.tomadorCidade || null,
+          tomadorUf: dadosSalvos.tomadorUf || null,
+          tomadorCodigoMunicipio: dadosSalvos.tomadorCodigoMunicipio || null,
           dataEmissao: hoje,
-          dataCompetencia: hoje,
+          dataCompetencia: hoje.slice(0, 7),
           codigoServico: dadosSalvos.codigoServico,
           discriminacao: dadosSalvos.descricao,
           municipioPrestacao: dadosDps.municipioPrestacao,
@@ -865,26 +1195,71 @@ export async function processarComandoNfseWhatsApp(params: {
     // 3. Verifica se é um novo comando de emissão natural (ficha escrita, frase livre ou áudio transcrito)
     const cmd = interpretarComandoEmissaoNfse(limpo) || (await interpretarComandoEmissaoComIA(limpo));
 
-    // Se o cliente pediu para emitir nota mas ainda não passou os dados, envia o modelo pronto para preencher!
+    // Se o cliente pediu para emitir nota sem passar todos os dados, inicia o fluxo guiado passo a passo!
     if (!cmd) {
-      const pedeModelo = /^(?:quero\s+|preciso\s+|pode\s+)?(?:emitir|emite|tirar|fazer|gerar)\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?)\s*[!?.\s]*$/i.test(limpo);
-      if (!pedeModelo) return false;
+      const pedeIniciar = /^(?:oi[,!\s]*|ol[aá][,!\s]*)?(?:quero\s+|preciso\s+|pode\s+|gostaria\s+de\s+)?(?:emitir|emite|tirar|fazer|gerar)\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?)(?:\s+pela\s+(?:empresa\s+)?(.+))?\s*[!?.\s]*$/i;
+      const mInit = limpo.match(pedeIniciar);
+      if (!mInit) return false;
 
-      const empresaModelo = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup);
-      if (!empresaModelo?.nfseConfig) return false;
+      const prestadorInit = mInit[1]?.trim() || extrairPrestadorTexto(limpo) || undefined;
+      const empresaInit = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup, prestadorInit);
+      if (!empresaInit?.nfseConfig) return false;
+
+      const notasEmp = await db.nfsE.findMany({
+        where: { empresaId: empresaInit.id, status: 'emitida' },
+        orderBy: { dataEmissao: 'desc' },
+        take: 100,
+      });
+      const mapaServ = new Map<string, { codigo: string; descricao: string; aliquotaIss: number; issRetido: boolean }>();
+      const conh = Array.isArray(empresaInit.nfseConfig.servicosConhecidos) ? (empresaInit.nfseConfig.servicosConhecidos as any[]) : [];
+      for (const s of conh) {
+        const cod = String(s?.cTribNac || s?.codigo || '').trim();
+        if (cod && !mapaServ.has(cod)) {
+          mapaServ.set(cod, { codigo: cod, descricao: limparDescricaoMenu(cod, s?.descricao || s?.xDescServ), aliquotaIss: Number(s?.aliquotaIss || 0), issRetido: Boolean(s?.issRetido) });
+        }
+      }
+      for (const n of notasEmp) {
+        const cod = String(n.codigoServico || '').trim();
+        if (cod && !mapaServ.has(cod)) {
+          mapaServ.set(cod, { codigo: cod, descricao: limparDescricaoMenu(cod, n.discriminacao), aliquotaIss: Number(n.aliquotaIss || 0), issRetido: Boolean(n.issRetido) });
+          if (mapaServ.size >= 8) break;
+        }
+      }
+
+      await ensureRascunhosTable();
+      const expInit = new Date(Date.now() + 15 * 60 * 1000);
+      await db.$executeRawUnsafe(
+        `INSERT INTO nfse_whatsapp_rascunhos (jid, empresa_id, dados_json, expires_at, created_at)
+         VALUES ($1, $2, $3::jsonb, $4, NOW())
+         ON CONFLICT (jid) DO UPDATE SET empresa_id = EXCLUDED.empresa_id, dados_json = EXCLUDED.dados_json, expires_at = EXCLUDED.expires_at`,
+        params.sendJid,
+        empresaInit.id,
+        JSON.stringify({
+          etapa: 'pedir_tomador',
+          empresaId: empresaInit.id,
+          empresaNome: empresaInit.nomeFantasia || empresaInit.razaoSocial,
+          tomadorNome: '',
+          tomadorDocumento: '',
+          tomadorEmail: null,
+          codigoServico: '',
+          municipioPrestacao: empresaInit.nfseConfig.codigoMunicipio || '',
+          descricao: '',
+          valorServicos: 0,
+          aliquotaIss: 0,
+          issRetido: false,
+          opcoesServico: Array.from(mapaServ.values()),
+        }),
+        expInit
+      );
 
       await params.enviarMensagem(
         params.sendJid,
         [
-          `📝 *Emitir NFS-e pelo WhatsApp*`,
-          `Você pode mandar um *áudio* falando os dados ou copiar e preencher por escrito abaixo:`,
+          `🧾 *Vamos emitir sua NFS-e por ${empresaInit.nomeFantasia || empresaInit.razaoSocial}!*`,
+          `Vou te pedir uma informação por vez (você pode responder por *texto ou áudio*):`,
           '',
-          `Emitir nota`,
-          `CNPJ ou CPF: `,
-          `Nome (se for CPF): `,
-          `Valor: R$ `,
-          `Descrição do serviço: `,
-          `E-mail do cliente (opcional): `,
+          `1️⃣ Qual o *CNPJ ou CPF* (ou *Nome* de um cliente já atendido) do tomador?`,
+          `_(Responda *NÃO* a qualquer momento para cancelar)_`,
         ].join('\n')
       );
       return true;
@@ -932,14 +1307,29 @@ export async function processarComandoNfseWhatsApp(params: {
       }
     }
 
-    // Se for um CNPJ NOVO (14 dígitos) enviado por escrito/áudio, busca a Razão Social direto na Receita Federal!
-    if ((!tomadorNome || !tomadorDocumento) && digBusca.length === 14) {
+    let tomadorCep: string | null = notaBase?.tomadorCep ? apenasDigitos(notaBase.tomadorCep) : null;
+    let tomadorLogradouro: string | null = notaBase?.tomadorEndereco || null;
+    let tomadorNumero: string | null = notaBase?.tomadorNumero || null;
+    let tomadorBairro: string | null = notaBase?.tomadorBairro || null;
+    let tomadorCidade: string | null = notaBase?.tomadorCidade || null;
+    let tomadorUf: string | null = notaBase?.tomadorUf || null;
+    let tomadorCodigoMunicipio: string | null = notaBase?.tomadorCodigoMunicipio || null;
+
+    // Se for um CNPJ NOVO (14 dígitos) enviado por escrito/áudio, busca Razão Social + Endereço/CEP direto na Receita Federal!
+    if ((!tomadorNome || !tomadorDocumento || !tomadorCep) && digBusca.length === 14) {
       const rf = await consultarRazaoReceitaCnpj(digBusca);
       if (rf?.razaoSocial) {
-        tomadorNome = rf.razaoSocial;
-        tomadorDocumento = digBusca;
-        tomadorEmail = cmd.email || rf.email || null;
-      } else if (cmd.tomadorBusca && apenasDigitos(cmd.tomadorBusca) !== digBusca) {
+        tomadorNome = tomadorNome || rf.razaoSocial;
+        tomadorDocumento = tomadorDocumento || digBusca;
+        tomadorEmail = cmd.email || tomadorEmail || rf.email || null;
+        tomadorCep = tomadorCep || rf.cep;
+        tomadorLogradouro = tomadorLogradouro || rf.logradouro;
+        tomadorNumero = tomadorNumero || rf.numero;
+        tomadorBairro = tomadorBairro || rf.bairro;
+        tomadorCidade = tomadorCidade || rf.cidade;
+        tomadorUf = tomadorUf || rf.uf;
+        tomadorCodigoMunicipio = tomadorCodigoMunicipio || rf.codigoMunicipio;
+      } else if (!tomadorNome && cmd.tomadorBusca && apenasDigitos(cmd.tomadorBusca) !== digBusca) {
         tomadorNome = cmd.tomadorBusca;
         tomadorDocumento = digBusca;
       }
@@ -996,6 +1386,7 @@ export async function processarComandoNfseWhatsApp(params: {
 
     const opcoesServico = Array.from(mapaServicos.values());
 
+    const faltaCep = !tomadorCep;
     await ensureRascunhosTable();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await db.$executeRawUnsafe(
@@ -1005,12 +1396,19 @@ export async function processarComandoNfseWhatsApp(params: {
       params.sendJid,
       empresa.id,
       JSON.stringify({
-        etapa: 'escolher_servico',
+        etapa: faltaCep ? 'pedir_cep' : 'escolher_servico',
         empresaId: empresa.id,
         empresaNome: empresa.nomeFantasia || empresa.razaoSocial,
         tomadorNome,
         tomadorDocumento,
         tomadorEmail,
+        tomadorCep,
+        tomadorLogradouro,
+        tomadorNumero,
+        tomadorBairro,
+        tomadorCidade,
+        tomadorUf,
+        tomadorCodigoMunicipio,
         codigoServico: notaBase?.codigoServico || opcoesServico[0]?.codigo || '',
         municipioPrestacao,
         descricao,
@@ -1021,6 +1419,14 @@ export async function processarComandoNfseWhatsApp(params: {
       }),
       expiresAt
     );
+
+    if (faltaCep) {
+      await params.enviarMensagem(
+        params.sendJid,
+        `📍 Antes de escolher o serviço, qual o *CEP* do endereço de *${tomadorNome}*? _(Ex.: 85601-290 — ou responda *PULAR* se não tiver)_`
+      );
+      return true;
+    }
 
     const branding = await obterBrandingDaEmpresa(empresa.id);
     const assinatura = branding ? `\n\n_${branding.nome}_` : '';
