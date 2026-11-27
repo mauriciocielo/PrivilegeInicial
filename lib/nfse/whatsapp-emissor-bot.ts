@@ -660,7 +660,7 @@ export async function processarComandoNfseWhatsApp(params: {
         ambiente,
         serie,
         nDps: nDpsInicial,
-        dataCompetencia: hoje,
+        dataCompetencia: hoje.slice(0, 7),
         tomadorDocumento: dadosSalvos.tomadorDocumento,
         tomadorNome: dadosSalvos.tomadorNome,
         tomadorEmail: dadosSalvos.tomadorEmail || null,

@@ -363,20 +363,43 @@ function normalizeText(str: string): string {
 }
 
 /**
- * Busca por similaridade semântica / palavras-chave no que foi ensinado ao assistente
+ * Trava de segurança LGPD: impede que qualquer resposta contendo senhas, e-mails,
+ * CPFs/CNPJs de terceiros, credenciais de acesso ou mensagens pessoais de outros clientes
+ * seja retornada pelo bot.
+ */
+export function contemDadosSensiveisOuPrivados(texto: string): boolean {
+  if (!texto) return false;
+  return (
+    /\b(senha|password|token)\s*[:=-]/i.test(texto) ||
+    /acesso ao portal j[aá] est[aá] liberado/i.test(texto) ||
+    /[a-zA-Z0-9._%+-]+@(?!privilegecontabilidade\.)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(texto) ||
+    /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/.test(texto) ||
+    /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/.test(texto) ||
+    /\bsou a yasmin\b/i.test(texto)
+  );
+}
+
+/**
+ * Busca por similaridade semântica / palavras-chave APENAS em lições cadastradas manualmente
+ * (nunca em respostas privadas de chats de clientes — proteção estrita contra vazamento de dados).
  */
 export async function findTaughtAnswer(userQuestion: string): Promise<{ lesson: KnowledgeLesson; score: number } | null> {
   const pool = getEmailDbPool();
   if (!pool) return null;
 
   const normalizedUser = normalizeText(userQuestion);
-  if (!normalizedUser) return null;
+  if (!normalizedUser || normalizedUser.length < 6) return null;
 
   const userTokens = normalizedUser.split(/\s+/).filter(w => w.length >= 2);
   if (userTokens.length === 0) return null;
 
   const allLessons = (await getKnowledgeList()).filter(
-    l => l.topic !== 'Site / Documento' && l.learned_from !== 'documento'
+    l =>
+      l.learned_from === 'manual' &&
+      l.topic !== 'Site / Documento' &&
+      l.topic !== 'Aprendizado Automático' &&
+      !contemDadosSensiveisOuPrivados(l.answer) &&
+      !contemDadosSensiveisOuPrivados(l.question)
   );
   if (allLessons.length === 0) return null;
 
@@ -419,10 +442,17 @@ export async function findTaughtAnswer(userQuestion: string): Promise<{ lesson: 
 }
 
 /**
- * Monta contexto com os ensinamentos para injetar no prompt da IA
+ * Monta contexto com os ensinamentos OFICIAIS (manuais e sanitizados) para injetar no prompt da IA.
+ * Nunca inclui mensagens copiadas de conversas privadas de outros clientes.
  */
 export async function getTaughtLessonsContext(): Promise<string> {
-  const lessons = await getKnowledgeList();
+  const lessons = (await getKnowledgeList()).filter(
+    l =>
+      l.learned_from === 'manual' &&
+      l.topic !== 'Aprendizado Automático' &&
+      !contemDadosSensiveisOuPrivados(l.answer) &&
+      !contemDadosSensiveisOuPrivados(l.question)
+  );
   if (lessons.length === 0) return '';
 
   return lessons
@@ -432,132 +462,30 @@ export async function getTaughtLessonsContext(): Promise<string> {
 }
 
 /**
- * Aprende automaticamente quando um consultor humano responde a uma dúvida real de um cliente
+ * DESATIVADO POR SEGURANÇA (LGPD): copiar respostas privadas de consultores em chats
+ * para a base de conhecimento global pode vazar credenciais, e-mails ou dados de um cliente
+ * para outro. Ensinamentos devem ser cadastrados manualmente na Base de Conhecimento.
  */
-export async function autoLearnFromConsultantReply(params: {
+export async function autoLearnFromConsultantReply(_params: {
   chatId: string;
   consultantReply: string;
 }): Promise<void> {
-  const pool = getEmailDbPool();
-  if (!pool) return;
-  const answer = (params.consultantReply || '').trim();
-  if (answer.length < 22) return;
-  if (answer.includes('Protocolo de Atendimento Registrado') || answer.startsWith('🎫')) return;
-
-  await ensureKnowledgeTable(pool);
-
-  const lastClientRes = await pool
-    .query(
-      `SELECT text, timestamp FROM whatsapp_messages
-       WHERE chat_id = $1 AND from_me = FALSE AND media_type = 'text'
-       ORDER BY timestamp DESC LIMIT 1`,
-      [params.chatId]
-    )
-    .catch(() => null);
-
-  const question = (lastClientRes?.rows?.[0]?.text || '').trim();
-  if (question.length < 15) return;
-
-  const ignoreGreetings = /^(oi|olá|ola|bom dia|boa tarde|boa noite|ok|obrigad[oa]|valeu|certo|blz|sim|não|nao|show)[\s!?.]*$/i;
-  if (ignoreGreetings.test(question) || ignoreGreetings.test(answer)) return;
-
-  const normQ = normalizeText(question);
-  if (!normQ || normQ.length < 12) return;
-
-  // Evita duplicar lições já existentes com pergunta parecida
-  const existing = await getKnowledgeList();
-  const duplicate = existing.some(l => {
-    const lNorm = normalizeText(l.question);
-    return lNorm === normQ || (lNorm.length > 15 && normQ.includes(lNorm)) || (normQ.length > 15 && lNorm.includes(normQ));
-  });
-  if (duplicate) return;
-
-  await teachAssistant({
-    topic: 'Aprendizado Automático',
-    question: question.slice(0, 300),
-    answer: answer.slice(0, 1200),
-    learned_from: 'correcao_chat',
-  }).catch(() => {});
+  return;
 }
 
 /**
- * Processa TODAS as mensagens históricas do banco para extrair inteligência automaticamente
+ * DESATIVADO POR SEGURANÇA (LGPD): não importa mais mensagens privadas de clientes
+ * para a base de conhecimento compartilhada.
  */
 export async function learnFromAllHistoricalMessages(): Promise<{
   scannedMessages: number;
   learnedCount: number;
   totalLessons: number;
 }> {
-  const pool = getEmailDbPool();
-  if (!pool) return { scannedMessages: 0, learnedCount: 0, totalLessons: 0 };
-  await ensureKnowledgeTable(pool);
-
-  const msgsRes = await pool
-    .query(
-      `SELECT chat_id, from_me, sent_by, text, media_type, timestamp
-       FROM whatsapp_messages
-       WHERE media_type = 'text' AND text IS NOT NULL
-       ORDER BY chat_id ASC, timestamp ASC
-       LIMIT 3000`
-    )
-    .catch(() => null);
-
-  const rows = msgsRes?.rows || [];
-  if (rows.length === 0) {
-    const cur = await getKnowledgeList();
-    return { scannedMessages: 0, learnedCount: 0, totalLessons: cur.length };
-  }
-
-  const existing = await getKnowledgeList();
-  const knownNorms = new Set<string>(existing.map(l => normalizeText(l.question)).filter(Boolean));
-  const ignoreGreetings = /^(oi|olá|ola|bom dia|boa tarde|boa noite|ok|obrigad[oa]|valeu|certo|blz|sim|não|nao|show)[\s!?.]*$/i;
-
-  let learnedCount = 0;
-  let lastClientQuestionByChat: Record<string, string> = {};
-
-  for (const r of rows) {
-    const txt = String(r.text || '').trim();
-    if (!txt) continue;
-
-    if (!r.from_me) {
-      if (txt.length >= 15 && !ignoreGreetings.test(txt)) {
-        lastClientQuestionByChat[r.chat_id] = txt;
-      }
-      continue;
-    }
-
-    if (r.sent_by === 'consultor' && txt.length >= 22 && !ignoreGreetings.test(txt) && !txt.startsWith('🎫')) {
-      const q = lastClientQuestionByChat[r.chat_id];
-      if (!q) continue;
-      delete lastClientQuestionByChat[r.chat_id];
-
-      const normQ = normalizeText(q);
-      if (!normQ || normQ.length < 12) continue;
-
-      let isDup = false;
-      for (const k of knownNorms) {
-        if (k === normQ || (k.length > 15 && normQ.includes(k)) || (normQ.length > 15 && k.includes(normQ))) {
-          isDup = true;
-          break;
-        }
-      }
-      if (isDup) continue;
-
-      knownNorms.add(normQ);
-      await teachAssistant({
-        topic: 'Aprendizado Automático',
-        question: q.slice(0, 300),
-        answer: txt.slice(0, 1200),
-        learned_from: 'correcao_chat',
-      }).catch(() => {});
-      learnedCount++;
-    }
-  }
-
-  const finalList = await getKnowledgeList();
+  const finalList = (await getKnowledgeList()).filter(l => l.learned_from === 'manual');
   return {
-    scannedMessages: rows.length,
-    learnedCount,
+    scannedMessages: 0,
+    learnedCount: 0,
     totalLessons: finalList.length,
   };
 }
