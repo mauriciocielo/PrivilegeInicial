@@ -5,6 +5,7 @@ import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, delete
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
+import { buildWhatsAppAiContext } from './whatsapp-ai-context';
 import {
   AssistantPersona,
   DEFAULT_ASSISTANTS,
@@ -1559,72 +1560,66 @@ function isAiAvailable(config: WhatsAppConfig): boolean {
 }
 
 /**
- * Gera a resposta do Léo pela IA. `handover` indica que a IA pediu para chamar a equipe
- * (marca [CHAMAR_EQUIPE], removida do texto). Sem nenhum provedor, usa as respostas fixas.
+ * Gera a resposta do Léo pela IA com memória multi-turn real (até 20 msgs + áudios),
+ * contexto do CRM, dados reais da empresa cliente e data/hora atual de Brasília.
+ * `handover` indica que a IA pediu para chamar a equipe (marca [CHAMAR_EQUIPE]).
  */
 async function generateLeoReply(
   userMessage: string,
   customPrompt?: string,
   ownerId = 'default',
-  chatId?: string
+  chatId?: string,
+  phone?: string,
+  extraContext?: string
 ): Promise<{ text: string; handover: boolean }> {
   const config = await getWhatsAppConfig(ownerId).catch(() => DEFAULT_CONFIG);
 
   const prompt = customPrompt || config.bot_prompt || DEFAULT_CONFIG.bot_prompt;
-  const taughtContext = await getTaughtLessonsContext().catch(() => '');
-
-  let historyContext = '';
-  if (chatId) {
-    const pool = getEmailDbPool();
-    if (pool) {
-      try {
-        const histRes = await pool.query(
-          `SELECT from_me, sender_name, text FROM whatsapp_messages
-           WHERE chat_id = $1 AND media_type = 'text' AND text IS NOT NULL
-           ORDER BY timestamp DESC LIMIT 10`,
-          [chatId]
-        );
-        const rows = (histRes.rows || []).reverse();
-        if (rows.length > 0) {
-          historyContext = rows
-            .map((r: any) => `${r.from_me ? 'Privilege/Léo' : 'Cliente'}: ${String(r.text || '').trim()}`)
-            .join('\n');
-        }
-      } catch {}
-    }
-  }
+  const [taughtContext, aiCtx] = await Promise.all([
+    getTaughtLessonsContext().catch(() => ''),
+    buildWhatsAppAiContext({ chatId, phone, currentUserMessage: userMessage }),
+  ]);
 
   const enrichedPrompt = `
 ${prompt}
 
+DATA E HORA ATUAIS:
+${aiCtx.dateTimeBrasilia}
+${aiCtx.crmSummary ? `\nPERFIL DO CONTATO NO CRM:\n${aiCtx.crmSummary}` : ''}
+${aiCtx.empresaSummary ? `\n${aiCtx.empresaSummary}` : ''}
+${extraContext ? `\nCONTEXTO COMERCIAL ADICIONAL:\n${extraContext}` : ''}
+
 CONHECIMENTO OFICIAL ENSINADO E APRENDIDO PELA EQUIPE DA PRIVILEGE CONTABILIDADE:
 ${taughtContext || 'Nenhuma lição específica cadastrada ainda.'}
-${historyContext ? `\nHISTÓRICO RECENTE DESTA CONVERSA:\n${historyContext}` : ''}
 
-INSTRUÇÕES DE INTELIGÊNCIA E ATENDIMENTO:
-1. Utilize estritamente as informações e regras acima para responder ao cliente com mensagens curtas, naturais, humanas e simpáticas.
-2. NUNCA chame o cliente pelo nome completo — use sempre apenas o PRIMEIRO NOME (se souber).
-3. Nunca repita perguntas já respondidas anteriormente pelo cliente e conduza para o próximo passo com objetividade.
-4. SCRIPT SDR ANÚNCIO DO INSTAGRAM ("vídeo no carro sobre preço / onde meu lucro está vazando"):
-   - Se o lead veio desse anúncio (ou respondeu ao Passo 1 sobre ramo e como calcula preço):
-     * PASSO 2A — Se disser que usa planilha/sistema, mas ainda falta dinheiro: responda exatamente na linha de: "Entendi perfeitamente. Muitas vezes o sistema até calcula, mas fica faltando colocar o peso real dos impostos, das taxas de cartão ou dos custos fixos da empresa na conta. Hoje, você sente que o maior aperto está na falta de dinheiro em caixa ou você não tem certeza se o preço atual realmente dá lucro?"
-     * PASSO 2B — Se disser que faz "de cabeça" ou "olha o concorrente": responda exatamente na linha de: "Isso acontece muito na correria do dia a dia! O perigo de olhar o concorrente é que a gente não sabe se a conta dele fecha ou se ele também está no prejuízo sem saber. Hoje, qual é a média de faturamento mensal da sua empresa, só para eu direcionar você para o diagnóstico certo?"
-     * PASSO 3 — Após o lead responder o Passo 2 (dor de caixa/lucro ou faturamento), faça o fechamento para agendamento: "Perfeito! Pelo que você me passou, vale muito a pena o Mauricio dar uma olhada rápida na sua estrutura de preços para estancar esse vazamento.\n\nEle separou dois horários na agenda para fazer um Raio-X rápido e gratuito com quem veio desse vídeo: amanhã às 10h ou às 15h30. Algum desses horários funciona para você (pode ser online ou aqui no escritório)?"
-5. QUANDO NÃO SOUBER A RESPOSTA EXATA: não transfira a conversa de imediato. Responda você mesmo com o que sabe sobre a Privilege e sobre gestão de empresas, mostrando conhecimento prático sobre o ramo do cliente (ex.: se disser "loja de roupas", comente desafios típicos do varejo de moda, como estoque parado, margem por coleção, sazonalidade e taxas de cartão, e diga como a Privilege ajuda nisso). Depois faça UMA pergunta para entender melhor o desafio dele.
-   - Nunca invente preços, prazos, horários disponíveis, dados de clientes ou informações que não estejam acima. Se a dúvida exigir isso, diga com naturalidade que a equipe confirma esse ponto.
-6. CHAMAR A EQUIPE: só quando (a) o cliente pedir para falar com uma pessoa, (b) ele já tiver escolhido formato/turno para a Sessão de Diagnóstico, (c) for assunto da empresa dele que exige consultar o sistema/documentos (boletos, guias, notas, prazos do contador), ou (d) você realmente não conseguir ajudar. Nesses casos, diga que vai chamar alguém da equipe, que responde por aqui mesmo, e termine a mensagem com a marca [CHAMAR_EQUIPE] (ela é removida antes do envio; nunca use em outros casos).
+INSTRUÇÕES DE INTELIGÊNCIA AVANÇADA E ATENDIMENTO:
+1. Você está em uma conversa real de WhatsApp (use todo o histórico de mensagens abaixo para manter continuidade perfeita). NUNCA repita perguntas que o cliente já respondeu, NUNCA se apresente de novo se já falou com ele hoje.
+2. Entenda abreviações informais de WhatsApp ("vc", "qto", "blz", "pfv", "tbm", "pq"), mensagens curtas ("Sim", "Manhã", "10h", "MEI", "Pode ser") e áudios transcritos usando o contexto das mensagens anteriores.
+3. Chame o cliente sempre apenas pelo PRIMEIRO NOME (se souber). Nunca use nome completo.
+4. Mostre inteligência consultiva real:
+   - Se o cliente trouxer uma dor de negócio (caixa apertado, imposto alto, Fator R, MEI estourando, Reforma Tributária IBS/CBS, precificação, vendas, equipe), entregue 1 insight prático e específico para o ramo dele em 2-3 linhas e conduza com UMA pergunta objetiva para o próximo passo.
+   - Se for um CLIENTE CADASTRADO (dados acima), ajude diretamente com base nos dados reais dele (ex.: validade do certificado A1, notas do mês, emissão de NFS-e pelo próprio WhatsApp) sem tratar como se fosse um lead desconhecido!
+5. SCRIPT SDR ANÚNCIO DO INSTAGRAM ("vídeo no carro sobre preço / onde meu lucro está vazando"):
+   - Se o lead veio desse anúncio (ou respondeu sobre ramo e como calcula preço):
+     * PASSO 2A — Se disser que usa planilha/sistema, mas ainda falta dinheiro: valide que muitas vezes falta incluir o peso real dos impostos, taxas de cartão e custos fixos na conta, e pergunte se o maior aperto está na falta de caixa ou na dúvida se o preço realmente dá lucro.
+     * PASSO 2B — Se disser que faz "de cabeça" ou "olha o concorrente": explique o risco de copiar quem pode estar no prejuízo e pergunte a média de faturamento mensal para direcionar ao diagnóstico certo.
+     * PASSO 3 — Após o Passo 2, convide para o Raio-X rápido e gratuito com o Mauricio (30 min, online ou presencial em Francisco Beltrão), oferecendo duas opções práticas de turno/horário.
+6. FORMATO WHATSAPP: respostas curtas e naturais (máximo 2 parágrafos ou 4-5 linhas), sem textos gigantes, sem listas burocráticas e sem linguagem robótica ("Certo, me conte mais").
+7. Nunca invente preços fechados (exceto MEI: Essencial R$ 100, Plus R$ 150, Premium R$ 200), prazos ou agendamentos confirmados.
+8. CHAMAR A EQUIPE: só quando (a) o cliente pedir explicitamente para falar com um humano/atendente, (b) já tiver escolhido formato/horário para a Sessão de Diagnóstico, ou (c) exigir ação manual no sistema/documentos. Nesses casos, diga que passou para a equipe continuar por aqui mesmo e termine com a marca [CHAMAR_EQUIPE] (removida antes do envio).
 `.trim();
 
-  // Ollama primeiro; o provedor salvo na configuração e os demais ficam como contingência.
   const ai = await generateText({
     system: enrichedPrompt,
-    prompt: `MENSAGEM RECEBIDA DO CLIENTE NO WHATSAPP:\n"${userMessage}"\n\nResponda diretamente ao cliente de forma curta, simpática e seguindo todas as regras.`,
-    maxTokens: 450,
-    temperature: 0.4,
+    messages: aiCtx.historyMessages,
+    prompt: userMessage,
+    maxTokens: 700,
+    temperature: 0.55,
     configs: [config],
-    timeoutMs: 8500,
+    timeoutMs: 18000,
     ollamaTimeoutMs: 45000,
   });
+
   if (ai.text) {
     const handover = HANDOVER_MARKER.test(ai.text);
     HANDOVER_MARKER.lastIndex = 0;
@@ -2019,13 +2014,29 @@ export async function processIncomingMessage(params: {
     return { reply: passo1Reply, source: 'rule', ruleId: 'rule_instagram_lucro' };
   }
 
+  // Regras fixas:
+  // - Gatilhos curtos/numéricos (<= 2 chars, ex.: "1", "2", "5") só casam por igualdade EXATA (evita "15h" disparar regra "1" ou "5"!).
+  // - Quando a IA está ativa (modo IA ou Híbrido), regras genéricas NÃO sequestram a conversa — apenas opção numérica exata ou pedido explícito de atendente humano.
   if (config.bot_mode !== 'ia') {
     const rules = config.auto_reply_rules || [];
     for (const rule of rules) {
       const match = rule.gatilhos.some(g => {
         const gat = g.toLowerCase().trim();
         if (!gat) return false;
-        return lowerText === gat || lowerText.includes(gat);
+        if (/^\d+$/.test(gat) || gat.length <= 2) {
+          return lowerText === gat;
+        }
+        // Com IA ativa, evita sequestrar frases normais com palavras genéricas como "falar", "ajuda", "consultoria"
+        if (aiActive && !rule.pausarBot) {
+          return lowerText === gat;
+        }
+        if (aiActive && rule.pausarBot) {
+          return (
+            lowerText === gat ||
+            /\b(falar com (um |uma )?(atendente|humano|pessoa|consultor)|quero (um )?atendente|transferir para humano)\b/i.test(lowerText)
+          );
+        }
+        return lowerText === gat || new RegExp(`\\b${gat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lowerText);
       });
 
       if (match) {
@@ -2041,6 +2052,7 @@ export async function processIncomingMessage(params: {
           text: rule.resposta,
           config,
           isIncomingAudio,
+          ownerId,
         });
 
         return { reply: rule.resposta, source: 'rule', ruleId: rule.id, paused: !!rule.pausarBot };
@@ -2048,15 +2060,31 @@ export async function processIncomingMessage(params: {
     }
   }
 
+  // Só envia boas-vindas fixa se for primeiro contato (sem conversa nas últimas 12h).
+  // Se já existe conversa recente, deixa a IA responder naturalmente dando continuidade!
   const isGreeting = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'menu', 'inicio', 'início'].includes(lowerText);
   if (isGreeting && config.welcome_message) {
-    await dispatchBotReply({
-      chatId: params.chatId,
-      text: config.welcome_message,
-      config,
-      isIncomingAudio,
-    });
-    return { reply: config.welcome_message, source: 'rule' };
+    let temHistoricoRecente = false;
+    if (pool) {
+      try {
+        const hRes = await pool.query(
+          `SELECT COUNT(*)::int AS total FROM whatsapp_messages
+           WHERE chat_id = $1 AND timestamp >= NOW() - INTERVAL '12 hours'`,
+          [params.chatId]
+        );
+        temHistoricoRecente = Number(hRes.rows[0]?.total || 0) > 1;
+      } catch {}
+    }
+    if (!temHistoricoRecente && !aiActive) {
+      await dispatchBotReply({
+        chatId: params.chatId,
+        text: config.welcome_message,
+        config,
+        isIncomingAudio,
+        ownerId,
+      });
+      return { reply: config.welcome_message, source: 'rule' };
+    }
   }
 
   // Funil Comercial Automático (Garimpador B2B -> Kanban -> Horários livres da agenda)
@@ -2078,15 +2106,9 @@ export async function processIncomingMessage(params: {
     }
   }
 
-  const isRealQuestionOrConversation =
-    cleanText.includes('?') ||
-    cleanText.split(/\s+/).length >= 4 ||
-    Boolean(currentTriage?.nomeCliente && !isGreeting) ||
-    Boolean(contextoComercialIA);
-
-  // Quando estiver em modo IA ou Híbrido com chave configurada e o cliente já tiver nome/dúvida real,
-  // usa o Gemini/Claude com todo o histórico e base aprendida antes de cair nas respostas fixas de triagem.
-  if (aiActive && isRealQuestionOrConversation) {
+  // Com IA disponível (modo IA ou Híbrido), TODA conversa (inclusive respostas curtas como "Sim", "Manhã", "MEI", "10h")
+  // vai direto para a IA com memória multi-turn completa + dados do cliente + CRM!
+  if (aiActive) {
     const assistantsList =
       Array.isArray(config.assistants) && config.assistants.length > 0
         ? config.assistants
@@ -2098,11 +2120,15 @@ export async function processIncomingMessage(params: {
       : activePersona && activePersona.id !== 'leo'
       ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
       : config.bot_prompt;
-    const personaPrompt = contextoComercialIA
-      ? `${basePersonaPrompt}${contextoComercialIA}`
-      : basePersonaPrompt;
 
-    const { text: aiReply, handover } = await generateLeoReply(cleanText, personaPrompt, ownerId, params.chatId);
+    const { text: aiReply, handover } = await generateLeoReply(
+      cleanText,
+      basePersonaPrompt,
+      ownerId,
+      params.chatId,
+      params.phone,
+      contextoComercialIA
+    );
     await dispatchBotReply({
       chatId: params.chatId,
       text: aiReply,
@@ -2248,7 +2274,10 @@ export async function simulateBotResponse(
     for (const rule of config.auto_reply_rules || []) {
       const match = rule.gatilhos.some(g => {
         const gat = g.toLowerCase().trim();
-        return lower === gat || lower.includes(gat);
+        if (!gat) return false;
+        if (/^\d+$/.test(gat) || gat.length <= 2) return lower === gat;
+        if (aiActive) return lower === gat;
+        return lower === gat || new RegExp(`\\b${gat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lower);
       });
       if (match) {
         return {
@@ -2262,7 +2291,7 @@ export async function simulateBotResponse(
     }
   }
 
-  if (['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'menu'].includes(lower) && config.welcome_message) {
+  if (['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'menu'].includes(lower) && config.welcome_message && !aiActive) {
     return {
       reply: config.welcome_message,
       source: 'welcome',
@@ -2271,8 +2300,8 @@ export async function simulateBotResponse(
     };
   }
 
-  // Com IA disponível e cliente já identificado (ou dúvida real), a IA responde em vez da triagem fixa
-  if (aiActive && (triageState?.nomeCliente || clean.includes('?') || clean.split(/\s+/).length >= 4)) {
+  // Com IA disponível, TODA mensagem no simulador também passa pela IA inteligente
+  if (aiActive) {
     const { text: aiText, handover } = await generateLeoReply(clean, config.bot_prompt);
     return {
       reply: aiText,
