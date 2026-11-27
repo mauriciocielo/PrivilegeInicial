@@ -6,6 +6,7 @@ import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } fr
 import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
 import { buildWhatsAppAiContext } from './whatsapp-ai-context';
+import { buscarNaInternetParaBot } from './web-search';
 import {
   AssistantPersona,
   DEFAULT_ASSISTANTS,
@@ -1541,6 +1542,8 @@ export async function generateGeminiBotReply(
 
 /** Marca que a IA coloca no fim da resposta quando a conversa precisa ir para a equipe. */
 const HANDOVER_MARKER = /\[\s*CHAMAR[_\s]EQUIPE\s*\]/gi;
+/** Marca que a IA usa quando não sabe a resposta e quer pesquisar na internet antes de responder. */
+const WEB_SEARCH_MARKER = /\[\s*BUSCAR[_\s]WEB\s*:\s*([^\]]+)\]/i;
 
 /** Existe algum provedor de IA utilizável (mesma lista que o generateText tenta)? */
 function isAiAvailable(config: WhatsAppConfig): boolean {
@@ -1606,7 +1609,10 @@ INSTRUÇÕES DE INTELIGÊNCIA AVANÇADA E ATENDIMENTO:
      * PASSO 3 — Após o Passo 2, convide para o Raio-X rápido e gratuito com o Mauricio (30 min, online ou presencial em Francisco Beltrão), oferecendo duas opções práticas de turno/horário.
 6. FORMATO WHATSAPP: respostas curtas e naturais (máximo 2 parágrafos ou 4-5 linhas), sem textos gigantes, sem listas burocráticas e sem linguagem robótica ("Certo, me conte mais").
 7. Nunca invente preços fechados (exceto MEI: Essencial R$ 100, Plus R$ 150, Premium R$ 200), prazos ou agendamentos confirmados.
-8. CHAMAR A EQUIPE: só quando (a) o cliente pedir explicitamente para falar com um humano/atendente, (b) já tiver escolhido formato/horário para a Sessão de Diagnóstico, ou (c) exigir ação manual no sistema/documentos. Nesses casos, diga que passou para a equipe continuar por aqui mesmo e termine com a marca [CHAMAR_EQUIPE] (removida antes do envio).
+8. PESQUISA NA INTERNET QUANDO NÃO SOUBER: se o cliente fizer uma pergunta técnica, fiscal, tributária, trabalhista, sobre tabela/alíquota vigente, prazo oficial da Receita ou qualquer assunto factual que você NÃO tem 100% de certeza, NÃO chute e NÃO transfira ainda! Responda APENAS com:
+   [BUSCAR_WEB: termo objetivo da pesquisa em português Brasil]
+   (O sistema vai pesquisar na internet automaticamente em segundos e te devolver os resultados para você formular uma ótima resposta.)
+9. CHAMAR O CONSULTOR / EQUIPE: só quando (a) o cliente pedir explicitamente para falar com um humano/atendente, (b) já tiver escolhido formato/horário para a Sessão de Diagnóstico, (c) exigir acesso interno a documentos/boletos/decisão exclusiva do consultor, ou (d) você realmente não conseguir responder mesmo após pesquisar. Nesses casos, diga de forma cordial que vai encaminhar para um consultor da equipe continuar por aqui mesmo e termine com [CHAMAR_EQUIPE] (removida antes do envio).
 `.trim();
 
   const ai = await generateText({
@@ -1621,13 +1627,51 @@ INSTRUÇÕES DE INTELIGÊNCIA AVANÇADA E ATENDIMENTO:
   });
 
   if (ai.text) {
+    // Se a IA pediu pesquisa na internet, executa a busca em tempo real e gera a resposta final!
+    const matchWeb = ai.text.match(WEB_SEARCH_MARKER);
+    if (matchWeb && matchWeb[1]) {
+      const queryWeb = matchWeb[1].trim();
+      console.log(`[WhatsApp IA] Pesquisando na internet para responder ao cliente: "${queryWeb}"`);
+      const resultadosWeb = await buscarNaInternetParaBot(queryWeb).catch(() => '');
+
+      if (resultadosWeb) {
+        const aiComWeb = await generateText({
+          system: `${enrichedPrompt}\n\nRESULTADOS PESQUISADOS AGORA NA INTERNET PARA "${queryWeb}":\n${resultadosWeb}\n\nINSTRUÇÃO FINAL: Use os resultados acima para responder ao cliente de forma clara, objetiva, humana e útil (máx. 2 parágrafos curtos, sem inventar dados). Se mesmo com essa pesquisa a dúvida exigir análise específica de um consultor, diga que está encaminhando para o consultor da equipe continuar por aqui mesmo e termine com [CHAMAR_EQUIPE]. Nunca use [BUSCAR_WEB] novamente.`,
+          messages: aiCtx.historyMessages,
+          prompt: userMessage,
+          maxTokens: 700,
+          temperature: 0.45,
+          configs: [config],
+          timeoutMs: 18000,
+          ollamaTimeoutMs: 45000,
+        });
+        if (aiComWeb.text) {
+          const handoverWeb = HANDOVER_MARKER.test(aiComWeb.text);
+          HANDOVER_MARKER.lastIndex = 0;
+          const textoFinal = aiComWeb.text
+            .replace(HANDOVER_MARKER, '')
+            .replace(WEB_SEARCH_MARKER, '')
+            .trim();
+          if (textoFinal) return { text: textoFinal, handover: handoverWeb };
+        }
+      }
+
+      // Se a pesquisa na internet não trouxe resposta suficiente, encaminha para o consultor!
+      return {
+        text: 'Essa é uma questão bem específica e quero garantir que você tenha a orientação exata. Vou encaminhar sua mensagem para um de nossos consultores, que continua o atendimento com você por aqui mesmo!',
+        handover: true,
+      };
+    }
+
     const handover = HANDOVER_MARKER.test(ai.text);
     HANDOVER_MARKER.lastIndex = 0;
-    const text = ai.text.replace(HANDOVER_MARKER, '').trim();
+    const text = ai.text.replace(HANDOVER_MARKER, '').replace(WEB_SEARCH_MARKER, '').trim();
     if (text) return { text, handover };
   }
 
-  return { text: fallbackLeoReply(userMessage), handover: false };
+  // Sem resposta da IA: encaminha para o consultor (handover = true)
+  const fb = fallbackLeoReply(userMessage);
+  return { text: fb, handover: fb.includes('chamar alguém da nossa equipe') };
 }
 
 /** Respostas fixas usadas só quando nenhum provedor de IA respondeu. */
