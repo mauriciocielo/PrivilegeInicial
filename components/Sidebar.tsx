@@ -8,13 +8,14 @@ import TwoFactorModal from './TwoFactorModal';
 import CommandPalette from './CommandPalette';
 import NotificationCenter from './NotificationCenter';
 import MobileNavShell from './MobileNavShell';
+import EscritorioBrandingModal, { aplicarTemaWhiteLabel, type BrandingState } from './EscritorioBrandingModal';
 import {
   Settings, LayoutDashboard, Lightbulb, BrainCircuit, Radar, CalendarDays, Timer,
   NotebookPen, FolderInput, Scale, Target, Wallet, Users, CreditCard, Banknote,
   ReceiptText, Landmark, ClipboardList, Building2, ListTree, Tag, FileText, Mail,
   ShieldCheck, BarChart3, Truck, Car, Fuel, PiggyBank, Building, ScrollText,
   UserCog, UserSearch, ChevronsLeft, ChevronsRight, Search, Globe, Clock, ChevronDown,
-  Bell, LogOut, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, CheckSquare, type LucideIcon,
+  Bell, LogOut, Handshake, Gem, Briefcase, BookOpen, BarChart2, Calculator, AlertTriangle, Activity, Sliders, Presentation, Inbox, FileSearch, MessageSquare, Gamepad2, Layers, TrendingUp, Swords, HeartHandshake, GitBranch, Network, DollarSign, SmilePlus, Menu, CheckSquare, Palette, type LucideIcon,
 } from 'lucide-react';
 
 // Marcador em allowedRoutes que o admin ativa para deixar o usuário SÓ no painel fiscal
@@ -218,7 +219,44 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [appMode, setAppMode] = useState<'empresarial' | 'condominio'>('empresarial');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'idle'>('idle');
+  const [branding, setBranding] = useState<BrandingState | null>(null);
+  const [showBrandingModal, setShowBrandingModal] = useState(false);
   const acessoNfse = useAcessoNfse(role === 'cliente');
+
+  // Carrega identidade visual white-label (logo + cores) para contadores parceiros e seus clientes
+  useEffect(() => {
+    let cancelado = false;
+    try {
+      const cached = sessionStorage.getItem('cf_brand_whitelabel');
+      if (cached) {
+        const parsed = JSON.parse(cached) as BrandingState;
+        setBranding(parsed);
+        aplicarTemaWhiteLabel(parsed);
+      }
+    } catch {}
+
+    fetch('/api/escritorio/branding', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: BrandingState | null) => {
+        if (cancelado || !d) return;
+        if (d.customizado || d.podeEditar) {
+          setBranding(d);
+          aplicarTemaWhiteLabel(d);
+          try {
+            sessionStorage.setItem('cf_brand_whitelabel', JSON.stringify(d));
+          } catch {}
+        } else {
+          setBranding(null);
+          aplicarTemaWhiteLabel(null);
+          try {
+            sessionStorage.removeItem('cf_brand_whitelabel');
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    return () => { cancelado = true; };
+  }, []);
 
   useEffect(() => {
     // Sincronização de status do banco
@@ -532,9 +570,11 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
 
   const handleLogout = async () => {
     store.setCurrentUser(null);
+    aplicarTemaWhiteLabel(null);
     try {
       sessionStorage.removeItem('cf_postgres_synced');
       sessionStorage.removeItem('cf_empresa_sel');
+      sessionStorage.removeItem('cf_brand_whitelabel');
     } catch {}
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     router.push('/');
@@ -712,7 +752,19 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
             : '/consultor/dashboard2'
         )}
       >
-        <BrandLogo size={42} />
+        {branding?.logoData ? (
+          <img
+            src={branding.logoData}
+            alt={branding.nome || 'Logo do Escritório'}
+            style={{ height: 40, maxWidth: 165, objectFit: 'contain' }}
+          />
+        ) : branding?.customizado && branding?.nome ? (
+          <span style={{ fontWeight: 800, fontSize: 16, color: branding.corPrimaria || 'var(--accent)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+            {branding.nome}
+          </span>
+        ) : (
+          <BrandLogo size={42} />
+        )}
       </div>
 
       {!isFiscalUser && !isFiscalRoute && selectableEmpresas.length > 0 && (
@@ -953,6 +1005,31 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
           </div>
         )}
 
+        {branding?.podeEditar && (
+          <button
+            type="button"
+            onClick={() => setShowBrandingModal(true)}
+            title="Alterar logo e cores do seu escritório e do painel dos seus clientes"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 11px',
+              borderRadius: 99,
+              background: 'var(--accent-glow)',
+              color: 'var(--accent)',
+              border: '1px solid var(--accent)',
+              fontSize: 13.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <Palette size={14} />
+            {!isSidebarCompact && <span className="topbar-rotulo">Personalizar Painel</span>}
+          </button>
+        )}
+
         {role !== 'cliente' && !ehContadorTerceiro && (
         <button
           type="button"
@@ -1116,6 +1193,14 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       onNavigate={href => router.push(href)}
       onLogout={handleLogout}
     />
+
+    {showBrandingModal && branding && (
+      <EscritorioBrandingModal
+        brandingAtual={branding}
+        onFechar={() => setShowBrandingModal(false)}
+        onSalvo={(novo) => setBranding(novo)}
+      />
+    )}
     </>
   );
 }

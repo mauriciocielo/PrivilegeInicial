@@ -228,7 +228,7 @@ export default function SaasEscritoriosNfseTab() {
                     </td>
                     <td style={{ padding: '10px 8px', fontWeight: 700 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <Building2 size={13} /> {esc.totalEmpresas} / {esc.limiteEmpresas}
+                        <Building2 size={13} /> {esc.totalEmpresas} <span style={{ fontSize: 11.5, color: '#15803d', fontWeight: 700 }}>(Ilimitado)</span>
                       </span>
                     </td>
                     <td style={{ padding: '10px 8px' }}>
@@ -357,8 +357,10 @@ export default function SaasEscritoriosNfseTab() {
                   <input className="form-control" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} placeholder="(46) 99999-9999" />
                 </div>
                 <div>
-                  <label className="form-label">Limite Empresas</label>
-                  <input type="number" min={1} max={2000} className="form-control" value={form.limiteEmpresas} onChange={(e) => setForm({ ...form, limiteEmpresas: Number(e.target.value) || 50 })} />
+                  <label className="form-label">CNPJs & Personalização</label>
+                  <div style={{ padding: '8px 10px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', fontSize: 12.5, fontWeight: 600 }}>
+                    CNPJs ilimitados · Logo e cores personalizáveis no painel do contador
+                  </div>
                 </div>
               </div>
 

@@ -42,11 +42,20 @@ export async function ensureEscritoriosNfseTables() {
       email TEXT NOT NULL DEFAULT '',
       telefone TEXT NOT NULL DEFAULT '',
       ativo BOOLEAN NOT NULL DEFAULT TRUE,
-      limite_empresas INTEGER NOT NULL DEFAULT 50,
+      limite_empresas INTEGER NOT NULL DEFAULT 0,
+      brand_nome TEXT,
+      brand_cor_primaria TEXT,
+      brand_cor_secundaria TEXT,
+      brand_logo_data TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `);
+  // Garante colunas de white-label em bancos já existentes
+  await db.$executeRawUnsafe(`ALTER TABLE nfse_escritorios ADD COLUMN IF NOT EXISTS brand_nome TEXT`);
+  await db.$executeRawUnsafe(`ALTER TABLE nfse_escritorios ADD COLUMN IF NOT EXISTS brand_cor_primaria TEXT`);
+  await db.$executeRawUnsafe(`ALTER TABLE nfse_escritorios ADD COLUMN IF NOT EXISTS brand_cor_secundaria TEXT`);
+  await db.$executeRawUnsafe(`ALTER TABLE nfse_escritorios ADD COLUMN IF NOT EXISTS brand_logo_data TEXT`);
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS nfse_escritorio_usuarios (
       user_id TEXT PRIMARY KEY,
@@ -110,7 +119,7 @@ export async function obterEscritorioDoUsuario(userId: string): Promise<VinculoU
       papel: r.papel === 'operador' ? 'operador' : 'admin_escritorio',
       nomeEscritorio: String(r.nome || ''),
       ativo: Boolean(r.ativo),
-      limiteEmpresas: Number(r.limite_empresas || 50),
+      limiteEmpresas: Number(r.limite_empresas || 0),
     };
   } catch {
     return null;
@@ -161,6 +170,81 @@ export async function idsEmpresasDeTerceiros(): Promise<string[]> {
     return rows.map((r) => String(r.empresa_id));
   } catch {
     return [];
+  }
+}
+
+export interface BrandingEscritorio {
+  escritorioId: string;
+  nome: string;
+  corPrimaria: string | null;
+  corSecundaria: string | null;
+  logoData: string | null;
+  podeEditar: boolean;
+}
+
+/**
+ * Retorna a personalização visual (white-label: logo + cores) do escritório parceiro
+ * tanto para o próprio contador quanto para todos os clientes das empresas dele.
+ */
+export async function obterBrandingEscritorioDoUsuario(
+  userId: string,
+  role: string
+): Promise<BrandingEscritorio | null> {
+  if (!userId || role === 'administrador') return null;
+  try {
+    await ensureEscritoriosNfseTables();
+
+    // 1. Usuário é membro do escritório parceiro (contador / operador)
+    const escUser = await db.$queryRawUnsafe<any[]>(
+      `SELECT u.escritorio_id, u.papel, e.nome, e.brand_nome, e.brand_cor_primaria, e.brand_cor_secundaria, e.brand_logo_data
+       FROM nfse_escritorio_usuarios u
+       INNER JOIN nfse_escritorios e ON e.id = u.escritorio_id
+       WHERE u.user_id = $1 AND e.ativo = TRUE
+       LIMIT 1`,
+      userId
+    );
+    if (escUser[0]) {
+      const r = escUser[0];
+      return {
+        escritorioId: String(r.escritorio_id),
+        nome: String(r.brand_nome || r.nome || ''),
+        corPrimaria: r.brand_cor_primaria || null,
+        corSecundaria: r.brand_cor_secundaria || null,
+        logoData: r.brand_logo_data || null,
+        podeEditar: r.papel !== 'operador',
+      };
+    }
+
+    // 2. Usuário é cliente de uma empresa vinculada a um escritório parceiro
+    if (role === 'cliente') {
+      const u = await db.user.findUnique({ where: { id: userId }, select: { empresaIds: true } });
+      const empIds = Array.isArray(u?.empresaIds) ? u!.empresaIds : [];
+      if (empIds.length > 0) {
+        const escEmp = await db.$queryRawUnsafe<any[]>(
+          `SELECT e.id AS escritorio_id, e.nome, e.brand_nome, e.brand_cor_primaria, e.brand_cor_secundaria, e.brand_logo_data
+           FROM nfse_empresa_escritorio ee
+           INNER JOIN nfse_escritorios e ON e.id = ee.escritorio_id
+           WHERE ee.empresa_id = ANY($1::text[]) AND e.ativo = TRUE
+           LIMIT 1`,
+          empIds
+        );
+        if (escEmp[0]) {
+          const r = escEmp[0];
+          return {
+            escritorioId: String(r.escritorio_id),
+            nome: String(r.brand_nome || r.nome || ''),
+            corPrimaria: r.brand_cor_primaria || null,
+            corSecundaria: r.brand_cor_secundaria || null,
+            logoData: r.brand_logo_data || null,
+            podeEditar: false,
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
   }
 }
 

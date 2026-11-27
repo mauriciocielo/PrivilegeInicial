@@ -108,7 +108,8 @@ export async function POST(request: Request) {
     const responsavel = typeof body?.responsavel === 'string' ? body.responsavel.trim() : '';
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
     const telefone = typeof body?.telefone === 'string' ? body.telefone.trim() : '';
-    const limiteEmpresas = Math.max(1, Math.min(2000, Number(body?.limiteEmpresas) || 50));
+    // Contadores parceiros operam sem limite de CNPJs (0 = ilimitado)
+    const limiteEmpresas = 0;
 
     const criarLogin = Boolean(body?.criarLogin);
     const loginEmail = typeof body?.loginEmail === 'string' ? body.loginEmail.trim().toLowerCase() : email;
