@@ -9,6 +9,7 @@ import {
   idsEmpresasDoEscritorio,
   obterEscritorioDoUsuario,
 } from '../../../../lib/nfse/escritorios-terceiros';
+import { registrarAuditoriaEscritorio } from '../../../../lib/escritorio-recursos';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,6 +157,13 @@ export async function POST(request: Request) {
       novoId,
       vinculo.escritorioId
     );
+
+    await registrarAuditoriaEscritorio({
+      userId: auth.session.userId,
+      escritorioId: vinculo.escritorioId,
+      acao: 'equipe_membro_criado',
+      detalhes: `Cadastrou auxiliar ${name} (${email}) com acesso a ${empresaIdsFinais.length} empresa(s)`,
+    });
 
     return NextResponse.json({
       ok: true,

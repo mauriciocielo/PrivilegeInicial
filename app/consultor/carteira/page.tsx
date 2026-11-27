@@ -6,8 +6,12 @@ import {
   AlertTriangle,
   Archive,
   CheckCircle2,
+  Copy,
   Download,
   Edit3,
+  Headphones,
+  History,
+  KeyRound,
   MessageSquare,
   Plus,
   RefreshCw,
@@ -23,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { fmt } from '../../../lib/reports';
 import { confirmAsync } from '../../../components/ConfirmProvider';
+import { AuditoriaEquipeTab, SuporteChamadosTab } from '../../../components/EscritorioChamadosAuditoria';
 
 interface EmpresaSaude {
   id: string;
@@ -91,7 +96,16 @@ function formatCnpj(cnpj: string): string {
 
 export default function CarteiraEscritorioPage() {
   const [competencia, setCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
-  const [aba, setAba] = useState<'saude' | 'equipe'>('saude');
+  const [aba, setAba] = useState<'saude' | 'equipe' | 'chamados' | 'auditoria'>('saude');
+  const [abrirModalChamado, setAbrirModalChamado] = useState(false);
+
+  // Modal Link A1 Self-Service
+  const [conviteA1Modal, setConviteA1Modal] = useState<{
+    empresa: EmpresaSaude;
+    link: string;
+    whatsappEnviado?: boolean;
+  } | null>(null);
+  const [gerandoLinkA1Id, setGerandoLinkA1Id] = useState<string | null>(null);
 
   // Saúde da carteira
   const [carregando, setCarregando] = useState(true);
@@ -250,6 +264,33 @@ export default function CarteiraEscritorioPage() {
     }
   };
 
+  const handleGerarLinkA1 = async (emp: EmpresaSaude, enviarWhatsapp = false) => {
+    setGerandoLinkA1Id(emp.id);
+    try {
+      const res = await fetch('/api/escritorio/convite-certificado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: emp.id, enviarWhatsapp }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível gerar o link do Certificado A1.');
+        return;
+      }
+      setConviteA1Modal({ empresa: emp, link: data.link, whatsappEnviado: data.whatsappEnviado });
+      if (enviarWhatsapp) {
+        if (data.whatsappEnviado) toast.success('Link seguro enviado no WhatsApp do cliente!');
+        else toast.info(`Link gerado! (${data.whatsappAviso || 'Copie e envie manualmente ao cliente.'})`);
+      } else {
+        toast.success('Link seguro de envio do Certificado A1 gerado!');
+      }
+    } catch {
+      toast.error('Erro de conexão ao gerar link A1.');
+    } finally {
+      setGerandoLinkA1Id(null);
+    }
+  };
+
   const abrirModalNovoMembro = () => {
     setEditandoMembro(null);
     setFormNome('');
@@ -385,6 +426,19 @@ export default function CarteiraEscritorioPage() {
 
           <button
             type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setAba('chamados');
+              setAbrirModalChamado(true);
+            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 10, fontWeight: 600 }}
+          >
+            <Headphones size={14} />
+            Abrir Chamado
+          </button>
+
+          <button
+            type="button"
             className="btn"
             onClick={handleBaixarFechamentoZip}
             disabled={baixandoZip || carregando || empresas.length === 0}
@@ -452,6 +506,48 @@ export default function CarteiraEscritorioPage() {
             Equipe do Escritório ({membros.length})
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => setAba('chamados')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: aba === 'chamados' ? 'var(--accent, #600000)' : '#f3f4f6',
+            color: aba === 'chamados' ? '#fff' : '#374151',
+          }}
+        >
+          <Headphones size={15} />
+          Suporte & Chamados
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAba('auditoria')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: aba === 'auditoria' ? 'var(--accent, #600000)' : '#f3f4f6',
+            color: aba === 'auditoria' ? '#fff' : '#374151',
+          }}
+        >
+          <History size={15} />
+          Auditoria da Equipe
+        </button>
       </div>
 
       {aba === 'saude' ? (
@@ -697,6 +793,18 @@ export default function CarteiraEscritorioPage() {
                               <button
                                 type="button"
                                 className="btn btn-secondary"
+                                style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#1d4ed8', borderColor: '#bfdbfe', background: '#eff6ff' }}
+                                disabled={gerandoLinkA1Id !== null}
+                                onClick={() => handleGerarLinkA1(emp, false)}
+                                title="Gerar link white-label para o cliente enviar o próprio Certificado A1 (.pfx)"
+                              >
+                                <KeyRound size={12} style={{ marginRight: 4 }} />
+                                {gerandoLinkA1Id === emp.id ? 'Gerando...' : 'Link A1'}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
                                 style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#15803d', borderColor: '#bbf7d0', background: '#f0fdf4' }}
                                 disabled={enviandoWhatsId !== null}
                                 onClick={() => handleAvisarCliente(emp, 'resumo')}
@@ -716,6 +824,14 @@ export default function CarteiraEscritorioPage() {
             )}
           </div>
         </>
+      ) : aba === 'chamados' ? (
+        <SuporteChamadosTab
+          empresas={empresas}
+          abrirModalInicial={abrirModalChamado}
+          onConsumirAbrirModal={() => setAbrirModalChamado(false)}
+        />
+      ) : aba === 'auditoria' ? (
+        <AuditoriaEquipeTab />
       ) : (
         /* Aba Equipe do Escritório */
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 20 }}>
@@ -820,6 +936,80 @@ export default function CarteiraEscritorioPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal Link Self-Service Certificado A1 */}
+      {conviteA1Modal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setConviteA1Modal(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 540,
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <KeyRound size={17} color="var(--accent, #600000)" />
+                Link Seguro — Envio de Certificado A1
+              </h3>
+              <button type="button" onClick={() => setConviteA1Modal(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ margin: 0, fontSize: 13.5, color: '#4b5563', lineHeight: 1.55 }}>
+                Envie o link abaixo para <strong>{conviteA1Modal.empresa.nomeFantasia || conviteA1Modal.empresa.razaoSocial}</strong>.
+                O cliente verá a <strong>sua logo e cores</strong>, subirá o arquivo <code>.pfx</code> + senha direto no cofre criptografado e você receberá um aviso no WhatsApp assim que concluir.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="form-control" readOnly value={conviteA1Modal.link} style={{ fontSize: 12.5, fontFamily: 'monospace' }} />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(conviteA1Modal.link);
+                    toast.success('Link copiado!');
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
+                >
+                  <Copy size={14} /> Copiar
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={gerandoLinkA1Id !== null}
+                  onClick={() => handleGerarLinkA1(conviteA1Modal.empresa, true)}
+                  style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <MessageSquare size={14} />
+                  {conviteA1Modal.whatsappEnviado ? 'Reenviar no WhatsApp do Cliente' : 'Enviar no WhatsApp do Cliente'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setConviteA1Modal(null)}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

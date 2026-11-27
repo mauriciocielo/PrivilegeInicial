@@ -8,6 +8,7 @@ import { CofreNaoConfiguradoError } from '../../../../../lib/nfse/cofre';
 import { montarCancelamento, MOTIVOS_CANCELAMENTO, validarCancelamento, type AmbienteNfse, type ModoCancelamento } from '../../../../../lib/nfse/dps';
 import { criarTransporteMtls, registrarEvento, SefinIndisponivelError } from '../../../../../lib/nfse/sefin';
 import { enviarEmailNfseCancelada } from '../../../../../lib/nfse/enviar-email-nfse';
+import { registrarAuditoriaEscritorio } from '../../../../../lib/escritorio-recursos';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -79,6 +80,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await db.nfsE.update({
       where: { id },
       data: { ...dados, documento: { update: { eventoXml: resultado.eventoXml } } },
+    });
+
+    await registrarAuditoriaEscritorio({
+      userId: auth.session.userId,
+      acao: 'nfse_cancelada',
+      empresaId: nota.empresaId,
+      empresaNome: nota.prestadorRazaoSocial,
+      detalhes: `Cancelou NFS-e nº ${nota.numero} (Tomador: ${nota.tomadorRazaoSocial}) — ${motivoCancelamento}`,
     });
 
     const emailCancelamento = modo === 'direto'

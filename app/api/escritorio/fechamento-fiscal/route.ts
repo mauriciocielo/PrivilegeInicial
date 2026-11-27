@@ -6,6 +6,7 @@ import { captureError } from '../../../../lib/sentry-helper';
 import { apenasDigitos } from '../../../../lib/nfse/dps';
 import { criarZipBuffer, type ArquivoZip } from '../../../../lib/nfse/zip';
 import { resolverEmpresasDaCarteira } from '../../../../lib/escritorio-carteira';
+import { registrarAuditoriaEscritorio } from '../../../../lib/escritorio-recursos';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -246,6 +247,11 @@ export async function GET(request: Request) {
     });
 
     const zipBuffer = criarZipBuffer(arquivos);
+    await registrarAuditoriaEscritorio({
+      userId: auth.session.userId,
+      acao: 'fechamento_zip_baixado',
+      detalhes: `Baixou Pacote de Fechamento Fiscal ${competencia} (${empresas.length} empresa(s), ${totalXmls} XML(s))`,
+    });
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {

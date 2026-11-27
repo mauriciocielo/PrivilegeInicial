@@ -17,6 +17,7 @@ import { sincronizarNotasAdn } from '../../../../lib/nfse/sincronizar-adn';
 import { enviarEmailNfseEmitida } from '../../../../lib/nfse/enviar-email-nfse';
 import { enviarNfsePorWhatsAppAoEmissor } from '../../../../lib/nfse/enviar-whatsapp-nfse';
 import { registrarEntregaNfse } from '../../../../lib/nfse/entregas-db';
+import { registrarAuditoriaEscritorio } from '../../../../lib/escritorio-recursos';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const textoOuNull = (v: unknown) => texto(v) || null;
@@ -358,6 +359,14 @@ export async function POST(request: Request) {
         await db.nfseConfig.update({ where: { empresaId }, data: { proximoNDpsProducao: proximoAposEmissao } });
       }
     }
+
+    await registrarAuditoriaEscritorio({
+      userId: auth.session.userId,
+      acao: 'nfse_emitida',
+      empresaId,
+      empresaNome: autorizada.prestadorRazaoSocial,
+      detalhes: `Emitiu NFS-e nº ${autorizada.numero || 'SN'} para ${dados.tomadorNome} (R$ ${Number(autorizada.valorLiquido || 0).toFixed(2)})`,
+    });
 
     const emailEnviado = await enviarEmailNfseEmitida({
       empresaId,
