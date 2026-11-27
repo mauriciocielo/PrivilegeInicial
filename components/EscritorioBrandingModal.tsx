@@ -9,6 +9,7 @@ export interface BrandingState {
   customizado?: boolean;
   escritorioId?: string;
   nome?: string;
+  email?: string | null;
   telefone?: string | null;
   corPrimaria?: string | null;
   corSecundaria?: string | null;
@@ -63,6 +64,7 @@ interface Props {
 export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSalvo }: Props) {
   const [mounted, setMounted] = useState(false);
   const [nome, setNome] = useState(brandingAtual.nome || '');
+  const [email, setEmail] = useState(brandingAtual.email || '');
   const [telefone, setTelefone] = useState(brandingAtual.telefone || '');
   const [corPrimaria, setCorPrimaria] = useState(brandingAtual.corPrimaria || '#1d4ed8');
   const [corSecundaria, setCorSecundaria] = useState(brandingAtual.corSecundaria || '#1e3a8a');
@@ -99,6 +101,7 @@ export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSal
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: nome.trim(),
+          email: email.trim(),
           telefone: telefone.trim(),
           corPrimaria,
           corSecundaria,
@@ -218,6 +221,19 @@ export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSal
                 placeholder="(46) 99999-9999"
               />
             </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              E-mail de Resposta (Reply-To e cópia das NFS-es emitidas/canceladas)
+            </label>
+            <input
+              type="email"
+              className="form-control"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="fiscal@seuescritorio.com.br"
+            />
           </div>
 
           {/* Logo */}

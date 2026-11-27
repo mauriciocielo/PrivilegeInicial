@@ -1,295 +1,953 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
-  Activity, AlertTriangle, CheckCircle2, ShieldAlert, Search, RefreshCw, Calendar, Sparkles, X,
+  Activity,
+  AlertTriangle,
+  Archive,
+  CheckCircle2,
+  Download,
+  Edit3,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  TrendingUp,
+  UserPlus,
+  Users,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { fmt } from '../../../lib/reports';
+import { confirmAsync } from '../../../components/ConfirmProvider';
 
-interface ClienteSemaforo {
-  empresaId: string;
-  nome: string;
+interface EmpresaSaude {
+  id: string;
+  razaoSocial: string;
+  nomeFantasia: string;
   cnpj: string;
-  responsavel: string;
   telefone: string;
-  saldoCaixa: number;
-  totalVencidoPagar: number;
-  qtdVencidoPagar: number;
-  certDias: number | null;
-  cndsPositivas: string[];
-  ultimaReuniao: string | null;
-  diasSemReuniao: number | null;
-  semaforo: 'vermelho' | 'amarelo' | 'verde';
-  scoreSaude: number;
-  motivos: string[];
+  email: string;
+  regime: 'MEI' | 'Simples Nacional' | 'Regime Normal';
+  statusCertificado: 'valido' | 'vencendo' | 'vencido' | 'procuracao' | 'ausente';
+  diasCertificado: number | null;
+  certValidoAte: string | null;
+  faturamentoMes: number;
+  nfseMesQtd: number;
+  nfseMesValor: number;
+  nfeEmitMesQtd: number;
+  nfeEmitMesValor: number;
+  nfeRecMesQtd: number;
+  nfeRecMesValor: number;
+  rbt12: number;
+  tetoRbt12: number | null;
+  sublimiteRbt12: number | null;
+  percentualTeto: number | null;
+  alertaRbt12: 'ok' | 'atencao' | 'critico';
+  totalRecorrencias: number;
+  recorrenciaPendente: boolean;
+  semaforo: 'verde' | 'amarelo' | 'vermelho';
+  alertas: string[];
 }
 
-const moeda = (v: number) =>
-  (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+interface ResumoCarteira {
+  totalEmpresas: number;
+  verdes: number;
+  amarelas: number;
+  vermelhas: number;
+  certVencidos: number;
+  certVencendo: number;
+  alertasRbt12: number;
+  recorrenciasPendentes: number;
+  faturamentoMesTotal: number;
+  rbt12CarteiraTotal: number;
+}
 
-export default function CarteiraSemaforoPage() {
-  const [loading, setLoading] = useState(true);
-  const [totais, setTotais] = useState({ total: 0, vermelho: 0, amarelo: 0, verde: 0 });
-  const [carteira, setCarteira] = useState<ClienteSemaforo[]>([]);
-  const [filtroCor, setFiltroCor] = useState<'todos' | 'vermelho' | 'amarelo' | 'verde'>('todos');
+interface MembroEquipe {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  papel: 'admin_escritorio' | 'operador';
+  empresaIds: string[];
+  createdAt: string;
+}
+
+interface EmpresaSimples {
+  id: string;
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+}
+
+function formatCnpj(cnpj: string): string {
+  const d = (cnpj || '').replace(/\D/g, '');
+  if (d.length !== 14) return cnpj;
+  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+}
+
+export default function CarteiraEscritorioPage() {
+  const [competencia, setCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
+  const [aba, setAba] = useState<'saude' | 'equipe'>('saude');
+
+  // Saúde da carteira
+  const [carregando, setCarregando] = useState(true);
+  const [baixandoZip, setBaixandoZip] = useState(false);
+  const [escritorio, setEscritorio] = useState<{ id: string; nome: string; papel: string } | null>(null);
+  const [ehAdminEscritorio, setEhAdminEscritorio] = useState(false);
+  const [resumo, setResumo] = useState<ResumoCarteira | null>(null);
+  const [empresas, setEmpresas] = useState<EmpresaSaude[]>([]);
   const [busca, setBusca] = useState('');
+  const [filtroSemaforo, setFiltroSemaforo] = useState<'todos' | 'vermelho' | 'amarelo' | 'verde'>('todos');
+  const [enviandoWhatsId, setEnviandoWhatsId] = useState<string | null>(null);
 
-  // Modal Dossiê IA rápido
-  const [dossieAberto, setDossieAberto] = useState<{ nome: string; dados: any; pontosIA: string[] } | null>(null);
-  const [carregandoDossieId, setCarregandoDossieId] = useState<string | null>(null);
+  // Equipe do escritório
+  const [carregandoEquipe, setCarregandoEquipe] = useState(false);
+  const [membros, setMembros] = useState<MembroEquipe[]>([]);
+  const [empresasEquipe, setEmpresasEquipe] = useState<EmpresaSimples[]>([]);
+  const [modalMembroAberto, setModalMembroAberto] = useState(false);
+  const [editandoMembro, setEditandoMembro] = useState<MembroEquipe | null>(null);
+  const [formNome, setFormNome] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formSenha, setFormSenha] = useState('');
+  const [formTodasEmpresas, setFormTodasEmpresas] = useState(true);
+  const [formEmpresaIds, setFormEmpresaIds] = useState<string[]>([]);
+  const [salvandoMembro, setSalvandoMembro] = useState(false);
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
+  const carregarSaude = useCallback(async (mes: string) => {
+    setCarregando(true);
     try {
-      const res = await fetch('/api/carteira/semaforo');
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erro ao carregar carteira');
-      setTotais(json.totais || { total: 0, vermelho: 0, amarelo: 0, verde: 0 });
-      setCarteira(Array.isArray(json.carteira) ? json.carteira : []);
-    } catch (e) {
-      toast.error((e as Error).message);
+      const res = await fetch(`/api/escritorio/saude-carteira?mes=${encodeURIComponent(mes)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível carregar a saúde da carteira.');
+        return;
+      }
+      setEscritorio(data.escritorio || null);
+      setEhAdminEscritorio(Boolean(data.ehAdminEscritorio));
+      setResumo(data.resumo || null);
+      setEmpresas(Array.isArray(data.empresas) ? data.empresas : []);
+    } catch {
+      toast.error('Erro de conexão ao carregar a carteira.');
     } finally {
-      setLoading(false);
+      setCarregando(false);
+    }
+  }, []);
+
+  const carregarEquipe = useCallback(async () => {
+    setCarregandoEquipe(true);
+    try {
+      const res = await fetch('/api/escritorio/equipe');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMembros(Array.isArray(data.membros) ? data.membros : []);
+        setEmpresasEquipe(Array.isArray(data.empresas) ? data.empresas : []);
+      }
+    } catch {
+      // ignora
+    } finally {
+      setCarregandoEquipe(false);
     }
   }, []);
 
   useEffect(() => {
-    carregar();
-  }, [carregar]);
+    carregarSaude(competencia);
+  }, [competencia, carregarSaude]);
 
-  const abrirDossie = async (c: ClienteSemaforo) => {
-    setCarregandoDossieId(c.empresaId);
+  useEffect(() => {
+    if (aba === 'equipe' && escritorio && ehAdminEscritorio) {
+      carregarEquipe();
+    }
+  }, [aba, escritorio, ehAdminEscritorio, carregarEquipe]);
+
+  const empresasFiltradas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    const dig = busca.replace(/\D/g, '');
+    return empresas.filter((e) => {
+      if (filtroSemaforo !== 'todos' && e.semaforo !== filtroSemaforo) return false;
+      if (!q) return true;
+      return (
+        e.razaoSocial.toLowerCase().includes(q) ||
+        (e.nomeFantasia || '').toLowerCase().includes(q) ||
+        e.cnpj.includes(q) ||
+        (dig && e.cnpj.replace(/\D/g, '').includes(dig))
+      );
+    });
+  }, [empresas, busca, filtroSemaforo]);
+
+  const handleBaixarFechamentoZip = async () => {
+    setBaixandoZip(true);
     try {
-      const res = await fetch('/api/agenda/dossie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId: c.empresaId, titulo: 'Revisão de Saúde da Carteira' }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Falha ao gerar dossiê');
-      setDossieAberto({ nome: c.nome, dados: json.dados, pontosIA: json.pontosIA || [] });
-    } catch (e) {
-      toast.error((e as Error).message);
+      const res = await fetch(`/api/escritorio/fechamento-fiscal?mes=${encodeURIComponent(competencia)}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || 'Não foi possível gerar o pacote fiscal.');
+        return;
+      }
+      const blob = await res.blob();
+      const totalXmls = res.headers.get('X-Total-Xmls') || '0';
+      const totalEmp = res.headers.get('X-Total-Empresas') || '0';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Fechamento_Fiscal_${competencia}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Pacote fiscal baixado! ${totalEmp} empresa(s) · ${totalXmls} XML(s) + planilha Excel consolidada.`);
+    } catch {
+      toast.error('Erro de conexão ao gerar pacote fiscal.');
     } finally {
-      setCarregandoDossieId(null);
+      setBaixandoZip(false);
     }
   };
 
-  const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    return carteira.filter(c => {
-      if (filtroCor !== 'todos' && c.semaforo !== filtroCor) return false;
-      if (q && !`${c.nome} ${c.cnpj} ${c.responsavel}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [carteira, filtroCor, busca]);
+  const handleAvisarCliente = async (emp: EmpresaSaude, tipo: 'certificado' | 'rbt12' | 'resumo') => {
+    const chave = `${emp.id}:${tipo}`;
+    setEnviandoWhatsId(chave);
+    try {
+      if (tipo === 'resumo') {
+        const res = await fetch(`/api/nfse/emissores/${emp.id}/fechamento-whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ competencia, telefone: emp.telefone || '' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(data.error || 'Não foi possível enviar o resumo no WhatsApp.');
+          return;
+        }
+        toast.success(`Resumo mensal enviado no WhatsApp para ${emp.nomeFantasia || emp.razaoSocial}!`);
+      } else {
+        const res = await fetch('/api/escritorio/avisar-cliente-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            empresaId: emp.id,
+            tipo,
+            telefone: emp.telefone || '',
+            rbt12: emp.rbt12,
+            teto: emp.sublimiteRbt12 || emp.tetoRbt12 || 0,
+            regime: emp.regime,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(data.error || 'Não foi possível enviar o aviso no WhatsApp.');
+          return;
+        }
+        toast.success(`Aviso enviado no WhatsApp para ${data.destinoNome || emp.razaoSocial}!`);
+      }
+    } catch {
+      toast.error('Erro de conexão ao disparar WhatsApp.');
+    } finally {
+      setEnviandoWhatsId(null);
+    }
+  };
+
+  const abrirModalNovoMembro = () => {
+    setEditandoMembro(null);
+    setFormNome('');
+    setFormEmail('');
+    setFormPhone('');
+    setFormSenha('');
+    setFormTodasEmpresas(true);
+    setFormEmpresaIds(empresasEquipe.map((e) => e.id));
+    setModalMembroAberto(true);
+  };
+
+  const abrirModalEditarMembro = (m: MembroEquipe) => {
+    setEditandoMembro(m);
+    setFormNome(m.name);
+    setFormEmail(m.email);
+    setFormPhone(m.phone || '');
+    setFormSenha('');
+    const temTodas = empresasEquipe.length > 0 && m.empresaIds.length >= empresasEquipe.length;
+    setFormTodasEmpresas(temTodas);
+    setFormEmpresaIds(m.empresaIds || []);
+    setModalMembroAberto(true);
+  };
+
+  const handleSalvarMembro = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSalvandoMembro(true);
+    try {
+      const metodo = editandoMembro ? 'PATCH' : 'POST';
+      const payload = editandoMembro
+        ? {
+            id: editandoMembro.id,
+            name: formNome.trim(),
+            phone: formPhone.trim(),
+            password: formSenha.trim() || undefined,
+            todasEmpresas: formTodasEmpresas,
+            empresaIds: formEmpresaIds,
+          }
+        : {
+            name: formNome.trim(),
+            email: formEmail.trim().toLowerCase(),
+            phone: formPhone.trim(),
+            password: formSenha.trim(),
+            todasEmpresas: formTodasEmpresas,
+            empresaIds: formEmpresaIds,
+          };
+
+      const res = await fetch('/api/escritorio/equipe', {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao salvar membro da equipe.');
+        return;
+      }
+      toast.success(editandoMembro ? 'Membro atualizado com sucesso!' : 'Auxiliar criado! Já pode acessar com o e-mail e senha.');
+      setModalMembroAberto(false);
+      carregarEquipe();
+    } catch {
+      toast.error('Erro de conexão ao salvar membro.');
+    } finally {
+      setSalvandoMembro(false);
+    }
+  };
+
+  const handleRemoverMembro = async (m: MembroEquipe) => {
+    const ok = await confirmAsync(`Remover o acesso de ${m.name} (${m.email}) da sua equipe?`);
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/escritorio/equipe?id=${encodeURIComponent(m.id)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao remover membro.');
+        return;
+      }
+      toast.success('Acesso removido da equipe.');
+      carregarEquipe();
+    } catch {
+      toast.error('Erro de conexão ao remover membro.');
+    }
+  };
+
+  const toggleEmpresaMembro = (id: string) => {
+    setFormEmpresaIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
 
   return (
-    <>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+    <div className="page-body" style={{ padding: '24px 32px', background: '#fdfdfd', minHeight: '100%' }}>
+      {/* Cabeçalho Executivo */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
         <div>
-          <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Activity size={22} style={{ color: '#600000' }} />
-            Semáforo da Carteira de Clientes
+          <div style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent, #600000)' }}>
+            {escritorio ? escritorio.nome : 'Gestão Fiscal Multi-CNPJ'}
           </div>
-          <div className="page-subtitle">
-            Radar automático da diretoria cruzando Caixa, Contas Vencidas, Certificado A1, CND e Dias sem Reunião.
-          </div>
+          <h1 style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+            Carteira & Fechamento Fiscal
+          </h1>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#6b7280' }}>
+            Semáforo de certificados A1, termômetro RBT12 (MEI/Simples), fechamento em 1 clique e equipe do escritório
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Link href="/consultor/agenda" className="btn btn-secondary btn-sm">
-            <Calendar size={14} style={{ marginRight: 5, verticalAlign: -2 }} /> Ir para Agenda
-          </Link>
-          <button className="btn btn-primary btn-sm" onClick={carregar} disabled={loading} style={{ background: '#600000', borderColor: '#600000' }}>
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} style={{ marginRight: 5, verticalAlign: -2 }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <input
+            type="month"
+            className="form-control"
+            value={competencia}
+            onChange={(e) => setCompetencia(e.target.value)}
+            style={{ width: 170, fontSize: 14, fontWeight: 600 }}
+            aria-label="Competência do fechamento"
+          />
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => carregarSaude(competencia)}
+            disabled={carregando}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 10 }}
+          >
+            <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
             Atualizar
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={handleBaixarFechamentoZip}
+            disabled={baixandoZip || carregando || empresas.length === 0}
+            style={{
+              background: 'var(--accent, #600000)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontWeight: 700,
+              padding: '9px 18px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            title="Baixa 1 único arquivo ZIP organizado por empresa com todos os XMLs de NFS-e e NF-e do mês + planilha Excel consolidada"
+          >
+            <Archive size={15} />
+            {baixandoZip ? 'Montando pacote ZIP...' : 'Baixar Fechamento do Mês (ZIP + Excel)'}
           </button>
         </div>
       </div>
 
-      <div className="page-body">
-        {/* 4 KPIs clicáveis */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
-          {[
-            { id: 'todos' as const, label: 'Total na Carteira', valor: totais.total, cor: '#0f172a', bg: 'var(--bg-card)', border: 'var(--border-light)', icon: <Activity size={18} /> },
-            { id: 'vermelho' as const, label: 'Crítico (Ação Imediata)', valor: totais.vermelho, cor: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: <ShieldAlert size={18} /> },
-            { id: 'amarelo' as const, label: 'Atenção (Monitorar)', valor: totais.amarelo, cor: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: <AlertTriangle size={18} /> },
-            { id: 'verde' as const, label: 'Saudável (Em Dia)', valor: totais.verde, cor: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: <CheckCircle2 size={18} /> },
-          ].map(card => (
-            <div
-              key={card.id}
-              onClick={() => setFiltroCor(card.id)}
-              style={{
-                background: card.bg,
-                border: `2px solid ${filtroCor === card.id ? '#600000' : card.border}`,
-                borderRadius: 12,
-                padding: '14px 16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{card.label}</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: card.cor, marginTop: 2 }}>{card.valor}</div>
-              </div>
-              <div style={{ color: card.cor }}>{card.icon}</div>
-            </div>
-          ))}
-        </div>
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #e5e7eb', paddingBottom: 10 }}>
+        <button
+          type="button"
+          onClick={() => setAba('saude')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: aba === 'saude' ? 'var(--accent, #600000)' : '#f3f4f6',
+            color: aba === 'saude' ? '#fff' : '#374151',
+          }}
+        >
+          <Activity size={15} />
+          Saúde da Carteira & RBT12 ({empresas.length})
+        </button>
 
-        {/* Busca */}
-        <div className="card" style={{ padding: 14, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1 1 260px' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Buscar empresa, CNPJ ou responsável..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              style={{ paddingLeft: 32 }}
-            />
-          </div>
-          <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>
-            Exibindo {filtrados.length} de {carteira.length} empresa(s)
-          </span>
-        </div>
-
-        {/* Lista da Carteira */}
-        {loading ? (
-          <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Analisando carteira de clientes...</div>
-        ) : filtrados.length === 0 ? (
-          <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Nenhuma empresa neste filtro.</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
-            {filtrados.map(c => {
-              const corBorder = c.semaforo === 'vermelho' ? '#dc2626' : c.semaforo === 'amarelo' ? '#d97706' : '#16a34a';
-              const badgeBg = c.semaforo === 'vermelho' ? '#fee2e2' : c.semaforo === 'amarelo' ? '#fef3c7' : '#dcfce7';
-              const badgeTxt = c.semaforo === 'vermelho' ? '#b91c1c' : c.semaforo === 'amarelo' ? '#b45309' : '#15803d';
-              const badgeLbl = c.semaforo === 'vermelho' ? 'CRÍTICO' : c.semaforo === 'amarelo' ? 'ATENÇÃO' : 'SAUDÁVEL';
-
-              return (
-                <div
-                  key={c.empresaId}
-                  className="card"
-                  style={{
-                    padding: 16,
-                    borderLeft: `5px solid ${corBorder}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--text-primary)' }}>{c.nome}</div>
-                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.cnpj}</div>
-                      </div>
-                      <span style={{ fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: badgeBg, color: badgeTxt }}>
-                        {badgeLbl} · {c.scoreSaude}%
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12, padding: '8px 10px', borderRadius: 8, background: 'var(--bg-base)', fontSize: 12 }}>
-                      <div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>Saldo Caixa</div>
-                        <div style={{ fontWeight: 700, color: c.saldoCaixa < 0 ? '#dc2626' : '#15803d' }}>{moeda(c.saldoCaixa)}</div>
-                      </div>
-                      <div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>Última Reunião</div>
-                        <div style={{ fontWeight: 700 }}>
-                          {c.diasSemReuniao !== null ? `há ${c.diasSemReuniao}d` : 'Sem registro'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {c.motivos.length > 0 ? (
-                      <ul style={{ margin: '10px 0 0', paddingLeft: 16, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        {c.motivos.map((m, idx) => (
-                          <li key={idx}>{m}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div style={{ marginTop: 10, fontSize: 12, color: '#15803d', fontWeight: 600 }}>
-                        ✓ Caixa, obrigações fiscais e acompanhamento em dia.
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border-light)' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => abrirDossie(c)}
-                      disabled={carregandoDossieId === c.empresaId}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12 }}
-                    >
-                      <Sparkles size={13} style={{ color: '#600000' }} />
-                      {carregandoDossieId === c.empresaId ? 'Gerando...' : 'Dossiê IA'}
-                    </button>
-                    <Link
-                      href="/consultor/agenda"
-                      className="btn btn-primary btn-sm"
-                      style={{ flex: 1, background: '#600000', borderColor: '#600000', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12 }}
-                    >
-                      <Calendar size={13} /> Agendar
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {escritorio && ehAdminEscritorio && (
+          <button
+            type="button"
+            onClick={() => setAba('equipe')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 10,
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: 14,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: aba === 'equipe' ? 'var(--accent, #600000)' : '#f3f4f6',
+              color: aba === 'equipe' ? '#fff' : '#374151',
+            }}
+          >
+            <Users size={15} />
+            Equipe do Escritório ({membros.length})
+          </button>
         )}
       </div>
 
-      {/* Modal Dossiê IA */}
-      {dossieAberto && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.52)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(6px)', padding: 16 }}
-          onClick={e => e.target === e.currentTarget && setDossieAberto(null)}
-        >
-          <div className="card" style={{ width: 560, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
-            <button onClick={() => setDossieAberto(null)} style={{ position: 'absolute', right: 16, top: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-              <X size={18} />
+      {aba === 'saude' ? (
+        <>
+          {/* KPIs Consolidados */}
+          {resumo && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 22 }}>
+              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontSize: 12.5, color: '#6b7280', fontWeight: 600 }}>Semáforo da Carteira</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginTop: 4 }}>{resumo.totalEmpresas} empresas</div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 12.5, fontWeight: 700 }}>
+                  <span style={{ color: '#b91c1c' }}>● {resumo.vermelhas} críticas</span>
+                  <span style={{ color: '#b45309' }}>● {resumo.amarelas} atenção</span>
+                  <span style={{ color: '#15803d' }}>● {resumo.verdes} ok</span>
+                </div>
+              </div>
+
+              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontSize: 12.5, color: '#6b7280', fontWeight: 600 }}>Faturamento da Carteira ({competencia})</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent, #600000)', marginTop: 4 }}>
+                  {fmt.currency(resumo.faturamentoMesTotal)}
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>NFS-e prestadas + NF-e emitidas</div>
+              </div>
+
+              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontSize: 12.5, color: '#6b7280', fontWeight: 600 }}>RBT12 Consolidado (12m)</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginTop: 4 }}>
+                  {fmt.currency(resumo.rbt12CarteiraTotal)}
+                </div>
+                <div style={{ fontSize: 12, color: resumo.alertasRbt12 > 0 ? '#b91c1c' : '#15803d', fontWeight: 600, marginTop: 6 }}>
+                  {resumo.alertasRbt12 > 0
+                    ? `${resumo.alertasRbt12} empresa(s) perto/acima do teto`
+                    : 'Nenhuma empresa perto do teto'}
+                </div>
+              </div>
+
+              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontSize: 12.5, color: '#6b7280', fontWeight: 600 }}>Certificados A1</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: resumo.certVencidos > 0 ? '#b91c1c' : '#111827', marginTop: 4 }}>
+                  {resumo.certVencidos} vencido(s) · {resumo.certVencendo} vencendo
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>
+                  {resumo.recorrenciasPendentes > 0
+                    ? `${resumo.recorrenciasPendentes} empresa(s) com recorrência pendente`
+                    : 'Recorrências em dia no mês'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filtros */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 420 }}>
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+              <input
+                className="form-control"
+                style={{ paddingLeft: 36, fontSize: 14 }}
+                placeholder="Buscar empresa por nome ou CNPJ..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+
+            {(['todos', 'vermelho', 'amarelo', 'verde'] as const).map((st) => {
+              const ativo = filtroSemaforo === st;
+              const labels = { todos: 'Todas', vermelho: 'Críticas', amarelo: 'Atenção', verde: 'Em dia' };
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setFiltroSemaforo(st)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 99,
+                    border: '1px solid #e5e7eb',
+                    background: ativo ? '#111827' : '#fff',
+                    color: ativo ? '#fff' : '#374151',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {labels[st]}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tabela Principal */}
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden' }}>
+            {carregando ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Calculando saúde da carteira e RBT12...</div>
+            ) : empresasFiltradas.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Nenhuma empresa encontrada para este filtro.</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Empresa / Regime</th>
+                      <th>Certificado A1</th>
+                      <th>Faturamento ({competencia})</th>
+                      <th>Termômetro RBT12 (12m)</th>
+                      <th style={{ textAlign: 'right' }}>Ações WhatsApp (White-Label)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {empresasFiltradas.map((emp) => {
+                      const corSem =
+                        emp.semaforo === 'vermelho'
+                          ? { bg: '#fef2f2', fg: '#b91c1c', label: 'Crítico' }
+                          : emp.semaforo === 'amarelo'
+                          ? { bg: '#fffbeb', fg: '#b45309', label: 'Atenção' }
+                          : { bg: '#f0fdf4', fg: '#15803d', label: 'Em dia' };
+
+                      const pctBar = Math.min(100, emp.percentualTeto || 0);
+                      const corBar =
+                        emp.alertaRbt12 === 'critico' ? '#dc2626' : emp.alertaRbt12 === 'atencao' ? '#d97706' : '#16a34a';
+
+                      return (
+                        <tr key={emp.id}>
+                          <td>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                padding: '4px 10px',
+                                borderRadius: 99,
+                                background: corSem.bg,
+                                color: corSem.fg,
+                                fontSize: 12,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {emp.semaforo === 'vermelho' ? (
+                                <ShieldAlert size={13} />
+                              ) : emp.semaforo === 'amarelo' ? (
+                                <AlertTriangle size={13} />
+                              ) : (
+                                <CheckCircle2 size={13} />
+                              )}
+                              {corSem.label}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#111827', fontSize: 14 }}>
+                              {emp.nomeFantasia || emp.razaoSocial}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#6b7280' }}>
+                              {formatCnpj(emp.cnpj)} · <strong>{emp.regime}</strong>
+                            </div>
+                            {emp.alertas.length > 0 && (
+                              <div style={{ fontSize: 11.5, color: corSem.fg, marginTop: 3, fontWeight: 600 }}>
+                                {emp.alertas.join(' · ')}
+                              </div>
+                            )}
+                          </td>
+
+                          <td>
+                            {emp.statusCertificado === 'vencido' ? (
+                              <span style={{ color: '#b91c1c', fontWeight: 700, fontSize: 13 }}>
+                                Vencido ({Math.abs(emp.diasCertificado || 0)}d)
+                              </span>
+                            ) : emp.statusCertificado === 'vencendo' ? (
+                              <span style={{ color: '#b45309', fontWeight: 700, fontSize: 13 }}>
+                                Vence em {emp.diasCertificado}d
+                              </span>
+                            ) : emp.statusCertificado === 'valido' ? (
+                              <span style={{ color: '#15803d', fontWeight: 600, fontSize: 13 }}>
+                                Válido ({emp.diasCertificado}d)
+                              </span>
+                            ) : emp.statusCertificado === 'procuracao' ? (
+                              <span style={{ color: '#1d4ed8', fontWeight: 600, fontSize: 13 }}>Procuração</span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: 13 }}>Sem certificado</span>
+                            )}
+                          </td>
+
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#111827', fontSize: 14 }}>
+                              {fmt.currency(emp.faturamentoMes)}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: '#6b7280' }}>
+                              {emp.nfseMesQtd} NFS-e · {emp.nfeEmitMesQtd} NF-e · {emp.nfeRecMesQtd} compras
+                            </div>
+                          </td>
+
+                          <td style={{ minWidth: 190 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                              <span>{fmt.currency(emp.rbt12)}</span>
+                              {emp.percentualTeto !== null && (
+                                <span style={{ color: corBar }}>{emp.percentualTeto}%</span>
+                              )}
+                            </div>
+                            {emp.tetoRbt12 ? (
+                              <div style={{ marginTop: 5 }}>
+                                <div style={{ height: 6, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${pctBar}%`, background: corBar, borderRadius: 99 }} />
+                                </div>
+                                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                                  Teto {emp.regime}: {fmt.currency(emp.tetoRbt12)}
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Sem teto Simples/MEI</div>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {(emp.statusCertificado === 'vencido' || emp.statusCertificado === 'vencendo') && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#b45309', borderColor: '#fde68a', background: '#fffbeb' }}
+                                  disabled={enviandoWhatsId !== null}
+                                  onClick={() => handleAvisarCliente(emp, 'certificado')}
+                                  title="Enviar aviso de renovação de Certificado A1 no WhatsApp do cliente com a assinatura do escritório"
+                                >
+                                  <ShieldCheck size={12} style={{ marginRight: 4 }} />
+                                  {enviandoWhatsId === `${emp.id}:certificado` ? 'Enviando...' : 'Avisar A1'}
+                                </button>
+                              )}
+
+                              {emp.alertaRbt12 !== 'ok' && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#b91c1c', borderColor: '#fecaca', background: '#fef2f2' }}
+                                  disabled={enviandoWhatsId !== null}
+                                  onClick={() => handleAvisarCliente(emp, 'rbt12')}
+                                  title="Avisar cliente no WhatsApp sobre aproximação/estouro do teto RBT12"
+                                >
+                                  <TrendingUp size={12} style={{ marginRight: 4 }} />
+                                  {enviandoWhatsId === `${emp.id}:rbt12` ? 'Enviando...' : 'Avisar RBT12'}
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#15803d', borderColor: '#bbf7d0', background: '#f0fdf4' }}
+                                disabled={enviandoWhatsId !== null}
+                                onClick={() => handleAvisarCliente(emp, 'resumo')}
+                                title="Enviar resumo mensal de NFS-e no WhatsApp do cliente assinado pelo escritório"
+                              >
+                                <MessageSquare size={12} style={{ marginRight: 4 }} />
+                                {enviandoWhatsId === `${emp.id}:resumo` ? 'Enviando...' : 'Resumo Whats'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* Aba Equipe do Escritório */
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>Equipe do Escritório (Auxiliares Fiscais)</h2>
+              <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#6b7280' }}>
+                Crie logins individuais para sua equipe escolhendo quais CNPJs da sua carteira cada auxiliar pode operar. Todos herdam automaticamente sua logo e cores.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn"
+              onClick={abrirModalNovoMembro}
+              style={{
+                background: 'var(--accent, #600000)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 10,
+                fontWeight: 700,
+                padding: '9px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <UserPlus size={15} />
+              Adicionar Auxiliar
             </button>
-            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={18} style={{ color: '#600000' }} /> Dossiê Executivo — {dossieAberto.nome}
-            </h3>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>
-              Resumo em tempo real para tomada de decisão.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
-              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Saldo em Caixa</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: dossieAberto.dados.saldoCaixa < 0 ? '#dc2626' : '#15803d' }}>{moeda(dossieAberto.dados.saldoCaixa)}</div>
-              </div>
-              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>NFS-e no Mês ({dossieAberto.dados.qtdNotasMes})</div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>{moeda(dossieAberto.dados.faturamentoNfseMes)}</div>
-              </div>
-              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Contas a Pagar Vencidas</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: dossieAberto.dados.pagarVencido > 0 ? '#dc2626' : 'var(--text-primary)' }}>{moeda(dossieAberto.dados.pagarVencido)}</div>
-              </div>
-              <div style={{ padding: 10, borderRadius: 10, background: 'var(--bg-base)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Certificado A1</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: dossieAberto.dados.certAlerta ? '#dc2626' : '#15803d' }}>{dossieAberto.dados.certStatus}</div>
-              </div>
+          </div>
+
+          {carregandoEquipe ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>Carregando equipe...</div>
+          ) : membros.length === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>Nenhum membro encontrado.</div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail / WhatsApp</th>
+                    <th>Função</th>
+                    <th>Empresas Permitidas</th>
+                    <th style={{ textAlign: 'right' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {membros.map((m) => (
+                    <tr key={m.id}>
+                      <td style={{ fontWeight: 700, color: '#111827' }}>{m.name}</td>
+                      <td>
+                        <div style={{ fontSize: 13.5 }}>{m.email}</div>
+                        {m.phone && <div style={{ fontSize: 12, color: '#6b7280' }}>{m.phone}</div>}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: 99,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: m.papel === 'admin_escritorio' ? '#eff6ff' : '#f3f4f6',
+                            color: m.papel === 'admin_escritorio' ? '#1d4ed8' : '#374151',
+                          }}
+                        >
+                          {m.papel === 'admin_escritorio' ? 'Administrador' : 'Auxiliar / Operador'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13, color: '#374151' }}>
+                        {m.papel === 'admin_escritorio'
+                          ? 'Toda a carteira (ilimitado)'
+                          : `${m.empresaIds.length} de ${empresasEquipe.length} empresa(s)`}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {m.papel === 'operador' ? (
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ fontSize: 12.5, padding: '5px 10px', borderRadius: 8 }}
+                              onClick={() => abrirModalEditarMembro(m)}
+                            >
+                              <Edit3 size={13} style={{ marginRight: 4 }} /> Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ fontSize: 12.5, padding: '5px 10px', borderRadius: 8, color: '#b91c1c', borderColor: '#fecaca' }}
+                              onClick={() => handleRemoverMembro(m)}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 12, color: '#9ca3af' }}>Titular</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div style={{ padding: 14, borderRadius: 12, background: '#fef2f2', border: '1px solid #fecaca' }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#600000', marginBottom: 8 }}>Pauta Recomendada pela IA</div>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-                {dossieAberto.pontosIA.map((p, i) => <li key={i} style={{ marginBottom: 4 }}>{p}</li>)}
-              </ul>
+          )}
+        </div>
+      )}
+
+      {/* Modal Criar / Editar Auxiliar */}
+      {modalMembroAberto && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setModalMembroAberto(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 560,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#111827' }}>
+                {editandoMembro ? `Editar ${editandoMembro.name}` : 'Novo Auxiliar da Equipe'}
+              </h3>
+              <button type="button" onClick={() => setModalMembroAberto(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+                <X size={20} />
+              </button>
             </div>
+
+            <form onSubmit={handleSalvarMembro} style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Nome completo</label>
+                  <input className="form-control" required value={formNome} onChange={(e) => setFormNome(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>WhatsApp / Telefone</label>
+                  <input className="form-control" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="(46) 99999-9999" />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>E-mail de acesso</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    required
+                    disabled={Boolean(editandoMembro)}
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                    {editandoMembro ? 'Nova senha (opcional)' : 'Senha inicial (mín. 6 caracteres)'}
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    required={!editandoMembro}
+                    minLength={editandoMembro ? undefined : 6}
+                    value={formSenha}
+                    onChange={(e) => setFormSenha(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formTodasEmpresas}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setFormTodasEmpresas(v);
+                      if (v) setFormEmpresaIds(empresasEquipe.map((emp) => emp.id));
+                    }}
+                  />
+                  Acesso a todas as empresas da carteira ({empresasEquipe.length})
+                </label>
+
+                {!formTodasEmpresas && (
+                  <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {empresasEquipe.map((emp) => (
+                      <label key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formEmpresaIds.includes(emp.id)}
+                          onChange={() => toggleEmpresaMembro(emp.id)}
+                        />
+                        <span>{emp.nomeFantasia || emp.razaoSocial}</span>
+                        <span style={{ color: '#9ca3af', fontSize: 11.5 }}>{formatCnpj(emp.cnpj)}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setModalMembroAberto(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  disabled={salvandoMembro}
+                  style={{ background: 'var(--accent, #600000)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
+                >
+                  {salvandoMembro ? 'Salvando...' : editandoMembro ? 'Salvar Alterações' : 'Criar Acesso'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

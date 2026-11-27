@@ -62,6 +62,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
       || pathname.startsWith('/consultor/dashboard2')
       || pathname.startsWith('/consultor/nfse')
       || pathname.startsWith('/consultor/nfe-destinadas')
+      || pathname.startsWith('/consultor/carteira')
       || pathname.startsWith('/consultor/cnd-federal')
       || pathname.startsWith('/consultor/comparador-sped')
       || pathname.startsWith('/consultor/whatsapp')
@@ -84,9 +85,12 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
     } else if (user.role === 'consultor') {
       const allowed = user.allowedRoutes || ['/consultor/dashboard2'];
       if (allowed.includes('contador-terceiro-nfse')) {
-        const rotaPermitidaContador = pathname.startsWith('/consultor/nfse') || pathname.startsWith('/consultor/nfe-destinadas');
+        const rotaPermitidaContador =
+          pathname.startsWith('/consultor/nfse') ||
+          pathname.startsWith('/consultor/nfe-destinadas') ||
+          pathname.startsWith('/consultor/carteira');
         if (!rotaPermitidaContador) {
-          router.replace('/consultor/nfse');
+          router.replace('/consultor/carteira');
           return;
         }
         setAuthorized(true);

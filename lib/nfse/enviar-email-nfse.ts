@@ -201,6 +201,7 @@ export async function enviarEmailNfseEmitida(params: {
 
     await transporter.sendMail({
       from: `"${nomeMarca}" <${smtpUser}>`,
+      replyTo: ehParceiro && brandingParceiro?.email ? brandingParceiro.email : undefined,
       to: destinatarios.join(', '),
       cc: ehParceiro ? (brandingParceiro?.email || undefined) : smtpUser,
       subject: `NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
@@ -220,13 +221,12 @@ export async function enviarEmailNfseEmitida(params: {
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
                       <td style="vertical-align:middle;">
-                        ${
-                          emailLogoBuffer
-                            ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
+                        ${emailLogoBuffer
+          ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
                                  <img src="cid:privilege-logo" alt="${nomeMarca}" style="height:36px;width:auto;display:block;" />
                                </div>`
-                            : ''
-                        }
+          : ''
+        }
                         <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.85);">
                           Documento Fiscal Eletrônico • Autorizado
                         </div>
@@ -276,14 +276,13 @@ export async function enviarEmailNfseEmitida(params: {
                       <td style="padding:10px 0 4px;font-size:12.5px;color:#64748b;border-top:1px solid #e2e8f0;">Valor Líquido</td>
                       <td style="padding:10px 0 4px;font-size:18px;font-weight:800;color:${corPrimaria};border-top:1px solid #e2e8f0;">${valorFmt}</td>
                     </tr>
-                    ${
-                      dados.chave
-                        ? `<tr>
+                    ${dados.chave
+          ? `<tr>
                              <td style="padding:8px 0 0;font-size:11.5px;color:#64748b;">Chave de Acesso</td>
                              <td style="padding:8px 0 0;font-size:11px;font-family:monospace;color:#334155;word-break:break-all;">${dados.chave}</td>
                            </tr>`
-                        : ''
-                    }
+          : ''
+        }
                   </table>
                 </td>
               </tr>
@@ -294,15 +293,14 @@ export async function enviarEmailNfseEmitida(params: {
                   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#334155;">
                     📎 <strong>Anexos incluídos:</strong> DANFSe_${numLimpo}.pdf (Documento Auxiliar) e NFSe_${numLimpo}.xml (Arquivo Fiscal Oficial).
                   </div>
-                  ${
-                    linkPortal
-                      ? `<div style="text-align:center;">
+                  ${linkPortal
+          ? `<div style="text-align:center;">
                            <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:${corPrimaria};color:#ffffff;text-decoration:none;font-size:13.5px;font-weight:700;padding:12px 24px;border-radius:8px;">
                              Consultar Autenticidade no Portal Nacional
                            </a>
                          </div>`
-                      : ''
-                  }
+          : ''
+        }
                 </td>
               </tr>
 
@@ -399,7 +397,7 @@ export async function enviarEmailNfseCancelada(params: {
             emailLogoBuffer = fs.readFileSync(p);
             break;
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -424,7 +422,7 @@ export async function enviarEmailNfseCancelada(params: {
           content: pdfCancelada,
           contentType: 'application/pdf',
         });
-      } catch {}
+      } catch { }
     }
 
     if (params.eventoXml) {
@@ -475,6 +473,7 @@ export async function enviarEmailNfseCancelada(params: {
 
     await transporter.sendMail({
       from: `"${nomeMarca}" <${smtpUser}>`,
+      replyTo: ehParceiro && brandingParceiro?.email ? brandingParceiro.email : undefined,
       to: destinatarios.join(', '),
       cc: ehParceiro ? (brandingParceiro?.email || undefined) : smtpUser,
       subject: `CANCELAMENTO — NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
@@ -494,13 +493,12 @@ export async function enviarEmailNfseCancelada(params: {
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
                       <td style="vertical-align:middle;">
-                        ${
-                          emailLogoBuffer
-                            ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
+                        ${emailLogoBuffer
+          ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
                                  <img src="cid:privilege-logo" alt="${nomeMarca}" style="height:36px;width:auto;display:block;" />
                                </div>`
-                            : ''
-                        }
+          : ''
+        }
                         <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fecaca;">
                           Comunicado Fiscal Oficial • Nota Cancelada
                         </div>
@@ -558,15 +556,14 @@ export async function enviarEmailNfseCancelada(params: {
                     </tr>
                   </table>
 
-                  ${
-                    linkPortal
-                      ? `<div style="text-align:center;margin:18px 0 6px;">
+                  ${linkPortal
+          ? `<div style="text-align:center;margin:18px 0 6px;">
                            <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;background:${ehParceiro ? corPrimaria : '#111827'};color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">
                              Consultar situação no Portal Nacional da NFS-e
                            </a>
                          </div>`
-                      : ''
-                  }
+          : ''
+        }
                 </td>
               </tr>
               <tr>

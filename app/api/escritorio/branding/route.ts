@@ -62,6 +62,7 @@ export async function PUT(request: Request) {
     }
 
     const brandNome = typeof body?.nome === 'string' ? body.nome.trim().slice(0, 120) : null;
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase().slice(0, 160) : undefined;
     const telefone = typeof body?.telefone === 'string' ? body.telefone.trim().slice(0, 30) : undefined;
     const corPrimariaRaw = typeof body?.corPrimaria === 'string' ? body.corPrimaria.trim() : '';
     const corSecundariaRaw = typeof body?.corSecundaria === 'string' ? body.corSecundaria.trim() : '';
@@ -92,26 +93,28 @@ export async function PUT(request: Request) {
       await db.$executeRawUnsafe(
         `UPDATE nfse_escritorios
          SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4, brand_logo_data = $5,
-             telefone = COALESCE($6, telefone), updated_at = NOW()
+             telefone = COALESCE($6, telefone), email = COALESCE($7, email), updated_at = NOW()
          WHERE id = $1`,
         escritorioId,
         brandNome,
         corPrimaria,
         corSecundaria,
         logoData,
-        telefone !== undefined ? telefone : null
+        telefone !== undefined ? telefone : null,
+        email !== undefined ? email : null
       );
     } else {
       await db.$executeRawUnsafe(
         `UPDATE nfse_escritorios
          SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4,
-             telefone = COALESCE($5, telefone), updated_at = NOW()
+             telefone = COALESCE($5, telefone), email = COALESCE($6, email), updated_at = NOW()
          WHERE id = $1`,
         escritorioId,
         brandNome,
         corPrimaria,
         corSecundaria,
-        telefone !== undefined ? telefone : null
+        telefone !== undefined ? telefone : null,
+        email !== undefined ? email : null
       );
     }
 

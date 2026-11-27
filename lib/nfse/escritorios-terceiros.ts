@@ -176,6 +176,7 @@ export async function idsEmpresasDeTerceiros(): Promise<string[]> {
 export interface BrandingEscritorio {
   escritorioId: string;
   nome: string;
+  email?: string | null;
   telefone?: string | null;
   corPrimaria: string | null;
   corSecundaria: string | null;
@@ -197,7 +198,7 @@ export async function obterBrandingEscritorioDoUsuario(
 
     // 1. Usuário é membro do escritório parceiro (contador / operador)
     const escUser = await db.$queryRawUnsafe<any[]>(
-      `SELECT u.escritorio_id, u.papel, e.nome, e.telefone, e.brand_nome, e.brand_cor_primaria, e.brand_cor_secundaria, e.brand_logo_data
+      `SELECT u.escritorio_id, u.papel, e.nome, e.email, e.telefone, e.brand_nome, e.brand_cor_primaria, e.brand_cor_secundaria, e.brand_logo_data
        FROM nfse_escritorio_usuarios u
        INNER JOIN nfse_escritorios e ON e.id = u.escritorio_id
        WHERE u.user_id = $1 AND e.ativo = TRUE
@@ -209,6 +210,7 @@ export async function obterBrandingEscritorioDoUsuario(
       return {
         escritorioId: String(r.escritorio_id),
         nome: String(r.brand_nome || r.nome || ''),
+        email: r.email || null,
         telefone: r.telefone || null,
         corPrimaria: r.brand_cor_primaria || null,
         corSecundaria: r.brand_cor_secundaria || null,

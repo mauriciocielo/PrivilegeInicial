@@ -52,6 +52,7 @@ export async function POST(
     }
 
     const envio = await enviarNfsePorWhatsAppAoEmissor({
+      empresaId: nota.empresaId,
       telefoneDestino: telefone,
       numero: nota.numero || '',
       dataEmissao: nota.dataEmissao,

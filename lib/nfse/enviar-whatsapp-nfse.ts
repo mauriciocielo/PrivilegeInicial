@@ -3,6 +3,7 @@ import db from '../prisma';
 import logoNfse from './dados/logo-nfse.json';
 import { apenasDigitos } from './dps';
 import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } from './danfse';
+import { obterBrandingDaEmpresa } from './escritorios-terceiros';
 import {
   bootAllSavedBaileysSessions,
   ensureBaileysConnected,
@@ -100,6 +101,7 @@ function limparNomeArquivo(texto: string): string {
 }
 
 export async function enviarNfsePorWhatsAppAoEmissor(params: {
+  empresaId?: string;
   telefoneDestino: string;
   numero: string;
   dataEmissao: string;
@@ -143,6 +145,11 @@ export async function enviarNfsePorWhatsAppAoEmissor(params: {
       ? `${params.dataEmissao.slice(8, 10)}/${params.dataEmissao.slice(5, 7)}/${params.dataEmissao.slice(0, 4)}`
       : params.dataEmissao;
 
+    const brandingParceiro = params.empresaId ? await obterBrandingDaEmpresa(params.empresaId) : null;
+    const assinatura = brandingParceiro
+      ? `\n\n_${brandingParceiro.nome}${brandingParceiro.telefone ? ` · ${brandingParceiro.telefone}` : ''}_`
+      : '';
+
     const legenda = [
       `✅ *NFS-e nº ${params.numero || 'Emitida'}*${params.ambiente !== 'producao' ? ' (HOMOLOGAÇÃO)' : ''}`,
       ``,
@@ -151,7 +158,7 @@ export async function enviarNfsePorWhatsAppAoEmissor(params: {
       `• *Valor Líquido:* ${valorFmt}`,
       `• *Emissão:* ${dataFmt}`,
       ``,
-      `Segue o PDF oficial (DANFSe) pronto para encaminhar ao cliente.`,
+      `Segue o PDF oficial (DANFSe) pronto para encaminhar ao cliente.${assinatura}`,
     ].join('\n');
 
     const fileName = `NFSe_${params.numero || 'emitida'}_${limparNomeArquivo(params.tomadorNome)}.pdf`;

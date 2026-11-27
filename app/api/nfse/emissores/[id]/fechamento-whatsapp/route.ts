@@ -8,6 +8,7 @@ import { encontrarSessaoAdminPorNumero } from '../../../../../../lib/nfse/enviar
 import { sendBaileysLiveMessage } from '../../../../../../lib/baileys-manager';
 import { resolveWhatsAppOwnerId } from '../../../../../../lib/whatsapp-owner';
 import { registrarDisparoWhatsApp } from '../../../../../../lib/whatsapp-disparos-log';
+import { obterBrandingDaEmpresa } from '../../../../../../lib/nfse/escritorios-terceiros';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +117,11 @@ export async function POST(
       );
     }
 
+    const brandingParceiro = await obterBrandingDaEmpresa(empresaId);
+    const assinaturaRodape = brandingParceiro
+      ? `_Relatório gerado por ${brandingParceiro.nome}${brandingParceiro.telefone ? ` · ${brandingParceiro.telefone}` : ''} — os PDFs e XMLs oficiais estão disponíveis no portal._`
+      : `_Relatório gerado pelo Portal Privilege — os PDFs e XMLs oficiais estão disponíveis no sistema._`;
+
     const mensagem = [
       `📊 *Fechamento Mensal NFS-e — ${compBr}*`,
       `*Empresa:* ${nomeEmp}`,
@@ -129,7 +135,7 @@ export async function POST(
       '',
       `📥 *Serviços Tomados:* ${qtdTomadas} nota(s) (${fmtBRL(totalTomadas)})`,
       '',
-      `_Relatório gerado pelo Portal Privilege — os PDFs e XMLs oficiais estão disponíveis no sistema._`,
+      assinaturaRodape,
     ].filter(Boolean).join('\n');
 
     const ownerIdPreferencial = resolveWhatsAppOwnerId(request);

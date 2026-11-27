@@ -83,6 +83,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Relatórios Financeiros', href: '/consultor/relatorios', icon: BarChart3 },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
+      { label: 'Carteira & Fechamento', href: '/consultor/carteira', icon: Activity },
       { label: 'Situação Fiscal & CNDs', href: '/consultor/cnd-federal', icon: ShieldCheck },
       { label: 'Comparador de SPED', href: '/consultor/comparador-sped', icon: FileSearch },
     ],
@@ -592,6 +593,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
         {
           section: 'Fiscal',
           items: [
+            { label: 'Carteira & Fechamento', href: '/consultor/carteira', icon: Activity },
             { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
             { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
             { label: 'Controle de Certificados', href: '/consultor/nfe-destinadas?aba=certificados', icon: ShieldCheck },
