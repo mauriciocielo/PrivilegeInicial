@@ -2,8 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Building2, KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, Users, X, Power } from 'lucide-react';
+import { Building2, KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, Users, X, Power, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface EmpresaResumo {
+  id: string;
+  nome: string;
+  cnpj: string;
+}
 
 interface EscritorioItem {
   id: string;
@@ -19,10 +25,15 @@ interface EscritorioItem {
   totalUsuarios: number;
   totalEmpresas: number;
   usuarios: Array<{ id: string; name: string; email: string; papel: string }>;
+  empresas?: EmpresaResumo[];
 }
 
 export default function SaasEscritoriosNfseTab() {
   const [lista, setLista] = useState<EscritorioItem[]>([]);
+  const [empresasDisponiveis, setEmpresasDisponiveis] = useState<EmpresaResumo[]>([]);
+  const [escVincular, setEscVincular] = useState<EscritorioItem | null>(null);
+  const [buscaVincular, setBuscaVincular] = useState('');
+  const [processandoVinculo, setProcessandoVinculo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -78,7 +89,10 @@ export default function SaasEscritoriosNfseTab() {
       const res = await fetch('/api/saas/escritorios-nfse', { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        setLista(data.escritorios || []);
+        const novos = data.escritorios || [];
+        setLista(novos);
+        setEmpresasDisponiveis(data.empresasDisponiveis || []);
+        setEscVincular(atual => (atual ? novos.find((x: EscritorioItem) => x.id === atual.id) || null : null));
       } else {
         toast.error(data.error || 'Erro ao carregar contadores terceiros.');
       }
@@ -155,6 +169,45 @@ export default function SaasEscritoriosNfseTab() {
       carregar();
     } else {
       toast.error('Erro ao remover escritório.');
+    }
+  };
+
+  const vincularEmpresa = async (escritorioId: string, empresaId: string) => {
+    setProcessandoVinculo(empresaId);
+    try {
+      const res = await fetch('/api/saas/escritorios-nfse', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: escritorioId, vincularEmpresaId: empresaId }),
+      });
+      if (res.ok) {
+        toast.success('Empresa/cliente vinculado ao contador parceiro! O painel do cliente já herda logo, cores e carteira deste contador.');
+        await carregar();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || 'Erro ao vincular empresa.');
+      }
+    } finally {
+      setProcessandoVinculo(null);
+    }
+  };
+
+  const desvincularEmpresa = async (escritorioId: string, empresaId: string) => {
+    setProcessandoVinculo(empresaId);
+    try {
+      const res = await fetch('/api/saas/escritorios-nfse', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: escritorioId, desvincularEmpresaId: empresaId }),
+      });
+      if (res.ok) {
+        toast.success('Empresa desvinculada do contador parceiro (voltou para avulso/padrão).');
+        await carregar();
+      } else {
+        toast.error('Erro ao desvincular empresa.');
+      }
+    } finally {
+      setProcessandoVinculo(null);
     }
   };
 
@@ -260,6 +313,15 @@ export default function SaasEscritoriosNfseTab() {
                     </td>
                     <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '5px 8px', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => { setEscVincular(esc); setBuscaVincular(''); }}
+                          title="Vincular clientes avulsos ou gerenciar empresas deste contador parceiro"
+                        >
+                          <Link2 size={13} /> Vincular Clientes
+                        </button>
                         <button
                           type="button"
                           className="btn btn-secondary"
@@ -395,6 +457,125 @@ export default function SaasEscritoriosNfseTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {escVincular && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setEscVincular(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 640,
+              maxHeight: '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Vincular Clientes / Empresas — {escVincular.nome}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#6b7280' }}>
+                  Vincule clientes cadastrados como avulsos a este contador parceiro (o painel, relatórios e e-mails passam a usar a marca dele).
+                </p>
+              </div>
+              <button type="button" onClick={() => setEscVincular(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '14px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+                  Empresas vinculadas a este contador ({escVincular.empresas?.length || 0})
+                </div>
+                {!escVincular.empresas || escVincular.empresas.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: '#6b7280', padding: 10, border: '1px dashed #d1d5db', borderRadius: 8 }}>
+                    Nenhuma empresa vinculada ainda.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                    {escVincular.empresas.map(emp => (
+                      <div key={emp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{emp.nome}</div>
+                          <div style={{ fontSize: 11.5, color: '#4b5563' }}>{emp.cnpj}</div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={processandoVinculo === emp.id}
+                          onClick={() => desvincularEmpresa(escVincular.id, emp.id)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 8px', fontSize: 11.5, color: '#b91c1c', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <Unlink size={12} /> Desvincular
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 6 }}>
+                  Vincular cliente avulso / empresa disponível ({empresasDisponiveis.length})
+                </div>
+                <input
+                  className="form-control"
+                  value={buscaVincular}
+                  onChange={e => setBuscaVincular(e.target.value)}
+                  placeholder="Buscar por nome ou CNPJ..."
+                  style={{ marginBottom: 8 }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
+                  {empresasDisponiveis
+                    .filter(e => {
+                      const q = buscaVincular.trim().toLowerCase();
+                      if (!q) return true;
+                      return e.nome.toLowerCase().includes(q) || e.cnpj.toLowerCase().includes(q);
+                    })
+                    .slice(0, 40)
+                    .map(emp => (
+                      <div key={emp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{emp.nome}</div>
+                          <div style={{ fontSize: 11.5, color: '#6b7280' }}>{emp.cnpj}</div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={processandoVinculo === emp.id}
+                          onClick={() => vincularEmpresa(escVincular.id, emp.id)}
+                          className="btn btn-primary"
+                          style={{ padding: '4px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                        >
+                          {processandoVinculo === emp.id ? '...' : '+ Vincular'}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setEscVincular(null)}>Fechar</button>
+            </div>
           </div>
         </div>,
         document.body

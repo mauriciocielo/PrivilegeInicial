@@ -57,8 +57,36 @@ export async function GET(request: Request) {
       usersByEsc.set(u.escritorio_id, arr);
     }
 
+    const empresasVinculadasRows = await db.$queryRawUnsafe<any[]>(`
+      SELECT ee.escritorio_id, emp.id, emp."razaoSocial", emp."nomeFantasia", emp.cnpj
+      FROM nfse_empresa_escritorio ee
+      INNER JOIN "Empresa" emp ON emp.id = ee.empresa_id
+      ORDER BY emp."razaoSocial" ASC
+    `);
+    const empresasByEsc = new Map<string, Array<{ id: string; nome: string; cnpj: string }>>();
+    const idsJaVinculadas = new Set<string>();
+    for (const em of empresasVinculadasRows) {
+      idsJaVinculadas.add(String(em.id));
+      const arr = empresasByEsc.get(em.escritorio_id) || [];
+      arr.push({
+        id: String(em.id),
+        nome: String(em.nomeFantasia || em.razaoSocial || ''),
+        cnpj: String(em.cnpj || ''),
+      });
+      empresasByEsc.set(em.escritorio_id, arr);
+    }
+
+    const todasEmpresas = await db.empresa.findMany({
+      select: { id: true, razaoSocial: true, nomeFantasia: true, cnpj: true },
+      orderBy: { razaoSocial: 'asc' },
+    });
+    const empresasDisponiveis = todasEmpresas
+      .filter(e => !idsJaVinculadas.has(e.id))
+      .map(e => ({ id: e.id, nome: e.nomeFantasia || e.razaoSocial, cnpj: e.cnpj }));
+
     return NextResponse.json({
       success: true,
+      empresasDisponiveis,
       escritorios: rows.map((r) => ({
         id: r.id,
         nome: r.nome,
@@ -67,7 +95,7 @@ export async function GET(request: Request) {
         email: r.email || '',
         telefone: r.telefone || '',
         ativo: Boolean(r.ativo),
-        limiteEmpresas: Number(r.limite_empresas || 50),
+        limiteEmpresas: Number(r.limite_empresas || 0),
         createdAt: r.created_at,
         certificado: r.cert_titular
           ? { titular: r.cert_titular, documento: r.cert_documento, validoAte: r.cert_valido_ate }
@@ -75,6 +103,7 @@ export async function GET(request: Request) {
         totalUsuarios: Number(r.total_usuarios || 0),
         totalEmpresas: Number(r.total_empresas || 0),
         usuarios: usersByEsc.get(r.id) || [],
+        empresas: empresasByEsc.get(r.id) || [],
       })),
     });
   } catch (error) {
@@ -199,11 +228,36 @@ export async function PATCH(request: Request) {
       );
     }
     if (body?.limiteEmpresas != null) {
-      const lim = Math.max(1, Math.min(2000, Number(body.limiteEmpresas) || 50));
+      const lim = Math.max(0, Number(body.limiteEmpresas) || 0);
       await db.$executeRawUnsafe(
         `UPDATE nfse_escritorios SET limite_empresas = $2, updated_at = NOW() WHERE id = $1`,
         id,
         lim
+      );
+    }
+
+    // Vincula uma empresa / cliente avulso a este contador parceiro
+    if (typeof body?.vincularEmpresaId === 'string' && body.vincularEmpresaId.trim()) {
+      const empId = body.vincularEmpresaId.trim();
+      const existe = await db.empresa.findUnique({ where: { id: empId }, select: { id: true } });
+      if (!existe) {
+        return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
+      }
+      await db.$executeRawUnsafe(
+        `INSERT INTO nfse_empresa_escritorio (empresa_id, escritorio_id, created_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (empresa_id) DO UPDATE SET escritorio_id = EXCLUDED.escritorio_id`,
+        empId,
+        id
+      );
+    }
+
+    // Desvincula uma empresa deste contador parceiro (volta para avulso/padrão)
+    if (typeof body?.desvincularEmpresaId === 'string' && body.desvincularEmpresaId.trim()) {
+      await db.$executeRawUnsafe(
+        `DELETE FROM nfse_empresa_escritorio WHERE empresa_id = $1 AND escritorio_id = $2`,
+        body.desvincularEmpresaId.trim(),
+        id
       );
     }
 
