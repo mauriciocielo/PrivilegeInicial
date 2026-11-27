@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import db from '../../../../lib/prisma';
 import { requireAuth } from '../../../../lib/api-auth';
 import { captureError } from '../../../../lib/sentry-helper';
+import { generateText, stripJsonFences } from '../../../../lib/ai-provider';
 import {
   CATEGORIAS_DEDUTIVEIS_IRPF,
   ensureFinancasPessoaisTables,
@@ -207,8 +208,7 @@ async function classificarLoteComIA(
     }
   >();
 
-  const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey || pendentes.length === 0) return mapa;
+  if (pendentes.length === 0) return mapa;
 
   const lote = pendentes.slice(0, 55);
   const exemplosTxt =
@@ -241,28 +241,17 @@ Transações para classificar:
 ${itensTxt}`;
 
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.1,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: 'Responda estritamente em JSON válido.' },
-          { role: 'user', content: prompt },
-        ],
-      }),
-      signal: AbortSignal.timeout(15000),
+    const ai = await generateText({
+      system: 'Responda estritamente em JSON válido.',
+      prompt,
+      jsonMode: true,
+      temperature: 0.1,
+      maxTokens: 2500,
+      timeoutMs: 18000,
     });
 
-    if (!res.ok) return mapa;
-    const data = await res.json();
-    const raw = data?.choices?.[0]?.message?.content || '';
-    const parsed = JSON.parse(raw);
+    if (!ai.text) return mapa;
+    const parsed = JSON.parse(stripJsonFences(ai.text));
     const arr = Array.isArray(parsed?.itens) ? parsed.itens : [];
 
     for (const item of arr) {
@@ -286,9 +275,8 @@ ${itensTxt}`;
 }
 
 async function extrairTransacoesPdfComIA(textoPdf: string): Promise<TransacaoExtratoPf[]> {
-  const groqKey = process.env.GROQ_API_KEY;
   const limpo = (textoPdf || '').trim();
-  if (!groqKey || limpo.length < 20) return [];
+  if (limpo.length < 20) return [];
 
   const anoAtual = new Date().getFullYear();
   const trecho = limpo.slice(0, 24000);
@@ -307,28 +295,17 @@ Texto do extrato PDF:
 ${trecho}`;
 
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.05,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: 'Responda estritamente em JSON válido.' },
-          { role: 'user', content: prompt },
-        ],
-      }),
-      signal: AbortSignal.timeout(22000),
+    const ai = await generateText({
+      system: 'Responda estritamente em JSON válido.',
+      prompt,
+      jsonMode: true,
+      temperature: 0.05,
+      maxTokens: 3500,
+      timeoutMs: 22000,
     });
 
-    if (!res.ok) return [];
-    const data = await res.json();
-    const raw = data?.choices?.[0]?.message?.content || '';
-    const parsed = JSON.parse(raw);
+    if (!ai.text) return [];
+    const parsed = JSON.parse(stripJsonFences(ai.text));
     const arr = Array.isArray(parsed?.transacoes) ? parsed.transacoes : [];
 
     const out: TransacaoExtratoPf[] = [];
