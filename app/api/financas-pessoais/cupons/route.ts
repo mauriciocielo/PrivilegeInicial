@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 function isAdminRole(role?: string): boolean {
   const r = String(role || '').toLowerCase();
-  return r === 'consultor' || r === 'admin' || r === 'superadmin';
+  return r === 'consultor' || r === 'administrador' || r === 'admin' || r === 'superadmin';
 }
 
 export async function GET(request: Request) {

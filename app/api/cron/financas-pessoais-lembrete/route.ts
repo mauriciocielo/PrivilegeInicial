@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     const auth = await requireAuth(request);
     if (auth.error) return auth.error;
     const role = String(auth.session.role || '').toLowerCase();
-    if (!['consultor', 'admin', 'superadmin'].includes(role)) {
+    if (!['consultor', 'administrador', 'admin', 'superadmin'].includes(role)) {
       return NextResponse.json({ error: 'Acesso restrito.' }, { status: 403 });
     }
 
