@@ -9,6 +9,8 @@ import {
   Copy,
   Download,
   Edit3,
+  FileText,
+  Gift,
   Headphones,
   History,
   KeyRound,
@@ -18,6 +20,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Trash2,
   TrendingUp,
   UserPlus,
@@ -28,6 +31,7 @@ import { toast } from 'sonner';
 import { fmt } from '../../../lib/reports';
 import { confirmAsync } from '../../../components/ConfirmProvider';
 import { AuditoriaEquipeTab, SuporteChamadosTab } from '../../../components/EscritorioChamadosAuditoria';
+import { IndiqueContadorTab, RaioXProspectTab } from '../../../components/EscritorioCrescimentoTabs';
 
 interface EmpresaSaude {
   id: string;
@@ -96,8 +100,9 @@ function formatCnpj(cnpj: string): string {
 
 export default function CarteiraEscritorioPage() {
   const [competencia, setCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
-  const [aba, setAba] = useState<'saude' | 'equipe' | 'chamados' | 'auditoria'>('saude');
+  const [aba, setAba] = useState<'saude' | 'equipe' | 'chamados' | 'auditoria' | 'raiox' | 'indicacoes'>('saude');
   const [abrirModalChamado, setAbrirModalChamado] = useState(false);
+  const [enviandoDossieId, setEnviandoDossieId] = useState<string | null>(null);
 
   // Modal Link A1 Self-Service
   const [conviteA1Modal, setConviteA1Modal] = useState<{
@@ -261,6 +266,34 @@ export default function CarteiraEscritorioPage() {
       toast.error('Erro de conexão ao disparar WhatsApp.');
     } finally {
       setEnviandoWhatsId(null);
+    }
+  };
+
+  const handleDossiePdf = async (emp: EmpresaSaude, enviarWhatsapp = false) => {
+    if (!enviarWhatsapp) {
+      window.open(
+        `/api/escritorio/dossie-cliente?empresaId=${encodeURIComponent(emp.id)}&mes=${encodeURIComponent(competencia)}`,
+        '_blank'
+      );
+      return;
+    }
+    setEnviandoDossieId(emp.id);
+    try {
+      const res = await fetch('/api/escritorio/dossie-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId: emp.id, competencia, telefone: emp.telefone || '' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Não foi possível enviar o Dossiê no WhatsApp.');
+        return;
+      }
+      toast.success(`Dossiê Executivo PDF enviado no WhatsApp para ${emp.nomeFantasia || emp.razaoSocial}!`);
+    } catch {
+      toast.error('Erro de conexão ao enviar Dossiê.');
+    } finally {
+      setEnviandoDossieId(null);
     }
   };
 
@@ -548,6 +581,48 @@ export default function CarteiraEscritorioPage() {
           <History size={15} />
           Auditoria da Equipe
         </button>
+
+        <button
+          type="button"
+          onClick={() => setAba('raiox')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: aba === 'raiox' ? 'var(--accent, #600000)' : '#f3f4f6',
+            color: aba === 'raiox' ? '#fff' : '#374151',
+          }}
+        >
+          <Sparkles size={15} />
+          Raio-X do Prospect
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAba('indicacoes')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: aba === 'indicacoes' ? 'var(--accent, #600000)' : '#f3f4f6',
+            color: aba === 'indicacoes' ? '#fff' : '#374151',
+          }}
+        >
+          <Gift size={15} />
+          Indique e Ganhe
+        </button>
       </div>
 
       {aba === 'saude' ? (
@@ -793,6 +868,29 @@ export default function CarteiraEscritorioPage() {
                               <button
                                 type="button"
                                 className="btn btn-secondary"
+                                style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#6d28d9', borderColor: '#ddd6fe', background: '#f5f3ff' }}
+                                onClick={() => handleDossiePdf(emp, false)}
+                                title="Baixar Dossiê Executivo Mensal em PDF White-Label (6 meses + Top 5 + RBT12)"
+                              >
+                                <FileText size={12} style={{ marginRight: 4 }} />
+                                Dossiê PDF
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#047857', borderColor: '#a7f3d0', background: '#ecfdf5' }}
+                                disabled={enviandoDossieId !== null}
+                                onClick={() => handleDossiePdf(emp, true)}
+                                title="Enviar Dossiê Executivo PDF White-Label direto no WhatsApp do cliente"
+                              >
+                                <MessageSquare size={12} style={{ marginRight: 4 }} />
+                                {enviandoDossieId === emp.id ? 'Enviando...' : 'Dossiê Whats'}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
                                 style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, color: '#1d4ed8', borderColor: '#bfdbfe', background: '#eff6ff' }}
                                 disabled={gerandoLinkA1Id !== null}
                                 onClick={() => handleGerarLinkA1(emp, false)}
@@ -832,6 +930,10 @@ export default function CarteiraEscritorioPage() {
         />
       ) : aba === 'auditoria' ? (
         <AuditoriaEquipeTab />
+      ) : aba === 'raiox' ? (
+        <RaioXProspectTab />
+      ) : aba === 'indicacoes' ? (
+        <IndiqueContadorTab />
       ) : (
         /* Aba Equipe do Escritório */
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 20 }}>
