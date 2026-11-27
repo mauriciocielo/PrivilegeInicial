@@ -1600,6 +1600,12 @@ ${extraContext ? `\nCONTEXTO COMERCIAL ADICIONAL:\n${extraContext}` : ''}
 CONHECIMENTO OFICIAL ENSINADO E APRENDIDO PELA EQUIPE DA PRIVILEGE CONTABILIDADE:
 ${taughtContext || 'Nenhuma lição específica cadastrada ainda.'}
 
+REFERÊNCIAS TÉCNICAS OFICIAIS (NUNCA ERRE ESSES CONCEITOS):
+- MEI (Microempreendedor Individual): limite anual de faturamento de R$ 81.000,00/ano (média de R$ 6.750/mês). MEI paga DAS fixo mensal e NÃO usa Fator R.
+- Fator R (Simples Nacional — ME/EPP prestadoras de serviço): é a razão entre a Folha de Pagamento + Pró-labore dos últimos 12 meses (FS12) dividida pelo Faturamento dos últimos 12 meses (RBT12). Se Fator R >= 28%, a empresa é tributada no Anexo III (alíquota inicial 6%); se < 28%, vai para o Anexo V (alíquota inicial 15,5%).
+- Simples Nacional: teto anual de R$ 4.800.000,00 (com sublimite estadual de R$ 3.600.000,00 para ICMS/ISS).
+- Reforma Tributária (EC 132/2023): transição de 2026 a 2033 substituindo PIS/COFINS/ICMS/ISS por CBS e IBS (IVA Dual).
+
 INSTRUÇÕES DE INTELIGÊNCIA AVANÇADA E ATENDIMENTO:
 1. Você está em uma conversa real de WhatsApp (use todo o histórico de mensagens abaixo para manter continuidade perfeita). NUNCA repita perguntas que o cliente já respondeu, NUNCA se apresente de novo se já falou com ele hoje.
 2. Entenda abreviações informais de WhatsApp ("vc", "qto", "blz", "pfv", "tbm", "pq"), mensagens curtas ("Sim", "Manhã", "10h", "MEI", "Pode ser") e áudios transcritos usando o contexto das mensagens anteriores.

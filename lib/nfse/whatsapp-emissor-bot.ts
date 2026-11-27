@@ -246,7 +246,32 @@ async function localizarEmpresaPorChat(rawJid: string, cleanPhone: string, isGro
     where: { nfseConfig: { isNot: null } },
     include: { nfseConfig: true },
   });
-  return candidatas.find((e) => apenasDigitos(e.telefone).endsWith(ult8)) || null;
+  const porTelefoneEmpresa = candidatas.find((e) => apenasDigitos(e.telefone).endsWith(ult8));
+  if (porTelefoneEmpresa) return porTelefoneEmpresa;
+
+  // Fallback: verifica se o telefone pertence a um usuário cadastrado (cliente, contador parceiro ou administrador)
+  const usuarios = await db.user.findMany({
+    where: { phone: { not: null } },
+    select: { id: true, role: true, phone: true, empresaIds: true },
+  });
+  const usuario = usuarios.find((u) => apenasDigitos(u.phone || '').endsWith(ult8));
+  if (!usuario) return null;
+
+  if (Array.isArray(usuario.empresaIds) && usuario.empresaIds.length > 0) {
+    const empUsuario = candidatas.find((e) => usuario.empresaIds.includes(e.id));
+    if (empUsuario) return empUsuario;
+  }
+
+  // Para administrador (ex.: Maurício Cielo), prioriza a empresa Privilege Consultoria (58.033.979/0001-84) ou a primeira ativa
+  if (usuario.role === 'administrador') {
+    return (
+      candidatas.find((e) => apenasDigitos(e.cnpj) === '58033979000184') ||
+      candidatas[0] ||
+      null
+    );
+  }
+
+  return null;
 }
 
 async function reservarProximoNDps(empresaId: string, ambiente: AmbienteNfse): Promise<string> {
