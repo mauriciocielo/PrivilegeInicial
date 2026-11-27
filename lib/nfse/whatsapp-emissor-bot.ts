@@ -284,26 +284,25 @@ export async function processarComandoNfseWhatsApp(params: {
     const ehConfirmacao = /^(sim|confirmar|confirmo|pode emitir|emitir)$/i.test(limpo);
     const ehCancelamento = /^(n[aã]o|nao|cancelar|cancela)$/i.test(limpo);
 
-    // 1. Verifica se há rascunho pendente para este chat
-    if (ehConfirmacao || ehCancelamento) {
-      await ensureRascunhosTable();
-      const rows = await db.$queryRawUnsafe<any[]>(
-        `SELECT * FROM nfse_whatsapp_rascunhos WHERE jid = $1 AND expires_at > NOW() LIMIT 1`,
-        params.sendJid
-      );
-      const rascunho = rows[0];
-      if (!rascunho) return false;
+    // 1. Verifica se há rascunho pendente para este chat (escolha de código de serviço OU confirmação SIM)
+    await ensureRascunhosTable();
+    const rascunhoRows = await db.$queryRawUnsafe<any[]>(
+      `SELECT * FROM nfse_whatsapp_rascunhos WHERE jid = $1 AND expires_at > NOW() LIMIT 1`,
+      params.sendJid
+    );
+    const rascunho = rascunhoRows[0];
 
+    if (rascunho) {
       if (ehCancelamento) {
         await db.$executeRawUnsafe(`DELETE FROM nfse_whatsapp_rascunhos WHERE jid = $1`, params.sendJid);
         await params.enviarMensagem(params.sendJid, '❌ Emissão de NFS-e cancelada conforme solicitado.');
         return true;
       }
 
-      // Confirmado: emite oficialmente no Sefin Nacional!
-      await db.$executeRawUnsafe(`DELETE FROM nfse_whatsapp_rascunhos WHERE jid = $1`, params.sendJid);
       const dadosSalvos = rascunho.dados_json as {
+        etapa?: 'escolher_servico' | 'confirmar';
         empresaId: string;
+        empresaNome?: string;
         tomadorNome: string;
         tomadorDocumento: string;
         tomadorEmail: string | null;
@@ -313,7 +312,89 @@ export async function processarComandoNfseWhatsApp(params: {
         valorServicos: number;
         aliquotaIss: number;
         issRetido: boolean;
+        opcoesServico?: Array<{ codigo: string; descricao: string; aliquotaIss: number; issRetido: boolean }>;
       };
+
+      // Etapa intermediária: aguardando o usuário escolher qual código de serviço emitir
+      if (dadosSalvos.etapa === 'escolher_servico') {
+        const opcoes = Array.isArray(dadosSalvos.opcoesServico) ? dadosSalvos.opcoesServico : [];
+        let codigoEscolhido = '';
+        let aliquotaEscolhida = dadosSalvos.aliquotaIss || 0;
+        let issRetidoEscolhido = Boolean(dadosSalvos.issRetido);
+
+        // 1a. Respondeu com o número da opção da lista (ex.: "1", "2", "opção 1")
+        const mNum = limpo.match(/^(?:op[cç][aã]o\s*)?(\d{1,2})$/i);
+        if (mNum && opcoes.length > 0) {
+          const idx = Number(mNum[1]) - 1;
+          if (idx >= 0 && idx < opcoes.length) {
+            codigoEscolhido = opcoes[idx].codigo;
+            aliquotaEscolhida = opcoes[idx].aliquotaIss;
+            issRetidoEscolhido = opcoes[idx].issRetido;
+          }
+        }
+
+        // 1b. Ou digitou/falou um código de serviço diretamente (ex.: "17.01.01", "07.02", "170101")
+        if (!codigoEscolhido) {
+          const mCod = limpo.match(/\b(\d{2}\.?\d{2}(?:\.?\d{2})?)\b/);
+          if (mCod) {
+            const digitsCod = apenasDigitos(mCod[1]);
+            const pad = digitsCod.length === 4 ? `${digitsCod}01` : digitsCod;
+            const matchOpcao = opcoes.find((o) => apenasDigitos(o.codigo) === digitsCod || apenasDigitos(o.codigo) === pad);
+            codigoEscolhido = matchOpcao ? matchOpcao.codigo : pad;
+            if (matchOpcao) {
+              aliquotaEscolhida = matchOpcao.aliquotaIss;
+              issRetidoEscolhido = matchOpcao.issRetido;
+            }
+          }
+        }
+
+        if (!codigoEscolhido) {
+          await params.enviarMensagem(
+            params.sendJid,
+            opcoes.length > 0
+              ? `Não entendi o código escolhido. Responda com o *número da opção* (1 a ${opcoes.length}) ou digite o *código de serviço* (ex.: 17.01.01). Para cancelar, responda *NÃO*.`
+              : `Informe o *código de serviço* desejado (ex.: 17.01.01 ou 07.02.01). Para cancelar, responda *NÃO*.`
+          );
+          return true;
+        }
+
+        const atualizado = {
+          ...dadosSalvos,
+          etapa: 'confirmar' as const,
+          codigoServico: codigoEscolhido,
+          aliquotaIss: aliquotaEscolhida,
+          issRetido: issRetidoEscolhido,
+        };
+        const novoExpira = new Date(Date.now() + 15 * 60 * 1000);
+        await db.$executeRawUnsafe(
+          `UPDATE nfse_whatsapp_rascunhos SET dados_json = $2::jsonb, expires_at = $3 WHERE jid = $1`,
+          params.sendJid,
+          JSON.stringify(atualizado),
+          novoExpira
+        );
+
+        const branding = await obterBrandingDaEmpresa(dadosSalvos.empresaId);
+        const assinatura = branding ? `\n\n_${branding.nome}_` : '';
+        await params.enviarMensagem(
+          params.sendJid,
+          [
+            `🧾 *Prévia da NFS-e — Confirme para emitir*`,
+            '',
+            `• *Prestador:* ${dadosSalvos.empresaNome || 'Empresa'}`,
+            `• *Tomador:* ${dadosSalvos.tomadorNome} (${dadosSalvos.tomadorDocumento})`,
+            `• *Valor:* ${fmtBRL(dadosSalvos.valorServicos)}`,
+            `• *Cód. Serviço:* ${codigoEscolhido}${issRetidoEscolhido ? ' (ISS Retido)' : ''}`,
+            `• *Serviço:* ${dadosSalvos.descricao}`,
+            '',
+            `👉 Responda *SIM* para emitir oficialmente agora ou *NÃO* para cancelar.${assinatura}`,
+          ].join('\n')
+        );
+        return true;
+      }
+
+      if (ehConfirmacao) {
+        // Confirmado: emite oficialmente no Sefin Nacional!
+        await db.$executeRawUnsafe(`DELETE FROM nfse_whatsapp_rascunhos WHERE jid = $1`, params.sendJid);
 
       const [empresa, branding] = await Promise.all([
         db.empresa.findUnique({ where: { id: dadosSalvos.empresaId }, include: { nfseConfig: true } }),
@@ -478,6 +559,7 @@ export async function processarComandoNfseWhatsApp(params: {
         }
       );
       return true;
+      }
     }
 
     // 2. Verifica se é um novo comando de emissão natural (ficha escrita, frase livre ou áudio transcrito)
@@ -580,19 +662,39 @@ export async function processarComandoNfseWhatsApp(params: {
       return true;
     }
 
-    const codigoServico = notaBase?.codigoServico || ultimaNotaQualquer?.codigoServico || '';
     const municipioPrestacao = notaBase?.municipioPrestacao || empresa.nfseConfig.codigoMunicipio || '';
     const descricao = cmd.descricao || notaBase?.discriminacao || 'Prestação de serviços conforme contrato.';
     const aliquotaIss = Number(notaBase?.aliquotaIss || 0);
     const issRetido = Boolean(notaBase?.issRetido);
 
-    if (!codigoServico) {
-      await params.enviarMensagem(
-        params.sendJid,
-        '⚠️ Esta empresa ainda não possui um código de serviço padrão no histórico. Emita a primeira nota pelo painel web.'
-      );
-      return true;
+    // Monta lista de códigos de serviço conhecidos da empresa (config + histórico de notas)
+    const mapaServicos = new Map<string, { codigo: string; descricao: string; aliquotaIss: number; issRetido: boolean }>();
+    const conhecidos = Array.isArray(empresa.nfseConfig.servicosConhecidos)
+      ? (empresa.nfseConfig.servicosConhecidos as any[])
+      : [];
+    for (const s of conhecidos) {
+      const cod = String(s?.cTribNac || s?.codigo || '').trim();
+      if (!cod || mapaServicos.has(cod)) continue;
+      mapaServicos.set(cod, {
+        codigo: cod,
+        descricao: String(s?.descricao || s?.xDescServ || 'Serviço cadastrado').slice(0, 65),
+        aliquotaIss: Number(s?.aliquotaIss || aliquotaIss || 0),
+        issRetido: Boolean(s?.issRetido),
+      });
     }
+    for (const n of notasAnteriores) {
+      const cod = String(n.codigoServico || '').trim();
+      if (!cod || mapaServicos.has(cod)) continue;
+      mapaServicos.set(cod, {
+        codigo: cod,
+        descricao: String(n.discriminacao || 'Serviço do histórico').replace(/\s+/g, ' ').slice(0, 65),
+        aliquotaIss: Number(n.aliquotaIss || 0),
+        issRetido: Boolean(n.issRetido),
+      });
+      if (mapaServicos.size >= 8) break;
+    }
+
+    const opcoesServico = Array.from(mapaServicos.values());
 
     await ensureRascunhosTable();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -603,16 +705,19 @@ export async function processarComandoNfseWhatsApp(params: {
       params.sendJid,
       empresa.id,
       JSON.stringify({
+        etapa: 'escolher_servico',
         empresaId: empresa.id,
+        empresaNome: empresa.nomeFantasia || empresa.razaoSocial,
         tomadorNome,
         tomadorDocumento,
         tomadorEmail,
-        codigoServico,
+        codigoServico: notaBase?.codigoServico || opcoesServico[0]?.codigo || '',
         municipioPrestacao,
         descricao,
         valorServicos: cmd.valor,
         aliquotaIss,
         issRetido,
+        opcoesServico,
       }),
       expiresAt
     );
@@ -620,18 +725,30 @@ export async function processarComandoNfseWhatsApp(params: {
     const branding = await obterBrandingDaEmpresa(empresa.id);
     const assinatura = branding ? `\n\n_${branding.nome}_` : '';
 
+    const linhasOpcoes = opcoesServico.map(
+      (op, idx) => `*${idx + 1}* — \`${op.codigo}\` (${op.descricao})`
+    );
+
     await params.enviarMensagem(
       params.sendJid,
       [
-        `🧾 *Prévia da NFS-e — Confirme para emitir*`,
+        `🧾 *Qual código de serviço deseja usar nesta NFS-e?*`,
         '',
         `• *Prestador:* ${empresa.nomeFantasia || empresa.razaoSocial}`,
         `• *Tomador:* ${tomadorNome} (${tomadorDocumento})`,
         `• *Valor:* ${fmtBRL(cmd.valor)}`,
-        `• *Serviço:* ${descricao}`,
-        `• *Cód. Serviço:* ${codigoServico}${issRetido ? ' (ISS Retido)' : ''}`,
+        `• *Descrição:* ${descricao}`,
         '',
-        `👉 Responda *SIM* nos próximos 15 minutos para emitir oficialmente ou *NÃO* para cancelar.${assinatura}`,
+        ...(linhasOpcoes.length > 0
+          ? [
+              `Códigos utilizados pela empresa:`,
+              ...linhasOpcoes,
+              '',
+              `👉 Responda com o *número da opção* (ex.: *1*) ou digite o *código de serviço* desejado (ex.: *17.01.01*). Para cancelar, responda *NÃO*.${assinatura}`,
+            ]
+          : [
+              `👉 Responda informando o *código de serviço* desejado (ex.: *17.01.01* ou *07.02.01*). Para cancelar, responda *NÃO*.${assinatura}`,
+            ]),
       ].join('\n')
     );
     return true;
