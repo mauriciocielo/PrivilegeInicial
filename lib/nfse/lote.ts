@@ -312,31 +312,121 @@ export async function lerPlanilha(buffer: ArrayBuffer, nomeArquivo: string): Pro
   return aba ? XLSX.utils.sheet_to_json<Record<string, unknown>>(aba, { defval: '' }) : [];
 }
 
-export async function baixarModeloImportacao(): Promise<void> {
+function avancarMesReferenciaTexto(descricao: string, mesOrigem: string | null, competenciaDestino: string): string {
+  if (!descricao) return '';
+  if (!mesOrigem || !/^\d{4}-\d{2}$/.test(mesOrigem) || !/^\d{4}-\d{2}$/.test(competenciaDestino)) {
+    return descricao;
+  }
+  const [anoOrig, mesOrigNum] = mesOrigem.split('-').map(Number);
+  const [anoDest, mesDestNum] = competenciaDestino.split('-').map(Number);
+  const diffMeses = (anoDest - anoOrig) * 12 + (mesDestNum - mesOrigNum);
+  if (diffMeses === 0) return descricao;
+
+  return descricao.replace(/\b(0?[1-9]|1[0-2])\/(20\d{2})\b/g, (_match, mmStr, aaaaStr) => {
+    const dt = new Date(Number(aaaaStr), Number(mmStr) - 1 + diffMeses, 1);
+    const novoMm = String(dt.getMonth() + 1).padStart(2, '0');
+    const novoAa = dt.getFullYear();
+    return `${novoMm}/${novoAa}`;
+  });
+}
+
+function competenciaParaBr(compIso: string): string {
+  if (/^\d{4}-\d{2}/.test(compIso)) return `${compIso.slice(5, 7)}/${compIso.slice(0, 4)}`;
+  return compIso;
+}
+
+export async function baixarModeloImportacao(opcoes?: {
+  notasEmitidas?: NfsE[];
+  competenciaDestino?: string;
+}): Promise<{ quantidade: number; mesOrigem: string | null }> {
   const XLSX = await import('xlsx');
-  const exemplo: Record<Coluna, string> = {
-    tomador_documento: '11.222.333/0001-81',
-    tomador_nome: 'Cliente Exemplo Ltda',
-    valor: '1500,00',
-    descricao: 'Serviço de consultoria referente a 10/2026',
-    competencia: '10/2026',
-    codigo_tributacao_nacional: '',
-    codigo_tributacao_municipal: '',
-    codigo_nbs: '',
-    municipio_prestacao_ibge: '',
-    iss_retido: 'não',
-    aliquota_iss: '',
-    tomador_email: 'financeiro@exemplo.com.br',
-    tomador_inscricao_municipal: '',
-    tomador_cep: '',
-    tomador_ibge: '',
-    tomador_logradouro: '',
-    tomador_numero: '',
-    tomador_bairro: '',
-    vencimento: '',
-  };
-  const aba = XLSX.utils.json_to_sheet([exemplo], { header: [...COLUNAS_MODELO] });
+  const compDest = opcoes?.competenciaDestino && /^\d{4}-\d{2}$/.test(opcoes.competenciaDestino)
+    ? opcoes.competenciaDestino
+    : hojeBrasilia().slice(0, 7);
+  const compDestBr = competenciaParaBr(compDest);
+
+  const emitidas = (opcoes?.notasEmitidas || []).filter(n => n.status === 'emitida');
+
+  // Descobre o último mês com notas emitidas (prioriza o mês anterior à competência alvo; senão o mais recente)
+  let mesOrigem: string | null = null;
+  let baseNotas: NfsE[] = [];
+  if (emitidas.length > 0) {
+    const [anoD, mesD] = compDest.split('-').map(Number);
+    const dtAnt = new Date(anoD, mesD - 2, 1);
+    const mesAnterior = `${dtAnt.getFullYear()}-${String(dtAnt.getMonth() + 1).padStart(2, '0')}`;
+
+    const mesDaNota = (n: NfsE) => {
+      if (n.dataCompetencia && /^\d{4}-\d{2}/.test(n.dataCompetencia)) return n.dataCompetencia.slice(0, 7);
+      if (n.dataEmissao && /^\d{4}-\d{2}/.test(n.dataEmissao)) return n.dataEmissao.slice(0, 7);
+      return '';
+    };
+
+    const doMesAnterior = emitidas.filter(n => mesDaNota(n) === mesAnterior);
+    if (doMesAnterior.length > 0) {
+      mesOrigem = mesAnterior;
+      baseNotas = doMesAnterior;
+    } else {
+      const mesesOrdenados = Array.from(new Set(emitidas.map(mesDaNota).filter(Boolean))).sort().reverse();
+      mesOrigem = mesesOrdenados[0] || null;
+      baseNotas = mesOrigem ? emitidas.filter(n => mesDaNota(n) === mesOrigem) : [];
+    }
+  }
+
+  let linhasPlanilha: Array<Record<Coluna, string>>;
+  if (baseNotas.length > 0) {
+    const ordenadas = [...baseNotas].sort((a, b) =>
+      (a.tomadorRazaoSocial || '').localeCompare(b.tomadorRazaoSocial || '', 'pt-BR')
+    );
+    linhasPlanilha = ordenadas.map(n => ({
+      tomador_documento: n.tomadorCnpjCpf || '',
+      tomador_nome: n.tomadorRazaoSocial || '',
+      valor: Number(n.valorServicos || 0).toFixed(2).replace('.', ','),
+      descricao: avancarMesReferenciaTexto(n.discriminacao || '', mesOrigem, compDest),
+      competencia: compDestBr,
+      codigo_tributacao_nacional: n.codigoServico || '',
+      codigo_tributacao_municipal: n.cTribMun || '',
+      codigo_nbs: n.cNbs || '',
+      municipio_prestacao_ibge: n.municipioPrestacao || '',
+      iss_retido: n.issRetido ? 'sim' : 'não',
+      aliquota_iss: n.aliquotaIss ? String(n.aliquotaIss).replace('.', ',') : '',
+      tomador_email: n.tomadorEmail || '',
+      tomador_inscricao_municipal: n.tomadorInscricaoMunicipal || '',
+      tomador_cep: n.tomadorCep || '',
+      tomador_ibge: n.tomadorCodigoMunicipio || '',
+      tomador_logradouro: n.tomadorEndereco || '',
+      tomador_numero: n.tomadorNumero || '',
+      tomador_bairro: n.tomadorBairro || '',
+      vencimento: '',
+    }));
+  } else {
+    linhasPlanilha = [{
+      tomador_documento: '11.222.333/0001-81',
+      tomador_nome: 'Cliente Exemplo Ltda',
+      valor: '1500,00',
+      descricao: `Serviço de consultoria referente a ${compDestBr}`,
+      competencia: compDestBr,
+      codigo_tributacao_nacional: '',
+      codigo_tributacao_municipal: '',
+      codigo_nbs: '',
+      municipio_prestacao_ibge: '',
+      iss_retido: 'não',
+      aliquota_iss: '',
+      tomador_email: 'financeiro@exemplo.com.br',
+      tomador_inscricao_municipal: '',
+      tomador_cep: '',
+      tomador_ibge: '',
+      tomador_logradouro: '',
+      tomador_numero: '',
+      tomador_bairro: '',
+      vencimento: '',
+    }];
+  }
+
+  const aba = XLSX.utils.json_to_sheet(linhasPlanilha, { header: [...COLUNAS_MODELO] });
   const planilha = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(planilha, aba, 'Notas');
-  XLSX.writeFile(planilha, 'modelo-importacao-nfse.xlsx');
+  const sufixo = mesOrigem ? `-${compDest}` : '';
+  XLSX.writeFile(planilha, `modelo-importacao-nfse${sufixo}.xlsx`);
+
+  return { quantidade: baseNotas.length, mesOrigem };
 }

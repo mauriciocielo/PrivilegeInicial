@@ -3445,6 +3445,7 @@ export default function NfsePainel({ modoCliente: modoClienteProp = false }: { m
       {showImportarModal && (
         <NfseImportarModal
           notas={notasPrestadasNoPeriodo}
+          notasHistorico={nfseList.filter(n => !ehNotaTomada(n, cnpjEmpresaAtual) && n.status === 'emitida')}
           clientes={clientes}
           padroes={{
             cTribNac: parametros?.cTribNacPadrao,

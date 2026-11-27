@@ -14,6 +14,7 @@ const TAMANHO_MAX_ARQUIVO = 5 * 1024 * 1024;
 
 interface Props {
   notas: NfsE[];
+  notasHistorico?: NfsE[];
   clientes: Cliente[];
   padroes: Omit<PadroesImportacao, 'competencia'>;
   portadores: Portador[];
@@ -22,7 +23,7 @@ interface Props {
   onCriar: (itens: DadosCopiaveis[], financeiro: FinanceiroNota) => void;
 }
 
-export default function NfseImportarModal({ notas, clientes, padroes, portadores, planoContas, onFechar, onCriar }: Props) {
+export default function NfseImportarModal({ notas, notasHistorico, clientes, padroes, portadores, planoContas, onFechar, onCriar }: Props) {
   const mesAtual = hojeBrasilia().slice(0, 7);
   const [competencia, setCompetencia] = useState(mesAtual);
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -97,7 +98,25 @@ export default function NfseImportarModal({ notas, clientes, padroes, portadores
         </div>
         <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
           Obrigatórios: documento e nome do tomador, valor e descrição. Código do serviço e município usam o padrão da configuração se ficarem vazios.{' '}
-          <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 13, padding: '2px 8px' }} onClick={() => baixarModeloImportacao()}>⬇️ Baixar modelo</button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: 13, padding: '2px 8px' }}
+            onClick={async () => {
+              const res = await baixarModeloImportacao({
+                notasEmitidas: notasHistorico && notasHistorico.length > 0 ? notasHistorico : notas,
+                competenciaDestino: competencia,
+              });
+              if (res.quantidade > 0 && res.mesOrigem) {
+                const mesBr = `${res.mesOrigem.slice(5, 7)}/${res.mesOrigem.slice(0, 4)}`;
+                toast.success(`Modelo gerado com ${res.quantidade} nota(s) emitida(s) de ${mesBr}! Basta revisar valores e importar.`);
+              } else {
+                toast.info('Planilha modelo de exemplo baixada.');
+              }
+            }}
+          >
+            ⬇️ Baixar modelo preenchido (último mês)
+          </button>
         </div>
 
         {lendo && <div style={{ fontSize: 14.5, marginBottom: 16 }}>Lendo a planilha...</div>}
