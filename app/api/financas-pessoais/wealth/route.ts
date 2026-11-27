@@ -72,13 +72,22 @@ export async function GET(request: Request) {
       cor: String(c.cor || '#1d4ed8'),
     }));
 
+    const rendPorPatrimonio = new Map<string, number>();
+    for (const r of rendimentosRaw) {
+      if (r.patrimonio_id) {
+        const pid = String(r.patrimonio_id);
+        rendPorPatrimonio.set(pid, (rendPorPatrimonio.get(pid) || 0) + Number(r.valor_liquido || 0));
+      }
+    }
+
     const patrimonio = patrimonioRaw.map((p) => {
       const aplicado = Number(p.valor_aplicado || 0);
       const atual = Number(p.valor_atual || 0);
       const resultado = Math.round((atual - aplicado) * 100) / 100;
       const rentabilidadePct = aplicado > 0 ? Math.round(((atual - aplicado) / aplicado) * 1000) / 10 : 0;
+      const pid = String(p.id);
       return {
-        id: String(p.id),
+        id: pid,
         classe: String(p.classe || 'renda_fixa'),
         nome: String(p.nome),
         instituicao: String(p.instituicao || ''),
@@ -87,6 +96,7 @@ export async function GET(request: Request) {
         valorAtual: atual,
         resultado,
         rentabilidadePct,
+        rendimentosAcumulados: Math.round((rendPorPatrimonio.get(pid) || 0) * 100) / 100,
         taxaOuDetalhe: String(p.taxa_ou_detalhe || ''),
         dataReferencia: String(p.data_referencia || ''),
       };
@@ -220,7 +230,7 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     await Promise.all([ensureFinancasPessoaisTables(), ensureFinancasWealthTables()]);
-    const { primaryKey, phone } = await resolverChavesFinancasUsuario(auth.session.userId);
+    const { primaryKey, allKeys, phone } = await resolverChavesFinancasUsuario(auth.session.userId);
     const body = await request.json().catch(() => ({}));
     const recurso = String(body?.recurso || '');
     const id = crypto.randomUUID();
@@ -292,7 +302,7 @@ export async function POST(request: Request) {
     }
 
     if (recurso === 'rendimento') {
-      const ativoNome = String(body?.ativoNome || '').trim();
+      const patrimonioId = String(body?.patrimonioId || '').trim();
       const tipoRendimento = String(body?.tipoRendimento || 'dividendo').trim();
       const valorBruto = Math.max(0, Number(body?.valorBruto || 0));
       const irRetido = Math.max(0, Number(body?.irRetido || 0));
@@ -300,13 +310,36 @@ export async function POST(request: Request) {
       const data = /^\d{4}-\d{2}-\d{2}$/.test(String(body?.data || ''))
         ? String(body.data)
         : new Date().toISOString().slice(0, 10);
-      const patrimonioId = body?.patrimonioId ? String(body.patrimonioId).trim() : null;
       const observacao = String(body?.observacao || '').trim().slice(0, 200);
-      const lancarNoCaixa = body?.lancarNoCaixa !== false;
+      const lancarNoCaixa = Boolean(body?.lancarNoCaixa);
+      const somarNoValorAtual = Boolean(body?.somarNoValorAtual);
 
-      if (!ativoNome || valorBruto <= 0) {
-        return NextResponse.json({ error: 'Informe o ativo e o valor do rendimento.' }, { status: 400 });
+      if (!patrimonioId) {
+        return NextResponse.json(
+          { error: 'Selecione um investimento cadastrado na sua carteira para lançar o rendimento.' },
+          { status: 400 }
+        );
       }
+      if (valorBruto <= 0) {
+        return NextResponse.json({ error: 'Informe o valor do rendimento.' }, { status: 400 });
+      }
+
+      const invRows = await db.$queryRawUnsafe<Array<{ id: string; nome: string; instituicao: string }>>(
+        `SELECT id, nome, instituicao FROM financas_pessoais_patrimonio WHERE id = $1 AND owner_key = ANY($2::text[]) LIMIT 1`,
+        patrimonioId,
+        allKeys
+      );
+      const investimento = invRows[0];
+      if (!investimento) {
+        return NextResponse.json(
+          { error: 'Investimento cadastrado não encontrado. Cadastre o investimento primeiro.' },
+          { status: 404 }
+        );
+      }
+
+      const ativoNome = investimento.instituicao
+        ? `${investimento.nome} (${investimento.instituicao})`
+        : investimento.nome;
 
       await db.$executeRawUnsafe(
         `INSERT INTO financas_pessoais_rendimentos
@@ -314,7 +347,7 @@ export async function POST(request: Request) {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
         id,
         primaryKey,
-        patrimonioId,
+        investimento.id,
         ativoNome,
         tipoRendimento,
         valorBruto,
@@ -323,6 +356,17 @@ export async function POST(request: Request) {
         data,
         observacao
       );
+
+      if (somarNoValorAtual && valorLiquido > 0) {
+        await db.$executeRawUnsafe(
+          `UPDATE financas_pessoais_patrimonio
+           SET valor_atual = valor_atual + $1, updated_at = NOW()
+           WHERE id = $2 AND owner_key = ANY($3::text[])`,
+          valorLiquido,
+          investimento.id,
+          allKeys
+        );
+      }
 
       if (lancarNoCaixa && valorLiquido > 0) {
         const rotulosTipo: Record<string, string> = {

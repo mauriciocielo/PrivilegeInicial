@@ -59,6 +59,7 @@ export interface WealthData {
     valorAtual: number;
     resultado: number;
     rentabilidadePct: number;
+    rendimentosAcumulados?: number;
     taxaOuDetalhe: string;
     dataReferencia: string;
   }>;
@@ -360,22 +361,22 @@ export function InvestimentosWealthTab({
   const [valorAtual, setValorAtual] = useState('');
   const [taxaOuDetalhe, setTaxaOuDetalhe] = useState('');
 
-  // Form Rendimento / Provento
+  // Form Rendimento / Provento (vinculado a investimento cadastrado)
   const [rendAtivoId, setRendAtivoId] = useState('');
-  const [rendAtivoNome, setRendAtivoNome] = useState('');
   const [rendTipo, setRendTipo] = useState('dividendo');
   const [rendData, setRendData] = useState(() => new Date().toISOString().slice(0, 10));
   const [rendBruto, setRendBruto] = useState('');
   const [rendIr, setRendIr] = useState('');
+  const [rendSomarAtual, setRendSomarAtual] = useState(false);
   const [rendLancarCaixa, setRendLancarCaixa] = useState(true);
   const [salvandoRend, setSalvandoRend] = useState(false);
 
+  const investimentosElegiveis = (wealth?.patrimonio || []).filter((p) => p.classe !== 'day_trade');
+
   const handleAddRendimento = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ativoSelecionado = (wealth?.patrimonio || []).find((p) => p.id === rendAtivoId);
-    const nomeFinal = (rendAtivoNome.trim() || ativoSelecionado?.nome || '').trim();
-    if (!nomeFinal) {
-      toast.error('Selecione ou digite o nome do investimento.');
+    if (!rendAtivoId) {
+      toast.error('Selecione um investimento cadastrado na sua carteira.');
       return;
     }
     setSalvandoRend(true);
@@ -385,12 +386,12 @@ export function InvestimentosWealthTab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recurso: 'rendimento',
-          patrimonioId: rendAtivoId || null,
-          ativoNome: nomeFinal,
+          patrimonioId: rendAtivoId,
           tipoRendimento: rendTipo,
           data: rendData,
           valorBruto: parseFloat(rendBruto.replace(',', '.')) || 0,
           irRetido: parseFloat(rendIr.replace(',', '.')) || 0,
+          somarNoValorAtual: rendSomarAtual,
           lancarNoCaixa: rendLancarCaixa,
         }),
       });
@@ -400,12 +401,12 @@ export function InvestimentosWealthTab({
         return;
       }
       toast.success(
-        rendLancarCaixa
-          ? 'Rendimento lançado e somado no seu caixa mensal!'
-          : 'Rendimento lançado na carteira!'
+        rendSomarAtual
+          ? 'Rendimento lançado e somado ao saldo atual do investimento!'
+          : rendLancarCaixa
+          ? 'Rendimento lançado no investimento e somado ao seu caixa!'
+          : 'Rendimento lançado no investimento!'
       );
-      setRendAtivoId('');
-      setRendAtivoNome('');
       setRendBruto('');
       setRendIr('');
       onAtualizado();
@@ -495,64 +496,74 @@ export function InvestimentosWealthTab({
         </div>
       </div>
 
-      {/* Lançar Rendimentos / Proventos dos Investimentos */}
-      <div style={{ background: '#fff', border: '1px solid #bbf7d0', borderRadius: 16, padding: 20 }}>
+      {/* Lançar Rendimentos / Proventos dos Investimentos Cadastrados */}
+      <div id="secao-rendimentos-pf" style={{ background: '#fff', border: '1px solid #bbf7d0', borderRadius: 16, padding: 20 }}>
         <div style={{ marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#14532d', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={17} color="#15803d" /> Lançar Rendimentos & Proventos (Dividendos, JCP, FIIs, CDB, Tesouro)
+            <Sparkles size={17} color="#15803d" /> Lançar Rendimentos & Proventos por Investimento Cadastrado
           </h3>
           <p style={{ margin: '3px 0 0', fontSize: 13, color: '#64748b' }}>
-            Registre os rendimentos recebidos das suas aplicações e acompanhe sua renda passiva mensal e anual.
+            Escolha o investimento já cadastrado na sua carteira para registrar o rendimento (Dividendos, JCP, FII, CDB, Tesouro) e acompanhar o retorno real de cada ativo.
           </p>
         </div>
-        <form onSubmit={handleAddRendimento} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-            <select
-              className="form-control"
-              value={rendAtivoId}
-              onChange={(e) => {
-                const idSel = e.target.value;
-                setRendAtivoId(idSel);
-                const found = (wealth?.patrimonio || []).find((p) => p.id === idSel);
-                if (found) setRendAtivoNome(found.nome);
-              }}
-            >
-              <option value="">Ativo avulso (digitar ao lado)</option>
-              {(wealth?.patrimonio || []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} {p.instituicao ? `(${p.instituicao})` : ''}
-                </option>
-              ))}
-            </select>
-            <input
-              className="form-control"
-              required
-              placeholder="Nome do ativo (ex.: MXRF11, CDB Inter)"
-              value={rendAtivoNome}
-              onChange={(e) => setRendAtivoNome(e.target.value)}
-            />
-            <select className="form-control" value={rendTipo} onChange={(e) => setRendTipo(e.target.value)}>
-              {Object.entries(TIPOS_RENDIMENTO).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
-              ))}
-            </select>
-            <input type="date" className="form-control" required value={rendData} onChange={(e) => setRendData(e.target.value)} />
-            <input className="form-control" required placeholder="Valor Bruto R$" value={rendBruto} onChange={(e) => setRendBruto(e.target.value)} />
-            <input className="form-control" placeholder="IR Retido R$ (opcional)" value={rendIr} onChange={(e) => setRendIr(e.target.value)} />
-            <button
-              type="submit"
-              disabled={salvandoRend}
-              className="btn"
-              style={{ background: '#15803d', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
-            >
-              <Plus size={14} /> {salvandoRend ? 'Salvando...' : 'Lançar Rendimento'}
-            </button>
+
+        {investimentosElegiveis.length === 0 ? (
+          <div style={{ padding: 16, borderRadius: 12, background: '#f8fafc', border: '1px dashed #cbd5e1', fontSize: 13.5, color: '#475569' }}>
+            Cadastre primeiro um investimento abaixo (ex.: CDB, Tesouro, Ação ou FII) para poder lançar os rendimentos vinculados a ele.
           </div>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#166534', cursor: 'pointer' }}>
-            <input type="checkbox" checked={rendLancarCaixa} onChange={(e) => setRendLancarCaixa(e.target.checked)} />
-            Lançar também como receita (categoria Investimentos) no meu caixa mensal
-          </label>
-        </form>
+        ) : (
+          <form onSubmit={handleAddRendimento} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+              <select
+                className="form-control"
+                required
+                value={rendAtivoId}
+                onChange={(e) => {
+                  const idSel = e.target.value;
+                  setRendAtivoId(idSel);
+                  const found = investimentosElegiveis.find((p) => p.id === idSel);
+                  if (found?.classe === 'renda_fixa') {
+                    setRendTipo('renda_fixa');
+                    setRendSomarAtual(true);
+                  }
+                }}
+              >
+                <option value="">Selecione o investimento cadastrado...</option>
+                {investimentosElegiveis.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} {p.instituicao ? `(${p.instituicao})` : ''}
+                  </option>
+                ))}
+              </select>
+              <select className="form-control" value={rendTipo} onChange={(e) => setRendTipo(e.target.value)}>
+                {Object.entries(TIPOS_RENDIMENTO).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+              <input type="date" className="form-control" required value={rendData} onChange={(e) => setRendData(e.target.value)} />
+              <input className="form-control" required placeholder="Valor Bruto R$" value={rendBruto} onChange={(e) => setRendBruto(e.target.value)} />
+              <input className="form-control" placeholder="IR Retido R$ (opcional)" value={rendIr} onChange={(e) => setRendIr(e.target.value)} />
+              <button
+                type="submit"
+                disabled={salvandoRend}
+                className="btn"
+                style={{ background: '#15803d', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
+              >
+                <Plus size={14} /> {salvandoRend ? 'Salvando...' : 'Lançar Rendimento'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#1d4ed8', cursor: 'pointer' }}>
+                <input type="checkbox" checked={rendSomarAtual} onChange={(e) => setRendSomarAtual(e.target.checked)} />
+                Somar ao Valor Atual deste investimento (rendimento reinvestido / CDB / Fundo)
+              </label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#166534', cursor: 'pointer' }}>
+                <input type="checkbox" checked={rendLancarCaixa} onChange={(e) => setRendLancarCaixa(e.target.checked)} />
+                Lançar também como receita no caixa mensal (ex.: dividendos na conta)
+              </label>
+            </div>
+          </form>
+        )}
 
         {(wealth?.rendimentos || []).length > 0 && (
           <div className="table-wrap" style={{ marginTop: 14 }}>
@@ -664,6 +675,7 @@ export function InvestimentosWealthTab({
                   <th>Aplicado / Pago</th>
                   <th>Atual / Saída</th>
                   <th>Resultado</th>
+                  <th>Rendimentos</th>
                   <th style={{ textAlign: 'right' }}>Ação</th>
                 </tr>
               </thead>
@@ -687,10 +699,33 @@ export function InvestimentosWealthTab({
                       <td style={{ fontWeight: 800, color: p.resultado >= 0 ? '#15803d' : '#b91c1c' }}>
                         {p.resultado >= 0 ? '+' : ''}{fmt.currency(p.resultado)} ({p.rentabilidadePct}%)
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button type="button" className="btn btn-secondary" style={{ color: '#b91c1c', padding: '4px 8px' }} onClick={() => handleExcluir(p.id, p.nome)}>
-                          <Trash2 size={13} />
-                        </button>
+                      <td style={{ fontWeight: 700, color: (p.rendimentosAcumulados || 0) > 0 ? '#15803d' : '#94a3b8', whiteSpace: 'nowrap' }}>
+                        {(p.rendimentosAcumulados || 0) > 0 ? `+ ${fmt.currency(p.rendimentosAcumulados || 0)}` : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: 6 }}>
+                          {p.classe !== 'day_trade' && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              title="Lançar rendimento para este investimento"
+                              style={{ color: '#15803d', fontSize: 11.5, padding: '4px 8px', fontWeight: 700 }}
+                              onClick={() => {
+                                setRendAtivoId(p.id);
+                                if (p.classe === 'renda_fixa') {
+                                  setRendTipo('renda_fixa');
+                                  setRendSomarAtual(true);
+                                }
+                                document.getElementById('secao-rendimentos-pf')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }}
+                            >
+                              + Rend.
+                            </button>
+                          )}
+                          <button type="button" className="btn btn-secondary" style={{ color: '#b91c1c', padding: '4px 8px' }} onClick={() => handleExcluir(p.id, p.nome)}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

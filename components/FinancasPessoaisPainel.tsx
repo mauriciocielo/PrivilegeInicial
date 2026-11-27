@@ -98,6 +98,7 @@ interface ItemExtratoPreview {
   selecionado: boolean;
   categoria: string;
   destino: 'lancamento' | 'rendimento_investimento';
+  patrimonioId?: string;
   tipoRendimento: string;
   dedutivelIrpf: boolean;
   origemClassificacao: 'existente' | 'historico' | 'ia' | 'regra';
@@ -1106,20 +1107,42 @@ export default function FinancasPessoaisPainel() {
                         </td>
                         <td style={{ padding: '8px 6px' }}>
                           {it.tipo === 'receita' ? (
-                            <select
-                              className="form-control"
-                              style={{ fontSize: 12, padding: '4px 6px', minWidth: 135 }}
-                              value={it.destino}
-                              onChange={(e) =>
-                                atualizarItemPreview(it.idx, {
-                                  destino: e.target.value === 'rendimento_investimento' ? 'rendimento_investimento' : 'lancamento',
-                                  categoria: e.target.value === 'rendimento_investimento' ? 'Investimentos' : it.categoria,
-                                })
-                              }
-                            >
-                              <option value="lancamento">Caixa Normal</option>
-                              <option value="rendimento_investimento">Rendimento Invest.</option>
-                            </select>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <select
+                                className="form-control"
+                                style={{ fontSize: 12, padding: '4px 6px', minWidth: 140 }}
+                                value={it.destino}
+                                onChange={(e) => {
+                                  const ehRend = e.target.value === 'rendimento_investimento';
+                                  const primeiroInv = (wealthData?.patrimonio || []).find((p) => p.classe !== 'day_trade')?.id || '';
+                                  atualizarItemPreview(it.idx, {
+                                    destino: ehRend ? 'rendimento_investimento' : 'lancamento',
+                                    categoria: ehRend ? 'Investimentos' : it.categoria,
+                                    patrimonioId: ehRend ? it.patrimonioId || primeiroInv : '',
+                                  });
+                                }}
+                              >
+                                <option value="lancamento">Caixa Normal</option>
+                                <option value="rendimento_investimento">Rendimento Invest.</option>
+                              </select>
+                              {it.destino === 'rendimento_investimento' && (
+                                <select
+                                  className="form-control"
+                                  style={{ fontSize: 11.5, padding: '3px 6px', minWidth: 140, borderColor: '#86efac' }}
+                                  value={it.patrimonioId || ''}
+                                  onChange={(e) => atualizarItemPreview(it.idx, { patrimonioId: e.target.value })}
+                                >
+                                  <option value="">Escolha o investimento...</option>
+                                  {(wealthData?.patrimonio || [])
+                                    .filter((p) => p.classe !== 'day_trade')
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.nome}
+                                      </option>
+                                    ))}
+                                </select>
+                              )}
+                            </div>
                           ) : (
                             <span style={{ fontSize: 12, color: '#64748b' }}>Caixa Normal</span>
                           )}

@@ -327,13 +327,30 @@ export async function POST(request: Request) {
 
         if (destino === 'rendimento_investimento' && tipo === 'receita') {
           const tipoRendimento = String(raw?.tipoRendimento || detectarTipoRendimento(descricao) || 'renda_fixa');
+          const patrimonioId = raw?.patrimonioId ? String(raw.patrimonioId).trim() : null;
+          let ativoNomeFinal = descricao.slice(0, 90);
+          let pidValido: string | null = null;
+          if (patrimonioId) {
+            const invRows = await db.$queryRawUnsafe<Array<{ id: string; nome: string; instituicao: string }>>(
+              `SELECT id, nome, instituicao FROM financas_pessoais_patrimonio WHERE id = $1 AND owner_key = ANY($2::text[]) LIMIT 1`,
+              patrimonioId,
+              allKeys
+            );
+            if (invRows[0]) {
+              pidValido = invRows[0].id;
+              ativoNomeFinal = invRows[0].instituicao
+                ? `${invRows[0].nome} (${invRows[0].instituicao})`
+                : invRows[0].nome;
+            }
+          }
           await db.$executeRawUnsafe(
             `INSERT INTO financas_pessoais_rendimentos
               (id, owner_key, patrimonio_id, ativo_nome, tipo_rendimento, valor_bruto, ir_retido, valor_liquido, data, observacao, created_at)
-             VALUES ($1, $2, NULL, $3, $4, $5, 0, $5, $6, 'Conciliado do extrato bancário', NOW())`,
+             VALUES ($1, $2, $3, $4, $5, $6, 0, $6, $7, 'Conciliado do extrato bancário', NOW())`,
             crypto.randomUUID(),
             primaryKey,
-            descricao.slice(0, 90),
+            pidValido,
+            ativoNomeFinal,
             tipoRendimento,
             valor,
             data
@@ -384,7 +401,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const [historico, rendimentosExistentes] = await Promise.all([
+    const [historico, rendimentosExistentes, investimentosCadastrados] = await Promise.all([
       db.$queryRawUnsafe<HistoricoItem[]>(
         `SELECT data, tipo, valor, categoria, descricao, dedutivel_irpf
          FROM financas_pessoais_lancamentos
@@ -401,7 +418,25 @@ export async function POST(request: Request) {
          LIMIT 500`,
         allKeys
       ),
+      db.$queryRawUnsafe<Array<{ id: string; nome: string; instituicao: string; classe: string }>>(
+        `SELECT id, nome, instituicao, classe
+         FROM financas_pessoais_patrimonio
+         WHERE owner_key = ANY($1::text[]) AND classe <> 'day_trade'
+         ORDER BY nome ASC`,
+        allKeys
+      ),
     ]);
+
+    const encontrarInvestimentoNaDesc = (desc: string): string => {
+      const low = normalizarTexto(desc);
+      if (!low || investimentosCadastrados.length === 0) return investimentosCadastrados[0]?.id || '';
+      const match = investimentosCadastrados.find((inv) => {
+        const n = normalizarTexto(inv.nome);
+        const inst = normalizarTexto(inv.instituicao);
+        return (n.length >= 3 && low.includes(n)) || (inst.length >= 3 && low.includes(inst));
+      });
+      return match?.id || investimentosCadastrados[0]?.id || '';
+    };
 
     // Passo 1: Detectar já lançados + aprender pelo histórico
     const preliminares = transacoes.map((tr, idx) => {
@@ -450,6 +485,7 @@ export async function POST(request: Request) {
         selecionado: !jaLancado,
         categoria: hist ? hist.categoria : heur.categoria,
         destino,
+        patrimonioId: destino === 'rendimento_investimento' ? encontrarInvestimentoNaDesc(tr.descricao) : '',
         tipoRendimento: heur.tipoRendimento,
         dedutivelIrpf: hist
           ? hist.dedutivelIrpf
@@ -489,10 +525,12 @@ export async function POST(request: Request) {
       if (!ia) return p;
       const dedutivel =
         p.tipo === 'despesa' && Boolean(ia.dedutivelIrpf || CATEGORIAS_DEDUTIVEIS_IRPF.has(ia.categoria));
+      const destinoFinal = p.tipo === 'receita' ? ia.destino : 'lancamento';
       return {
         ...p,
         categoria: ia.categoria,
-        destino: p.tipo === 'receita' ? ia.destino : 'lancamento',
+        destino: destinoFinal,
+        patrimonioId: destinoFinal === 'rendimento_investimento' ? p.patrimonioId || encontrarInvestimentoNaDesc(p.descricao) : '',
         tipoRendimento: ia.tipoRendimento || p.tipoRendimento,
         dedutivelIrpf: dedutivel,
         origemClassificacao: 'ia' as const,
