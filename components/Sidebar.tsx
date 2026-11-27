@@ -80,6 +80,7 @@ const consultorNav: { section: string; items: NavItem[] }[] = [
       { label: 'Centros de Custo', href: '/consultor/centros-custo', icon: Tag },
       { label: 'Projeção de Caixa', href: '/consultor/projecao-caixa', icon: Activity },
       { label: 'Orçamento', href: '/consultor/orcamento', icon: PiggyBank },
+      { label: 'Minhas Finanças (PF)', href: '/consultor/financas-pessoais', icon: Wallet },
       { label: 'Relatórios Financeiros', href: '/consultor/relatorios', icon: BarChart3 },
       { label: 'NFS-e / Emissão', href: '/consultor/nfse', icon: ReceiptText },
       { label: 'NF-e Destinadas', href: '/consultor/nfe-destinadas', icon: Inbox },
@@ -147,6 +148,7 @@ const clienteNav: { section: string; items: NavItem[] }[] = [
       { label: 'Contas a Receber', href: '/cliente/contas-receber', icon: Banknote },
       { label: 'Clientes / Fornecedores', href: '/cliente/clientes', icon: Users },
       { label: 'NF-e Recebidas', href: '/cliente/nfe-destinadas', icon: Inbox },
+      { label: 'Minhas Finanças (PF)', href: '/cliente/financas-pessoais', icon: Wallet },
       { label: 'Importar OFX', href: '/cliente/importar-ofx', icon: FolderInput },
       { label: 'Contas via ERP', href: '/cliente/contas-erp', icon: Landmark },
       { label: 'Atas de Atendimento', href: '/cliente/atas', icon: FileText },
@@ -641,7 +643,7 @@ export default function Sidebar({ role }: { role: 'administrador' | 'consultor' 
       return navClienteBase.map(section => {
         const items = section.items.filter(item => {
           if (item.href === '/cliente/dashboard') return !somenteFiscal && allowedClient.includes('/cliente/dashboard');
-          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped' || item.href === '/cliente/whatsapp') return true;
+          if (item.href === '/cliente/dashboard2' || item.href === '/cliente/nfse' || item.href === '/cliente/comparador-sped' || item.href === '/cliente/whatsapp' || item.href === '/cliente/financas-pessoais') return true;
           return allowedClient.some(route => item.href.startsWith(route));
         });
         return { ...section, items };

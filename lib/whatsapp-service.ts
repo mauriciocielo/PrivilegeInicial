@@ -2016,6 +2016,20 @@ export async function processIncomingMessage(params: {
       if (tratadoAuto) {
         return { source: 'ai' };
       }
+
+      // Controle Financeiro Pessoal (PF) no WhatsApp — texto, áudio ou foto de comprovante (apenas privado)
+      if (!ehGrupo) {
+        const { processarComandoFinancasPessoaisWhatsApp } = await import('./financas-pessoais');
+        const tratadoPf = await processarComandoFinancasPessoaisWhatsApp({
+          sendJid: sendTarget,
+          cleanPhone: params.phone,
+          text: cleanText,
+          enviarMensagem: (jid, msg) => sendBaileysLiveMessage(jid, msg, undefined, ownerId),
+        });
+        if (tratadoPf) {
+          return { source: 'ai' };
+        }
+      }
     } catch (err) {
       console.warn('[WhatsApp] Erro no emissor de NFS-e via WhatsApp:', err);
     }

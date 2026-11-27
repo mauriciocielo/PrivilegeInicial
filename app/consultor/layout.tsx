@@ -63,6 +63,7 @@ export default function ConsultorLayout({ children }: { children: React.ReactNod
       || pathname.startsWith('/consultor/nfse')
       || pathname.startsWith('/consultor/nfe-destinadas')
       || pathname.startsWith('/consultor/carteira')
+      || pathname.startsWith('/consultor/financas-pessoais')
       || pathname.startsWith('/consultor/cnd-federal')
       || pathname.startsWith('/consultor/comparador-sped')
       || pathname.startsWith('/consultor/whatsapp')
