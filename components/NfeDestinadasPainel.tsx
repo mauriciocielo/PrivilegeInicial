@@ -173,6 +173,8 @@ export default function NfeDestinadasPainel({ modoCliente = false }: { modoClien
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [manifestando, setManifestando] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [importandoLotePagar, setImportandoLotePagar] = useState(false);
+  const [progressoLotePagar, setProgressoLotePagar] = useState('');
   const [formatoExportacao, setFormatoExportacao] = useState<'ambos' | 'pdf' | 'xml' | 'pdf_unico'>('ambos');
 
   // Consulta de Horário Noturno e leitura de ?aba=certificados na URL
@@ -587,6 +589,166 @@ export default function NfeDestinadasPainel({ modoCliente = false }: { modoClien
   const idsParaCiencia = useMemo(() => {
     return notasSelecionadas.filter(podeDarCiencia).map(n => n.id);
   }, [notasSelecionadas]);
+
+  const notasElegiveisPagar = useMemo(() => {
+    return notasSelecionadas.filter(
+      n => n.papel !== 'emitida' && n.situacao !== 'cancelada' && (n.valorNf || 0) > 0 && !chavesLancadasPagar.has(n.chaveAcesso)
+    );
+  }, [notasSelecionadas, chavesLancadasPagar]);
+
+  // Lançamento em lote das NF-es selecionadas para Contas a Pagar + cadastro automático de fornecedores
+  const handleImportarLoteContasPagar = async () => {
+    if (!empresaIdSelecionada || notasElegiveisPagar.length === 0) return;
+    const valorLote = notasElegiveisPagar.reduce((acc, n) => acc + (n.valorNf || 0), 0);
+    const ok = await confirmAsync(
+      `Lançar ${notasElegiveisPagar.length} nota(s) no Contas a Pagar (${fmt.currency(valorLote)})?\n\n` +
+      `Para cada NF-e, o sistema vai ler automaticamente as duplicatas do XML (quando disponíveis) ou usar vencimento em 30 dias, cadastrar fornecedores que ainda não existirem e evitar duplicidade.`
+    );
+    if (!ok) return;
+
+    const somarDiasIso = (dataIso: string, dias: number): string => {
+      const base = new Date(`${dataIso.slice(0, 10)}T12:00:00`);
+      if (Number.isNaN(base.getTime())) {
+        const d = new Date();
+        d.setDate(d.getDate() + dias);
+        return d.toISOString().slice(0, 10);
+      }
+      base.setDate(base.getDate() + dias);
+      return base.toISOString().slice(0, 10);
+    };
+
+    setImportandoLotePagar(true);
+    let lancadas = 0;
+    let parcelasCriadas = 0;
+    let fornecedoresCriados = 0;
+    let jaExistiam = 0;
+    let erros = 0;
+    const novasChaves = new Set<string>();
+
+    try {
+      for (let i = 0; i < notasElegiveisPagar.length; i++) {
+        const nota = notasElegiveisPagar[i];
+        setProgressoLotePagar(`${i + 1}/${notasElegiveisPagar.length}`);
+        try {
+          const dataEmissao = (nota.dataEmissao || new Date().toISOString()).slice(0, 10);
+          let parcelas: Array<{ numero: string; dataVencimento: string; valor: number }> = [];
+          let resumoProdutos = '';
+          let fornecedorExtra: Record<string, any> | null = null;
+
+          // 1. Consulta detalhes do XML (parcelas <dup> e dados do emitente) e verifica duplicidade no servidor
+          const resGet = await fetch(
+            `/api/financeiro/importar-nota-pagar?empresaId=${encodeURIComponent(empresaIdSelecionada)}&nfeId=${encodeURIComponent(nota.id)}&chaveAcesso=${encodeURIComponent(nota.chaveAcesso)}`
+          );
+          const dadosGet = await resGet.json().catch(() => ({}));
+          if (dadosGet?.jaLancada) {
+            jaExistiam++;
+            novasChaves.add(nota.chaveAcesso);
+            continue;
+          }
+          if (Array.isArray(dadosGet?.parcelas) && dadosGet.parcelas.length > 0) {
+            parcelas = dadosGet.parcelas;
+          }
+          if (dadosGet?.resumoProdutos) resumoProdutos = String(dadosGet.resumoProdutos);
+          if (dadosGet?.fornecedorExtra) fornecedorExtra = dadosGet.fornecedorExtra;
+
+          if (parcelas.length === 0) {
+            parcelas = [
+              {
+                numero: '001',
+                dataVencimento: somarDiasIso(dataEmissao, 30),
+                valor: Math.round((nota.valorNf || 0) * 100) / 100,
+              },
+            ];
+          }
+
+          const numeroDoc = nota.numero || nota.chaveAcesso.slice(-9);
+          const descricao = resumoProdutos
+            ? `NF-e ${numeroDoc} — ${nota.emitenteNome || 'Fornecedor'} (${resumoProdutos})`
+            : `NF-e ${numeroDoc} — ${nota.emitenteNome || 'Fornecedor'}`;
+
+          // 2. Lança no servidor (auto-cadastra fornecedor + cria Lancamento + ContaPagar)
+          const resPost = await fetch('/api/financeiro/importar-nota-pagar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              empresaId: empresaIdSelecionada,
+              origem: 'nfe',
+              notaId: nota.id,
+              chaveAcesso: nota.chaveAcesso,
+              numeroDocumento: `NF-e ${numeroDoc}`,
+              dataEmissao,
+              descricao,
+              formaPagamento: 'Boleto',
+              fornecedor: {
+                nome: nota.emitenteNome || 'Fornecedor',
+                cpfCnpj: nota.emitenteCnpj || '',
+                ...(fornecedorExtra || {}),
+              },
+              parcelas,
+            }),
+          });
+          const dadosPost = await resPost.json().catch(() => ({}));
+          if (resPost.status === 409) {
+            jaExistiam++;
+            novasChaves.add(nota.chaveAcesso);
+            continue;
+          }
+          if (!resPost.ok) {
+            erros++;
+            continue;
+          }
+
+          if (dadosPost.fornecedor) {
+            store.saveCliente({
+              ...dadosPost.fornecedor,
+              createdAt: String(dadosPost.fornecedor.createdAt || new Date().toISOString()),
+            });
+          }
+          if (Array.isArray(dadosPost.lancamentos)) {
+            for (const l of dadosPost.lancamentos) {
+              store.saveLancamento({
+                ...l,
+                createdAt: String(l.createdAt || new Date().toISOString()),
+              });
+            }
+          }
+
+          lancadas++;
+          parcelasCriadas += Number(dadosPost.totalParcelas || parcelas.length);
+          if (dadosPost.fornecedorCriado) fornecedoresCriados++;
+          novasChaves.add(nota.chaveAcesso);
+        } catch {
+          erros++;
+        }
+      }
+
+      if (novasChaves.size > 0) {
+        setChavesLancadasPagar(prev => {
+          const next = new Set(prev);
+          novasChaves.forEach(c => next.add(c));
+          return next;
+        });
+      }
+      setSelecionadas(new Set());
+
+      const partes: string[] = [];
+      if (lancadas > 0) partes.push(`${lancadas} nota(s) lançada(s) (${parcelasCriadas} título(s))`);
+      if (fornecedoresCriados > 0) partes.push(`${fornecedoresCriados} fornecedor(es) cadastrado(s)`);
+      if (jaExistiam > 0) partes.push(`${jaExistiam} já lançada(s) anteriormente`);
+      if (erros > 0) partes.push(`${erros} com erro`);
+
+      if (lancadas > 0) {
+        toast.success(`Contas a Pagar atualizado: ${partes.join(' · ')}.`);
+      } else if (jaExistiam > 0 && erros === 0) {
+        toast.info(`Todas as notas selecionadas já estavam lançadas no Contas a Pagar.`);
+      } else {
+        toast.error(`Não foi possível lançar as notas (${partes.join(' · ')}).`);
+      }
+    } finally {
+      setImportandoLotePagar(false);
+      setProgressoLotePagar('');
+    }
+  };
 
   const todasMarcadas = notasFiltradas.length > 0 && notasFiltradas.every(n => selecionadas.has(n.id));
 
@@ -1583,6 +1745,32 @@ export default function NfeDestinadasPainel({ modoCliente = false }: { modoClien
                     <Download size={13} />
                     {exportando ? 'Exportando...' : `Baixar (${selecionadas.size})`}
                   </button>
+
+                  {abaPrincipal !== 'emitidas' && notasElegiveisPagar.length > 0 && (
+                    <button
+                      className="btn"
+                      style={{
+                        background: '#15803d',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        padding: '8px 16px',
+                        fontSize: 14.5,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                      onClick={handleImportarLoteContasPagar}
+                      disabled={importandoLotePagar || exportando || manifestando}
+                      title="Lança todas as NF-es recebidas selecionadas no Contas a Pagar e cadastra fornecedores automaticamente"
+                    >
+                      <Wallet size={14} />
+                      {importandoLotePagar
+                        ? `Lançando ${progressoLotePagar}...`
+                        : `Lançar no Contas a Pagar (${notasElegiveisPagar.length})`}
+                    </button>
+                  )}
 
                   {idsParaCiencia.length > 0 && (
                     <button

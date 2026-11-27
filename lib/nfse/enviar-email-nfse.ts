@@ -327,6 +327,7 @@ export async function enviarEmailNfseEmitida(params: {
 }
 
 export async function enviarEmailNfseCancelada(params: {
+  empresaId?: string;
   numero: string;
   dataEmissao: string;
   prestadorNome: string;
@@ -374,15 +375,32 @@ export async function enviarEmailNfseCancelada(params: {
     const valorFmt = params.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const linkPortal = params.chaveAcesso ? urlConsultaPublica(params.chaveAcesso) : '';
 
+    const brandingParceiro = params.empresaId ? await obterBrandingDaEmpresa(params.empresaId) : null;
+    const ehParceiro = Boolean(brandingParceiro);
+    const corPrimaria = brandingParceiro?.corPrimaria || '#600000';
+    const nomeMarca = brandingParceiro?.nome || 'Privilege Consultoria';
+    const logoParceiroImg = dataUrlParaBuffer(brandingParceiro?.logoData);
+
     let emailLogoBuffer: Buffer | null = null;
-    for (const candidate of ['privilege-logo-email.png', 'privilege-email-logo.png', 'logo.png']) {
-      try {
-        const p = path.join(process.cwd(), 'public', candidate);
-        if (fs.existsSync(p)) {
-          emailLogoBuffer = fs.readFileSync(p);
-          break;
-        }
-      } catch {}
+    let emailLogoType = 'image/png';
+    let emailLogoName = 'logo-escritorio.png';
+
+    if (ehParceiro) {
+      if (logoParceiroImg) {
+        emailLogoBuffer = logoParceiroImg.buffer;
+        emailLogoType = logoParceiroImg.contentType;
+        emailLogoName = `logo-escritorio.${logoParceiroImg.ext}`;
+      }
+    } else {
+      for (const candidate of ['privilege-logo-email.png', 'privilege-email-logo.png', 'logo.png']) {
+        try {
+          const p = path.join(process.cwd(), 'public', candidate);
+          if (fs.existsSync(p)) {
+            emailLogoBuffer = fs.readFileSync(p);
+            break;
+          }
+        } catch {}
+      }
     }
 
     const attachments: Array<{ filename: string; content: Buffer; contentType: string; cid?: string }> = [];
@@ -419,24 +437,53 @@ export async function enviarEmailNfseCancelada(params: {
 
     if (emailLogoBuffer) {
       attachments.push({
-        filename: 'privilege-logo.png',
+        filename: emailLogoName,
         content: emailLogoBuffer,
-        contentType: 'image/png',
+        contentType: emailLogoType,
         cid: 'privilege-logo',
       });
     }
 
+    const rodapeTexto = ehParceiro
+      ? `NFS-e cancelada por ${params.prestadorNome} · ${nomeMarca}${brandingParceiro?.telefone ? ` | Tel/WhatsApp: ${brandingParceiro.telefone}` : ''}`
+      : `Sistema PRIVILEGE CONSULTORIA LTDA · Site: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 99980-0010`;
+
+    const rodapeHtml = ehParceiro
+      ? `<div style="font-size:12px;font-weight:700;color:${corPrimaria};margin-bottom:4px;">
+           NFS-e cancelada por ${params.prestadorNome}
+         </div>
+         <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+           ${nomeMarca}${brandingParceiro?.telefone ? ` · ${brandingParceiro.telefone}` : ''}${brandingParceiro?.email ? ` · ${brandingParceiro.email}` : ''}
+         </div>`
+      : `<div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
+           NFS-e cancelada por ${params.prestadorNome}
+         </div>
+         <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
+           Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
+         </div>
+         <div style="margin-bottom:10px;">
+           <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
+             🌐 privilegecontabilidade.cnt.br
+           </a>
+           <a href="https://wa.me/5546999800010" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
+             💬 WhatsApp (46) 99980-0010
+           </a>
+         </div>
+         <div style="font-size:11px;color:#9ca3af;">
+           E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
+         </div>`;
+
     await transporter.sendMail({
-      from: `"Privilege Consultoria" <${smtpUser}>`,
+      from: `"${nomeMarca}" <${smtpUser}>`,
       to: destinatarios.join(', '),
-      cc: smtpUser,
+      cc: ehParceiro ? (brandingParceiro?.email || undefined) : smtpUser,
       subject: `CANCELAMENTO — NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
       text:
         `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
         `Informamos que a Nota Fiscal de Serviço Eletrônica (NFS-e) nº ${numLimpo}, emitida em ${params.dataEmissao} no valor líquido de ${valorFmt} por ${params.prestadorNome}, foi CANCELADA junto ao Sefin Nacional.\n\n` +
         `Motivo do cancelamento: ${params.motivoCancelamento}\n\n` +
         `Por favor, desconsidere a nota anterior (e eventual cobrança vinculada a ela).\n\n` +
-        `Sistema PRIVILEGE CONSULTORIA LTDA · Site: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 99980-0010`,
+        rodapeTexto,
       html: `
         <!doctype html>
         <html>
@@ -450,7 +497,7 @@ export async function enviarEmailNfseCancelada(params: {
                         ${
                           emailLogoBuffer
                             ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
-                                 <img src="cid:privilege-logo" alt="Privilege Consultoria" style="height:36px;width:auto;display:block;" />
+                                 <img src="cid:privilege-logo" alt="${nomeMarca}" style="height:36px;width:auto;display:block;" />
                                </div>`
                             : ''
                         }
@@ -514,7 +561,7 @@ export async function enviarEmailNfseCancelada(params: {
                   ${
                     linkPortal
                       ? `<div style="text-align:center;margin:18px 0 6px;">
-                           <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;background:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">
+                           <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 20px;background:${ehParceiro ? corPrimaria : '#111827'};color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">
                              Consultar situação no Portal Nacional da NFS-e
                            </a>
                          </div>`
@@ -524,23 +571,7 @@ export async function enviarEmailNfseCancelada(params: {
               </tr>
               <tr>
                 <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center;">
-                  <div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
-                    NFS-e cancelada por ${params.prestadorNome}
-                  </div>
-                  <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
-                    Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
-                  </div>
-                  <div style="margin-bottom:10px;">
-                    <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
-                      🌐 privilegecontabilidade.cnt.br
-                    </a>
-                    <a href="https://wa.me/5546999800010" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
-                      💬 WhatsApp (46) 99980-0010
-                    </a>
-                  </div>
-                  <div style="font-size:11px;color:#9ca3af;">
-                    E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
-                  </div>
+                  ${rodapeHtml}
                 </td>
               </tr>
             </table>

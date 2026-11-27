@@ -47,6 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (codigos.includes('E0840')) {
         await db.nfsE.update({ where: { id }, data: { status: 'cancelada', motivoCancelamento, cancelamentoEmAnalise: false } });
         const emailCancelamento = await enviarEmailNfseCancelada({
+          empresaId: nota.empresaId,
           numero: nota.numero,
           dataEmissao: nota.dataEmissao,
           prestadorNome: nota.prestadorRazaoSocial,
@@ -82,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const emailCancelamento = modo === 'direto'
       ? await enviarEmailNfseCancelada({
+          empresaId: nota.empresaId,
           numero: nota.numero,
           dataEmissao: nota.dataEmissao,
           prestadorNome: nota.prestadorRazaoSocial,
