@@ -48,9 +48,17 @@ export async function ensureFinancasPessoaisTables() {
       status TEXT NOT NULL DEFAULT 'pago',
       dedutivel_irpf BOOLEAN NOT NULL DEFAULT FALSE,
       origem TEXT NOT NULL DEFAULT 'whatsapp',
+      comprovante_data TEXT,
+      comprovante_nome TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `);
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_lancamentos ADD COLUMN IF NOT EXISTS comprovante_data TEXT`
+  );
+  await db.$executeRawUnsafe(
+    `ALTER TABLE financas_pessoais_lancamentos ADD COLUMN IF NOT EXISTS comprovante_nome TEXT`
+  );
   await db.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS idx_fp_lanc_owner_data ON financas_pessoais_lancamentos(owner_key, data DESC)`
   );
@@ -143,6 +151,8 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
   sendJid: string;
   cleanPhone: string;
   text: string;
+  mediaUrl?: string | null;
+  fileName?: string | null;
   enviarMensagem: (jid: string, texto: string) => Promise<any>;
 }): Promise<boolean> {
   const limpo = params.text.replace(/^\[[^\]]+\]:\s*/, '').trim();
@@ -258,11 +268,12 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
   }
 
   // 4. Lançamento de Gasto ou Receita Pessoal por Texto, Áudio ou Foto!
-  const gatilhoGasto = /\b(gastei|paguei|comprei|despesa\s+pessoal|lan[cç]a(?:r)?\s+gasto|anota(?:r)?\s+gasto|passei\s+no\s+cart[aã]o)\b/i;
+  const gatilhoGasto = /\b(gastei|paguei|comprei|despesa\s+pessoal|lan[cç]a(?:r)?\s+gasto|anota(?:r)?\s+gasto|passei\s+no\s+cart[aã]o|irpf|recibo|nota\s+m[eé]dica|dentista|escola|faculdade|plano\s+de\s+sa[uú]de)\b/i;
   const gatilhoReceita = /\b(recebi|entrou\s+(?:r\$|\d)|ganhei|receita\s+pessoal|lan[cç]a(?:r)?\s+receita)\b/i;
-  const ehFotoComprovante = lower.includes('[análise da imagem enviada pelo cliente:') && /\b(pix|cupom|nota\s+fiscal|comprovante|pagamento|total|r\$)\b/i.test(lower);
+  const ehFotoComprovante = lower.includes('[análise da imagem enviada pelo cliente:') && /\b(pix|cupom|nota\s+fiscal|comprovante|pagamento|total|r\$|recibo|consulta|m[eé]dic|dentista|escola)\b/i.test(lower);
+  const ehDocIrpf = Boolean(params.mediaUrl && /\b(irpf|imposto\s+de\s+renda|recibo|sa[uú]de|m[eé]dic|dentista|escola|faculdade|previd[eê]ncia)\b/i.test(lower));
 
-  if (!gatilhoGasto.test(lower) && !gatilhoReceita.test(lower) && !ehFotoComprovante) {
+  if (!gatilhoGasto.test(lower) && !gatilhoReceita.test(lower) && !ehFotoComprovante && !ehDocIrpf) {
     return false;
   }
 
@@ -314,12 +325,19 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
   await ensureFinancasPessoaisTables();
   const hoje = new Date().toISOString().slice(0, 10);
   const mesAtual = hoje.slice(0, 7);
-  const dedutivelIrpf = tipo === 'despesa' && CATEGORIAS_DEDUTIVEIS_IRPF.has(categoria);
+  const dedutivelIrpf = tipo === 'despesa' && (CATEGORIAS_DEDUTIVEIS_IRPF.has(categoria) || ehDocIrpf);
+  const comprovanteData =
+    params.mediaUrl && params.mediaUrl.startsWith('data:') && params.mediaUrl.length <= 4 * 1024 * 1024
+      ? params.mediaUrl
+      : null;
+  const comprovanteNome = comprovanteData
+    ? params.fileName || (comprovanteData.startsWith('data:application/pdf') ? `Documento_IRPF_${hoje}.pdf` : `Comprovante_${hoje}.jpg`)
+    : null;
 
   await db.$executeRawUnsafe(
     `INSERT INTO financas_pessoais_lancamentos
-      (id, owner_key, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pago', $10, 'whatsapp', NOW())`,
+      (id, owner_key, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, comprovante_data, comprovante_nome, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pago', $10, 'whatsapp', $11, $12, NOW())`,
     crypto.randomUUID(),
     ownerKey,
     params.cleanPhone,
@@ -329,7 +347,9 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
     formaPagamento,
     descricao,
     hoje,
-    dedutivelIrpf
+    dedutivelIrpf,
+    comprovanteData,
+    comprovanteNome
   );
 
   // Checa meta da categoria no mês para dar feedback imediato
@@ -358,7 +378,11 @@ export async function processarComandoFinancasPessoaisWhatsApp(params: {
     }
   }
 
-  const linhaIrpf = dedutivelIrpf ? `\n📋 *Pasta IRPF:* Marcado automaticamente como despesa dedutível!` : '';
+  const linhaIrpf = dedutivelIrpf
+    ? comprovanteData
+      ? `\n📋 *Pasta IRPF:* Documento fiscal salvo (${comprovanteNome}) e pronto para download!`
+      : `\n📋 *Pasta IRPF:* Marcado automaticamente como despesa dedutível!`
+    : '';
 
   await params.enviarMensagem(
     params.sendJid,

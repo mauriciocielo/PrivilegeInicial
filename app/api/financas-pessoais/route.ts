@@ -74,6 +74,8 @@ export async function GET(request: Request) {
         status: r.status === 'pendente' ? 'pendente' : 'pago',
         dedutivelIrpf: Boolean(r.dedutivel_irpf),
         origem: String(r.origem || 'web'),
+        temComprovante: Boolean(r.comprovante_data),
+        comprovanteNome: r.comprovante_nome ? String(r.comprovante_nome) : null,
       };
     });
 
@@ -96,6 +98,8 @@ export async function GET(request: Request) {
       descricao: String(r.descricao || ''),
       valor: Number(r.valor || 0),
       formaPagamento: String(r.forma_pagamento || ''),
+      temComprovante: Boolean(r.comprovante_data),
+      comprovanteNome: r.comprovante_nome ? String(r.comprovante_nome) : null,
     }));
     const totalDedutivelAno = dedutiveisIrpf.reduce((acc, d) => acc + d.valor, 0);
 
@@ -143,6 +147,17 @@ export async function POST(request: Request) {
     const dedutivelIrpf =
       tipo === 'despesa' && (Boolean(body?.dedutivelIrpf) || CATEGORIAS_DEDUTIVEIS_IRPF.has(categoria));
 
+    const comprovanteData =
+      typeof body?.comprovanteData === 'string' &&
+      body.comprovanteData.startsWith('data:') &&
+      body.comprovanteData.length <= 4 * 1024 * 1024
+        ? body.comprovanteData
+        : null;
+    const comprovanteNome =
+      comprovanteData && typeof body?.comprovanteNome === 'string'
+        ? body.comprovanteNome.trim().slice(0, 140)
+        : null;
+
     if (valor <= 0 || !descricao) {
       return NextResponse.json({ error: 'Informe descrição e valor maior que zero.' }, { status: 400 });
     }
@@ -150,8 +165,8 @@ export async function POST(request: Request) {
     const id = crypto.randomUUID();
     await db.$executeRawUnsafe(
       `INSERT INTO financas_pessoais_lancamentos
-        (id, owner_key, user_id, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'web', NOW())`,
+        (id, owner_key, user_id, phone, tipo, valor, categoria, forma_pagamento, descricao, data, status, dedutivel_irpf, origem, comprovante_data, comprovante_nome, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'web', $13, $14, NOW())`,
       id,
       primaryKey,
       auth.session.userId,
@@ -163,7 +178,9 @@ export async function POST(request: Request) {
       descricao,
       data,
       status,
-      dedutivelIrpf
+      dedutivelIrpf,
+      comprovanteData,
+      comprovanteNome
     );
 
     return NextResponse.json({ ok: true, id });
@@ -198,6 +215,22 @@ export async function PATCH(request: Request) {
         `UPDATE financas_pessoais_lancamentos SET dedutivel_irpf = $2 WHERE id = $1 AND owner_key = ANY($3::text[])`,
         id,
         body.dedutivelIrpf,
+        allKeys
+      );
+    }
+    if (
+      typeof body?.comprovanteData === 'string' &&
+      body.comprovanteData.startsWith('data:') &&
+      body.comprovanteData.length <= 4 * 1024 * 1024
+    ) {
+      const nome = typeof body?.comprovanteNome === 'string' ? body.comprovanteNome.trim().slice(0, 140) : 'Documento_IRPF.pdf';
+      await db.$executeRawUnsafe(
+        `UPDATE financas_pessoais_lancamentos
+         SET comprovante_data = $2, comprovante_nome = $3
+         WHERE id = $1 AND owner_key = ANY($4::text[])`,
+        id,
+        body.comprovanteData,
+        nome,
         allKeys
       );
     }

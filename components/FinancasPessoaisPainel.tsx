@@ -64,6 +64,19 @@ interface LancamentoPf {
   status: 'pago' | 'pendente';
   dedutivelIrpf: boolean;
   origem: string;
+  temComprovante?: boolean;
+  comprovanteNome?: string | null;
+}
+
+interface DedutivelIrpfItem {
+  id: string;
+  data: string;
+  categoria: string;
+  descricao: string;
+  valor: number;
+  formaPagamento: string;
+  temComprovante?: boolean;
+  comprovanteNome?: string | null;
 }
 
 interface MetaPf {
@@ -86,7 +99,8 @@ export default function FinancasPessoaisPainel() {
   const [porCategoria, setPorCategoria] = useState<Array<{ categoria: string; total: number }>>([]);
   const [metas, setMetas] = useState<MetaPf[]>([]);
   const [lancamentos, setLancamentos] = useState<LancamentoPf[]>([]);
-  const [dedutiveisIrpf, setDedutiveisIrpf] = useState<Array<{ id: string; data: string; categoria: string; descricao: string; valor: number; formaPagamento: string }>>([]);
+  const [dedutiveisIrpf, setDedutiveisIrpf] = useState<DedutivelIrpfItem[]>([]);
+  const [enviandoDocId, setEnviandoDocId] = useState<string | null>(null);
 
   // Modal Novo Lançamento
   const [modalNovo, setModalNovo] = useState(false);
@@ -97,6 +111,8 @@ export default function FinancasPessoaisPainel() {
   const [descricao, setDescricao] = useState('');
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
   const [dedutivelIrpf, setDedutivelIrpf] = useState(false);
+  const [comprovanteData, setComprovanteData] = useState<string | null>(null);
+  const [comprovanteNome, setComprovanteNome] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   // Modal Nova Meta
@@ -131,6 +147,41 @@ export default function FinancasPessoaisPainel() {
     carregar(mes);
   }, [mes, carregar]);
 
+  const lerArquivoComoDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      if (file.size > 3 * 1024 * 1024) {
+        reject(new Error('Arquivo muito grande (limite de 3 MB).'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo.'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleAnexarDocumentoIrpf = async (id: string, file: File) => {
+    setEnviandoDocId(id);
+    try {
+      const dataUrl = await lerArquivoComoDataUrl(file);
+      const res = await fetch('/api/financas-pessoais', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, comprovanteData: dataUrl, comprovanteNome: file.name }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao anexar documento fiscal.');
+        return;
+      }
+      toast.success('Documento fiscal salvo na Pasta IRPF!');
+      carregar(mes);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao ler o arquivo.');
+    } finally {
+      setEnviandoDocId(null);
+    }
+  };
+
   const handleSalvarLancamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setSalvando(true);
@@ -146,6 +197,8 @@ export default function FinancasPessoaisPainel() {
           descricao,
           data,
           dedutivelIrpf,
+          comprovanteData,
+          comprovanteNome,
         }),
       });
       const d = await res.json().catch(() => ({}));
@@ -158,6 +211,8 @@ export default function FinancasPessoaisPainel() {
       setValor('');
       setDescricao('');
       setDedutivelIrpf(false);
+      setComprovanteData(null);
+      setComprovanteNome(null);
       carregar(mes);
     } finally {
       setSalvando(false);
@@ -586,6 +641,16 @@ export default function FinancasPessoaisPainel() {
                         </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'inline-flex', gap: 6 }}>
+                            {l.temComprovante && (
+                              <a
+                                href={`/api/financas-pessoais/comprovante?id=${encodeURIComponent(l.id)}`}
+                                className="btn btn-secondary"
+                                title={l.comprovanteNome || 'Baixar documento fiscal'}
+                                style={{ fontSize: 11.5, padding: '4px 8px', color: '#1d4ed8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                              >
+                                <Download size={12} />
+                              </a>
+                            )}
                             <button
                               type="button"
                               className="btn btn-secondary"
@@ -627,7 +692,7 @@ export default function FinancasPessoaisPainel() {
                 Pasta de Despesas Dedutíveis para o IRPF ({mes.slice(0, 4)})
               </h2>
               <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#64748b' }}>
-                Todo gasto de <strong>Saúde, Educação ou Previdência</strong> lançado pelo WhatsApp ou aqui fica separado automaticamente para sua Declaração de Imposto de Renda.
+                Todo recibo, nota ou PDF de <strong>Saúde, Educação ou Previdência</strong> enviado pelo WhatsApp ou anexado aqui fica guardado com o documento fiscal pronto para baixar na declaração do IRPF.
               </p>
             </div>
             <button
@@ -642,7 +707,7 @@ export default function FinancasPessoaisPainel() {
 
           {dedutiveisIrpf.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>
-              Nenhum gasto dedutível registrado em {mes.slice(0, 4)} ainda.
+              Nenhum gasto dedutível registrado em {mes.slice(0, 4)} ainda. Envie um PDF ou foto de recibo médico/escolar no WhatsApp ou lance acima.
             </div>
           ) : (
             <div className="table-wrap">
@@ -653,17 +718,99 @@ export default function FinancasPessoaisPainel() {
                     <th>Categoria</th>
                     <th>Descrição</th>
                     <th>Pagamento</th>
+                    <th>Documento Fiscal</th>
                     <th style={{ textAlign: 'right' }}>Valor Dedutível</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dedutiveisIrpf.map((d) => (
                     <tr key={d.id}>
-                      <td>{d.data}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{d.data}</td>
                       <td><strong>{d.categoria}</strong></td>
                       <td>{d.descricao}</td>
                       <td>{d.formaPagamento}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>{fmt.currency(d.valor)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {d.temComprovante ? (
+                            <>
+                              <a
+                                href={`/api/financas-pessoais/comprovante?id=${encodeURIComponent(d.id)}`}
+                                className="btn"
+                                title={d.comprovanteNome || 'Baixar documento fiscal'}
+                                style={{
+                                  background: '#1d4ed8',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: 8,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  padding: '5px 10px',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                }}
+                              >
+                                <Download size={13} /> Baixar PDF / Doc
+                              </a>
+                              <label
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: 600,
+                                  color: '#475569',
+                                  cursor: 'pointer',
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  border: '1px solid #cbd5e1',
+                                }}
+                              >
+                                {enviandoDocId === d.id ? 'Salvando...' : 'Trocar'}
+                                <input
+                                  type="file"
+                                  accept=".pdf,image/*"
+                                  style={{ display: 'none' }}
+                                  disabled={enviandoDocId === d.id}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleAnexarDocumentoIrpf(d.id, file);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            </>
+                          ) : (
+                            <label
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: '#0f172a',
+                                background: '#f8fafc',
+                                border: '1px dashed #94a3b8',
+                                borderRadius: 8,
+                                padding: '5px 10px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Upload size={13} /> {enviandoDocId === d.id ? 'Salvando...' : 'Anexar PDF / Foto'}
+                              <input
+                                type="file"
+                                accept=".pdf,image/*"
+                                style={{ display: 'none' }}
+                                disabled={enviandoDocId === d.id}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleAnexarDocumentoIrpf(d.id, file);
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: '#15803d', whiteSpace: 'nowrap' }}>{fmt.currency(d.valor)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -739,6 +886,50 @@ export default function FinancasPessoaisPainel() {
                   Guardar na Pasta de Dedutíveis do IRPF
                 </label>
               )}
+              <div>
+                <label style={{ fontSize: 12.5, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                  Documento Fiscal / Recibo (PDF ou foto, opcional)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      padding: '7px 12px',
+                      borderRadius: 8,
+                      border: '1px dashed #94a3b8',
+                      background: '#f8fafc',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Upload size={14} /> {comprovanteNome ? 'Trocar arquivo' : 'Anexar PDF ou Imagem'}
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const dataUrl = await lerArquivoComoDataUrl(file);
+                          setComprovanteData(dataUrl);
+                          setComprovanteNome(file.name);
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Erro ao ler arquivo.');
+                        }
+                      }}
+                    />
+                  </label>
+                  {comprovanteNome && (
+                    <span style={{ fontSize: 12, color: '#15803d', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+                      {comprovanteNome}
+                    </span>
+                  )}
+                </div>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setModalNovo(false)}>Cancelar</button>
                 <button type="submit" className="btn" disabled={salvando} style={{ background: 'var(--accent, #600000)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}>

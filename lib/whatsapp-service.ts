@@ -2024,6 +2024,8 @@ export async function processIncomingMessage(params: {
           sendJid: sendTarget,
           cleanPhone: params.phone,
           text: cleanText,
+          mediaUrl: params.mediaUrl || null,
+          fileName: params.fileName || null,
           enviarMensagem: (jid, msg) => sendBaileysLiveMessage(jid, msg, undefined, ownerId),
         });
         if (tratadoPf) {
