@@ -2,6 +2,12 @@ import db from './prisma';
 import { encontrarSessaoAdminPorNumero } from './nfse/enviar-whatsapp-nfse';
 import { listarSessoesBaileysAtivas, sendBaileysLiveMessage } from './baileys-manager';
 import { registrarDisparoWhatsApp } from './whatsapp-disparos-log';
+import {
+  ID_ESCRITORIO_PADRAO,
+  ensureEscritoriosNfseTables,
+  idsEmpresasDeTerceiros,
+  idsEmpresasDoEscritorio,
+} from './nfse/escritorios-terceiros';
 
 export const TELEFONE_ALERTA_CERTIFICADO_PADRAO =
   (process.env.CERTIFICADO_ALERTA_WHATSAPP || '4630351018').replace(/\D/g, '') || '4630351018';
@@ -49,22 +55,24 @@ function formatarDataBr(d: Date): string {
 }
 
 /**
- * Coleta o certificado A1 do escritório e todos os certificados A1 próprios das empresas
- * que já estão vencidos ou vencem nos próximos 30 dias.
+ * Coleta o certificado A1 do escritório especificado ('padrao' ou escritorioId de parceiro)
+ * e todos os certificados A1 das empresas vinculadas a ele que estão vencidos ou vencem em 30 dias.
  */
-export async function coletarCertificadosEmAtencao(): Promise<CertificadoEmAtencao[]> {
+export async function coletarCertificadosEmAtencao(escritorioId: string = ID_ESCRITORIO_PADRAO): Promise<CertificadoEmAtencao[]> {
   const agora = new Date();
   const em30Dias = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
   const itens: CertificadoEmAtencao[] = [];
+  const ehPadrao = !escritorioId || escritorioId === ID_ESCRITORIO_PADRAO;
 
   try {
-    const certEsc = await db.nfseCertificadoEscritorio.findFirst({
+    const certEsc = await db.nfseCertificadoEscritorio.findUnique({
+      where: { id: ehPadrao ? ID_ESCRITORIO_PADRAO : escritorioId },
       select: { titular: true, documento: true, validoAte: true },
     });
     if (certEsc?.validoAte && certEsc.validoAte <= em30Dias) {
       const diffDias = Math.ceil((certEsc.validoAte.getTime() - agora.getTime()) / (24 * 60 * 60 * 1000));
       itens.push({
-        chave: 'escritorio',
+        chave: ehPadrao ? 'escritorio' : `escritorio:${escritorioId}`,
         tipo: 'escritorio',
         nome: 'Certificado A1 do Escritório (Procuração)',
         cnpj: certEsc.documento || undefined,
@@ -80,9 +88,21 @@ export async function coletarCertificadosEmAtencao(): Promise<CertificadoEmAtenc
   }
 
   try {
-    // Monitora TODOS os certificados A1 cadastrados nas empresas (mesmo quando emitem NFS-e por procuração)
+    let filtroEmpresas: Record<string, any> = {};
+    if (ehPadrao) {
+      const idsTerceiros = await idsEmpresasDeTerceiros();
+      if (idsTerceiros.length > 0) {
+        filtroEmpresas = { empresaId: { notIn: idsTerceiros } };
+      }
+    } else {
+      const idsEsc = await idsEmpresasDoEscritorio(escritorioId);
+      if (idsEsc.length === 0) return itens;
+      filtroEmpresas = { empresaId: { in: idsEsc } };
+    }
+
+    // Monitora TODOS os certificados A1 cadastrados nas empresas do escritório (mesmo quando emitem NFS-e por procuração)
     const certsEmp = await db.nfseConfig.findMany({
-      where: { certValidoAte: { not: null, lte: em30Dias } },
+      where: { ...filtroEmpresas, certValidoAte: { not: null, lte: em30Dias } },
       select: {
         empresaId: true,
         certTitular: true,
@@ -126,13 +146,13 @@ function formatarDocumento(doc?: string): string {
   return doc || '';
 }
 
-export function montarMensagemAlertaCertificados(itens: CertificadoEmAtencao[]): string {
+export function montarMensagemAlertaCertificados(itens: CertificadoEmAtencao[], nomeMarca = 'Privilege Contabilidade'): string {
   const vencidos = itens.filter(i => i.vencido);
   const vencendo = itens.filter(i => !i.vencido);
 
   const linhas: string[] = [
     `🔐 *Aviso de Certificados Digitais A1*`,
-    `Privilege Contabilidade`,
+    nomeMarca,
     ``,
   ];
 
@@ -161,7 +181,7 @@ export function montarMensagemAlertaCertificados(itens: CertificadoEmAtencao[]):
     linhas.push(`📌 Providencie a renovação para evitar interrupção na emissão e consulta de notas fiscais.`);
   }
 
-  linhas.push(``, `_Monitoramento Automático • Privilege Contabilidade_`);
+  linhas.push(``, `_Monitoramento Automático • ${nomeMarca}_`);
   return linhas.join('\n');
 }
 
@@ -218,31 +238,18 @@ export async function enviarAlertaCertificadosWhatsApp(
   return { ok: true, enviadoPara: destino, quantidade: itens.length };
 }
 
-/**
- * Rotina automática 24h (acionada pelo daemon a cada 30s, com throttle de 30 min):
- * verifica certificados A1 vencidos ou vencendo em 30, 15, 7, 3 e 1 dia(s) e envia
- * um único aviso consolidado no WhatsApp 4630351018 (a partir das 08h de Brasília).
- */
-export async function processarAlertasCertificados24h(): Promise<{ enviados: number }> {
-  const agoraMs = Date.now();
-  if (agoraMs - ultimaExecucaoMs < 30 * 60 * 1000) {
-    return { enviados: 0 };
-  }
-  ultimaExecucaoMs = agoraMs;
+async function dispararAlertasParaEscritorio(params: {
+  escritorioId: string;
+  nomeMarca: string;
+  telefoneDestino: string;
+  ownerId: string;
+}): Promise<number> {
+  const itens = await coletarCertificadosEmAtencao(params.escritorioId);
+  if (itens.length === 0) return 0;
 
-  // Só dispara em horário comercial (entre 08h e 19h no horário de Brasília)
-  const horaBrasilia = new Date(agoraMs - 3 * 3600 * 1000).getUTCHours();
-  if (horaBrasilia < 8 || horaBrasilia >= 19) {
-    return { enviados: 0 };
-  }
-
-  const itens = await coletarCertificadosEmAtencao();
-  if (itens.length === 0) return { enviados: 0 };
-
-  await ensureTabelaAlertasCertificado();
-  const destino = normalizarTelefoneCertificado();
-
+  const destino = normalizarTelefoneCertificado(params.telefoneDestino);
   const pendentes: Array<{ item: CertificadoEmAtencao; marco: string }> = [];
+
   for (const item of itens) {
     const marco = definirMarco(item);
     if (!marco) continue;
@@ -260,14 +267,21 @@ export async function processarAlertasCertificados24h(): Promise<{ enviados: num
     }
   }
 
-  if (pendentes.length === 0) return { enviados: 0 };
+  if (pendentes.length === 0) return 0;
 
-  const ownerId = await encontrarSessaoAdminPorNumero('46999800010');
-  if (!ownerId) return { enviados: 0 };
+  const mensagem = montarMensagemAlertaCertificados(pendentes.map(p => p.item), params.nomeMarca);
+  const res = await sendBaileysLiveMessage(destino, mensagem, undefined, params.ownerId);
+  await registrarDisparoWhatsApp({
+    categoria: 'certificado_alerta',
+    destino,
+    destinoNome: `Certificados A1 — ${params.nomeMarca}`,
+    mensagem,
+    status: res?.sent ? 'enviado' : 'erro',
+    erro: res?.sent ? null : (res?.error || `sessão ${params.ownerId}`),
+    ownerId: params.ownerId,
+  }).catch(() => {});
 
-  const mensagem = montarMensagemAlertaCertificados(pendentes.map(p => p.item));
-  const res = await sendBaileysLiveMessage(destino, mensagem, undefined, ownerId);
-  if (!res?.sent) return { enviados: 0 };
+  if (!res?.sent) return 0;
 
   for (const { item, marco } of pendentes) {
     await db.$executeRawUnsafe(
@@ -281,5 +295,62 @@ export async function processarAlertasCertificados24h(): Promise<{ enviados: num
     );
   }
 
-  return { enviados: pendentes.length };
+  return pendentes.length;
+}
+
+/**
+ * Rotina automática 24h (acionada pelo daemon a cada 30s, com throttle de 30 min):
+ * verifica certificados A1 vencidos ou vencendo em 30, 15, 7, 3 e 1 dia(s) e envia
+ * aviso consolidado isolado no WhatsApp da Privilege (4630351018) e no WhatsApp de
+ * cada Contador Parceiro cadastrado (a partir das 08h de Brasília).
+ */
+export async function processarAlertasCertificados24h(): Promise<{ enviados: number }> {
+  const agoraMs = Date.now();
+  if (agoraMs - ultimaExecucaoMs < 30 * 60 * 1000) {
+    return { enviados: 0 };
+  }
+  ultimaExecucaoMs = agoraMs;
+
+  // Só dispara em horário comercial (entre 08h e 19h no horário de Brasília)
+  const horaBrasilia = new Date(agoraMs - 3 * 3600 * 1000).getUTCHours();
+  if (horaBrasilia < 8 || horaBrasilia >= 19) {
+    return { enviados: 0 };
+  }
+
+  const ownerId = await encontrarSessaoAdminPorNumero('46999800010');
+  if (!ownerId) return { enviados: 0 };
+
+  await ensureTabelaAlertasCertificado();
+  let totalEnviados = 0;
+
+  // 1. Escritório padrão (Privilege)
+  totalEnviados += await dispararAlertasParaEscritorio({
+    escritorioId: ID_ESCRITORIO_PADRAO,
+    nomeMarca: 'Privilege Contabilidade',
+    telefoneDestino: TELEFONE_ALERTA_CERTIFICADO_PADRAO,
+    ownerId,
+  });
+
+  // 2. Cada Contador Parceiro ativo com telefone/WhatsApp cadastrado (100% isolado e white-label)
+  try {
+    await ensureEscritoriosNfseTables();
+    const parceiros = await db.$queryRawUnsafe<Array<{ id: string; nome: string; brand_nome: string | null; telefone: string | null }>>(
+      `SELECT id, nome, brand_nome, telefone FROM nfse_escritorios WHERE ativo = TRUE AND id <> $1`,
+      ID_ESCRITORIO_PADRAO
+    );
+    for (const p of parceiros) {
+      const telLimpo = String(p.telefone || '').replace(/\D/g, '');
+      if (telLimpo.length < 10) continue;
+      totalEnviados += await dispararAlertasParaEscritorio({
+        escritorioId: String(p.id),
+        nomeMarca: String(p.brand_nome || p.nome || 'Escritório Contábil'),
+        telefoneDestino: telLimpo,
+        ownerId,
+      });
+    }
+  } catch {
+    // ignora erro pontual
+  }
+
+  return { enviados: totalEnviados };
 }

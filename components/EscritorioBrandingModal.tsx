@@ -9,6 +9,7 @@ export interface BrandingState {
   customizado?: boolean;
   escritorioId?: string;
   nome?: string;
+  telefone?: string | null;
   corPrimaria?: string | null;
   corSecundaria?: string | null;
   logoData?: string | null;
@@ -62,6 +63,7 @@ interface Props {
 export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSalvo }: Props) {
   const [mounted, setMounted] = useState(false);
   const [nome, setNome] = useState(brandingAtual.nome || '');
+  const [telefone, setTelefone] = useState(brandingAtual.telefone || '');
   const [corPrimaria, setCorPrimaria] = useState(brandingAtual.corPrimaria || '#1d4ed8');
   const [corSecundaria, setCorSecundaria] = useState(brandingAtual.corSecundaria || '#1e3a8a');
   const [logoData, setLogoData] = useState<string | null>(brandingAtual.logoData || null);
@@ -97,6 +99,7 @@ export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSal
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: nome.trim(),
+          telefone: telefone.trim(),
           corPrimaria,
           corSecundaria,
           logoData: logoData ?? '',
@@ -195,15 +198,26 @@ export default function EscritorioBrandingModal({ brandingAtual, onFechar, onSal
             </div>
           </div>
 
-          {/* Nome */}
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Nome de Exibição do Escritório</label>
-            <input
-              className="form-control"
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-              placeholder="Ex.: Contabilidade Exemplo"
-            />
+          {/* Nome e WhatsApp de Alertas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Nome de Exibição do Escritório</label>
+              <input
+                className="form-control"
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                placeholder="Ex.: Contabilidade Exemplo"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>WhatsApp para Alertas de Certificados A1</label>
+              <input
+                className="form-control"
+                value={telefone}
+                onChange={e => setTelefone(e.target.value)}
+                placeholder="(46) 99999-9999"
+              />
+            </div>
           </div>
 
           {/* Logo */}

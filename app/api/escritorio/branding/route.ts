@@ -62,6 +62,7 @@ export async function PUT(request: Request) {
     }
 
     const brandNome = typeof body?.nome === 'string' ? body.nome.trim().slice(0, 120) : null;
+    const telefone = typeof body?.telefone === 'string' ? body.telefone.trim().slice(0, 30) : undefined;
     const corPrimariaRaw = typeof body?.corPrimaria === 'string' ? body.corPrimaria.trim() : '';
     const corSecundariaRaw = typeof body?.corSecundaria === 'string' ? body.corSecundaria.trim() : '';
     const corPrimaria = corPrimariaRaw ? (HEX_COLOR.test(corPrimariaRaw) ? corPrimariaRaw : null) : null;
@@ -90,23 +91,27 @@ export async function PUT(request: Request) {
     if (logoData !== undefined) {
       await db.$executeRawUnsafe(
         `UPDATE nfse_escritorios
-         SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4, brand_logo_data = $5, updated_at = NOW()
+         SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4, brand_logo_data = $5,
+             telefone = COALESCE($6, telefone), updated_at = NOW()
          WHERE id = $1`,
         escritorioId,
         brandNome,
         corPrimaria,
         corSecundaria,
-        logoData
+        logoData,
+        telefone !== undefined ? telefone : null
       );
     } else {
       await db.$executeRawUnsafe(
         `UPDATE nfse_escritorios
-         SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4, updated_at = NOW()
+         SET brand_nome = $2, brand_cor_primaria = $3, brand_cor_secundaria = $4,
+             telefone = COALESCE($5, telefone), updated_at = NOW()
          WHERE id = $1`,
         escritorioId,
         brandNome,
         corPrimaria,
-        corSecundaria
+        corSecundaria,
+        telefone !== undefined ? telefone : null
       );
     }
 
