@@ -398,7 +398,7 @@ export default function FinancasPessoaisPainel() {
   };
 
   return (
-    <div className="page-body fp-shell" style={{ padding: '24px 32px', background: '#f8fafc', minHeight: '100%' }}>
+    <div className="page-body fp-shell" style={{ padding: '24px 32px', background: 'var(--bg-base, #f6f5f2)', minHeight: '100%' }}>
       <style jsx global>{`
         .fp-tabs {
           display: flex;

@@ -21,6 +21,7 @@ function destinoPosLogin(user: { role?: string; allowedRoutes?: string[] } | nul
     return '/consultor/dashboard2';
   }
   if (routes.includes('somente-whatsapp')) return '/cliente/whatsapp';
+  if (routes.length === 1 && routes[0] === '/cliente/financas-pessoais') return '/cliente/financas-pessoais';
   return '/cliente/dashboard2';
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
@@ -8,13 +9,14 @@ import {
   CheckCircle2,
   CreditCard,
   FileText,
+  LogIn,
   MessageSquare,
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function VendasFinancasPessoaisPage() {
   const router = useRouter();
@@ -48,164 +50,348 @@ export default function VendasFinancasPessoaisPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Topo */}
-      <header style={{ maxWidth: 1120, margin: '0 auto', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #16a34a, #0d9488)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wallet size={20} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>Minhas Finanças PF</div>
-            <div style={{ fontSize: 11, color: '#94a3b8' }}>WhatsApp + Inteligência Artificial</div>
-          </div>
-        </div>
-        <a
-          href="/login"
-          style={{
-            color: '#e2e8f0',
-            textDecoration: 'none',
-            fontSize: 13.5,
-            fontWeight: 700,
-            padding: '8px 14px',
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.16)',
-          }}
-        >
-          Já tenho conta
-        </a>
-      </header>
+    <div
+      className="pf-landing"
+      style={{
+        minHeight: '100vh',
+        background: 'var(--bg-base, #f6f5f2)',
+        color: 'var(--text-primary, #141413)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <style jsx global>{`
+        .pf-landing-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+          gap: 32px;
+          align-items: start;
+        }
+        .pf-features-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+        @media (max-width: 900px) {
+          .pf-landing-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+        }
+        @media (max-width: 640px) {
+          .pf-features-grid {
+            grid-template-columns: 1fr;
+          }
+          .pf-nav-links {
+            display: none !important;
+          }
+          .pf-landing input {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
 
-      {/* Hero + Formulário */}
-      <main style={{ maxWidth: 1120, margin: '0 auto', padding: '20px 20px 64px' }}>
+      {/* Cabeçalho Institucional Privilege */}
+      <header
+        style={{
+          background: '#ffffff',
+          borderBottom: '1px solid var(--border, #e6e4de)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+        }}
+      >
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: 32,
+            maxWidth: 1140,
+            margin: '0 auto',
+            padding: '14px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
+            gap: 16,
           }}
         >
-          {/* Coluna Texto */}
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <BrandLogo size={38} />
+          </Link>
+
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div className="pf-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <Link href="/" style={{ color: 'var(--text-secondary, #4a4945)', textDecoration: 'none', fontSize: 14.5, fontWeight: 500 }}>
+                Início
+              </Link>
+              <Link href="/contato" style={{ color: 'var(--text-secondary, #4a4945)', textDecoration: 'none', fontSize: 14.5, fontWeight: 500 }}>
+                Contato
+              </Link>
+            </div>
+            <Link
+              href="/login"
+              style={{
+                background: 'var(--accent, #600000)',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: 14,
+                fontWeight: 600,
+                padding: '9px 16px',
+                borderRadius: 10,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: 'var(--shadow-accent, 0 2px 8px rgba(96, 0, 0, 0.16))',
+              }}
+            >
+              <LogIn size={15} /> Entrar no Painel
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Conteúdo Principal */}
+      <main style={{ maxWidth: 1140, width: '100%', margin: '0 auto', padding: '32px 20px 64px', flex: 1 }}>
+        <div className="pf-landing-grid">
+          {/* Coluna Editorial / Proposta de Valor */}
           <div>
             <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
-                background: 'rgba(22, 163, 74, 0.15)',
-                border: '1px solid rgba(34, 197, 94, 0.35)',
-                color: '#86efac',
-                padding: '6px 12px',
+                gap: 7,
+                background: 'rgba(96, 0, 0, 0.06)',
+                border: '1px solid rgba(96, 0, 0, 0.18)',
+                color: 'var(--accent, #600000)',
+                padding: '6px 13px',
                 borderRadius: 99,
                 fontSize: 12.5,
                 fontWeight: 700,
+                letterSpacing: '0.02em',
                 marginBottom: 16,
               }}
             >
-              <Sparkles size={14} /> 7 dias grátis · Sem precisar cadastrar cartão
+              <Sparkles size={14} /> Privilege Finanças Pessoais · 7 dias grátis
             </div>
 
-            <h1 style={{ margin: 0, fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 900, lineHeight: 1.12, letterSpacing: '-0.03em' }}>
-              Controle seu dinheiro pelo <span style={{ color: '#4ade80' }}>WhatsApp</span> com uma IA cuidando do seu bolso.
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: "'Instrument Serif', Georgia, serif",
+                fontSize: 'clamp(34px, 5vw, 52px)',
+                fontWeight: 400,
+                lineHeight: 1.08,
+                color: 'var(--text-primary, #141413)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Controle seu dinheiro pelo <span style={{ color: 'var(--accent, #600000)', fontStyle: 'italic' }}>WhatsApp</span> com inteligência financeira de verdade.
             </h1>
 
-            <p style={{ margin: '16px 0 22px', fontSize: 16, lineHeight: 1.6, color: '#cbd5e1' }}>
-              Mande um áudio, foto de cupom ou PDF de recibo médico no WhatsApp. O sistema lança, concilia seu extrato bancário, organiza cartões, investimentos, rendimentos e monta sua <strong>Pasta do IRPF</strong> automaticamente.
+            <p
+              style={{
+                margin: '16px 0 24px',
+                fontSize: 15.5,
+                lineHeight: 1.65,
+                color: 'var(--text-secondary, #4a4945)',
+              }}
+            >
+              Envie um áudio, texto ou foto de cupom/PDF de recibo médico no WhatsApp. O sistema lança seus gastos, concilia seu extrato bancário com IA, controla cartões, investimentos, rendimentos e organiza sua <strong>Pasta do IRPF</strong> automaticamente.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+            {/* Benefícios em Cards no padrão Privilege */}
+            <div className="pf-features-grid">
               {[
-                { icon: MessageSquare, title: 'Lançamento por Áudio e Foto', desc: '"Gastei 85 no mercado" ou foto do cupom direto no WhatsApp.' },
-                { icon: Brain, title: 'Conciliação de Extrato com IA', desc: 'Sobe o OFX/CSV: a IA detecta o que já foi lançado e categoriza pelo seu histórico.' },
-                { icon: TrendingUp, title: 'Investimentos & Rendimentos', desc: 'Renda Fixa, Bolsa, Day Trade (DARF 20%), Consórcios e Dividendos.' },
-                { icon: FileText, title: 'Pasta IRPF com PDF', desc: 'Guarda recibos de Saúde e Educação com PDF pronto para baixar na declaração.' },
-                { icon: CreditCard, title: 'Cartões & Plano anti-Dívidas', desc: 'Consultor IA cria um plano prático para quitar juros caros e investir melhor.' },
-                { icon: ShieldCheck, title: 'Privado e 100% seu', desc: 'Seus dados ficam isolados e acessíveis no celular ou computador.' },
+                {
+                  icon: MessageSquare,
+                  title: 'Lançamento por Áudio e Foto',
+                  desc: 'Mande "Gastei 85 no mercado no pix" ou a foto do comprovante direto no WhatsApp.',
+                },
+                {
+                  icon: Brain,
+                  title: 'Conciliação de Extrato com IA',
+                  desc: 'Sobe seu OFX/CSV: a IA identifica o que já foi lançado e categoriza usando o seu histórico.',
+                },
+                {
+                  icon: TrendingUp,
+                  title: 'Investimentos & Rendimentos',
+                  desc: 'Renda Fixa, Bolsa, Day Trade (DARF 20%), Consórcios e rendimentos vinculados por ativo.',
+                },
+                {
+                  icon: FileText,
+                  title: 'Pasta IRPF com PDF',
+                  desc: 'Guarda recibos de Saúde, Educação e Previdência com o documento fiscal pronto para baixar.',
+                },
+                {
+                  icon: CreditCard,
+                  title: 'Cartões & Plano anti-Dívidas',
+                  desc: 'Consultor IA cria um plano prático para quitar juros caros e melhorar seus investimentos.',
+                },
+                {
+                  icon: ShieldCheck,
+                  title: 'Segurança e Privacidade',
+                  desc: 'Seus dados pessoais ficam 100% isolados, acessíveis no celular ou computador.',
+                },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
                   <div
                     key={item.title}
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.09)',
+                      background: 'var(--bg-card, #ffffff)',
+                      border: '1px solid var(--border, #e6e4de)',
                       borderRadius: 14,
-                      padding: 14,
+                      padding: 16,
+                      boxShadow: 'var(--shadow, 0 1px 2px rgba(20, 20, 19, 0.04))',
                     }}
                   >
-                    <Icon size={18} color="#4ade80" style={{ marginBottom: 6 }} />
-                    <div style={{ fontWeight: 800, fontSize: 14 }}>{item.title}</div>
-                    <div style={{ fontSize: 12.5, color: '#94a3b8', marginTop: 3, lineHeight: 1.45 }}>{item.desc}</div>
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 9,
+                        background: 'rgba(96, 0, 0, 0.07)',
+                        color: 'var(--accent, #600000)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Icon size={17} />
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text-primary, #141413)' }}>{item.title}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted, #6e6c66)', marginTop: 4, lineHeight: 1.5 }}>{item.desc}</div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Coluna Formulário de Autocadastro */}
+          {/* Coluna Card de Assinatura / Autocadastro */}
           <div
             style={{
-              background: '#ffffff',
-              color: '#0f172a',
-              borderRadius: 20,
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border, #e6e4de)',
+              borderTop: '4px solid var(--accent, #600000)',
+              borderRadius: 16,
               padding: '26px 24px',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+              boxShadow: 'var(--shadow-lg, 0 12px 28px rgba(20, 20, 19, 0.08))',
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#15803d' }}>
-              Acesso Imediato
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <span
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  color: 'var(--gold, #a88948)',
+                }}
+              >
+                Teste Grátis por 7 Dias
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: 'rgba(21, 128, 61, 0.08)',
+                  color: '#15803d',
+                  padding: '3px 9px',
+                  borderRadius: 99,
+                }}
+              >
+                Sem cartão agora
+              </span>
             </div>
-            <h2 style={{ margin: '4px 0 6px', fontSize: 22, fontWeight: 900 }}>
-              Comece seu teste grátis de 7 dias
+
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: "'Instrument Serif', Georgia, serif",
+                fontSize: 28,
+                fontWeight: 400,
+                color: 'var(--text-primary, #141413)',
+              }}
+            >
+              Comece agora mesmo
             </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13.5, color: '#64748b' }}>
-              Depois do teste: <strong>R$ 29,90/mês</strong> ou <strong>R$ 297/ano</strong> (2 meses grátis). Cancele quando quiser.
-            </p>
+
+            <div
+              style={{
+                margin: '12px 0 18px',
+                padding: '12px 14px',
+                borderRadius: 12,
+                background: 'var(--bg-card2, #f3f2ee)',
+                border: '1px solid var(--border, #e6e4de)',
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted, #6e6c66)', fontWeight: 600 }}>Após os 7 dias grátis</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted, #6e6c66)' }}>Cancele quando quiser</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent, #600000)' }}>R$ 29,90</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-muted, #6e6c66)' }}>/mês</span>
+              </div>
+            </div>
 
             <form onSubmit={handleCadastrar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 4 }}>Seu nome</label>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                  Nome completo
+                </label>
                 <input
+                  className="form-control"
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex.: Maria Silva"
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 15, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 4 }}>Seu melhor e-mail</label>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                  E-mail de acesso
+                </label>
                 <input
+                  className="form-control"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="maria@email.com"
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 15, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 4 }}>WhatsApp com DDD</label>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                  WhatsApp com DDD
+                </label>
                 <input
+                  className="form-control"
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(46) 99999-9999"
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 15, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 4 }}>Crie uma senha (mín. 6 caracteres)</label>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary, #4a4945)', display: 'block', marginBottom: 4 }}>
+                  Crie sua senha (mín. 6 caracteres)
+                </label>
                 <input
+                  className="form-control"
                   type="password"
                   required
                   minLength={6}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="••••••"
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 15, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-dark, #d3d0c8)', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -216,35 +402,60 @@ export default function VendasFinancasPessoaisPage() {
                   marginTop: 6,
                   width: '100%',
                   padding: '13px 16px',
-                  borderRadius: 12,
+                  borderRadius: 10,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                  color: '#fff',
-                  fontSize: 15.5,
-                  fontWeight: 800,
+                  background: 'var(--accent, #600000)',
+                  color: '#ffffff',
+                  fontSize: 15,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
+                  boxShadow: 'var(--shadow-accent, 0 2px 8px rgba(96, 0, 0, 0.16))',
                 }}
               >
-                {enviando ? 'Liberando seu acesso...' : 'Criar conta e testar grátis'}
+                {enviando ? 'Liberando seu acesso...' : 'Criar conta e testar 7 dias grátis'}
                 {!enviando && <ArrowRight size={17} />}
               </button>
             </form>
 
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={14} color="#16a34a" /> Liberação instantânea no painel e no WhatsApp
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-light, #efede8)', display: 'flex', flexDirection: 'column', gap: 7, fontSize: 12.5, color: 'var(--text-secondary, #4a4945)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <CheckCircle2 size={14} color="#15803d" /> Acesso imediato no painel e integrado ao seu WhatsApp
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={14} color="#16a34a" /> Funciona direto no navegador do celular e computador
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <CheckCircle2 size={14} color="#15803d" /> Layout otimizado para celular e computador
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <CheckCircle2 size={14} color="#15803d" /> Tecnologia Privilege Contabilidade e Consultoria
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Rodapé Institucional */}
+      <footer
+        style={{
+          background: '#ffffff',
+          borderTop: '1px solid var(--border, #e6e4de)',
+          padding: '20px',
+          textAlign: 'center',
+          fontSize: 13,
+          color: 'var(--text-muted, #6e6c66)',
+        }}
+      >
+        © {new Date().getFullYear()} Privilege Contabilidade e Consultoria ·{' '}
+        <Link href="/privacidade" style={{ color: 'var(--accent, #600000)', textDecoration: 'none', fontWeight: 600 }}>
+          Privacidade
+        </Link>{' '}
+        ·{' '}
+        <Link href="/termos" style={{ color: 'var(--accent, #600000)', textDecoration: 'none', fontWeight: 600 }}>
+          Termos de Uso
+        </Link>
+      </footer>
     </div>
   );
 }
