@@ -1186,10 +1186,20 @@ export async function sendBaileysLiveMessage(
           mimetype: mime,
         });
       } else if (options.mediaType === 'audio') {
+        const isOggOpus =
+          mime.includes('ogg') ||
+          mime.includes('opus') ||
+          (buffer.length >= 4 && buffer.subarray(0, 4).toString('ascii') === 'OggS');
+        const isMp3 =
+          !isOggOpus &&
+          (mime.includes('mpeg') ||
+            mime.includes('mp3') ||
+            (buffer.length >= 3 && buffer.subarray(0, 3).toString('ascii') === 'ID3') ||
+            (buffer.length >= 2 && buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0));
         sentMsg = await sock.sendMessage(jid, {
           audio: buffer,
-          mimetype: mime.includes('ogg') ? mime : 'audio/mp4',
-          ptt: true,
+          mimetype: isOggOpus ? 'audio/ogg; codecs=opus' : isMp3 ? 'audio/mpeg' : mime || 'audio/mpeg',
+          ptt: isOggOpus,
         });
       } else if (options.mediaType === 'document') {
         sentMsg = await sock.sendMessage(jid, {

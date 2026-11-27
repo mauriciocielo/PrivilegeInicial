@@ -272,7 +272,7 @@ export async function synthesizeVoiceReplyPtBr(params: {
           model: 'tts-1',
           voice,
           input: spokenText.slice(0, 900),
-          response_format: 'mp3',
+          response_format: 'opus',
           speed: 1.03,
         }),
         signal: AbortSignal.timeout(9000),
@@ -282,8 +282,8 @@ export async function synthesizeVoiceReplyPtBr(params: {
         const arrBuf = await res.arrayBuffer();
         const b64 = Buffer.from(arrBuf).toString('base64');
         return {
-          audioDataUrl: `data:audio/mpeg;base64,${b64}`,
-          mimeType: 'audio/mp4',
+          audioDataUrl: `data:audio/ogg; codecs=opus;base64,${b64}`,
+          mimeType: 'audio/ogg; codecs=opus',
         };
       }
     } catch (err) {
@@ -342,7 +342,7 @@ export async function synthesizeVoiceReplyPtBr(params: {
           if (mp3Buffer.length > 0) {
             return {
               audioDataUrl: `data:audio/mpeg;base64,${mp3Buffer.toString('base64')}`,
-              mimeType: 'audio/mp4',
+              mimeType: 'audio/mpeg',
             };
           }
         }
@@ -405,7 +405,7 @@ export async function synthesizeVoiceReplyPtBr(params: {
       const combined = Buffer.concat(buffers);
       return {
         audioDataUrl: `data:audio/mpeg;base64,${combined.toString('base64')}`,
-        mimeType: 'audio/mp4',
+        mimeType: 'audio/mpeg',
       };
     }
   } catch (err) {
