@@ -59,11 +59,70 @@ function parseValorMonetario(texto: string): number {
   return parseFloat(raw) || 0;
 }
 
-export function interpretarComandoEmissaoNfse(textoBruto: string): {
+export interface PedidoEmissaoWhatsApp {
   valor: number;
   tomadorBusca: string;
+  documento?: string;
+  email?: string;
   descricao: string;
-} | null {
+}
+
+function extrairDocumentoTexto(texto: string): string {
+  const mCnpj = texto.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/);
+  if (mCnpj) return apenasDigitos(mCnpj[0]);
+  const mCpf = texto.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/);
+  if (mCpf) return apenasDigitos(mCpf[0]);
+  return '';
+}
+
+function extrairEmailTexto(texto: string): string {
+  const m = texto.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  return m ? m[0].toLowerCase() : '';
+}
+
+/**
+ * Interpreta ficha estruturada enviada por escrito no WhatsApp, ex.:
+ * Emitir nota
+ * CNPJ: 12.345.678/0001-90
+ * Nome: Empresa X (opcional se for CNPJ)
+ * Valor: 2.500,00
+ * Descrição: Consultoria mensal
+ * E-mail: financeiro@empresa.com
+ */
+export function interpretarFichaEscritaNfse(textoBruto: string): PedidoEmissaoWhatsApp | null {
+  const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
+  const temValorLabel = /\bvalor\s*[:=-]/i.test(limpo);
+  const temDocOuNomeLabel = /\b(cnpj|cpf|tomador|cliente|nome)\s*[:=-]/i.test(limpo);
+  if (!temValorLabel && !temDocOuNomeLabel) return null;
+
+  const mVal = limpo.match(/\bvalor(?:\s+da\s+nota|\s+do\s+servi[cç]o)?\s*[:=-]\s*([^\n]+)/i);
+  const valor = mVal ? parseValorMonetario(mVal[1]) : parseValorMonetario(limpo);
+  if (valor <= 0) return null;
+
+  const documento = extrairDocumentoTexto(limpo);
+  const mNome = limpo.match(/\b(?:nome|tomador|cliente|raz[aã]o(?:\s+social)?)\s*[:=-]\s*([^\n]+)/i);
+  const nome = (mNome?.[1] || '').replace(/\(.*?\)/g, '').trim();
+  const mDesc = limpo.match(/\b(?:descri[cç][aã]o(?:\s+do\s+servi[cç]o)?|servi[cç]o|discrimina[cç][aã]o|referente)\s*[:=-]\s*([^\n]+)/i);
+  const descricao = (mDesc?.[1] || '').trim();
+  const email = extrairEmailTexto(limpo);
+
+  const tomadorBusca = nome || documento;
+  if (!tomadorBusca) return null;
+
+  return {
+    valor: Math.round(valor * 100) / 100,
+    tomadorBusca,
+    documento: documento || undefined,
+    email: email || undefined,
+    descricao,
+  };
+}
+
+export function interpretarComandoEmissaoNfse(textoBruto: string): PedidoEmissaoWhatsApp | null {
+  // 1. Primeiro tenta ficha estruturada por escrito (CNPJ:/Valor:/Descrição:)
+  const ficha = interpretarFichaEscritaNfse(textoBruto);
+  if (ficha) return ficha;
+
   // Remove prefixo de grupo "[Nome]: ..."
   const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
   const gatilho = /(?:^\/emitir\b|\b(?:emit[aei]r?|faz(?:er)?|tir[ae]r?|ger[ae]r?|lan[cç][ae]r?)\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?))/i;
@@ -72,26 +131,31 @@ export function interpretarComandoEmissaoNfse(textoBruto: string): {
   const valor = parseValorMonetario(limpo);
   if (valor <= 0) return null;
 
+  const documento = extrairDocumentoTexto(limpo);
+  const email = extrairEmailTexto(limpo);
+
   // Extrai tomador após "para", "pro", "pra" até "referente", "ref", "sobre", "servico" ou fim
   const mToma = limpo.match(/\b(?:para|pro|pra)\s+(?:a\s+|o\s+)?(.+?)(?=\s+(?:referente|ref\.?|sobre|servi[cç]o|desc(?:ri[cç][aã]o)?|no\s+valor)\b|$)/i);
-  const tomadorBusca = (mToma?.[1] || '').trim().replace(/[.,;]+$/, '');
+  const tomadorBusca = (mToma?.[1] || documento || '').trim().replace(/[.,;]+$/, '');
 
   const mDesc = limpo.match(/\b(?:referente\s+a[o]?|referente|ref\.?|sobre|servi[cç]o(?:\s+de)?|desc(?:ri[cç][aã]o)?)\s+(.+)$/i);
   const descricao = (mDesc?.[1] || '').trim();
 
   if (!tomadorBusca) return null;
-  return { valor: Math.round(valor * 100) / 100, tomadorBusca, descricao };
+  return {
+    valor: Math.round(valor * 100) / 100,
+    tomadorBusca,
+    documento: documento || undefined,
+    email: email || undefined,
+    descricao,
+  };
 }
 
 /**
- * Fallback com IA para entender fala natural (especialmente áudios transcritos),
+ * Fallback com IA para entender fala natural (especialmente áudios transcritos e mensagens livres),
  * como "Oi Léo, tira uma nota de dois mil e quinhentos pro Condomínio Solaris de manutenção".
  */
-async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<{
-  valor: number;
-  tomadorBusca: string;
-  descricao: string;
-} | null> {
+async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<PedidoEmissaoWhatsApp | null> {
   const limpo = textoBruto.replace(/^\[[^\]]+\]:\s*/, '').trim();
   const parecePedidoNota =
     /\b(nota|nfse|nfs-e|faturar|emitir|emite|tira(?:r)?\s+uma\s+nota|faz(?:er)?\s+uma\s+nota)\b/i.test(limpo) &&
@@ -101,13 +165,13 @@ async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<{
   try {
     const ai = await generateText({
       jsonMode: true,
-      maxTokens: 220,
+      maxTokens: 250,
       temperature: 0.1,
       timeoutMs: 10000,
       system:
-        'Você extrai pedidos de emissão de Nota Fiscal de Serviço (NFS-e) de mensagens ou áudios transcritos de WhatsApp. ' +
-        'Se a mensagem NÃO for um pedido claro para emitir uma nota fiscal (por exemplo, se for apenas uma dúvida sobre notas fiscais), retorne {"ehPedido": false}. ' +
-        'Se FOR um pedido para emitir uma nota, retorne {"ehPedido": true, "valor": numero_float, "tomador": "nome ou CNPJ/CPF do cliente/tomador", "descricao": "descrição do serviço ou vazio"}. ' +
+        'Você extrai pedidos de emissão de Nota Fiscal de Serviço (NFS-e) de mensagens escritas ou áudios transcritos de WhatsApp. ' +
+        'Se a mensagem NÃO for um pedido claro para emitir uma nota fiscal (ex.: apenas dúvida), retorne {"ehPedido": false}. ' +
+        'Se FOR um pedido para emitir uma nota com dados, retorne {"ehPedido": true, "valor": numero_float, "tomador": "nome do cliente/tomador ou vazio", "documento": "apenas digitos do CNPJ ou CPF se informado ou vazio", "email": "email se informado ou vazio", "descricao": "descrição do serviço ou vazio"}. ' +
         'Converta valores por extenso (ex.: "dois mil e quinhentos") para número (2500).',
       prompt: limpo,
     });
@@ -115,13 +179,46 @@ async function interpretarComandoEmissaoComIA(textoBruto: string): Promise<{
     const parsed = JSON.parse(ai.text);
     if (!parsed?.ehPedido) return null;
     const valor = Math.round((Number(parsed.valor) || 0) * 100) / 100;
-    const tomadorBusca = String(parsed.tomador || '').trim();
+    const documento = apenasDigitos(String(parsed.documento || '')) || extrairDocumentoTexto(limpo);
+    const tomadorBusca = String(parsed.tomador || '').trim() || documento;
     const descricao = String(parsed.descricao || '').trim();
+    const email = String(parsed.email || '').trim().toLowerCase() || extrairEmailTexto(limpo);
     if (valor <= 0 || !tomadorBusca) return null;
-    return { valor, tomadorBusca, descricao };
+    return {
+      valor,
+      tomadorBusca,
+      documento: documento || undefined,
+      email: email || undefined,
+      descricao,
+    };
   } catch {
     return null;
   }
+}
+
+async function consultarRazaoReceitaCnpj(cnpj14: string): Promise<{ razaoSocial: string; email: string | null } | null> {
+  if (cnpj14.length !== 14) return null;
+  const tentar = async (url: string) => {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'PortalFiscal/1.0', Accept: 'application/json' },
+        signal: AbortSignal.timeout(4500),
+      });
+      if (!res.ok) return null;
+      const d = await res.json().catch(() => null);
+      const razao = String(d?.razao_social || d?.nome || '').trim();
+      if (!razao) return null;
+      const emailRaw = String(d?.email || d?.estabelecimento?.email || '').trim().toLowerCase();
+      return { razaoSocial: razao, email: emailRaw.includes('@') ? emailRaw : null };
+    } catch {
+      return null;
+    }
+  };
+  return (
+    (await tentar(`https://brasilapi.com.br/api/cnpj/v1/${cnpj14}`)) ||
+    (await tentar(`https://minhareceita.org/${cnpj14}`)) ||
+    (await tentar(`https://receitaws.com.br/v1/cnpj/${cnpj14}`))
+  );
 }
 
 async function localizarEmpresaPorChat(rawJid: string, cleanPhone: string, isGroup: boolean) {
@@ -383,9 +480,33 @@ export async function processarComandoNfseWhatsApp(params: {
       return true;
     }
 
-    // 2. Verifica se é um novo comando de emissão natural (texto ou áudio transcrito)
+    // 2. Verifica se é um novo comando de emissão natural (ficha escrita, frase livre ou áudio transcrito)
     const cmd = interpretarComandoEmissaoNfse(limpo) || (await interpretarComandoEmissaoComIA(limpo));
-    if (!cmd) return false;
+
+    // Se o cliente pediu para emitir nota mas ainda não passou os dados, envia o modelo pronto para preencher!
+    if (!cmd) {
+      const pedeModelo = /^(?:quero\s+|preciso\s+|pode\s+)?(?:emitir|emite|tirar|fazer|gerar)\s+(?:uma\s+)?(?:nfse|nfs-e|nota(?:\s+fiscal)?)\s*[!?.\s]*$/i.test(limpo);
+      if (!pedeModelo) return false;
+
+      const empresaModelo = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup);
+      if (!empresaModelo?.nfseConfig) return false;
+
+      await params.enviarMensagem(
+        params.sendJid,
+        [
+          `📝 *Emitir NFS-e pelo WhatsApp*`,
+          `Você pode mandar um *áudio* falando os dados ou copiar e preencher por escrito abaixo:`,
+          '',
+          `Emitir nota`,
+          `CNPJ ou CPF: `,
+          `Nome (se for CPF): `,
+          `Valor: R$ `,
+          `Descrição do serviço: `,
+          `E-mail do cliente (opcional): `,
+        ].join('\n')
+      );
+      return true;
+    }
 
     const empresa = await localizarEmpresaPorChat(params.rawJid, params.cleanPhone, params.isGroup);
     if (!empresa || !empresa.nfseConfig) {
@@ -397,7 +518,7 @@ export async function processarComandoNfseWhatsApp(params: {
     }
 
     // Busca tomador nas notas anteriores da empresa (puxa CNPJ, serviço e retenções automaticamente)
-    const digBusca = apenasDigitos(cmd.tomadorBusca);
+    const digBusca = cmd.documento || apenasDigitos(cmd.tomadorBusca);
     const notasAnteriores = await db.nfsE.findMany({
       where: { empresaId: empresa.id, status: 'emitida' },
       orderBy: { dataEmissao: 'desc' },
@@ -407,12 +528,12 @@ export async function processarComandoNfseWhatsApp(params: {
     const termo = cmd.tomadorBusca.toLowerCase();
     const notaBase = notasAnteriores.find((n) => {
       if (digBusca.length >= 11 && apenasDigitos(n.tomadorCnpjCpf) === digBusca) return true;
-      return (n.tomadorRazaoSocial || '').toLowerCase().includes(termo);
+      return termo.length >= 3 && (n.tomadorRazaoSocial || '').toLowerCase().includes(termo);
     });
 
     let tomadorNome = notaBase?.tomadorRazaoSocial || '';
     let tomadorDocumento = notaBase?.tomadorCnpjCpf || '';
-    let tomadorEmail = notaBase?.tomadorEmail || null;
+    let tomadorEmail = cmd.email || notaBase?.tomadorEmail || null;
     const ultimaNotaQualquer = notasAnteriores[0];
 
     if (!notaBase) {
@@ -420,19 +541,41 @@ export async function processarComandoNfseWhatsApp(params: {
       const cli = clientes.find(
         (c) =>
           (digBusca.length >= 11 && apenasDigitos(c.cpfCnpj) === digBusca) ||
-          c.nome.toLowerCase().includes(termo)
+          (termo.length >= 3 && c.nome.toLowerCase().includes(termo))
       );
       if (cli) {
         tomadorNome = cli.nome;
         tomadorDocumento = cli.cpfCnpj;
-        tomadorEmail = cli.email || null;
+        tomadorEmail = cmd.email || cli.email || null;
+      }
+    }
+
+    // Se for um CNPJ NOVO (14 dígitos) enviado por escrito/áudio, busca a Razão Social direto na Receita Federal!
+    if ((!tomadorNome || !tomadorDocumento) && digBusca.length === 14) {
+      const rf = await consultarRazaoReceitaCnpj(digBusca);
+      if (rf?.razaoSocial) {
+        tomadorNome = rf.razaoSocial;
+        tomadorDocumento = digBusca;
+        tomadorEmail = cmd.email || rf.email || null;
+      } else if (cmd.tomadorBusca && apenasDigitos(cmd.tomadorBusca) !== digBusca) {
+        tomadorNome = cmd.tomadorBusca;
+        tomadorDocumento = digBusca;
+      }
+    }
+
+    // Se for um CPF NOVO (11 dígitos) + Nome informados por escrito/áudio, aceita diretamente!
+    if ((!tomadorNome || !tomadorDocumento) && digBusca.length === 11) {
+      const nomeLimpo = cmd.tomadorBusca.replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/, '').replace(/\bcpf\b/i, '').trim();
+      if (nomeLimpo.length >= 3) {
+        tomadorNome = nomeLimpo;
+        tomadorDocumento = digBusca;
       }
     }
 
     if (!tomadorNome || !tomadorDocumento) {
       await params.enviarMensagem(
         params.sendJid,
-        `⚠️ Não encontrei o tomador *"${cmd.tomadorBusca}"* no histórico de notas ou clientes de *${empresa.nomeFantasia || empresa.razaoSocial}*.\nEnvie o nome exato de um cliente já atendido ou o CNPJ/CPF dele.`
+        `⚠️ Não encontrei o tomador *"${cmd.tomadorBusca}"* no histórico de *${empresa.nomeFantasia || empresa.razaoSocial}*.\n\nPara emitir para um cliente novo, envie por escrito informando o *CNPJ* (ou *CPF + Nome*):\n\nEmitir nota\nCNPJ ou CPF: \nNome (se for CPF): \nValor: R$ ${cmd.valor.toFixed(2).replace('.', ',')}\nDescrição: ${cmd.descricao || 'Prestação de serviços'}`
       );
       return true;
     }
