@@ -1322,3 +1322,23 @@ export async function deleteBaileysMessage(
     return false;
   }
 }
+
+/**
+ * Envia status de presença humana ("digitando..." / "gravando áudio..." / "paused") no WhatsApp.
+ */
+export async function sendBaileysPresence(
+  phoneOrJid: string,
+  presence: 'composing' | 'recording' | 'paused',
+  ownerId = 'default'
+): Promise<void> {
+  try {
+    const sock = getBaileysSocketForOwner(ownerId);
+    if (!sock?.user?.id || !phoneOrJid) return;
+    const jid = phoneOrJid.includes('@')
+      ? phoneOrJid
+      : await resolveWhatsAppJid(sock, phoneOrJid, ownerId);
+    await sock.sendPresenceUpdate(presence, jid);
+  } catch {
+    // silencioso
+  }
+}

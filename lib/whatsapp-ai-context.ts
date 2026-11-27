@@ -162,18 +162,55 @@ export async function buildWhatsAppAiContext(params: {
       });
       const emp = empresas.find((e) => apenasDigitos(e.telefone).endsWith(ult8));
       if (emp) {
-        const mesAtual = new Date().toISOString().slice(0, 7);
-        const nfsesMes = await db.nfsE.findMany({
-          where: {
-            empresaId: emp.id,
-            status: 'emitida',
-            OR: [{ dataCompetencia: { startsWith: mesAtual } }, { dataEmissao: { startsWith: mesAtual } }],
-          },
-          select: { valorServicos: true },
-        });
+        const hoje = new Date();
+        const mesAtual = hoje.toISOString().slice(0, 7);
+        const inicio12m = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1).toISOString().slice(0, 10);
+        const hojeIso = hoje.toISOString().slice(0, 10);
+        const em7DiasIso = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+        const [nfses12m, contasPagar7d] = await Promise.all([
+          db.nfsE.findMany({
+            where: {
+              empresaId: emp.id,
+              status: 'emitida',
+              dataEmissao: { gte: inicio12m },
+            },
+            select: {
+              numero: true,
+              prestadorCnpj: true,
+              tomadorRazaoSocial: true,
+              dataEmissao: true,
+              dataCompetencia: true,
+              valorServicos: true,
+            },
+            orderBy: { dataEmissao: 'desc' },
+          }),
+          db.lancamento.findMany({
+            where: {
+              empresaId: emp.id,
+              tipo: 'despesa',
+              status: 'previsto',
+              data: { gte: hojeIso, lte: em7DiasIso },
+            },
+            select: { descricao: true, data: true, valor: true },
+            orderBy: { data: 'asc' },
+            take: 5,
+          }),
+        ]);
+
+        const cnpjEmp = apenasDigitos(emp.cnpj);
+        const prestadas12m = nfses12m.filter((n) => !apenasDigitos(n.prestadorCnpj) || apenasDigitos(n.prestadorCnpj) === cnpjEmp);
+        const rbt12 = prestadas12m.reduce((acc, n) => acc + Number(n.valorServicos || 0), 0);
+        const nfsesMes = prestadas12m.filter(
+          (n) => n.dataEmissao.startsWith(mesAtual) || n.dataCompetencia === mesAtual
+        );
         const totalFatMes = nfsesMes.reduce((acc, n) => acc + Number(n.valorServicos || 0), 0);
+        const ultimaNota = prestadas12m[0];
         const opSimp = emp.nfseConfig?.opSimpNac ?? 3;
         const regime = opSimp === 2 ? 'MEI' : opSimp === 1 ? 'Regime Normal' : 'Simples Nacional';
+        const tetoRef = regime === 'MEI' ? 81_000 : regime === 'Simples Nacional' ? 4_800_000 : 0;
+        const pctTeto = tetoRef > 0 ? ` (${Math.round((rbt12 / tetoRef) * 1000) / 10}% do teto)` : '';
+
         let certInfo = 'Não configurado';
         if (emp.nfseConfig?.certValidoAte) {
           const dias = Math.ceil((emp.nfseConfig.certValidoAte.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -185,14 +222,27 @@ export async function buildWhatsAppAiContext(params: {
           certInfo = 'Procuração eletrônica ativa';
         }
 
+        const totalPagar7d = contasPagar7d.reduce((acc, c) => acc + Number(c.valor || 0), 0);
+        const resumoPagar7d =
+          contasPagar7d.length > 0
+            ? `${contasPagar7d.length} conta(s) vencendo nos próximos 7 dias (total R$ ${totalPagar7d.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+            : 'Nenhuma conta prevista para os próximos 7 dias';
+
         empresaSummary = [
           `ESTE CONTATO É UM CLIENTE CADASTRADO NO SISTEMA (use esses dados para ajudar com precisão, sem expor informações para terceiros):`,
           `• Empresa: ${emp.nomeFantasia || emp.razaoSocial} (CNPJ ${emp.cnpj})`,
           `• Regime: ${regime}`,
           `• Certificado A1: ${certInfo}`,
           `• NFS-e emitidas em ${mesAtual}: ${nfsesMes.length} nota(s), total R$ ${totalFatMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-          `• Recurso disponível: o cliente pode emitir NFS-e direto por este WhatsApp enviando "Emite uma nota de R$ VALOR para NOME_DO_CLIENTE referente a SERVIÇO".`,
-        ].join('\n');
+          `• Acumulado 12 meses (RBT12 NFS-e): R$ ${rbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${pctTeto}`,
+          ultimaNota
+            ? `• Última NFS-e emitida: nº ${ultimaNota.numero} em ${ultimaNota.dataEmissao.slice(0, 10)} para ${ultimaNota.tomadorRazaoSocial} (R$ ${Number(ultimaNota.valorServicos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+            : '',
+          `• Contas a Pagar (7 dias): ${resumoPagar7d}`,
+          `• Recursos instantâneos neste WhatsApp: emitir NFS-e por texto/áudio ("Emite uma nota de R$ VALOR para CLIENTE referente a SERVIÇO") e pedir PDF da última nota ("Me manda o PDF da última nota").`,
+        ]
+          .filter(Boolean)
+          .join('\n');
       }
     } catch {
       // ignora erro de consulta de empresa

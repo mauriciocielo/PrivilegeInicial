@@ -1,12 +1,17 @@
 import { getEmailDbPool } from './email-db';
 import QRCode from 'qrcode';
 import { findTaughtAnswer, getTaughtLessonsContext, autoLearnFromConsultantReply, learnFromAllHistoricalMessages } from './knowledge-service';
-import { sendBaileysLiveMessage, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
+import { sendBaileysLiveMessage, sendBaileysPresence, sendBaileysReaction, editBaileysMessage, deleteBaileysMessage, ensureBaileysConnected, verificarNumeroNoWhatsApp } from './baileys-manager';
 import { runTriageStep, handoverToTeam, saveDemandForAi, isValidContactName } from './triage-agent';
 import { processarRespostaLeadComercial } from './comercial-funil-ia';
 import { generateText } from './ai-provider';
 import { buildWhatsAppAiContext } from './whatsapp-ai-context';
 import { buscarNaInternetParaBot } from './web-search';
+import {
+  analisarImagemWhatsApp,
+  enriquecerCrmAutomaticamente,
+  processarAutoatendimentoClienteWhatsApp,
+} from './whatsapp-premium-plus';
 import {
   AssistantPersona,
   DEFAULT_ASSISTANTS,
@@ -338,8 +343,8 @@ export async function getWhatsAppConfig(ownerId = 'default'): Promise<WhatsAppCo
         typeof r.assistants === 'string'
           ? JSON.parse(r.assistants)
           : Array.isArray(r.assistants) && r.assistants.length > 0
-          ? r.assistants
-          : DEFAULT_ASSISTANTS,
+            ? r.assistants
+            : DEFAULT_ASSISTANTS,
       updated_at: r.updated_at,
     };
   } catch (err) {
@@ -557,7 +562,7 @@ export async function ensureChatColumns(pool: any) {
     await pool.query(`
       ALTER TABLE whatsapp_messages
         ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT 'default';
-    `).catch(() => {});
+    `).catch(() => { });
     await pool.query(`
       CREATE TABLE IF NOT EXISTS whatsapp_protocols (
         id TEXT PRIMARY KEY,
@@ -572,7 +577,7 @@ export async function ensureChatColumns(pool: any) {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         closed_at TIMESTAMPTZ
       );
-    `).catch(() => {});
+    `).catch(() => { });
     await pool.query(`UPDATE whatsapp_chats SET ticket_status = 'aberto' WHERE ticket_status IS NULL`);
     await pool.query(`UPDATE whatsapp_chats SET owner_id = 'default' WHERE owner_id IS NULL`);
     __chatColumnsEnsured = true;
@@ -708,7 +713,7 @@ export async function checkAndDispatchDueFollowups(pool: any) {
         sentBy: 'consultor',
         senderName: 'Follow-up Privilege',
         ownerId: row.owner_id || 'default',
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } catch {
   } finally {
@@ -728,7 +733,7 @@ export async function runWhatsAppBackgroundTick(): Promise<void> {
   const now = Date.now();
   if (now - __lastAutoLearnAt > 10 * 60 * 1000) {
     __lastAutoLearnAt = now;
-    learnFromAllHistoricalMessages().catch(() => {});
+    learnFromAllHistoricalMessages().catch(() => { });
   }
 }
 
@@ -741,13 +746,13 @@ export async function listChats(
   ownerId = 'default'
 ): Promise<WhatsAppChat[]> {
   // Garante que o socket do WhatsApp (Baileys) esteja conectado em background escutando novas mensagens
-  ensureBaileysConnected(false, ownerId).catch(() => {});
+  ensureBaileysConnected(false, ownerId).catch(() => { });
 
   const pool = getEmailDbPool();
   if (!pool) return [];
 
   await ensureChatColumns(pool);
-  checkAndDispatchDueFollowups(pool).catch(() => {});
+  checkAndDispatchDueFollowups(pool).catch(() => { });
 
   try {
     let query = `SELECT * FROM whatsapp_chats`;
@@ -1068,8 +1073,8 @@ export async function sendMessage(params: {
   if (!baileysSent && !externalSent) {
     throw new Error(
       baileysErro ||
-        externalErro ||
-        'WhatsApp desconectado ou número sem WhatsApp. Verifique a conexão na aba Conexão QR Code.'
+      externalErro ||
+      'WhatsApp desconectado ou número sem WhatsApp. Verifique a conexão na aba Conexão QR Code.'
     );
   }
 
@@ -1102,10 +1107,10 @@ export async function sendMessage(params: {
       mediaType === 'audio'
         ? '🎤 Mensagem de áudio'
         : mediaType === 'image'
-        ? '📷 ' + (params.text || 'Imagem')
-        : mediaType === 'document'
-        ? '📄 ' + (params.fileName || params.text || 'Documento')
-        : message.text;
+          ? '📷 ' + (params.text || 'Imagem')
+          : mediaType === 'document'
+            ? '📄 ' + (params.fileName || params.text || 'Documento')
+            : message.text;
     const pauseParams: any[] = [snippet, params.chatId];
 
     if (params.sentBy === 'consultor' && config.human_takeover_minutes > 0) {
@@ -1122,7 +1127,7 @@ export async function sendMessage(params: {
       autoLearnFromConsultantReply({
         chatId: params.chatId,
         consultantReply: message.text,
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }
 
@@ -1151,7 +1156,7 @@ export async function editMessage(params: {
 
   let waKey = row.wa_key;
   if (typeof waKey === 'string') {
-    try { waKey = JSON.parse(waKey); } catch {}
+    try { waKey = JSON.parse(waKey); } catch { }
   }
 
   const editedOnWhatsapp = await editBaileysMessage(row.chat_id || params.chatId, cleanText, waKey, ownerId);
@@ -1186,7 +1191,7 @@ export async function deleteMessage(params: {
 
   let waKey = row.wa_key;
   if (typeof waKey === 'string') {
-    try { waKey = JSON.parse(waKey); } catch {}
+    try { waKey = JSON.parse(waKey); } catch { }
   }
 
   const deletedOnWhatsapp = await deleteBaileysMessage(row.chat_id || params.chatId, waKey, ownerId);
@@ -1243,7 +1248,7 @@ export async function reactToMessage(params: {
 
   // Despacha reação para o WhatsApp real via Baileys
   if (waKey) {
-    sendBaileysReaction(params.chatId, params.emoji, waKey, ownerId).catch(() => {});
+    sendBaileysReaction(params.chatId, params.emoji, waKey, ownerId).catch(() => { });
   }
 
   return current;
@@ -1549,16 +1554,16 @@ const WEB_SEARCH_MARKER = /\[\s*BUSCAR[_\s]WEB\s*:\s*([^\]]+)\]/i;
 function isAiAvailable(config: WhatsAppConfig): boolean {
   return Boolean(
     config.gemini_api_key ||
-      config.claude_api_key ||
-      config.openai_api_key ||
-      (config.api_key && config.api_key.length > 20) ||
-      process.env.GROQ_API_KEY ||
-      process.env.OLLAMA_BASE_URL ||
-      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30) ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.CLAUDE_API_KEY ||
-      process.env.OPENAI_API_KEY
+    config.claude_api_key ||
+    config.openai_api_key ||
+    (config.api_key && config.api_key.length > 20) ||
+    process.env.GROQ_API_KEY ||
+    process.env.OLLAMA_BASE_URL ||
+    (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 30) ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.CLAUDE_API_KEY ||
+    process.env.OPENAI_API_KEY
   );
 }
 
@@ -1849,6 +1854,34 @@ export async function processIncomingMessage(params: {
     }
   }
 
+  // Visão Computacional Premium Plus: se o cliente mandou foto (boleto, comprovante, print de erro, documento),
+  // lê o conteúdo da imagem para a IA responder com total precisão!
+  if (params.mediaType === 'image' && params.mediaUrl && params.mediaUrl.startsWith('data:image/')) {
+    const geminiKey =
+      config.gemini_api_key ||
+      (config.api_key && config.api_key.startsWith('AIza') ? config.api_key : '') ||
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      '';
+    const groqKey =
+      process.env.GROQ_API_KEY ||
+      (config.api_key && config.api_key.startsWith('gsk_') ? config.api_key : '');
+
+    const leituraImagem = await analisarImagemWhatsApp({
+      mediaUrl: params.mediaUrl,
+      caption: cleanText,
+      groqKey,
+      geminiKey,
+    }).catch(() => null);
+
+    if (leituraImagem) {
+      cleanText =
+        cleanText && cleanText !== '📷 Imagem'
+          ? `${cleanText}\n[Análise da imagem enviada pelo cliente: ${leituraImagem}]`
+          : `[Análise da imagem enviada pelo cliente: ${leituraImagem}]`;
+    }
+  }
+
   // Criação automática de tarefas na Agenda a partir de mensagens do WhatsApp desativada
   // para evitar poluição da Agenda; agendamentos devem ser feitos na tela Agenda ou via /agendar.
 
@@ -1886,7 +1919,7 @@ export async function processIncomingMessage(params: {
             params.chatId = dupRes.rows[0].id;
           }
         }
-      } catch {}
+      } catch { }
     }
 
     const snippetForChat = isIncomingAudio
@@ -1962,6 +1995,19 @@ export async function processIncomingMessage(params: {
         enviarMensagem: (jid, msg, media) => sendBaileysLiveMessage(jid, msg, media, ownerId),
       });
       if (tratadoNfse) {
+        return { source: 'ai' };
+      }
+
+      // Autoatendimento Premium Plus: envio instantâneo do PDF da última NFS-e emitida
+      const tratadoAuto = await processarAutoatendimentoClienteWhatsApp({
+        rawJid: params.remoteJid || params.chatId,
+        sendJid: sendTarget,
+        cleanPhone: params.phone,
+        isGroup: ehGrupo,
+        text: cleanText,
+        enviarMensagem: (jid, msg, media) => sendBaileysLiveMessage(jid, msg, media, ownerId),
+      });
+      if (tratadoAuto) {
         return { source: 'ai' };
       }
     } catch (err) {
@@ -2140,7 +2186,7 @@ export async function processIncomingMessage(params: {
           [params.chatId]
         );
         temHistoricoRecente = Number(hRes.rows[0]?.total || 0) > 1;
-      } catch {}
+      } catch { }
     }
     if (!temHistoricoRecente && !aiActive) {
       await dispatchBotReply({
@@ -2185,8 +2231,12 @@ export async function processIncomingMessage(params: {
     const basePersonaPrompt = activePersona?.customPrompt
       ? `${config.bot_prompt}\n\nVocê está atuando como ${activePersona.name} (${activePersona.role}):\n${activePersona.customPrompt}`
       : activePersona && activePersona.id !== 'leo'
-      ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
-      : config.bot_prompt;
+        ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
+        : config.bot_prompt;
+
+    // Presença humana ("digitando..." ou "gravando áudio...") enquanto a IA pensa
+    const sendTarget = params.remoteJid || params.phone;
+    sendBaileysPresence(sendTarget, isIncomingAudio ? 'recording' : 'composing', ownerId).catch(() => { });
 
     const { text: aiReply, handover } = await generateLeoReply(
       cleanText,
@@ -2203,6 +2253,9 @@ export async function processIncomingMessage(params: {
       isIncomingAudio,
       ownerId,
     });
+    sendBaileysPresence(sendTarget, 'paused', ownerId).catch(() => { });
+    // Auto-qualificação silenciosa de CRM (tags + temperatura do lead)
+    enriquecerCrmAutomaticamente({ chatId: params.chatId, userMessage: cleanText }).catch(() => { });
     if (handover) {
       // A própria IA decidiu chamar a equipe: gera o resumo da triagem e pausa o bot
       await handoverToTeam({
@@ -2252,8 +2305,8 @@ export async function processIncomingMessage(params: {
     const personaPrompt = activePersona?.customPrompt
       ? `${config.bot_prompt}\n\nVocê está atuando como ${activePersona.name} (${activePersona.role}):\n${activePersona.customPrompt}`
       : activePersona && activePersona.id !== 'leo'
-      ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
-      : config.bot_prompt;
+        ? `${config.bot_prompt}\n\nNota: Nesta conversa você atende como ${activePersona.name} (${activePersona.role}) da Privilege Contabilidade e Consultoria.`
+        : config.bot_prompt;
 
     const aiReply = await generateGeminiBotReply(cleanText, personaPrompt, ownerId, params.chatId);
     await dispatchBotReply({
