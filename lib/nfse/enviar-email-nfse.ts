@@ -5,6 +5,20 @@ import QRCode from 'qrcode';
 import logoNfse from './dados/logo-nfse.json';
 import { apenasDigitos } from './dps';
 import { gerarDanfsePdf, lerDadosDanfse, marcaDaguaDaNota, urlConsultaPublica } from './danfse';
+import { obterBrandingDaEmpresa } from './escritorios-terceiros';
+
+function dataUrlParaBuffer(dataUrl?: string | null): { buffer: Buffer; contentType: string; ext: string } | null {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return null;
+  const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(dataUrl);
+  if (!m) return null;
+  const contentType = m[1];
+  const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+  try {
+    return { buffer: Buffer.from(m[2], 'base64'), contentType, ext };
+  } catch {
+    return null;
+  }
+}
 
 const DEFAULT_SMTP_HOST = 'email-ssl.com.br';
 const DEFAULT_SMTP_PORT = 465;
@@ -50,6 +64,7 @@ export interface ResultadoEmailNfse {
 }
 
 export async function enviarEmailNfseEmitida(params: {
+  empresaId?: string;
   numero: string;
   dataEmissao: string;
   prestadorNome: string;
@@ -111,16 +126,34 @@ export async function enviarEmailNfseEmitida(params: {
     const valorFmt = params.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const linkPortal = dados.chave ? urlConsultaPublica(dados.chave) : '';
 
+    const brandingParceiro = params.empresaId ? await obterBrandingDaEmpresa(params.empresaId) : null;
+    const ehParceiro = Boolean(brandingParceiro);
+    const corPrimaria = brandingParceiro?.corPrimaria || '#600000';
+    const corSecundaria = brandingParceiro?.corSecundaria || (ehParceiro ? corPrimaria : '#8c1a22');
+    const nomeMarca = brandingParceiro?.nome || 'Privilege Consultoria';
+    const logoParceiroImg = dataUrlParaBuffer(brandingParceiro?.logoData);
+
     let emailLogoBuffer: Buffer | null = null;
-    for (const candidate of ['privilege-logo-email.png', 'privilege-email-logo.png', 'logo.png']) {
-      try {
-        const p = path.join(process.cwd(), 'public', candidate);
-        if (fs.existsSync(p)) {
-          emailLogoBuffer = fs.readFileSync(p);
-          break;
+    let emailLogoType = 'image/png';
+    let emailLogoName = 'logo-escritorio.png';
+
+    if (ehParceiro) {
+      if (logoParceiroImg) {
+        emailLogoBuffer = logoParceiroImg.buffer;
+        emailLogoType = logoParceiroImg.contentType;
+        emailLogoName = `logo-escritorio.${logoParceiroImg.ext}`;
+      }
+    } else {
+      for (const candidate of ['privilege-logo-email.png', 'privilege-email-logo.png', 'logo.png']) {
+        try {
+          const p = path.join(process.cwd(), 'public', candidate);
+          if (fs.existsSync(p)) {
+            emailLogoBuffer = fs.readFileSync(p);
+            break;
+          }
+        } catch {
+          // tenta o próximo
         }
-      } catch {
-        // tenta o próximo
       }
     }
 
@@ -130,24 +163,52 @@ export async function enviarEmailNfseEmitida(params: {
     ];
     if (emailLogoBuffer) {
       attachments.push({
-        filename: 'privilege-logo.png',
+        filename: emailLogoName,
         content: emailLogoBuffer,
-        contentType: 'image/png',
+        contentType: emailLogoType,
         cid: 'privilege-logo',
       });
     }
 
+    const rodapeTexto = ehParceiro
+      ? `NFS-e emitida por ${params.prestadorNome} · ${nomeMarca}${brandingParceiro?.telefone ? ` | Tel/WhatsApp: ${brandingParceiro.telefone}` : ''}`
+      : `NFS-e emitida por ${params.prestadorNome} · Sistema PRIVILEGE CONSULTORIA LTDA\nSite: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 99980-0010 (https://wa.me/5546999800010)`;
+
+    const rodapeHtml = ehParceiro
+      ? `<div style="font-size:12px;font-weight:700;color:${corPrimaria};margin-bottom:4px;">
+           NFS-e emitida por ${params.prestadorNome}
+         </div>
+         <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+           ${nomeMarca}${brandingParceiro?.telefone ? ` · ${brandingParceiro.telefone}` : ''}${brandingParceiro?.email ? ` · ${brandingParceiro.email}` : ''}
+         </div>`
+      : `<div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
+           NFS-e emitida por ${params.prestadorNome}
+         </div>
+         <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
+           Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
+         </div>
+         <div style="margin-bottom:10px;">
+           <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
+             🌐 privilegecontabilidade.cnt.br
+           </a>
+           <a href="https://wa.me/5546999800010" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
+             💬 WhatsApp (46) 99980-0010
+           </a>
+         </div>
+         <div style="font-size:11px;color:#9ca3af;">
+           E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
+         </div>`;
+
     await transporter.sendMail({
-      from: `"Privilege Consultoria" <${smtpUser}>`,
+      from: `"${nomeMarca}" <${smtpUser}>`,
       to: destinatarios.join(', '),
-      cc: smtpUser,
+      cc: ehParceiro ? (brandingParceiro?.email || undefined) : smtpUser,
       subject: `NFS-e nº ${numLimpo} — ${params.prestadorNome}`,
       text:
         `Olá, ${params.tomadorNome || 'Cliente'}!\n\n` +
         `Segue em anexo a Nota Fiscal de Serviço Eletrônica (NFS-e) nº ${numLimpo}, emitida em ${params.dataEmissao} no valor líquido de ${valorFmt} por ${params.prestadorNome}.\n\n` +
         `Arquivos anexos: DANFSe (PDF) e XML oficial.\n\n` +
-        `NFS-e emitida por ${params.prestadorNome} · Sistema PRIVILEGE CONSULTORIA LTDA\n` +
-        `Site: https://privilegecontabilidade.cnt.br | WhatsApp: (46) 99980-0010 (https://wa.me/5546999800010)`,
+        rodapeTexto,
       html: `
         <!doctype html>
         <html>
@@ -155,18 +216,18 @@ export async function enviarEmailNfseEmitida(params: {
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 8px 24px rgba(15,23,42,0.06);">
               <!-- Cabeçalho Institucional com Logo -->
               <tr>
-                <td style="background:linear-gradient(135deg,#600000 0%,#8c1a22 100%);padding:24px 28px;color:#ffffff;">
+                <td style="background:linear-gradient(135deg,${corPrimaria} 0%,${corSecundaria} 100%);padding:24px 28px;color:#ffffff;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
                       <td style="vertical-align:middle;">
                         ${
                           emailLogoBuffer
                             ? `<div style="display:inline-block;background:#ffffff;padding:8px 14px;border-radius:10px;margin-bottom:14px;">
-                                 <img src="cid:privilege-logo" alt="Privilege Consultoria" style="height:36px;width:auto;display:block;" />
+                                 <img src="cid:privilege-logo" alt="${nomeMarca}" style="height:36px;width:auto;display:block;" />
                                </div>`
                             : ''
                         }
-                        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fecaca;">
+                        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.85);">
                           Documento Fiscal Eletrônico • Autorizado
                         </div>
                         <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;">
@@ -213,7 +274,7 @@ export async function enviarEmailNfseEmitida(params: {
                     </tr>
                     <tr>
                       <td style="padding:10px 0 4px;font-size:12.5px;color:#64748b;border-top:1px solid #e2e8f0;">Valor Líquido</td>
-                      <td style="padding:10px 0 4px;font-size:18px;font-weight:800;color:#600000;border-top:1px solid #e2e8f0;">${valorFmt}</td>
+                      <td style="padding:10px 0 4px;font-size:18px;font-weight:800;color:${corPrimaria};border-top:1px solid #e2e8f0;">${valorFmt}</td>
                     </tr>
                     ${
                       dados.chave
@@ -230,13 +291,13 @@ export async function enviarEmailNfseEmitida(params: {
               <!-- Anexos e Botão Portal -->
               <tr>
                 <td style="padding:8px 28px 24px;">
-                  <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#7f1d1d;">
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#334155;">
                     📎 <strong>Anexos incluídos:</strong> DANFSe_${numLimpo}.pdf (Documento Auxiliar) e NFSe_${numLimpo}.xml (Arquivo Fiscal Oficial).
                   </div>
                   ${
                     linkPortal
                       ? `<div style="text-align:center;">
-                           <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#600000;color:#ffffff;text-decoration:none;font-size:13.5px;font-weight:700;padding:12px 24px;border-radius:8px;">
+                           <a href="${linkPortal}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:${corPrimaria};color:#ffffff;text-decoration:none;font-size:13.5px;font-weight:700;padding:12px 24px;border-radius:8px;">
                              Consultar Autenticidade no Portal Nacional
                            </a>
                          </div>`
@@ -248,23 +309,7 @@ export async function enviarEmailNfseEmitida(params: {
               <!-- Rodapé -->
               <tr>
                 <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center;">
-                  <div style="font-size:12px;font-weight:700;color:#600000;margin-bottom:4px;">
-                    NFS-e emitida por ${params.prestadorNome}
-                  </div>
-                  <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">
-                    Sistema fiscal disponibilizado por PRIVILEGE CONSULTORIA LTDA
-                  </div>
-                  <div style="margin-bottom:10px;">
-                    <a href="https://privilegecontabilidade.cnt.br" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#ffffff;border:1px solid #d1d5db;color:#111827;text-decoration:none;font-size:11.5px;font-weight:600;">
-                      🌐 privilegecontabilidade.cnt.br
-                    </a>
-                    <a href="https://wa.me/5546999800010" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 4px;padding:6px 12px;border-radius:6px;background:#16a34a;color:#ffffff;text-decoration:none;font-size:11.5px;font-weight:700;">
-                      💬 WhatsApp (46) 99980-0010
-                    </a>
-                  </div>
-                  <div style="font-size:11px;color:#9ca3af;">
-                    E-mail enviado automaticamente pelo sistema fiscal · ${smtpUser}
-                  </div>
+                  ${rodapeHtml}
                 </td>
               </tr>
             </table>

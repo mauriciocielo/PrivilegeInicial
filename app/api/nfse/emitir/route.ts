@@ -360,6 +360,7 @@ export async function POST(request: Request) {
     }
 
     const emailEnviado = await enviarEmailNfseEmitida({
+      empresaId,
       numero: autorizada.numero || '',
       dataEmissao: autorizada.dataEmissao,
       prestadorNome: autorizada.prestadorRazaoSocial,

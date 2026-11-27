@@ -48,8 +48,34 @@ function fitPreservingRatio(
 
 let officeLogoCache: string | null | undefined; // undefined = ainda não tentou buscar
 
-/** Busca e cacheia (em memória, por sessão) a logo do escritório como base64. */
+function lerBrandingWhiteLabelClient(): { nome?: string; corPrimaria?: string | null; logoData?: string | null } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem('cf_brand_whitelabel');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && (parsed.customizado || parsed.logoData || parsed.corPrimaria || parsed.nome)) {
+      return parsed;
+    }
+  } catch {
+    // ignora
+  }
+  return null;
+}
+
+function hexParaRgbTupla(hex?: string | null): [number, number, number] {
+  if (!hex) return PDF_ACCENT;
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) return PDF_ACCENT;
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+}
+
+/** Busca e cacheia (em memória, por sessão) a logo do escritório como base64 (respeitando white-label de contadores parceiros). */
 export async function getOfficeLogoBase64(): Promise<string | undefined> {
+  const wl = lerBrandingWhiteLabelClient();
+  if (wl) {
+    return wl.logoData || undefined;
+  }
   if (officeLogoCache !== undefined) return officeLogoCache ?? undefined;
   try {
     const res = await fetch('/logo.png');
@@ -89,23 +115,27 @@ export function drawPdfHeaderBand(
   }
 ): { textX: number } {
   const { pageWidth: W, margin: M, headerHeight, officeLogoBase64, empresaLogoData } = opts;
+  const wl = lerBrandingWhiteLabelClient();
+  const corFaixa = hexParaRgbTupla(wl?.corPrimaria);
+  const logoFinal = wl ? (wl.logoData || undefined) : officeLogoBase64;
 
-  doc.setFillColor(...PDF_ACCENT);
+  doc.setFillColor(...corFaixa);
   doc.rect(0, 0, W, headerHeight, 'F');
 
   const plateY = Math.max(4, (headerHeight - LOGO_PLATE_H) / 2);
 
-  if (officeLogoBase64) {
+  if (logoFinal) {
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(M, plateY, LOGO_PLATE_W, LOGO_PLATE_H, 2, 2, 'F');
     try {
+      const tipoLogo = logoFinal.includes('image/jpeg') || logoFinal.includes('image/jpg') ? 'JPEG' : 'PNG';
       const r = fitPreservingRatio(
-        doc, officeLogoBase64,
+        doc, logoFinal,
         M + LOGO_PAD, plateY + LOGO_PAD,
         LOGO_PLATE_W - LOGO_PAD * 2, LOGO_PLATE_H - LOGO_PAD * 2,
         1024 / 442
       );
-      doc.addImage(officeLogoBase64, 'PNG', r.x, r.y, r.w, r.h, undefined, 'FAST');
+      doc.addImage(logoFinal, tipoLogo, r.x, r.y, r.w, r.h, undefined, 'FAST');
     } catch {
       /* logo do escritório inválida — segue só com a placa branca */
     }
@@ -136,7 +166,8 @@ export function drawPdfHeaderBand(
 /** Rodapé padrão (nome do escritório + aviso de confidencialidade + página X de Y) em todas as páginas do documento. */
 export function drawPdfFooter(doc: any, opts: { pageWidth: number; pageHeight: number; margin: number; marca?: string }) {
   const { pageWidth: W, pageHeight: H, margin: M } = opts;
-  const marca = opts.marca || PDF_BRAND_NAME;
+  const wl = lerBrandingWhiteLabelClient();
+  const marca = opts.marca || wl?.nome || PDF_BRAND_NAME;
   const totalPaginas = doc.getNumberOfPages();
   for (let p = 1; p <= totalPaginas; p++) {
     doc.setPage(p);

@@ -248,6 +248,49 @@ export async function obterBrandingEscritorioDoUsuario(
   }
 }
 
+/**
+ * Retorna a identidade visual (logo, cores, nome, e-mail, telefone) do escritório parceiro
+ * dono de uma empresa específica (para e-mails automáticos e PDFs no servidor).
+ * Retorna null se a empresa pertencer ao escritório padrão (Privilege).
+ */
+export async function obterBrandingDaEmpresa(empresaId: string): Promise<{
+  escritorioId: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  corPrimaria: string | null;
+  corSecundaria: string | null;
+  logoData: string | null;
+} | null> {
+  if (!empresaId) return null;
+  try {
+    await ensureEscritoriosNfseTables();
+    const rows = await db.$queryRawUnsafe<any[]>(
+      `SELECT e.id AS escritorio_id, e.nome, e.email, e.telefone,
+              e.brand_nome, e.brand_cor_primaria, e.brand_cor_secundaria, e.brand_logo_data
+       FROM nfse_empresa_escritorio ee
+       INNER JOIN nfse_escritorios e ON e.id = ee.escritorio_id
+       WHERE ee.empresa_id = $1 AND e.id <> $2 AND e.ativo = TRUE
+       LIMIT 1`,
+      empresaId,
+      ID_ESCRITORIO_PADRAO
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      escritorioId: String(r.escritorio_id),
+      nome: String(r.brand_nome || r.nome || ''),
+      email: String(r.email || ''),
+      telefone: String(r.telefone || ''),
+      corPrimaria: r.brand_cor_primaria || null,
+      corSecundaria: r.brand_cor_secundaria || null,
+      logoData: r.brand_logo_data || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Vincula uma empresa a um escritório terceiro (usado na importação por procuração). */
 export async function vincularEmpresaAoEscritorio(empresaId: string, escritorioId: string): Promise<void> {
   if (!empresaId || !escritorioId || escritorioId === ID_ESCRITORIO_PADRAO) return;
